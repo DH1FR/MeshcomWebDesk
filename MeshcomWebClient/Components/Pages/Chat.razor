@@ -1,6 +1,7 @@
 @page "/"
 @using MeshcomWebClient.Models
 @using MeshcomWebClient.Services
+@using Microsoft.Extensions.Options
 @rendermode InteractiveServer
 @inject ChatService ChatService
 @inject MeshcomUdpService UdpService
@@ -69,22 +70,108 @@
         </div>
     </div>
 
-    @* ===== LOWER AREA: All raw received data ===== *@
+    @* ===== LOWER AREA: Monitor ===== *@
     <div class="lower-pane">
         <div class="pane-header">
-            <span>📡 Alle empfangenen Daten</span>
-            <span class="msg-count">(@_allMessages.Count Nachrichten)</span>
+            <span>📡 Monitor</span>
+            <span class="msg-count">@_allMessages.Count Einträge</span>
         </div>
-        <div class="raw-message-list" id="raw-messages">
-            @foreach (var msg in _allMessages)
+        <div class="mon-list" id="raw-messages">
+            @foreach (var m in _allMessages)
             {
-                <div class="raw-message">
-                    <span class="msg-time">@msg.Timestamp.ToString("HH:mm:ss")</span>
-                    <span class="raw-direction">@(msg.IsOutgoing ? "TX" : "RX")</span>
-                    <span class="raw-data">@msg.RawData</span>
+                <div class="mon-row @MonRowClass(m)">
+                    <span class="mon-time">@m.Timestamp.ToString("HH:mm:ss")</span>
+
+                    <span class="mon-badge @MonBadgeClass(m)">@MonType(m)</span>
+
+                    <span class="mon-dir @(m.IsOutgoing ? "mon-tx" : "mon-rx")">
+                        @(m.IsOutgoing ? "TX" : "RX")
+                    </span>
+
+                    @* Routing: From → To *@
+                    @if (!string.IsNullOrEmpty(m.From))
+                    {
+                        <span class="mon-routing">
+                            <span class="mon-call">@m.From</span>
+                            @if (!string.IsNullOrEmpty(m.To))
+                            {
+                                <span class="mon-arrow">→</span>
+                                <span class="mon-call @(m.IsBroadcast ? "mon-bcast" : "")">
+                                    @(m.IsBroadcast ? "alle" : m.To)
+                                </span>
+                            }
+                        </span>
+                    }
+
+                    @* Content *@
+                    @if (m.IsPositionBeacon && m.Latitude.HasValue)
+                    {
+                        <span class="mon-content mon-pos">
+                            📍&nbsp;@($"{Math.Abs(m.Latitude.Value):F4}°{(m.Latitude >= 0 ? "N" : "S")}")
+                            &nbsp;@($"{Math.Abs(m.Longitude!.Value):F4}°{(m.Longitude >= 0 ? "E" : "W")}")
+                            @if (m.Altitude.HasValue)
+                            {
+                                <span class="mon-alt">&nbsp;·&nbsp;@m.Altitude&nbsp;m</span>
+                            }
+                        </span>
+                    }
+                    else if (!string.IsNullOrEmpty(m.Text) && !m.Text.StartsWith('{'))
+                    {
+                        <span class="mon-content mon-text">"@m.Text"</span>
+                    }
+                    else if (string.IsNullOrEmpty(m.From))
+                    {
+                        <span class="mon-content mon-sys">@MonTruncate(m.RawData, 80)</span>
+                    }
+
+                    @* Signal *@
+                    @if (m.Rssi.HasValue)
+                    {
+                        <span class="mon-signal @RssiCssClass(m.Rssi.Value)">
+                            @m.Rssi&nbsp;dBm
+                            @if (m.Snr.HasValue)
+                            {
+                                <span class="mon-snr">/ @m.Snr.Value.ToString("F1")&nbsp;dB</span>
+                            }
+                        </span>
+                    }
                 </div>
             }
         </div>
+    </div>
+
+    @* ===== STATUS BAR ===== *@
+    <div class="status-bar">
+        <span class="status-item @(_status.IsListening ? "status-ok" : "status-err")">
+            @(_status.IsListening ? "🟢" : "🔴") UDP @(_status.IsListening ? "Aktiv" : "Inaktiv")
+        </span>
+        <span class="status-sep">|</span>
+        <span class="status-item @(_status.IsRegistered ? "status-ok" : "status-warn")">
+            @(_status.IsRegistered ? "✅" : "⏳") @(_status.IsRegistered ? "Registriert" : "Nicht registriert")
+        </span>
+        <span class="status-sep">|</span>
+        <span class="status-item">📡 @_settings.DeviceIp:@_settings.DevicePort</span>
+        <span class="status-sep">|</span>
+        <span class="status-item">🎙️ @_myCallsign</span>
+        <span class="status-sep">|</span>
+        <span class="status-item">📨 RX @_status.RxCount / TX @_status.TxCount</span>
+        @if (_status.LastRxTime.HasValue)
+        {
+            <span class="status-sep">|</span>
+            <span class="status-item">⏱️ @_status.LastRxTime.Value.ToString("HH:mm:ss") von @_status.LastRxFrom</span>
+        }
+        @if (_status.LastRssi.HasValue)
+        {
+            <span class="status-sep">|</span>
+            <span class="status-item @RssiCssClass(_status.LastRssi.Value)">
+                📶 RSSI @_status.LastRssi dBm&nbsp;&nbsp;SNR @_status.LastSnr?.ToString("F1") dB
+            </span>
+        }
+        @if (_status.LastTxTime.HasValue)
+        {
+            <span class="status-sep">|</span>
+            <span class="status-item">📤 @_status.LastTxTime.Value.ToString("HH:mm:ss")</span>
+        }
     </div>
 </div>
     </ChildContent>
@@ -106,14 +193,35 @@
     private bool _showNewTabInput;
     private string _myCallsign = string.Empty;
     private bool _disposed;
+    private ConnectionStatus _status = new();
+    private MeshcomSettings _settings = new();
 
     [Inject] private IConfiguration Configuration { get; set; } = default!;
+    [Inject] private IOptions<MeshcomSettings> SettingsOptions { get; set; } = default!;
 
     protected override void OnInitialized()
     {
-        _myCallsign = Configuration.GetSection("Meshcom")["MyCallsign"] ?? "N0CALL";
+        _settings = SettingsOptions.Value;
+        _myCallsign = _settings.MyCallsign;
+        _status = UdpService.Status;
         ChatService.OnChange += OnChatChanged;
+        UdpService.OnStatusChange += OnStatusChanged;
         RefreshData();
+    }
+
+    private async void OnStatusChanged()
+    {
+        if (_disposed) return;
+        try
+        {
+            await InvokeAsync(() =>
+            {
+                if (_disposed) return;
+                _status = UdpService.Status;
+                StateHasChanged();
+            });
+        }
+        catch (Exception) { }
     }
 
     private async void OnChatChanged()
@@ -224,5 +332,40 @@
     {
         _disposed = true;
         ChatService.OnChange -= OnChatChanged;
+        UdpService.OnStatusChange -= OnStatusChanged;
     }
+
+    private static string RssiCssClass(int rssi) => rssi switch
+    {
+        > -70 => "rssi-good",
+        > -90 => "rssi-fair",
+        _ => "rssi-weak"
+    };
+
+    // ── Monitor helpers ──────────────────────────────────────────────────────
+
+    private static string MonType(MeshcomMessage m)
+    {
+        if (m.IsPositionBeacon)          return "POS";
+        if (m.IsOutgoing)                return "MSG";
+        if (!string.IsNullOrEmpty(m.From)) return "MSG";
+        return "SYS";
+    }
+
+    private static string MonBadgeClass(MeshcomMessage m) => MonType(m) switch
+    {
+        "POS" => "badge-pos",
+        "MSG" when m.IsOutgoing => "badge-tx",
+        "MSG" => "badge-msg",
+        _ => "badge-sys"
+    };
+
+    private static string MonRowClass(MeshcomMessage m) =>
+        m.IsOutgoing ? "mon-row-tx" :
+        m.IsPositionBeacon ? "mon-row-pos" :
+        !string.IsNullOrEmpty(m.From) ? "mon-row-msg" :
+        "mon-row-sys";
+
+    private static string MonTruncate(string s, int max) =>
+        s.Length <= max ? s : s[..max] + "…";
 }

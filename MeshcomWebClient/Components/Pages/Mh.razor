@@ -1,0 +1,207 @@
+@page "/mh"
+@rendermode InteractiveServer
+@using MeshcomWebClient.Models
+@using MeshcomWebClient.Services
+@using MeshcomWebClient.Helpers
+@using Microsoft.Extensions.Options
+@implements IDisposable
+@inject ChatService ChatService
+@inject MeshcomUdpService UdpService
+@inject IOptions<MeshcomSettings> SettingsOptions
+
+<PageTitle>MH – Most Recently Heard</PageTitle>
+
+<div class="mh-page">
+
+    @* ── Own position bar ── *@
+    <div class="mh-ownpos @(HasOwnPos ? "mh-ownpos-ok" : "mh-ownpos-unknown")">
+        <span class="mh-ownpos-label">📍 Eigene Position:</span>
+        @if (HasOwnPos)
+        {
+            <span class="mh-ownpos-val">
+                @GeoHelper.FormatCoord(_status.OwnLatitude, _status.OwnLongitude)
+                @if (_status.OwnAltitude.HasValue)
+                { <span class="mh-ownpos-alt">&nbsp;· @_status.OwnAltitude m ü.NN</span> }
+            </span>
+            <span class="mh-ownpos-src">[Node]</span>
+            <a class="mh-osm-link" href="@GeoHelper.OsmUrl(_status.OwnLatitude!.Value, _status.OwnLongitude!.Value)"
+               target="_blank" title="Auf Karte anzeigen">🗺️</a>
+        }
+        else
+        {
+            <span class="mh-ownpos-unknown-txt">⏳ Warte auf Positionsdaten vom Node (@_myCallsign)…</span>
+        }
+    </div>
+
+    @* ── Header ── *@
+    <div class="mh-header">
+        <div class="mh-title-row">
+            <h2 class="mh-title">📻 Most Recently Heard</h2>
+            <span class="mh-subtitle">@_stations.Count Station@(_stations.Count != 1 ? "en" : "")</span>
+        </div>
+        @if (_stations.Count > 0)
+        {
+            <button class="mh-clear-btn" @onclick="ClearList">🗑️ Liste leeren</button>
+        }
+    </div>
+
+    @* ── Table ── *@
+    @if (_stations.Count == 0)
+    {
+        <div class="mh-empty">
+            <p>Noch keine Stationen gehört.</p>
+            <p class="mh-empty-hint">Empfangene LoRa-Nachrichten erscheinen hier automatisch.</p>
+        </div>
+    }
+    else
+    {
+        <div class="mh-table-wrapper">
+            <table class="mh-table">
+                <thead>
+                    <tr>
+                        <th>Rufzeichen</th>
+                        <th>Zuletzt gehört</th>
+                        <th class="col-center">Anz.</th>
+                        <th>Letzte Nachricht</th>
+                        <th>GPS-Position</th>
+                        <th class="col-center">Höhe</th>
+                        <th class="col-center">Entfernung</th>
+                        <th class="col-center">RSSI</th>
+                        <th class="col-center">SNR</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in _stations)
+                    {
+                        var dist = CalcDistance(s);
+                        <tr class="mh-row">
+                            <td class="mh-callsign">@s.Callsign</td>
+                            <td class="mh-time">
+                                <span class="mh-date">@s.LastHeard.ToString("dd.MM.yy")</span>
+                                <span class="mh-hour">@s.LastHeard.ToString("HH:mm:ss")</span>
+                            </td>
+                            <td class="col-center mh-count-cell">@s.MessageCount</td>
+                            <td class="mh-msg">@Truncate(s.LastMessage, 35)</td>
+                            <td class="mh-pos">
+                                @if (s.Latitude.HasValue && s.Longitude.HasValue)
+                                {
+                                    <a class="mh-coord-link"
+                                       href="@GeoHelper.OsmUrl(s.Latitude.Value, s.Longitude.Value)"
+                                       target="_blank"
+                                       title="Auf Karte anzeigen">
+                                        @($"{s.Latitude.Value:F4}°{(s.Latitude >= 0 ? "N" : "S")}")
+                                        <br />
+                                        @($"{s.Longitude.Value:F4}°{(s.Longitude >= 0 ? "E" : "W")}")
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="mh-no-pos">–</span>
+                                }
+                            </td>
+                            <td class="col-center mh-alt">
+                                @(s.Altitude.HasValue ? $"{s.Altitude} m" : "–")
+                            </td>
+                            <td class="col-center mh-dist @(dist.HasValue ? "dist-known" : "")">
+                                @(dist.HasValue ? GeoHelper.FormatDistance(dist.Value) : "–")
+                            </td>
+                            <td class="col-center @RssiClass(s.LastRssi)">
+                                @(s.LastRssi.HasValue ? $"{s.LastRssi} dBm" : "–")
+                            </td>
+                            <td class="col-center @RssiClass(s.LastRssi)">
+                                @(s.LastSnr.HasValue ? $"{s.LastSnr:F1} dB" : "–")
+                            </td>
+                            <td>
+                                <button class="mh-chat-btn" @onclick="() => OpenChat(s.Callsign)"
+                                        title="Chat mit @s.Callsign öffnen">💬</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<HeardStation> _stations = [];
+    private ConnectionStatus _status = new();
+    private string _myCallsign = string.Empty;
+    private bool _disposed;
+
+    private bool HasOwnPos => _status.OwnLatitude.HasValue && _status.OwnLongitude.HasValue;
+
+    protected override void OnInitialized()
+    {
+        _myCallsign = SettingsOptions.Value.MyCallsign;
+        _status     = UdpService.Status;
+        _stations   = ChatService.MhList;
+        ChatService.OnChange      += OnChanged;
+        UdpService.OnStatusChange += OnStatusChanged;
+    }
+
+    private async void OnChanged()
+    {
+        if (_disposed) return;
+        try
+        {
+            await InvokeAsync(() =>
+            {
+                if (_disposed) return;
+                _stations = ChatService.MhList;
+                StateHasChanged();
+            });
+        }
+        catch (Exception) { }
+    }
+
+    private async void OnStatusChanged()
+    {
+        if (_disposed) return;
+        try
+        {
+            await InvokeAsync(() =>
+            {
+                if (_disposed) return;
+                _status = UdpService.Status;
+                StateHasChanged();
+            });
+        }
+        catch (Exception) { }
+    }
+
+    private double? CalcDistance(HeardStation s)
+    {
+        if (!HasOwnPos || !s.Latitude.HasValue || !s.Longitude.HasValue)
+            return null;
+        return GeoHelper.CalculateDistanceKm(
+            _status.OwnLatitude!.Value, _status.OwnLongitude!.Value,
+            s.Latitude.Value, s.Longitude.Value);
+    }
+
+    private void OpenChat(string callsign)
+    {
+        ChatService.OpenTab(callsign.ToUpperInvariant());
+    }
+
+    private void ClearList() => ChatService.ClearMhList();
+
+    private static string Truncate(string text, int max) =>
+        text.Length <= max ? text : text[..max] + "…";
+
+    private static string RssiClass(int? rssi) => rssi switch
+    {
+        > -70 => "rssi-good",
+        > -90 => "rssi-fair",
+        null  => "",
+        _     => "rssi-weak"
+    };
+
+    public void Dispose()
+    {
+        _disposed = true;
+        ChatService.OnChange      -= OnChanged;
+        UdpService.OnStatusChange -= OnStatusChanged;
+    }
+}

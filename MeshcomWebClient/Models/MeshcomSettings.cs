@@ -24,4 +24,16 @@ public class MeshcomSettings
 
     /// <summary>Number of days to retain log files. Older files are deleted automatically.</summary>
     public int LogRetainDays { get; set; } = 30;
+
+    /// <summary>
+    /// When true, every UDP packet (RX and TX) is written to the log file at Information level.
+    /// Useful for offline traffic analysis. Default is false.
+    /// </summary>
+    public bool LogUdpTraffic { get; set; } = false;
+
+    /// <summary>
+    /// Maximum number of entries kept in the monitor feed. Oldest entries are dropped first.
+    /// Default is 1000.
+    /// </summary>
+    public int MonitorMaxMessages { get; set; } = 1000;
 }

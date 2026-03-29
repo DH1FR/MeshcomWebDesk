@@ -1,1 +1,62 @@
-.app-layout { height: 100vh; overflow: hidden; }
+.app-layout {
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    height: 44px;
+    background: #16213e;
+    border-bottom: 2px solid #0f3460;
+    flex-shrink: 0;
+    z-index: 100;
+}
+
+.app-header-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.app-title {
+    color: #a0c4ff;
+}
+
+.app-nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+::deep .app-nav-link {
+    padding: 6px 14px;
+    border-radius: 5px;
+    color: #a0c4ff;
+    text-decoration: none;
+    font-size: 13px;
+    transition: background 0.15s;
+}
+
+::deep .app-nav-link:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
+
+::deep .app-nav-link.active {
+    background: #0f3460;
+    color: #fff;
+    font-weight: 600;
+}
+
+.app-body {
+    flex: 1;
+    overflow: hidden;
+}

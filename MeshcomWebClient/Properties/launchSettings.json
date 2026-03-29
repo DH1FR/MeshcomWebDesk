@@ -18,6 +18,15 @@
         "environmentVariables": {
           "ASPNETCORE_ENVIRONMENT": "Development"
         }
+      },
+      "lan": {
+        "commandName": "Project",
+        "dotnetRunMessages": true,
+        "launchBrowser": false,
+        "applicationUrl": "http://0.0.0.0:5162",
+        "environmentVariables": {
+          "ASPNETCORE_ENVIRONMENT": "Development"
+        }
       }
     }
   }

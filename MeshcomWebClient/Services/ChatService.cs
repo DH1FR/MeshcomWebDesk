@@ -11,6 +11,7 @@ namespace MeshcomWebClient.Services;
 public class ChatService
 {
     private readonly ConcurrentDictionary<string, ChatTab> _tabs = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, HeardStation> _mhList = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<MeshcomMessage> _allMessages = [];
     private readonly object _lock = new();
     private readonly MeshcomSettings _settings;
@@ -47,19 +48,28 @@ public class ChatService
         }
     }
 
+    /// <summary>Most recently heard stations, sorted by last heard descending.</summary>
+    public IReadOnlyList<HeardStation> MhList =>
+        _mhList.Values.OrderByDescending(s => s.LastHeard).ToList();
+
     /// <summary>
     /// Route an incoming message to the correct tab. Creates tab automatically if needed.
     /// </summary>
     public void AddIncomingMessage(MeshcomMessage message)
     {
         // Determine tab key based on destination:
-        //   Broadcast (* / CQCQCQ)      → tab "*" ("Alle")
-        //   Direct to us (MyCallsign)   → tab by sender callsign
-        //   Group (any other dst)       → tab "#<group>"
+        //   Broadcast from known correspondent     → sender's direct tab
+        //   Broadcast from unknown station         → tab "*" ("Alle")
+        //   Direct to us (MyCallsign)              → tab by sender callsign
+        //   Group (any other dst)                  → tab "#<group>"
         string tabKey;
         if (message.IsBroadcast)
         {
-            tabKey = "*";
+            // If an open direct tab with this sender already exists, prefer it.
+            // Handles the MeshCom case where a station replies via broadcast.
+            tabKey = !string.IsNullOrEmpty(message.From) && _tabs.ContainsKey(message.From)
+                ? message.From
+                : "*";
         }
         else if (string.Equals(message.To, _settings.MyCallsign, StringComparison.OrdinalIgnoreCase))
         {
@@ -73,10 +83,11 @@ public class ChatService
         var tab = GetOrCreateTab(tabKey);
         lock (_lock)
         {
-            _allMessages.Add(message);
+            AppendToMonitor(message);
             tab.Messages.Add(message);
         }
 
+        UpdateMhList(message);
         NotifyChange();
     }
 
@@ -90,7 +101,7 @@ public class ChatService
         var tab = GetOrCreateTab(tabKey);
         lock (_lock)
         {
-            _allMessages.Add(message);
+            AppendToMonitor(message);
             tab.Messages.Add(message);
         }
 
@@ -105,7 +116,7 @@ public class ChatService
     {
         lock (_lock)
         {
-            _allMessages.Add(message);
+            AppendToMonitor(message);
         }
 
         NotifyChange();
@@ -126,6 +137,24 @@ public class ChatService
         NotifyChange();
     }
 
+    /// <summary>Remove all entries from the MH list.</summary>
+    public void ClearMhList()
+    {
+        _mhList.Clear();
+        NotifyChange();
+    }
+
+    /// <summary>
+    /// Process a pure position beacon: update MH position data and add to raw feed.
+    /// Does NOT open or update any chat tab.
+    /// </summary>
+    public void AddPositionBeacon(MeshcomMessage message)
+    {
+        UpdateMhList(message);
+        lock (_lock) { AppendToMonitor(message); }
+        NotifyChange();
+    }
+
     /// <summary>Get a specific tab.</summary>
     public ChatTab? GetTab(string key)
     {
@@ -143,6 +172,61 @@ public class ChatService
         {
             return tab.Messages.ToList();
         }
+    }
+
+    private void UpdateMhList(MeshcomMessage message)
+    {
+        if (string.IsNullOrEmpty(message.From))
+            return;
+
+        _mhList.AddOrUpdate(
+            message.From,
+            _ => new HeardStation
+            {
+                Callsign         = message.From,
+                FirstHeard       = message.Timestamp,
+                LastHeard        = message.Timestamp,
+                MessageCount     = message.IsPositionBeacon ? 0 : 1,
+                LastDestination  = message.To,
+                LastMessage      = message.Text,
+                LastRssi         = message.Rssi,
+                LastSnr          = message.Snr,
+                Latitude         = message.Latitude,
+                Longitude        = message.Longitude,
+                Altitude         = message.Altitude,
+                LastPositionTime = message.Latitude.HasValue ? message.Timestamp : null
+            },
+            (_, s) =>
+            {
+                s.LastHeard = message.Timestamp;
+                if (!message.IsPositionBeacon)
+                {
+                    s.MessageCount++;
+                    s.LastDestination = message.To;
+                    s.LastMessage     = message.Text;
+                }
+                if (message.Rssi.HasValue) s.LastRssi = message.Rssi;
+                if (message.Snr.HasValue)  s.LastSnr  = message.Snr;
+                if (message.Latitude.HasValue)
+                {
+                    s.Latitude         = message.Latitude;
+                    s.Longitude        = message.Longitude;
+                    s.Altitude         = message.Altitude;
+                    s.LastPositionTime = message.Timestamp;
+                }
+                return s;
+            });
+    }
+
+    /// <summary>
+    /// Appends a message to the monitor feed and trims to <see cref="MonitorMaxMessages"/>.
+    /// Must be called while holding <see cref="_lock"/>.
+    /// </summary>
+    private void AppendToMonitor(MeshcomMessage message)
+    {
+        _allMessages.Add(message);
+        if (_allMessages.Count > _settings.MonitorMaxMessages)
+            _allMessages.RemoveRange(0, _allMessages.Count - _settings.MonitorMaxMessages);
     }
 
     private ChatTab GetOrCreateTab(string key)
