@@ -1,0 +1,24 @@
+[Unit]
+Description=MeshCom Web Client
+After=network.target
+
+[Service]
+Type=simple
+User=meshcom
+WorkingDirectory=/opt/meshcom
+ExecStart=/opt/meshcom/MeshcomWebClient
+Restart=on-failure
+RestartSec=5
+
+# Override settings via environment variables
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=ASPNETCORE_URLS=http://0.0.0.0:5162
+Environment=Meshcom__LogPath=/var/log/meshcom
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=meshcom-webclient
+
+[Install]
+WantedBy=multi-user.target

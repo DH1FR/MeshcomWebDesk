@@ -1,0 +1,17 @@
+services:
+  meshcom-webclient:
+    build: .
+    image: meshcom-webclient:latest
+    container_name: meshcom-webclient
+    restart: unless-stopped
+    network_mode: host          # required for UDP RX from MeshCom device
+    volumes:
+      - ./logs:/app/logs        # persist log files
+      - ./appsettings.json:/app/appsettings.json:ro   # override config
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - Meshcom__DeviceIp=192.168.1.60
+      - Meshcom__DevicePort=1799
+      - Meshcom__ListenPort=1799
+      - Meshcom__MyCallsign=DH1FR-2
+      - Meshcom__LogPath=/app/logs
