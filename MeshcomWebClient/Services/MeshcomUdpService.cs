@@ -34,8 +34,8 @@ public partial class MeshcomUdpService : BackgroundService
     [GeneratedRegex(@"\{\d+$")]
     private static partial Regex TrailingSequencePattern();
 
-    /// <summary>Matches APRS-style ACK messages, e.g. "DH1FR-2 :ack187".</summary>
-    [GeneratedRegex(@"^\S+ :ack\d+$")]
+    /// <summary>Matches APRS-style ACK messages, e.g. "DH1FR-2 :ack187" or "DH1FR-2  :ack187" (padded addressee).</summary>
+    [GeneratedRegex(@"^\S+\s+:ack\d+$")]
     private static partial Regex AckPattern();
 
     public MeshcomUdpService(
@@ -318,8 +318,8 @@ public partial class MeshcomUdpService : BackgroundService
             if (!isPositionBeacon)
                 msg = TrailingSequencePattern().Replace(msg, string.Empty);
 
-            // Detect APRS-style ACK: "DH1FR-2 :ack187"
-            var isAck = !isPositionBeacon && AckPattern().IsMatch(msg);
+            // Detect APRS-style ACK: "DH1FR-2 :ack187" (callsign may be space-padded to 9 chars)
+            var isAck = !isPositionBeacon && AckPattern().IsMatch(msg.Trim());
 
             // src_type:"node" = local device packet; rssi/snr are 0 and not meaningful
             var srcType      = root.TryGetProperty("src_type", out var srcTypeProp) ? srcTypeProp.GetString() : "lora";
