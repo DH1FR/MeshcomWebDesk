@@ -217,9 +217,12 @@
     private ConnectionStatus _status = new();
     private MeshcomSettings _settings = new();
     private bool _showMonitor = true;
+    private bool _scrollMessages;
+    private bool _scrollMonitor;
 
     [Inject] private IConfiguration Configuration { get; set; } = default!;
     [Inject] private IOptions<MeshcomSettings> SettingsOptions { get; set; } = default!;
+    [Inject] private IJSRuntime JS { get; set; } = default!;
 
     protected override void OnInitialized()
     {
@@ -229,6 +232,20 @@
         ChatService.OnChange += OnChatChanged;
         UdpService.OnStatusChange += OnStatusChanged;
         RefreshData();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_scrollMessages)
+        {
+            _scrollMessages = false;
+            await JS.InvokeVoidAsync("scrollToBottom", "tab-messages");
+        }
+        if (_scrollMonitor)
+        {
+            _scrollMonitor = false;
+            await JS.InvokeVoidAsync("scrollToBottom", "raw-messages");
+        }
     }
 
     private async void OnStatusChanged()
@@ -286,6 +303,9 @@
         _activeTabMessages = _activeTab != null
             ? ChatService.GetTabMessages(_activeTabKey)
             : [];
+
+        _scrollMessages = true;
+        _scrollMonitor = true;
     }
 
     private void SelectTab(string key)
@@ -293,6 +313,7 @@
         _activeTabKey = key;
         _activeTab = ChatService.GetTab(key);
         _activeTabMessages = ChatService.GetTabMessages(key);
+        _scrollMessages = true;
     }
 
     private void CloseTab(string key)

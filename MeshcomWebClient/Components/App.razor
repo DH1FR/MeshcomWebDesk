@@ -17,6 +17,12 @@
     <Routes />
     <ReconnectModal />
     <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script>
+        window.scrollToBottom = function (id) {
+            var el = document.getElementById(id);
+            if (el) el.scrollTop = el.scrollHeight;
+        };
+    </script>
 </body>
 
 </html>
