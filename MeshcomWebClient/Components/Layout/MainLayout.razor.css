@@ -1,5 +1,6 @@
 .app-layout {
-    height: 100vh;
+    height: 100vh;        /* fallback for older browsers */
+    height: 100dvh;       /* dynamic viewport height: excludes mobile browser chrome */
     overflow: hidden;
     display: flex;
     flex-direction: column;

@@ -71,10 +71,14 @@
     </div>
 
     @* ===== LOWER AREA: Monitor ===== *@
-    <div class="lower-pane">
+    <div class="lower-pane @(_showMonitor ? "" : "lower-pane-collapsed")">
         <div class="pane-header">
             <span>📡 Monitor</span>
             <span class="msg-count">@_allMessages.Count Einträge</span>
+            <button class="mon-toggle-btn" @onclick="() => _showMonitor = !_showMonitor"
+                    title="@(_showMonitor ? "Monitor ausblenden" : "Monitor einblenden")">
+                @(_showMonitor ? "▼" : "▲")
+            </button>
         </div>
         <div class="mon-list" id="raw-messages">
             @foreach (var m in _allMessages)
@@ -195,6 +199,7 @@
     private bool _disposed;
     private ConnectionStatus _status = new();
     private MeshcomSettings _settings = new();
+    private bool _showMonitor = true;
 
     [Inject] private IConfiguration Configuration { get; set; } = default!;
     [Inject] private IOptions<MeshcomSettings> SettingsOptions { get; set; } = default!;

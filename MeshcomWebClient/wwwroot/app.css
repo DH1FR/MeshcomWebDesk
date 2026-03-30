@@ -20,6 +20,7 @@ h1:focus {
 /* ===== App Layout ===== */
 .app-layout {
     height: 100vh;
+    height: 100dvh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -619,6 +620,8 @@ h1:focus {
     align-items: center;
     gap: 4px;
     padding: 4px 12px;
+    /* iPhone X+ home indicator clearance */
+    padding-bottom: max(4px, env(safe-area-inset-bottom));
     background: #0d1117;
     border-top: 1px solid #21262d;
     font-size: 12px;
@@ -682,6 +685,58 @@ h1:focus {
     .new-tab-dialog input {
         font-size: 16px;
     }
+
+    /* Reduce header on phones */
+    .app-header {
+        height: 40px;
+        padding: 0 10px;
+    }
+
+    /* Smaller nav links on phones */
+    ::deep .app-nav-link {
+        padding: 5px 8px;
+        font-size: 12px;
+    }
+
+    /* Monitor pane: collapse to header-only on phones by default (user can expand) */
+    .lower-pane-collapsed .mon-list {
+        display: none;
+    }
+
+    .lower-pane-collapsed {
+        flex: 0 !important;
+    }
+
+    /* Monitor toggle button: visible on phones only */
+    .mon-toggle-btn {
+        display: inline-flex;
+    }
+
+    /* Status bar: single line, smaller on phones */
+    .status-bar {
+        font-size: 11px;
+        gap: 3px;
+        padding: 3px 8px;
+        padding-bottom: max(3px, env(safe-area-inset-bottom));
+    }
+
+    /* MH table: horizontal scroll on phones */
+    .mh-table-wrapper {
+        overflow-x: auto;
+    }
+}
+
+/* Monitor toggle button: hidden on desktop */
+.mon-toggle-btn {
+    display: none;
+    background: none;
+    border: none;
+    color: #58a6ff;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 0 6px;
+    margin-left: auto;
+    align-items: center;
 }
 
 /* ===== Blazor Error UI ===== */

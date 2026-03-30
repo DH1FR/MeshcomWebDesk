@@ -12,6 +12,8 @@ obj/
 
 ## Published output
 publish/
+*.zip
+meshcom-webclient-*.zip
 out/
 
 ## Rider
