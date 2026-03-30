@@ -246,7 +246,11 @@
         if (_scrollMessages)
         {
             _scrollMessages = false;
-            await JS.InvokeVoidAsync("scrollToBottom", "tab-messages");
+            try
+            {
+                await JS.InvokeVoidAsync("scrollToBottom", "tab-messages");
+            }
+            catch (JSException) { }
         }
     }
 
