@@ -68,11 +68,6 @@ public partial class MeshcomUdpService : BackgroundService
         // Without this, the device does not know where to deliver UDP data.
         await RegisterWithDeviceAsync();
 
-        // Request the device's current GPS position so the MH list and distance
-        // calculations are immediately available after startup.
-        await Task.Delay(500, stoppingToken);
-        await RequestOwnPositionAsync();
-
         try
         {
             while (!stoppingToken.IsCancellationRequested)
@@ -158,32 +153,6 @@ public partial class MeshcomUdpService : BackgroundService
             Status.IsRegistered = false;
             NotifyStatusChange();
             _logger.LogInformation("MeshCom UDP service stopped");
-        }
-    }
-
-    /// <summary>
-    /// Sends --sendpos to the device so it broadcasts its current GPS position.
-    /// The response is received via the normal UDP listener and updates the MH list
-    /// and own-position data used for distance calculations.
-    /// </summary>
-    private async Task RequestOwnPositionAsync()
-    {
-        if (_udpClient == null) return;
-
-        try
-        {
-            var json = JsonSerializer.Serialize(new { type = "cmd", msg = "--sendpos" });
-            var bytes = Encoding.UTF8.GetBytes(json);
-            var remoteEp = new IPEndPoint(IPAddress.Parse(_settings.DeviceIp), _settings.DevicePort);
-
-            await _udpClient.SendAsync(bytes, bytes.Length, remoteEp);
-            _logger.LogInformation("--sendpos command sent to {DeviceIp}:{DevicePort}", _settings.DeviceIp, _settings.DevicePort);
-            if (_settings.LogUdpTraffic)
-                _logger.LogInformation("[UDP-TX] {Remote} {Data}", remoteEp, json);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to send --sendpos command to {DeviceIp}:{DevicePort}", _settings.DeviceIp, _settings.DevicePort);
         }
     }
 
