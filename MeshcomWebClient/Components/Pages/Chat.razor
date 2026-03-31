@@ -101,11 +101,10 @@
                         @(m.IsOutgoing ? "TX" : "RX")
                     </span>
 
-                    @* Routing: From → To  (relay path as tooltip) *@
+                    @* Routing: From [⟶ Relay1 ⟶ Relay2 …] → To *@
                     @if (!string.IsNullOrEmpty(m.From))
                     {
-                        var routingTitle = m.RelayPath != null ? $"Pfad: {m.RelayPath}" : m.From;
-                        <span class="mon-routing" title="@routingTitle">
+                        <span class="mon-routing">
                             @if (!string.Equals(m.From, _myCallsign, StringComparison.OrdinalIgnoreCase))
                             {
                                 <span class="mon-call mon-call-link" @onclick="() => OpenTabFromMonitor(m.From)"
@@ -115,9 +114,14 @@
                             {
                                 <span class="mon-call">@m.From</span>
                             }
+                            @* Show each relay hop inline *@
                             @if (m.RelayPath != null)
                             {
-                                <span class="mon-hops" title="@m.RelayPath">⇢@(m.RelayPath.Count(c => c == ','))🔀</span>
+                                foreach (var hop in m.RelayPath.Split(',').Skip(1))
+                                {
+                                    <span class="mon-relay-arrow">⟶</span>
+                                    <span class="mon-relay-node" title="@hop">@hop</span>
+                                }
                             }
                             @if (!string.IsNullOrEmpty(m.To))
                             {
