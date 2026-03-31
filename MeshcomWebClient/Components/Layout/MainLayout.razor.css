@@ -1,6 +1,8 @@
 .app-layout {
-    height: 100vh;        /* fallback for older browsers */
-    height: 100dvh;       /* dynamic viewport height: excludes mobile browser chrome */
+    height: 100vh;                          /* fallback for older browsers */
+    height: -webkit-fill-available;         /* Safari: fills actual visible area */
+    height: 100dvh;                         /* dynamic viewport height */
+    height: var(--app-height, 100dvh);      /* JS-computed: handles Chrome on iPad */
     overflow: hidden;
     display: flex;
     flex-direction: column;

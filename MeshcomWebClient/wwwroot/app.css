@@ -7,6 +7,8 @@ html, body {
     margin: 0;
     padding: 0;
     height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     font-size: 14px;
     background: #1a1a2e;
@@ -20,7 +22,9 @@ h1:focus {
 /* ===== App Layout ===== */
 .app-layout {
     height: 100vh;
+    height: -webkit-fill-available;
     height: 100dvh;
+    height: var(--app-height, 100dvh);  /* JS-computed: handles Chrome on iPad */
     display: flex;
     flex-direction: column;
     overflow: hidden;

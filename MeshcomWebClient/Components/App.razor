@@ -25,6 +25,20 @@
             var el = document.getElementById(id);
             if (el) el.scrollTop = el.scrollHeight;
         };
+
+        // Fix for Chrome/browsers on iPad where 100dvh may include the browser toolbar.
+        // Uses visualViewport.height (most accurate) to set a --app-height CSS variable.
+        (function () {
+            function updateAppHeight() {
+                var h = (window.visualViewport ? window.visualViewport.height : window.innerHeight) + 'px';
+                document.documentElement.style.setProperty('--app-height', h);
+            }
+            updateAppHeight();
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', updateAppHeight);
+            }
+            window.addEventListener('resize', updateAppHeight);
+        })();
     </script>
 </body>
 
