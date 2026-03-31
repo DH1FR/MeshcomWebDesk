@@ -252,6 +252,7 @@
     private bool _scrollMessages;
     private bool _soundEnabled = true;
     private bool _playSound;
+    private bool _isInitialized;
     private DateTime _lastNotificationTime = DateTime.MinValue;
 
     [Inject] private IConfiguration Configuration { get; set; } = default!;
@@ -266,6 +267,7 @@
         ChatService.OnChange += OnChatChanged;
         UdpService.OnStatusChange += OnStatusChanged;
         RefreshData();
+        _isInitialized = true;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -345,17 +347,17 @@
             ChatService.ClearUnread(_activeTabKey);
         _scrollMessages = true;
 
-        // Sound notification: play beep when a new direct message to own callsign arrives
-        if (_soundEnabled)
+        // Sound notification: play beep when a new direct message to own callsign arrives.
+        // _lastNotificationTime is always updated (even on first load) so that pre-existing
+        // saved messages don't trigger the sound after a page reload.
+        var latestDirect = _allMessages.FirstOrDefault(m =>
+            !m.IsOutgoing &&
+            string.Equals(m.To, _myCallsign, StringComparison.OrdinalIgnoreCase));
+        if (latestDirect != null)
         {
-            var latestDirect = _allMessages.FirstOrDefault(m =>
-                !m.IsOutgoing &&
-                string.Equals(m.To, _myCallsign, StringComparison.OrdinalIgnoreCase));
-            if (latestDirect != null && latestDirect.Timestamp > _lastNotificationTime)
-            {
-                _lastNotificationTime = latestDirect.Timestamp;
+            if (_isInitialized && _soundEnabled && latestDirect.Timestamp > _lastNotificationTime)
                 _playSound = true;
-            }
+            _lastNotificationTime = latestDirect.Timestamp;
         }
     }
 
