@@ -361,11 +361,15 @@
             ChatService.ClearUnread(_activeTabKey);
         _scrollMessages = true;
 
-        // Sound notification: play beep when a new direct message to own callsign arrives.
+        // Sound notification: play beep when a new direct chat message to own callsign arrives.
         // _lastNotificationTime is always updated (even on first load) so that pre-existing
         // saved messages don't trigger the sound after a page reload.
+        // Explicitly exclude ACKs, position beacons and telemetry.
         var latestDirect = _allMessages.FirstOrDefault(m =>
             !m.IsOutgoing &&
+            !m.IsAck &&
+            !m.IsPositionBeacon &&
+            !m.IsTelemetry &&
             string.Equals(m.To, _myCallsign, StringComparison.OrdinalIgnoreCase));
         if (latestDirect != null)
         {
