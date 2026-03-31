@@ -66,6 +66,7 @@
                         <th>GPS-Position</th>
                         <th class="col-center">Höhe</th>
                         <th class="col-center">Entfernung</th>
+                        <th class="col-center">🔋</th>
                         <th class="col-center">RSSI</th>
                         <th class="col-center">SNR</th>
                         <th></th>
@@ -76,7 +77,13 @@
                     {
                         var dist = CalcDistance(s);
                         <tr class="mh-row">
-                            <td class="mh-callsign">@s.Callsign</td>
+                            <td class="mh-callsign">
+                                <span title="@BuildStationTooltip(s)">@s.Callsign</span>
+                                @if (!string.IsNullOrEmpty(MeshcomLookup.HwName(s.HwId)))
+                                {
+                                    <span class="mh-hw-badge">@MeshcomLookup.HwName(s.HwId)</span>
+                                }
+                            </td>
                             <td class="mh-time">
                                 <span class="mh-date">@s.LastHeard.ToString("dd.MM.yy")</span>
                                 <span class="mh-hour">@s.LastHeard.ToString("HH:mm:ss")</span>
@@ -105,6 +112,16 @@
                             </td>
                             <td class="col-center mh-dist @(dist.HasValue ? "dist-known" : "")">
                                 @(dist.HasValue ? GeoHelper.FormatDistance(dist.Value) : "–")
+                            </td>
+                            <td class="col-center mh-batt">
+                                @if (s.Battery.HasValue)
+                                {
+                                    <span class="@BattClass(s.Battery.Value)" title="Akku @s.Battery%">@s.Battery%</span>
+                                }
+                                else
+                                {
+                                    <span class="mh-no-pos">–</span>
+                                }
                             </td>
                             <td class="col-center @RssiClass(s.LastRssi)">
                                 @(s.LastRssi.HasValue ? $"{s.LastRssi} dBm" : "–")
@@ -197,6 +214,22 @@
         null  => "",
         _     => "rssi-weak"
     };
+
+    private static string BattClass(int batt) => batt switch
+    {
+        > 60 => "batt-ok",
+        > 30 => "batt-warn",
+        _    => "batt-low"
+    };
+
+    private static string BuildStationTooltip(HeardStation s)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrEmpty(s.Firmware))      parts.Add($"FW: {s.Firmware}");
+        if (s.HwId.HasValue)                         parts.Add($"HW-ID: {s.HwId}");
+        if (s.FirstHeard != default)                 parts.Add($"Erstmals: {s.FirstHeard:dd.MM.yy HH:mm}");
+        return parts.Count > 0 ? string.Join(" | ", parts) : s.Callsign;
+    }
 
     public void Dispose()
     {

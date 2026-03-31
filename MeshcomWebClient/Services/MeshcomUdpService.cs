@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
+using MeshcomWebClient.Helpers;
 using MeshcomWebClient.Models;
 
 namespace MeshcomWebClient.Services;
@@ -142,6 +143,15 @@ public partial class MeshcomUdpService : BackgroundService
                             Status.LastRxFrom = message.From;
                             NotifyStatusChange();
                             _chatService.AddPositionBeacon(message);
+                        }
+                        else if (message.IsTelemetry)
+                        {
+                            // Telemetry packet: update MH list, show in monitor only
+                            Status.RxCount++;
+                            Status.LastRxTime = message.Timestamp;
+                            Status.LastRxFrom = message.From;
+                            NotifyStatusChange();
+                            _chatService.AddTelemetry(message);
                         }
                         else
                         {
@@ -311,14 +321,15 @@ public partial class MeshcomUdpService : BackgroundService
 
             var msgType          = typeProp.GetString();
             var isPositionBeacon = msgType == "pos";
+            var isTelemetry      = msgType == "tele";
 
-            // Only handle "msg" (chat) and "pos" (position beacon) types
-            if (msgType != "msg" && msgType != "pos")
+            // Handle "msg", "pos", and "tele" types; ignore everything else
+            if (msgType != "msg" && msgType != "pos" && msgType != "tele")
                 return null;
 
             var src = srcProp.GetString() ?? string.Empty;
 
-            // "msg" requires dst + msg fields; "pos" may omit them
+            // "msg" requires dst + msg fields; "pos" may omit them; "tele" has neither
             string dst = "*";
             string msg = string.Empty;
             if (msgType == "msg")
@@ -334,13 +345,15 @@ public partial class MeshcomUdpService : BackgroundService
                 dst = dstProp2.GetString() ?? "*";
             }
 
-            // For relayed messages ("OE1XAR-62,DB0TAW-13,..."), use the first callsign as sender
-            var commaIdx = src.IndexOf(',');
-            var sender   = commaIdx >= 0 ? src[..commaIdx] : src;
+            // For relayed messages ("OE1XAR-62,DB0TAW-13,..."), use the first callsign as sender;
+            // preserve the full path for display.
+            var commaIdx  = src.IndexOf(',');
+            var sender    = commaIdx >= 0 ? src[..commaIdx] : src;
+            var relayPath = commaIdx >= 0 ? src : null;
 
             // Extract sequence number from {NNN} before stripping it
             string? seqNum = null;
-            if (!isPositionBeacon)
+            if (!isPositionBeacon && !isTelemetry)
             {
                 var seqMatch = SequenceNumberPattern().Match(msg);
                 if (seqMatch.Success)
@@ -365,6 +378,23 @@ public partial class MeshcomUdpService : BackgroundService
 
             int?    rssi = (!isNodePacket && root.TryGetProperty("rssi", out var rssiProp)) ? rssiProp.GetInt32()  : null;
             double? snr  = (!isNodePacket && root.TryGetProperty("snr",  out var snrProp))  ? snrProp.GetDouble() : null;
+
+            // ── msg_id ───────────────────────────────────────────────────────
+            string? msgId = root.TryGetProperty("msg_id", out var msgIdProp) ? msgIdProp.GetString() : null;
+
+            // ── Hardware, firmware, battery ──────────────────────────────────
+            int? hwId = root.TryGetProperty("hw_id", out var hwProp) && hwProp.ValueKind == JsonValueKind.Number
+                ? hwProp.GetInt32() : null;
+
+            int? battery = root.TryGetProperty("batt", out var battProp) && battProp.ValueKind == JsonValueKind.Number
+                ? battProp.GetInt32() : null;
+
+            // "firmware" can be integer (35) or string ("4.35")
+            string? rawFw = null;
+            if (root.TryGetProperty("firmware", out var fwProp))
+                rawFw = fwProp.ValueKind == JsonValueKind.String ? fwProp.GetString() : fwProp.GetInt32().ToString();
+            string? fwSub   = root.TryGetProperty("fw_sub", out var fwSubProp) ? fwSubProp.GetString() : null;
+            string? firmware = MeshcomLookup.FormatFirmware(rawFw, fwSub);
 
             // ── GPS coordinates ──────────────────────────────────────────────
             // MeshCom node format uses separate direction fields:
@@ -407,6 +437,23 @@ public partial class MeshcomUdpService : BackgroundService
             // 0°N 0°E (null island) = no GPS fix
             if (lat is 0.0 && lon is 0.0) { lat = null; lon = null; alt = null; }
 
+            // ── Telemetry fields ─────────────────────────────────────────────
+            double? temp1    = null;
+            double? temp2    = null;
+            double? humidity = null;
+            double? pressure = null;
+            if (isTelemetry)
+            {
+                if (root.TryGetProperty("temp1", out var t1) && t1.ValueKind == JsonValueKind.Number) temp1    = t1.GetDouble();
+                if (root.TryGetProperty("temp2", out var t2) && t2.ValueKind == JsonValueKind.Number) temp2    = t2.GetDouble();
+                if (root.TryGetProperty("hum",   out var hm) && hm.ValueKind == JsonValueKind.Number) humidity = hm.GetDouble();
+                // Prefer qnh (sea-level) over qfe (station pressure)
+                if (root.TryGetProperty("qnh", out var qnh) && qnh.ValueKind == JsonValueKind.Number && qnh.GetDouble() > 0)
+                    pressure = qnh.GetDouble();
+                else if (root.TryGetProperty("qfe", out var qfe) && qfe.ValueKind == JsonValueKind.Number && qfe.GetDouble() > 0)
+                    pressure = qfe.GetDouble();
+            }
+
             return new MeshcomMessage
             {
                 From             = sender,
@@ -420,8 +467,19 @@ public partial class MeshcomUdpService : BackgroundService
                 Longitude        = lon,
                 Altitude         = alt,
                 IsPositionBeacon = isPositionBeacon,
+                IsTelemetry      = isTelemetry,
                 IsAck            = isAck,
-                SequenceNumber   = seqNum
+                MsgId            = msgId,
+                SequenceNumber   = seqNum,
+                RelayPath        = relayPath,
+                SrcType          = srcType,
+                HwId             = hwId,
+                Battery          = battery,
+                Firmware         = firmware,
+                Temp1            = temp1,
+                Temp2            = temp2,
+                Humidity         = humidity,
+                Pressure         = pressure,
             };
         }
         catch (JsonException ex)

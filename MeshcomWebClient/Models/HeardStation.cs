@@ -41,4 +41,13 @@ public class HeardStation
 
     /// <summary>Timestamp when the GPS position was last updated.</summary>
     public DateTime? LastPositionTime { get; set; }
+
+    /// <summary>Battery level in percent (from "batt" field in position/telemetry packets).</summary>
+    public int? Battery { get; set; }
+
+    /// <summary>Hardware ID (from "hw_id" field).</summary>
+    public int? HwId { get; set; }
+
+    /// <summary>Firmware version string (e.g. "4.35p").</summary>
+    public string? Firmware { get; set; }
 }

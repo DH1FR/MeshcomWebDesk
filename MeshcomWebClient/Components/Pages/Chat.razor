@@ -101,10 +101,11 @@
                         @(m.IsOutgoing ? "TX" : "RX")
                     </span>
 
-                    @* Routing: From → To *@
+                    @* Routing: From → To  (relay path as tooltip) *@
                     @if (!string.IsNullOrEmpty(m.From))
                     {
-                        <span class="mon-routing">
+                        var routingTitle = m.RelayPath != null ? $"Pfad: {m.RelayPath}" : m.From;
+                        <span class="mon-routing" title="@routingTitle">
                             @if (!string.Equals(m.From, _myCallsign, StringComparison.OrdinalIgnoreCase))
                             {
                                 <span class="mon-call mon-call-link" @onclick="() => OpenTabFromMonitor(m.From)"
@@ -113,6 +114,10 @@
                             else
                             {
                                 <span class="mon-call">@m.From</span>
+                            }
+                            @if (m.RelayPath != null)
+                            {
+                                <span class="mon-hops" title="@m.RelayPath">⇢@(m.RelayPath.Count(c => c == ','))🔀</span>
                             }
                             @if (!string.IsNullOrEmpty(m.To))
                             {
@@ -135,7 +140,16 @@
                     }
 
                     @* Content *@
-                    @if (m.IsPositionBeacon && m.Latitude.HasValue)
+                    @if (m.IsTelemetry)
+                    {
+                        <span class="mon-content mon-tele">
+                            @if (m.Temp1.HasValue && m.Temp1 != 0)  { <span>🌡️ @m.Temp1.Value.ToString("F1")°C</span> }
+                            @if (m.Humidity.HasValue && m.Humidity != 0) { <span class="mon-alt">&nbsp;·&nbsp;💧 @m.Humidity.Value.ToString("F0")%</span> }
+                            @if (m.Pressure.HasValue && m.Pressure != 0) { <span class="mon-alt">&nbsp;·&nbsp;🧭 @m.Pressure.Value.ToString("F1") hPa</span> }
+                            @if (m.Battery.HasValue) { <span class="mon-alt">&nbsp;·&nbsp;🔋 @m.Battery%</span> }
+                        </span>
+                    }
+                    else if (m.IsPositionBeacon && m.Latitude.HasValue)
                     {
                         <span class="mon-content mon-pos">
                             📍&nbsp;@($"{Math.Abs(m.Latitude.Value):F4}°{(m.Latitude >= 0 ? "N" : "S")}")
@@ -451,6 +465,7 @@
 
     private static string MonType(MeshcomMessage m)
     {
+        if (m.IsTelemetry)                 return "TEL";
         if (m.IsPositionBeacon)            return "POS";
         if (m.IsAck)                       return "ACK";
         if (m.IsOutgoing)                  return "MSG";
@@ -460,6 +475,7 @@
 
     private static string MonBadgeClass(MeshcomMessage m) => MonType(m) switch
     {
+        "TEL" => "badge-tel",
         "POS" => "badge-pos",
         "ACK" => "badge-ack",
         "MSG" when m.IsOutgoing => "badge-tx",
@@ -469,6 +485,7 @@
 
     private static string MonRowClass(MeshcomMessage m) =>
         m.IsOutgoing ? "mon-row-tx" :
+        m.IsTelemetry ? "mon-row-tele" :
         m.IsPositionBeacon ? "mon-row-pos" :
         m.IsAck ? "mon-row-ack" :
         !string.IsNullOrEmpty(m.From) ? "mon-row-msg" :

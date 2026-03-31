@@ -292,6 +292,17 @@ public class ChatService
         NotifyChange();
     }
 
+    /// <summary>
+    /// Process a telemetry packet: update MH data and add to monitor feed.
+    /// Does NOT open or update any chat tab.
+    /// </summary>
+    public void AddTelemetry(MeshcomMessage message)
+    {
+        UpdateMhList(message);
+        lock (_lock) { AppendToMonitor(message); }
+        NotifyChange();
+    }
+
     /// <summary>Get a specific tab.</summary>
     public ChatTab? GetTab(string key)
     {
@@ -314,12 +325,15 @@ public class ChatService
     /// <summary>
     /// Returns true when an identical message was already processed within <see cref="DedupWindow"/>.
     /// Registers the message as seen on first encounter.
+    /// Priority: msg_id (most reliable) → seq:{From}:{SeqNr} → txt:{From}:{To}:{Text}
     /// </summary>
     private bool IsDuplicate(MeshcomMessage message)
     {
-        string key = !string.IsNullOrEmpty(message.SequenceNumber)
-            ? $"seq:{message.From}:{message.SequenceNumber}"
-            : $"txt:{message.From}:{message.To}:{message.Text}";
+        string key = !string.IsNullOrEmpty(message.MsgId)
+            ? $"mid:{message.MsgId}"
+            : !string.IsNullOrEmpty(message.SequenceNumber)
+                ? $"seq:{message.From}:{message.SequenceNumber}"
+                : $"txt:{message.From}:{message.To}:{message.Text}";
 
         lock (_lock)
         {
@@ -354,7 +368,7 @@ public class ChatService
                 Callsign         = message.From,
                 FirstHeard       = message.Timestamp,
                 LastHeard        = message.Timestamp,
-                MessageCount     = message.IsPositionBeacon ? 0 : 1,
+                MessageCount     = (message.IsPositionBeacon || message.IsTelemetry) ? 0 : 1,
                 LastDestination  = message.To,
                 LastMessage      = message.Text,
                 LastRssi         = message.Rssi,
@@ -362,19 +376,25 @@ public class ChatService
                 Latitude         = message.Latitude,
                 Longitude        = message.Longitude,
                 Altitude         = message.Altitude,
-                LastPositionTime = message.Latitude.HasValue ? message.Timestamp : null
+                LastPositionTime = message.Latitude.HasValue ? message.Timestamp : null,
+                Battery          = message.Battery,
+                HwId             = message.HwId,
+                Firmware         = message.Firmware,
             },
             (_, s) =>
             {
                 s.LastHeard = message.Timestamp;
-                if (!message.IsPositionBeacon)
+                if (!message.IsPositionBeacon && !message.IsTelemetry)
                 {
                     s.MessageCount++;
                     s.LastDestination = message.To;
                     s.LastMessage     = message.Text;
                 }
-                if (message.Rssi.HasValue) s.LastRssi = message.Rssi;
-                if (message.Snr.HasValue)  s.LastSnr  = message.Snr;
+                if (message.Rssi.HasValue)    s.LastRssi = message.Rssi;
+                if (message.Snr.HasValue)     s.LastSnr  = message.Snr;
+                if (message.Battery.HasValue) s.Battery  = message.Battery;
+                if (message.HwId.HasValue)    s.HwId     = message.HwId;
+                if (!string.IsNullOrEmpty(message.Firmware)) s.Firmware = message.Firmware;
                 if (message.Latitude.HasValue)
                 {
                     s.Latitude         = message.Latitude;

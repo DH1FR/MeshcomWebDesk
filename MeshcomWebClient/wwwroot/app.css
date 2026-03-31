@@ -328,6 +328,8 @@ h1:focus {
 .mon-row-tx:hover     { background: #142b1f; }
 .mon-row-pos          { background: #0d1c22; border-left-color: #1f7a8c; }
 .mon-row-pos:hover    { background: #0f252e; }
+.mon-row-tele         { background: #1a0d2e; border-left-color: #9b59b6; }
+.mon-row-tele:hover   { background: #220f38; }
 .mon-row-ack          { opacity: 0.6; border-left-color: #b8a000; }
 .mon-row-ack:hover    { opacity: 1.0; background: #1c1c00; }
 .mon-row-sys          { opacity: 0.72; }
@@ -355,6 +357,7 @@ h1:focus {
 .badge-tx  { background: #0d3a25; color: #6ee57a; }
 .badge-pos { background: #0d3542; color: #4de8f0; }
 .badge-ack { background: #2d2d00; color: #b8a000; }
+.badge-tel { background: #2d1a3a; color: #c792ea; }
 .badge-sys { background: #3a3a3a; color: #8b949e; }
 
 /* Direction */
@@ -384,9 +387,11 @@ h1:focus {
 .mon-text    { color: #e6edf3; }
 .mon-text::before { content: ''; }
 .mon-pos     { color: #56d4db; }
+.mon-tele    { color: #c792ea; }
 .mon-alt     { color: #8b949e; }
 .mon-dist    { color: #8b949e; }
 .mon-sys     { color: #6e7681; font-size: 11px; }
+.mon-hops    { color: #6e7681; font-size: 10px; margin: 0 2px; cursor: help; }
 
 /* Signal */
 .mon-signal {
@@ -531,6 +536,24 @@ h1:focus {
 .mh-table td { padding: 6px 10px; vertical-align: middle; }
 
 .mh-callsign  { font-weight: 700; color: #a0c4ff; white-space: nowrap; }
+
+.mh-hw-badge {
+    display: inline-block;
+    margin-left: 5px;
+    font-size: 9px;
+    font-weight: 600;
+    background: #0f3460;
+    color: #79c0ff;
+    border-radius: 3px;
+    padding: 1px 4px;
+    vertical-align: middle;
+    letter-spacing: 0.03em;
+}
+
+.mh-batt { white-space: nowrap; font-size: 11px; }
+.batt-ok   { color: #3fb950; }
+.batt-warn { color: #d29922; }
+.batt-low  { color: #f85149; font-weight: 700; }
 
 .mh-time      { white-space: nowrap; }
 .mh-date      { display: block; font-size: 10px; color: #6c757d; }
