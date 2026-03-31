@@ -135,7 +135,7 @@ All settings in `MeshcomWebClient/appsettings.json`:
   "ListenPort":         1799,            // local UDP port
   "DeviceIp":           "192.168.1.60",  // MeshCom node IP
   "DevicePort":         1799,            // MeshCom node UDP port
-  "MyCallsign":         "DH1FR-2",       // own callsign
+  "MyCallsign":         "NOCALL-1",       // own callsign
   "LogPath":            "C:\\Temp\\Logs",// log file directory
   "LogRetainDays":      30,              // log file retention in days
   "LogUdpTraffic":      false,           // log every UDP packet to file
@@ -191,13 +191,13 @@ This client communicates with the MeshCom node using the **EXTUDP JSON protocol*
 
 | Direction | Example |
 |-----------|---------|
-| Registration | `{"type":"info","src":"DH1FR-2","dst":"*","msg":"info"}` |
-| Chat RX (direct) | `{"src_type":"lora","type":"msg","src":"DH1FR-1","dst":"DH1FR-2","msg":"Hello{034","msg_id":"5DFC7187","rssi":-95,"snr":12,"firmware":35,"fw_sub":"p"}` |
+| Registration | `{"type":"info","src":"NOCALL-2","dst":"*","msg":"info"}` |
+| Chat RX (direct) | `{"src_type":"lora","type":"msg","src":"NOCALL-1","dst":"NOCALL-2","msg":"Hello{034","msg_id":"5DFC7187","rssi":-95,"snr":12,"firmware":35,"fw_sub":"p"}` |
 | Chat RX (relayed) | `{"src_type":"lora","type":"msg","src":"OE1XAR-62,DL0VBK-12,DB0KH-11","dst":"*","msg":"...","rssi":-109,"snr":5}` |
 | Position RX | `{"src_type":"lora","type":"pos","src":"DB0MGN-1,...","lat":50.57,"lat_dir":"N","long":10.42,"long_dir":"E","alt":1243,"batt":100,"hw_id":42,"firmware":35,"fw_sub":"p","rssi":-108,"snr":5}` |
 | Telemetry RX | `{"src_type":"lora","type":"tele","src":"DB0MGN-1,...","batt":100,"temp1":20.6,"hum":0,"qnh":1031.4}` |
-| Chat TX | `{"type":"msg","dst":"DH1FR-1","msg":"Hello"}` |
-| ACK RX | `{"src_type":"udp","type":"msg","src":"DH1FR-1","dst":"DH1FR-2","msg":"DH1FR-2  :ack034","msg_id":"A177E139"}` |
+| Chat TX | `{"type":"msg","dst":"NOCALL-1","msg":"Hello"}` |
+| ACK RX | `{"src_type":"udp","type":"msg","src":"NOCALL-1","dst":"NOCALL-2","msg":"NOCALL-2  :ack034","msg_id":"A177E139"}` |
 
 ### ACK delivery tracking
 
@@ -285,7 +285,7 @@ Either edit `appsettings.json` (next to `docker-compose.yml`) or use environment
 ```yaml
 environment:
   - Meshcom__DeviceIp=192.168.1.60
-  - Meshcom__MyCallsign=DH1FR-2
+  - Meshcom__MyCallsign=NOCALL-1
   - Meshcom__GroupFilterEnabled=true
   - Meshcom__Groups__0=#OE
   - Meshcom__Groups__1=#Test
@@ -409,7 +409,7 @@ The shipped `appsettings.json` contains placeholder values – the following **m
 
 | Key | Description | Example |
 |-----|-------------|---------|
-| `MyCallsign` | Your own callsign | `DH1FR-2` |
+| `MyCallsign` | Your own callsign | `NOCALL-1` |
 | `DeviceIp` | IP address of the MeshCom node | `192.168.1.60` |
 | `LogPath` | Directory for log files | `./logs` / `/var/log/meshcom` |
 | `DataPath` | Directory for persistent state | `./data` / `/opt/meshcom/data` |

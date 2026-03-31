@@ -14,9 +14,9 @@ namespace MeshcomWebClient.Services;
 /// Listens for incoming messages and provides a method to send messages.
 /// 
 /// MeshCom EXTUDP JSON format:
-///   RX chat : {"src_type":"lora","type":"msg","src":"DH1FR-1","dst":"DH1FR-2","msg":"Hello{034","rssi":-95,"snr":12,...}
-///   RX pos  : {"src_type":"node","type":"pos","src":"DH1FR-2","lat":50.8515,"lat_dir":"N","long":9.1075,"long_dir":"E","alt":827,...}
-///   TX chat : {"type":"msg","dst":"DH1FR-1","msg":"Hello"}
+///   RX chat : {"src_type":"lora","type":"msg","src":"NOCALL-1","dst":"NOCALL-2","msg":"Hello{034","rssi":-95,"snr":12,...}
+///   RX pos  : {"src_type":"node","type":"pos","src":"NOCALL-2","lat":50.8515,"lat_dir":"N","long":9.1075,"long_dir":"E","alt":827,...}
+///   TX chat : {"type":"msg","dst":"NOCALL-1","msg":"Hello"}
 /// </summary>
 public partial class MeshcomUdpService : BackgroundService
 {
@@ -35,7 +35,7 @@ public partial class MeshcomUdpService : BackgroundService
     [GeneratedRegex(@"\{\d+$")]
     private static partial Regex TrailingSequencePattern();
 
-    /// <summary>Matches APRS-style ACK messages, e.g. "DH1FR-2 :ack187" or "DH1FR-2  :ack187" (padded addressee).</summary>
+    /// <summary>Matches APRS-style ACK messages, e.g. "NOCALL-2 :ack187" or "NOCALL-2  :ack187" (padded addressee).</summary>
     [GeneratedRegex(@"^\S+\s+:ack\d+$")]
     private static partial Regex AckPattern();
 
@@ -43,7 +43,7 @@ public partial class MeshcomUdpService : BackgroundService
     [GeneratedRegex(@"\{(\d+)$")]
     private static partial Regex SequenceNumberPattern();
 
-    /// <summary>Captures the sequence number from an APRS ACK text, e.g. "DH1FR-2  :ack034" → "034".</summary>
+    /// <summary>Captures the sequence number from an APRS ACK text, e.g. "NOCALL-2  :ack034" → "034".</summary>
     [GeneratedRegex(@":ack(\d+)$", RegexOptions.IgnoreCase)]
     private static partial Regex AckSequencePattern();
 
@@ -361,7 +361,7 @@ public partial class MeshcomUdpService : BackgroundService
                 msg = TrailingSequencePattern().Replace(msg, string.Empty);
             }
 
-            // Detect APRS-style ACK: "DH1FR-2 :ack187" (callsign may be space-padded to 9 chars)
+            // Detect APRS-style ACK: "NOCALL-2 :ack187" (callsign may be space-padded to 9 chars)
             var isAck = !isPositionBeacon && AckPattern().IsMatch(msg.Trim());
 
             // For ACK messages extract the sequence number from the :ackNNN part

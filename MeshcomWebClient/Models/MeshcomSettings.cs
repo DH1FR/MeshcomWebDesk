@@ -17,7 +17,7 @@ public class MeshcomSettings
     public int DevicePort { get; set; } = 1799;
 
     /// <summary>Own callsign used as sender in outgoing messages.</summary>
-    public string MyCallsign { get; set; } = "DH1FR-2";
+    public string MyCallsign { get; set; } = "NOCALL-1";
 
     /// <summary>Directory path for log files.</summary>
     public string LogPath { get; set; } = @"C:\Temp\Logs";
