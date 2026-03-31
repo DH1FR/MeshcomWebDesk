@@ -371,6 +371,11 @@ h1:focus {
     white-space: nowrap;
 }
 .mon-call  { color: #cdd9e5; font-weight: 600; }
+.mon-call-link {
+    cursor: pointer;
+    text-decoration: underline dotted #4a6a9a;
+}
+.mon-call-link:hover { color: #79c0ff; text-decoration: underline solid; }
 .mon-arrow { color: #6e7681; }
 .mon-bcast { color: #f0883e; }
 

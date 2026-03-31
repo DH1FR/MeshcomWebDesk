@@ -105,13 +105,31 @@
                     @if (!string.IsNullOrEmpty(m.From))
                     {
                         <span class="mon-routing">
-                            <span class="mon-call">@m.From</span>
+                            @if (!string.Equals(m.From, _myCallsign, StringComparison.OrdinalIgnoreCase))
+                            {
+                                <span class="mon-call mon-call-link" @onclick="() => OpenTabFromMonitor(m.From)"
+                                      title="Chat mit @m.From öffnen">@m.From</span>
+                            }
+                            else
+                            {
+                                <span class="mon-call">@m.From</span>
+                            }
                             @if (!string.IsNullOrEmpty(m.To))
                             {
                                 <span class="mon-arrow">→</span>
-                                <span class="mon-call @(m.IsBroadcast ? "mon-bcast" : "")">
-                                    @(m.IsBroadcast ? "alle" : m.To)
-                                </span>
+                                @if (m.IsBroadcast)
+                                {
+                                    <span class="mon-call mon-bcast">alle</span>
+                                }
+                                else if (!string.Equals(m.To, _myCallsign, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    <span class="mon-call mon-call-link" @onclick="() => OpenTabFromMonitor(m.To)"
+                                          title="Chat mit @m.To öffnen">@m.To</span>
+                                }
+                                else
+                                {
+                                    <span class="mon-call">@m.To</span>
+                                }
                             }
                         </span>
                     }
@@ -352,6 +370,14 @@
         _activeTab = ChatService.GetTab(key);
         _showNewTabInput = false;
         _newTabCallsign = string.Empty;
+        RefreshData();
+    }
+
+    private void OpenTabFromMonitor(string callsign)
+    {
+        var key = callsign.Trim().ToUpperInvariant();
+        ChatService.OpenTab(key);
+        SelectTab(key);
         RefreshData();
     }
 
