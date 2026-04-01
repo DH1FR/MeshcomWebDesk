@@ -191,10 +191,12 @@ public class ChatService
     {
         lock (_lock)
         {
+            // m.To may carry the '#' prefix (e.g. "#9") while the node echo uses the raw
+            // group number (e.g. "9") – strip '#' on both sides before comparing.
             var msg = _allMessages.LastOrDefault(m =>
                 m.IsOutgoing &&
                 m.SequenceNumber == null &&
-                string.Equals(m.To, destination, StringComparison.OrdinalIgnoreCase));
+                string.Equals(m.To.TrimStart('#'), destination.TrimStart('#'), StringComparison.OrdinalIgnoreCase));
             if (msg != null)
                 msg.SequenceNumber = sequenceNumber;
         }

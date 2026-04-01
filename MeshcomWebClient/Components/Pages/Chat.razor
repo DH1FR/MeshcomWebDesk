@@ -446,8 +446,9 @@
 
         // Strip leading '#' for group tabs – the node uses the raw group number (e.g. "262"),
         // the '#' is an internal UI convention only.
+        // Pass the original tab key so the outgoing message is routed to the correct '#' tab.
         var destination = _activeTab.Key == "*" ? "CQCQCQ" : _activeTab.Key.TrimStart('#');
-        await UdpService.SendMessageAsync(destination, _messageText);
+        await UdpService.SendMessageAsync(destination, _messageText, _activeTab.Key);
         _messageText = string.Empty;
     }
 

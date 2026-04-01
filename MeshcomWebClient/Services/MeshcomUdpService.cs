@@ -233,7 +233,11 @@ public partial class MeshcomUdpService : BackgroundService
     /// <summary>
     /// Send a text message to the MeshCom device via UDP.
     /// </summary>
-    public async Task SendMessageAsync(string destination, string text)
+    /// <param name="destination">Wire destination sent to the node (no leading '#', e.g. "9" for group #9).</param>
+    /// <param name="text">Message text.</param>
+    /// <param name="tabKey">Original chat-tab key (e.g. "#9", "*"). Used for local tab routing only.
+    /// When null, <paramref name="destination"/> is used for both wire and tab routing.</param>
+    public async Task SendMessageAsync(string destination, string text, string? tabKey = null)
     {
         if (_udpClient == null)
         {
@@ -259,7 +263,7 @@ public partial class MeshcomUdpService : BackgroundService
             _chatService.AddOutgoingMessage(new MeshcomMessage
             {
                 From = _settings.MyCallsign,
-                To = destination,
+                To = tabKey ?? destination,
                 Text = text,
                 IsOutgoing = true,
                 RawData = json
