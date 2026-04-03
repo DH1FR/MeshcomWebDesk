@@ -14,7 +14,7 @@ public class ChatService
     private readonly ConcurrentDictionary<string, HeardStation> _mhList = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<MeshcomMessage> _allMessages = [];
     private readonly object _lock = new();
-    private readonly MeshcomSettings _settings;
+    private MeshcomSettings _settings;
     private readonly ILogger<ChatService> _logger;
 
     /// <summary>
@@ -36,10 +36,11 @@ public class ChatService
     /// </summary>
     public event Action<string>? OnNewDirectTab;
 
-    public ChatService(IOptions<MeshcomSettings> settings, ILogger<ChatService> logger)
+    public ChatService(IOptionsMonitor<MeshcomSettings> settings, ILogger<ChatService> logger)
     {
-        _settings = settings.Value;
+        _settings = settings.CurrentValue;
         _logger   = logger;
+        settings.OnChange(s => _settings = s);
     }
 
     /// <summary>All open tabs.</summary>

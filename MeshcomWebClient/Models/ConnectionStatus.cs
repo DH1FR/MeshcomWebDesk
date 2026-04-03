@@ -43,4 +43,10 @@ public class ConnectionStatus
 
     /// <summary>Source of the own position: "Browser GPS", "Node" or empty when unknown.</summary>
     public string OwnPositionSource { get; set; } = string.Empty;
+
+    /// <summary>True while the beacon is configured and running (BeaconEnabled + group + text set).</summary>
+    public bool BeaconActive { get; set; }
+
+    /// <summary>Scheduled time of the next beacon transmission. Null when beacon is inactive.</summary>
+    public DateTime? BeaconNextSend { get; set; }
 }

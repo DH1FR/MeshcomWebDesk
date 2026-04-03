@@ -1,0 +1,235 @@
+@page "/settings"
+@rendermode InteractiveServer
+@using Microsoft.Extensions.Options
+@inject IOptionsMonitor<MeshcomSettings> SettingsMonitor
+@inject SettingsService SettingsService
+
+<PageTitle>Einstellungen – MeshCom Web Client</PageTitle>
+
+<div class="settings-page">
+    <div class="settings-container">
+
+        <div class="settings-header">
+            <span class="settings-icon">⚙️</span>
+            <h1 class="settings-title">Einstellungen</h1>
+        </div>
+
+        <div class="settings-notice">
+            ℹ️ Die meisten Einstellungen werden <strong>sofort</strong> übernommen, ohne Neustart.<br />
+            Ausnahmen: <strong>Listen-IP / Listen-Port</strong> (Socket-Binding) und
+            <strong>Log-Pfad / Log-Aufbewahrung</strong> (Serilog) erfordern einen Neustart der Anwendung.
+        </div>
+
+        @if (_saved)
+        {
+            <div class="settings-success">✅ Einstellungen gespeichert.</div>
+        }
+        @if (_errorMessage != null)
+        {
+            <div class="settings-error">❌ Fehler: @_errorMessage</div>
+        }
+
+        <!-- Verbindung -->
+        <div class="settings-section">
+            <h2 class="settings-section-title">🔌 Verbindung</h2>
+            <div class="settings-grid">
+                <label>Listen IP</label>
+                <input type="text" @bind="_model.ListenIp" />
+
+                <label>Listen Port</label>
+                <input type="number" min="1" max="65535" @bind="_model.ListenPort" />
+
+                <label>Device IP</label>
+                <input type="text" @bind="_model.DeviceIp" />
+
+                <label>Device Port</label>
+                <input type="number" min="1" max="65535" @bind="_model.DevicePort" />
+
+                <label>Eigenes Rufzeichen</label>
+                <input type="text" @bind="_model.MyCallsign" />
+            </div>
+        </div>
+
+        <!-- Logging -->
+        <div class="settings-section">
+            <h2 class="settings-section-title">📝 Logging</h2>
+            <div class="settings-grid">
+                <label>Log-Pfad</label>
+                <input type="text" @bind="_model.LogPath" />
+
+                <label>Log-Aufbewahrung (Tage)</label>
+                <input type="number" min="1" @bind="_model.LogRetainDays" />
+
+                <label>UDP-Traffic loggen</label>
+                <label class="settings-toggle">
+                    <input type="checkbox" @bind="_model.LogUdpTraffic" />
+                    <span>@(_model.LogUdpTraffic ? "Aktiv" : "Inaktiv")</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Chat & Monitor -->
+        <div class="settings-section">
+            <h2 class="settings-section-title">💬 Chat &amp; Monitor</h2>
+            <div class="settings-grid">
+                <label>Monitor-Limit (Einträge)</label>
+                <input type="number" min="10" @bind="_model.MonitorMaxMessages" />
+
+                <label>Gruppenfilter aktiv</label>
+                <label class="settings-toggle">
+                    <input type="checkbox" @bind="_model.GroupFilterEnabled" />
+                    <span>@(_model.GroupFilterEnabled ? "Aktiv" : "Inaktiv")</span>
+                </label>
+
+                <label>
+                    Gruppen-Whitelist<br />
+                    <small>(eine pro Zeile, z.&nbsp;B. #262)</small>
+                </label>
+                <textarea rows="4" @bind="_model.GroupsText"></textarea>
+            </div>
+        </div>
+
+        <!-- Datenspeicherung -->
+        <div class="settings-section">
+            <h2 class="settings-section-title">💾 Datenspeicherung</h2>
+            <div class="settings-grid">
+                <label>Datenpfad</label>
+                <input type="text" @bind="_model.DataPath" />
+            </div>
+        </div>
+
+        <!-- Auto-Reply -->
+        <div class="settings-section">
+            <h2 class="settings-section-title">↩️ Auto-Reply</h2>
+            <div class="settings-grid">
+                <label>Auto-Reply aktiv</label>
+                <label class="settings-toggle">
+                    <input type="checkbox" @bind="_model.AutoReplyEnabled" />
+                    <span>@(_model.AutoReplyEnabled ? "Aktiv" : "Inaktiv")</span>
+                </label>
+
+                <label>Auto-Reply Text</label>
+                <input type="text" @bind="_model.AutoReplyText" />
+            </div>
+        </div>
+
+        <!-- Bake (Beacon) -->
+        <div class="settings-section">
+            <h2 class="settings-section-title">📡 Bake (Beacon)</h2>
+            <div class="settings-grid">
+                <label>Bake aktiv</label>
+                <label class="settings-toggle">
+                    <input type="checkbox" @bind="_model.BeaconEnabled" />
+                    <span>@(_model.BeaconEnabled ? "Aktiv" : "Inaktiv")</span>
+                </label>
+
+                <label>Gruppe</label>
+                <input type="text" @bind="_model.BeaconGroup" placeholder="#262" />
+
+                <label>Bakentext</label>
+                <input type="text" @bind="_model.BeaconText" />
+
+                <label>Interval (Stunden, min. 1)</label>
+                <input type="number" min="1" @bind="_model.BeaconIntervalHours" />
+            </div>
+        </div>
+
+        <div class="settings-actions">
+            <button class="btn-save" @onclick="SaveAsync">💾 Speichern</button>
+        </div>
+
+    </div>
+</div>
+
+@code {
+    private FormModel _model = new();
+    private bool _saved;
+    private string? _errorMessage;
+
+    protected override void OnInitialized()
+    {
+        var s = SettingsMonitor.CurrentValue;
+        _model = new FormModel
+        {
+            ListenIp            = s.ListenIp,
+            ListenPort          = s.ListenPort,
+            DeviceIp            = s.DeviceIp,
+            DevicePort          = s.DevicePort,
+            MyCallsign          = s.MyCallsign,
+            LogPath             = s.LogPath,
+            LogRetainDays       = s.LogRetainDays,
+            LogUdpTraffic       = s.LogUdpTraffic,
+            MonitorMaxMessages  = s.MonitorMaxMessages,
+            GroupFilterEnabled  = s.GroupFilterEnabled,
+            GroupsText          = string.Join("\n", s.Groups),
+            DataPath            = s.DataPath,
+            AutoReplyEnabled    = s.AutoReplyEnabled,
+            AutoReplyText       = s.AutoReplyText,
+            BeaconEnabled       = s.BeaconEnabled,
+            BeaconGroup         = s.BeaconGroup,
+            BeaconText          = s.BeaconText,
+            BeaconIntervalHours = s.BeaconIntervalHours
+        };
+    }
+
+    private async Task SaveAsync()
+    {
+        _saved        = false;
+        _errorMessage = null;
+        try
+        {
+            await SettingsService.SaveMeshcomSettingsAsync(_model.ToSettings());
+            _saved = true;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private sealed class FormModel
+    {
+        public string ListenIp            { get; set; } = "0.0.0.0";
+        public int    ListenPort          { get; set; } = 1799;
+        public string DeviceIp            { get; set; } = "192.168.1.60";
+        public int    DevicePort          { get; set; } = 1799;
+        public string MyCallsign          { get; set; } = "NOCALL-1";
+        public string LogPath             { get; set; } = string.Empty;
+        public int    LogRetainDays       { get; set; } = 30;
+        public bool   LogUdpTraffic       { get; set; }
+        public int    MonitorMaxMessages  { get; set; } = 1000;
+        public bool   GroupFilterEnabled  { get; set; }
+        public string GroupsText          { get; set; } = string.Empty;
+        public string DataPath            { get; set; } = string.Empty;
+        public bool   AutoReplyEnabled    { get; set; }
+        public string AutoReplyText       { get; set; } = string.Empty;
+        public bool   BeaconEnabled       { get; set; }
+        public string BeaconGroup         { get; set; } = string.Empty;
+        public string BeaconText          { get; set; } = string.Empty;
+        public int    BeaconIntervalHours { get; set; } = 1;
+
+        public MeshcomSettings ToSettings() => new()
+        {
+            ListenIp            = ListenIp,
+            ListenPort          = ListenPort,
+            DeviceIp            = DeviceIp,
+            DevicePort          = DevicePort,
+            MyCallsign          = MyCallsign,
+            LogPath             = LogPath,
+            LogRetainDays       = LogRetainDays,
+            LogUdpTraffic       = LogUdpTraffic,
+            MonitorMaxMessages  = MonitorMaxMessages,
+            GroupFilterEnabled  = GroupFilterEnabled,
+            Groups              = GroupsText
+                .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToList(),
+            DataPath            = DataPath,
+            AutoReplyEnabled    = AutoReplyEnabled,
+            AutoReplyText       = AutoReplyText,
+            BeaconEnabled       = BeaconEnabled,
+            BeaconGroup         = BeaconGroup,
+            BeaconText          = BeaconText,
+            BeaconIntervalHours = BeaconIntervalHours < 1 ? 1 : BeaconIntervalHours
+        };
+    }
+}

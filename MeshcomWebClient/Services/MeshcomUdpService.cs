@@ -22,7 +22,7 @@ public partial class MeshcomUdpService : BackgroundService
 {
     private readonly ILogger<MeshcomUdpService> _logger;
     private readonly ChatService _chatService;
-    private readonly MeshcomSettings _settings;
+    private MeshcomSettings _settings;
     private UdpClient? _udpClient;
 
     /// <summary>Live connection and statistics status. Updated on every relevant event.</summary>
@@ -52,9 +52,14 @@ public partial class MeshcomUdpService : BackgroundService
         IOptionsMonitor<MeshcomSettings> settings,
         ChatService chatService)
     {
-        _logger    = logger;
+        _logger      = logger;
         _chatService = chatService;
-        _settings  = settings.CurrentValue;
+        _settings    = settings.CurrentValue;
+        settings.OnChange(s =>
+        {
+            _settings = s;
+            _logger.LogInformation("Settings reloaded from appsettings.json.");
+        });
 
         _chatService.OnNewDirectTab += callsign => _ = SendAutoReplyAsync(callsign);
     }
@@ -83,9 +88,8 @@ public partial class MeshcomUdpService : BackgroundService
         // Without this, the device does not know where to deliver UDP data.
         await RegisterWithDeviceAsync();
 
-        // Start periodic beacon transmitter (fire-and-forget, cancelled via stoppingToken).
-        if (_settings.BeaconEnabled)
-            _ = RunBeaconAsync(stoppingToken);
+        // Beacon task runs permanently and checks BeaconEnabled on each tick.
+        _ = RunBeaconAsync(stoppingToken);
 
         try
         {
@@ -235,39 +239,63 @@ public partial class MeshcomUdpService : BackgroundService
     }
 
     /// <summary>
-    /// Sends a periodic beacon to <see cref="MeshcomSettings.BeaconGroup"/> every
-    /// <see cref="MeshcomSettings.BeaconIntervalHours"/> hours until cancellation.
-    /// The first transmission occurs after one full interval (not immediately on startup).
+    /// Checks beacon settings every minute. Sends a beacon to <see cref="MeshcomSettings.BeaconGroup"/>
+    /// when <see cref="MeshcomSettings.BeaconEnabled"/> is true and the configured interval has elapsed.
+    /// All settings are read from the live <see cref="_settings"/> field so changes apply without restart.
     /// </summary>
     private async Task RunBeaconAsync(CancellationToken stoppingToken)
     {
-        if (string.IsNullOrWhiteSpace(_settings.BeaconGroup) || string.IsNullOrWhiteSpace(_settings.BeaconText))
-        {
-            _logger.LogWarning("Beacon is enabled but BeaconGroup or BeaconText is not configured – beacon disabled.");
-            return;
-        }
+        var lastSent = DateTime.MinValue;
 
-        var hours = _settings.BeaconIntervalHours < 1 ? 1 : _settings.BeaconIntervalHours;
-        if (hours != _settings.BeaconIntervalHours)
-            _logger.LogWarning("BeaconIntervalHours {Configured} is below minimum – using 1h.", _settings.BeaconIntervalHours);
-        var interval = TimeSpan.FromHours(hours);
-        _logger.LogInformation("Beacon started – group {Group}, interval {Hours}h, text: {Text}",
-            _settings.BeaconGroup, hours, _settings.BeaconText);
-
-        using var timer = new PeriodicTimer(interval);
-        try
+        while (!stoppingToken.IsCancellationRequested)
         {
-            while (await timer.WaitForNextTickAsync(stoppingToken))
+            try
             {
-                var destination = _settings.BeaconGroup.TrimStart('#');
-                _logger.LogInformation("Sending beacon to {Group}", _settings.BeaconGroup);
-                await SendMessageAsync(destination, _settings.BeaconText, _settings.BeaconGroup);
+                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
             }
+            catch (OperationCanceledException) { break; }
+
+            var s = _settings;
+            bool configured = s.BeaconEnabled
+                && !string.IsNullOrWhiteSpace(s.BeaconGroup)
+                && !string.IsNullOrWhiteSpace(s.BeaconText);
+
+            if (!configured)
+            {
+                SetBeaconStatus(false, null);
+                continue;
+            }
+
+            var interval = TimeSpan.FromHours(Math.Max(1, s.BeaconIntervalHours));
+
+            // On first activation, record the current time so the first beacon fires
+            // after one full interval – not immediately on startup or when enabling.
+            if (lastSent == DateTime.MinValue)
+                lastSent = DateTime.Now;
+
+            var nextDue = lastSent + interval;
+
+            SetBeaconStatus(true, nextDue > DateTime.Now ? nextDue : DateTime.Now);
+
+            if (DateTime.Now < nextDue)
+                continue;
+
+            var destination = s.BeaconGroup.TrimStart('#');
+            _logger.LogInformation("Sending beacon to {Group}", s.BeaconGroup);
+            await SendMessageAsync(destination, s.BeaconText, s.BeaconGroup);
+            lastSent = DateTime.Now;
+            SetBeaconStatus(true, lastSent + interval);
         }
-        catch (OperationCanceledException)
-        {
-            // Normal shutdown – nothing to do.
-        }
+
+        SetBeaconStatus(false, null);
+    }
+
+    private void SetBeaconStatus(bool active, DateTime? nextSend)
+    {
+        if (Status.BeaconActive == active && Status.BeaconNextSend == nextSend) return;
+        Status.BeaconActive  = active;
+        Status.BeaconNextSend = nextSend;
+        NotifyStatusChange();
     }
 
     /// <summary>

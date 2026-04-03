@@ -215,6 +215,17 @@
         <span class="status-item">🎙️ @_myCallsign</span>
         <span class="status-sep">|</span>
         <span class="status-item">📨 RX @_status.RxCount / TX @_status.TxCount</span>
+        @if (_status.BeaconActive)
+        {
+            <span class="status-sep">|</span>
+            <span class="status-item" title="Bake aktiv · Gruppe @_settings.BeaconGroup · alle @_settings.BeaconIntervalHours h">
+                <span class="beacon-dot">●</span> Bake
+                @if (_status.BeaconNextSend.HasValue)
+                {
+                    <span class="@BeaconTimeCss(_status.BeaconNextSend.Value)"> · @_status.BeaconNextSend.Value.ToString("HH:mm")</span>
+                }
+            </span>
+        }
         @if (_status.LastRxTime.HasValue)
         {
             <span class="status-sep">|</span>
@@ -537,4 +548,7 @@
         if (m.SequenceNumber != null) return $"Gesendet (Seq #{m.SequenceNumber})";
         return "Warte auf Node-Echo…";
     }
+
+    private static string BeaconTimeCss(DateTime nextSend) =>
+        (nextSend - DateTime.Now).TotalMinutes < 10 ? "beacon-time beacon-time-soon" : "beacon-time";
 }

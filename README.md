@@ -82,10 +82,16 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 ### ℹ️ About page
 - Displays assembly version (e.g. `v1.0.1`), build timestamp and links
 
+### ⚙️ Settings page
+- Web-based configuration editor at `/settings` – edit all `appsettings.json` values directly in the browser
+- Changes are saved to `appsettings.json` on disk; most settings apply **immediately without restart**
+- Settings that still require a restart: **Listen-IP / Listen-Port** (socket binding) and **Log-Path / Log-Retention** (Serilog)
+
 ### 📡 Beacon (Bake)
 - **Periodic beacon** – sends a configurable text to a configurable group at a fixed interval
-- Interval is configurable in whole hours (minimum 1 h)
-- Enabled / disabled via `BeaconEnabled` flag in `appsettings.json`
+- Interval is configurable in whole hours (minimum 1 h); first transmission after one full interval
+- Enabled / disabled via `BeaconEnabled` flag – applies **live** without restart
+- **Status indicator** in the status bar: pulsing `●` dot with next scheduled send time; turns yellow when < 10 min away
 - Beacon appears in the monitor feed and in the corresponding group chat tab
 
 ### 📝 Logging (Serilog)
@@ -108,6 +114,7 @@ MeshcomWebClient/              ← Blazor Server (ASP.NET Core host)
 │  └─ Pages/
 │       Chat.razor             ← Chat tabs + monitor pane + status bar
 │       Mh.razor               ← Most Recently Heard table + own position
+│       Settings.razor         ← Web-based configuration editor
 │       About.razor            ← Version / copyright / build info
 │       Clear.razor            ← Data reset page
 │
@@ -124,9 +131,10 @@ MeshcomWebClient/              ← Blazor Server (ASP.NET Core host)
 │     PersistenceSnapshot.cs   ← Serialisable state snapshot (tabs, MH, monitor, own GPS)
 │
 └─ Services/
-      MeshcomUdpService.cs     ← BackgroundService: UDP RX/TX, JSON parsing, ACK matching
+      MeshcomUdpService.cs     ← BackgroundService: UDP RX/TX, JSON parsing, ACK matching, beacon timer
       ChatService.cs           ← Singleton: routing, tabs, MH list, monitor, deduplication
       DataPersistenceService.cs← BackgroundService: load/save state to JSON on disk
+      SettingsService.cs       ← Reads/writes appsettings.json; changes applied live via IOptionsMonitor
 ```
 
 ---

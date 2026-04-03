@@ -39,6 +39,7 @@ builder.Services.AddDataProtection()
 builder.Services.AddSingleton<ChatService>();
 builder.Services.AddSingleton<MeshcomUdpService>();
 builder.Services.AddSingleton<DataPersistenceService>();
+builder.Services.AddSingleton<SettingsService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<MeshcomUdpService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<DataPersistenceService>());
 
