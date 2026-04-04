@@ -90,4 +90,27 @@ public class MeshcomSettings
     /// Only used when <see cref="BeaconEnabled"/> is true. Default is 1.
     /// </summary>
     public int BeaconIntervalHours { get; set; } = 1;
+
+    /// <summary>
+    /// When true, telemetry data is periodically read from <see cref="TelemetryFilePath"/>
+    /// and sent as a text message to <see cref="TelemetryGroup"/>.
+    /// </summary>
+    public bool TelemetryEnabled { get; set; } = false;
+
+    /// <summary>Full path to the JSON file that provides the telemetry values.</summary>
+    public string TelemetryFilePath { get; set; } = string.Empty;
+
+    /// <summary>Target group for telemetry messages (e.g. "#262").</summary>
+    public string TelemetryGroup { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Interval between telemetry transmissions in hours. Minimum value is 1. Default is 1.
+    /// </summary>
+    public int TelemetryIntervalHours { get; set; } = 1;
+
+    /// <summary>
+    /// Mapping of JSON file keys to display label and unit for the telemetry message.
+    /// Up to 5 entries are recommended to keep the message within the MeshCom 150-char limit.
+    /// </summary>
+    public List<TelemetryMappingEntry> TelemetryMapping { get; set; } = [];
 }

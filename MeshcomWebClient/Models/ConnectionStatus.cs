@@ -49,4 +49,10 @@ public class ConnectionStatus
 
     /// <summary>Scheduled time of the next beacon transmission. Null when beacon is inactive.</summary>
     public DateTime? BeaconNextSend { get; set; }
+
+    /// <summary>True while telemetry is configured and active.</summary>
+    public bool TelemetryActive { get; set; }
+
+    /// <summary>Scheduled time of the next telemetry transmission. Null when telemetry is inactive.</summary>
+    public DateTime? TelemetryNextSend { get; set; }
 }

@@ -134,6 +134,57 @@
             </div>
         </div>
 
+        <!-- Telemetrie -->
+        <div class="settings-section">
+            <h2 class="settings-section-title">📊 Telemetrie</h2>
+            <div class="settings-grid">
+                <label>Telemetrie aktiv</label>
+                <label class="settings-toggle">
+                    <input type="checkbox" @bind="_model.TelemetryEnabled" />
+                    <span>@(_model.TelemetryEnabled ? "Aktiv" : "Inaktiv")</span>
+                </label>
+
+                <label>JSON-Datei</label>
+                <input type="text" @bind="_model.TelemetryFilePath" placeholder="C:\Temp\telemetry.json" />
+
+                <label>Gruppe</label>
+                <input type="text" @bind="_model.TelemetryGroup" placeholder="#262" />
+
+                <label>Interval (Stunden, min. 1)</label>
+                <input type="number" min="1" @bind="_model.TelemetryIntervalHours" />
+            </div>
+
+            <div style="margin-top:1rem">
+                <h3 style="font-size:1rem;margin-bottom:0.5rem">Messwert-Zuordnung</h3>
+                <p><small>JSON-Key: Schlüssel aus der JSON-Datei. Bezeichnung: Anzeigename in der Nachricht. Einheit: z.&nbsp;B. °C, kW, hPa. Dez.: Nachkommastellen.</small></p>
+                <table class="telemetry-mapping-table">
+                    <thead>
+                        <tr>
+                            <th>JSON-Key</th>
+                            <th>Bezeichnung</th>
+                            <th>Einheit</th>
+                            <th>Dez.</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var entry in _model.TelemetryMapping)
+                        {
+                            var e = entry;
+                            <tr @key="e">
+                                <td><input type="text" @bind="e.JsonKey" /></td>
+                                <td><input type="text" @bind="e.Label" /></td>
+                                <td><input type="text" @bind="e.Unit" /></td>
+                                <td><input type="number" min="0" max="4" style="width:4rem" @bind="e.Decimals" /></td>
+                                <td><button type="button" class="btn-remove" @onclick="() => _model.TelemetryMapping.Remove(e)">🗑️</button></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                <button type="button" class="btn-add" @onclick="() => _model.TelemetryMapping.Add(new TelemetryMappingEntry())">➕ Zeile hinzufügen</button>
+            </div>
+        </div>
+
         <div class="settings-actions">
             <button class="btn-save" @onclick="SaveAsync">💾 Speichern</button>
         </div>
@@ -168,7 +219,20 @@
             BeaconEnabled       = s.BeaconEnabled,
             BeaconGroup         = s.BeaconGroup,
             BeaconText          = s.BeaconText,
-            BeaconIntervalHours = s.BeaconIntervalHours
+            BeaconIntervalHours = s.BeaconIntervalHours,
+            TelemetryEnabled       = s.TelemetryEnabled,
+            TelemetryFilePath      = s.TelemetryFilePath,
+            TelemetryGroup         = s.TelemetryGroup,
+            TelemetryIntervalHours = s.TelemetryIntervalHours,
+            TelemetryMapping       = s.TelemetryMapping
+                .Select(m => new TelemetryMappingEntry
+                {
+                    JsonKey  = m.JsonKey,
+                    Label    = m.Label,
+                    Unit     = m.Unit,
+                    Decimals = m.Decimals
+                })
+                .ToList()
         };
     }
 
@@ -207,6 +271,11 @@
         public string BeaconGroup         { get; set; } = string.Empty;
         public string BeaconText          { get; set; } = string.Empty;
         public int    BeaconIntervalHours { get; set; } = 1;
+        public bool   TelemetryEnabled       { get; set; }
+        public string TelemetryFilePath      { get; set; } = string.Empty;
+        public string TelemetryGroup         { get; set; } = string.Empty;
+        public int    TelemetryIntervalHours { get; set; } = 1;
+        public List<TelemetryMappingEntry> TelemetryMapping { get; set; } = [];
 
         public MeshcomSettings ToSettings() => new()
         {
@@ -229,7 +298,12 @@
             BeaconEnabled       = BeaconEnabled,
             BeaconGroup         = BeaconGroup,
             BeaconText          = BeaconText,
-            BeaconIntervalHours = BeaconIntervalHours < 1 ? 1 : BeaconIntervalHours
+            BeaconIntervalHours = BeaconIntervalHours < 1 ? 1 : BeaconIntervalHours,
+            TelemetryEnabled       = TelemetryEnabled,
+            TelemetryFilePath      = TelemetryFilePath,
+            TelemetryGroup         = TelemetryGroup,
+            TelemetryIntervalHours = TelemetryIntervalHours < 1 ? 1 : TelemetryIntervalHours,
+            TelemetryMapping       = TelemetryMapping
         };
     }
 }

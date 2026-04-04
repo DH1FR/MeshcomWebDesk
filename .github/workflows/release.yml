@@ -39,6 +39,24 @@ jobs:
             -p:PublishSingleFile=true \
             -o ./publish/linux-x64
 
+      - name: Publish macOS x64 / Intel (framework-dependent)
+        run: |
+          dotnet publish MeshcomWebClient/MeshcomWebClient.csproj \
+            -c Release \
+            -r osx-x64 \
+            --no-self-contained \
+            -p:PublishSingleFile=true \
+            -o ./publish/osx-x64
+
+      - name: Publish macOS arm64 / Apple Silicon (framework-dependent)
+        run: |
+          dotnet publish MeshcomWebClient/MeshcomWebClient.csproj \
+            -c Release \
+            -r osx-arm64 \
+            --no-self-contained \
+            -p:PublishSingleFile=true \
+            -o ./publish/osx-arm64
+
       - name: Package Windows ZIP
         run: |
           cp deploy/appsettings.template.json publish/win-x64/appsettings.json
@@ -55,10 +73,26 @@ jobs:
           tar -czf MeshcomWebClient-${{ github.ref_name }}-linux-x64.tar.gz \
             -C publish/linux-x64 .
 
+      - name: Package macOS x64 tarball
+        run: |
+          cp deploy/appsettings.template.json publish/osx-x64/appsettings.json
+          chmod +x publish/osx-x64/MeshcomWebClient
+          tar -czf MeshcomWebClient-${{ github.ref_name }}-osx-x64.tar.gz \
+            -C publish/osx-x64 .
+
+      - name: Package macOS arm64 tarball
+        run: |
+          cp deploy/appsettings.template.json publish/osx-arm64/appsettings.json
+          chmod +x publish/osx-arm64/MeshcomWebClient
+          tar -czf MeshcomWebClient-${{ github.ref_name }}-osx-arm64.tar.gz \
+            -C publish/osx-arm64 .
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             MeshcomWebClient-${{ github.ref_name }}-win-x64.zip
             MeshcomWebClient-${{ github.ref_name }}-linux-x64.tar.gz
+            MeshcomWebClient-${{ github.ref_name }}-osx-x64.tar.gz
+            MeshcomWebClient-${{ github.ref_name }}-osx-arm64.tar.gz
           generate_release_notes: true

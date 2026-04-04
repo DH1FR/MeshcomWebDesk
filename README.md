@@ -94,6 +94,14 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 - **Status indicator** in the status bar: pulsing `●` dot with next scheduled send time; turns yellow when < 10 min away
 - Beacon appears in the monitor feed and in the corresponding group chat tab
 
+### 📊 Telemetry (Telemetrie-Sender)
+- **Periodic telemetry messages** – reads a JSON file and sends a compact formatted text message to a group at a configurable interval (minimum 1 h)
+- **Source-agnostic**: any system can write the JSON file – Home Assistant, Node-RED, MQTT bridge, shell script, etc.
+- **Flexible mapping** – up to 5 key → label / unit / decimal-places pairs, fully configurable in the Settings UI without touching source code
+- **Status indicator** in the status bar analogue to the beacon
+- Example message sent over LoRa: `TM: temp.out=15.5°C qfe=1013.2hPa PV=3.8kW`
+- Source JSON format: flat key/value object with numeric sensor values (e.g. produced by Home Assistant)
+
 ### 📝 Logging (Serilog)
 - Rolling daily log files with configurable retention
 - Optional UDP traffic log (`LogUdpTraffic`) for offline analysis
@@ -125,6 +133,7 @@ MeshcomWebClient/              ← Blazor Server (ASP.NET Core host)
 ├─ Models/
 │     MeshcomMessage.cs        ← Message model (from/to/text/GPS/RSSI/ACK/relay/telemetry)
 │     MeshcomSettings.cs       ← Strongly-typed config (IOptions)
+│     TelemetryMappingEntry.cs ← Telemetry mapping entry (JSON key → label + unit + decimals)
 │     ChatTab.cs               ← Tab model with UnreadCount
 │     HeardStation.cs          ← MH list entry (GPS, signal, battery, hardware, firmware)
 │     ConnectionStatus.cs      ← Live UDP status + own GPS position
@@ -134,7 +143,7 @@ MeshcomWebClient/              ← Blazor Server (ASP.NET Core host)
       MeshcomUdpService.cs     ← BackgroundService: UDP RX/TX, JSON parsing, ACK matching, beacon timer
       ChatService.cs           ← Singleton: routing, tabs, MH list, monitor, deduplication
       DataPersistenceService.cs← BackgroundService: load/save state to JSON on disk
-      SettingsService.cs       ← Reads/writes appsettings.json; changes applied live via IOptionsMonitor
+      SettingsService.cs       ← Writes appsettings.override.json in DataPath (Docker-safe); changes applied live via IOptionsMonitor
 ```
 
 ---
@@ -162,7 +171,16 @@ All settings in `MeshcomWebClient/appsettings.json`:
   "BeaconEnabled":      false,           // send periodic beacon (Bake)
   "BeaconGroup":        "#262",          // target group for beacon
   "BeaconText":         "...",           // beacon text
-  "BeaconIntervalHours": 1               // beacon interval in hours (minimum 1)
+  "BeaconIntervalHours": 1,              // beacon interval in hours (minimum 1)
+  "TelemetryEnabled":      false,        // send periodic telemetry message
+  "TelemetryFilePath":     "/data/telemetry.json", // source JSON file (written by HA etc.)
+  "TelemetryGroup":        "#262",       // target group for telemetry
+  "TelemetryIntervalHours": 1,           // telemetry interval in hours (minimum 1)
+  "TelemetryMapping": [                  // up to 5 entries; change without recompiling
+    { "JsonKey": "aussentemp",  "Label": "temp.out", "Unit": "°C",  "Decimals": 1 },
+    { "JsonKey": "luftdruck",   "Label": "qfe",      "Unit": "hPa", "Decimals": 1 },
+    { "JsonKey": "pv_leistung", "Label": "PV",       "Unit": "kW",  "Decimals": 2 }
+  ]
 }
 ```
 
@@ -321,6 +339,9 @@ environment:
   - Meshcom__Groups__1=#Test
 ```
 
+> **Settings saved via the UI** are written to `DataPath/appsettings.override.json` (inside the `./data` volume).  
+> The `appsettings.json` mount stays **read-only** (`:ro`) – no container rebuild needed after UI changes.
+
 After any change to `docker-compose.yml` or `appsettings.json`:
 
 ```bash
@@ -403,7 +424,6 @@ Open browser: **http://localhost:5162**
 ---
 
 ### Linux (systemd)
-
 **Prerequisites:**
 - [.NET 10 ASP.NET Core Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)
 
@@ -433,7 +453,39 @@ systemctl restart meshcom-webclient    # restart after config change
 
 ---
 
-### Configuration reference
+### macOS (Intel & Apple Silicon)
+
+**Prerequisites:**
+- [.NET 10 ASP.NET Core Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) for macOS
+
+```bash
+# Extract the archive (choose the right binary for your CPU)
+# Apple Silicon (M1/M2/M3):
+tar -xzf MeshcomWebClient-vX.Y.Z-osx-arm64.tar.gz -C ~/meshcom
+
+# Intel Mac:
+tar -xzf MeshcomWebClient-vX.Y.Z-osx-x64.tar.gz -C ~/meshcom
+
+cd ~/meshcom
+
+# Edit configuration
+nano appsettings.json      # set DeviceIp, MyCallsign
+
+# Allow execution (macOS Gatekeeper)
+xattr -d com.apple.quarantine MeshcomWebClient
+
+# Start
+./MeshcomWebClient
+```
+
+Open browser: **http://localhost:5162**
+
+> **macOS Gatekeeper:** If you see *"cannot be opened because it is from an unidentified developer"*,  
+> run `xattr -d com.apple.quarantine ./MeshcomWebClient` once before starting.
+
+---
+
+### Linux (systemd)
 
 The shipped `appsettings.json` contains placeholder values – the following **must** be set before first start:
 

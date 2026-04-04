@@ -91,6 +91,9 @@ public partial class MeshcomUdpService : BackgroundService
         // Beacon task runs permanently and checks BeaconEnabled on each tick.
         _ = RunBeaconAsync(stoppingToken);
 
+        // Telemetry task runs permanently and checks TelemetryEnabled on each tick.
+        _ = RunTelemetryAsync(stoppingToken);
+
         try
         {
             while (!stoppingToken.IsCancellationRequested)
@@ -295,6 +298,119 @@ public partial class MeshcomUdpService : BackgroundService
         if (Status.BeaconActive == active && Status.BeaconNextSend == nextSend) return;
         Status.BeaconActive  = active;
         Status.BeaconNextSend = nextSend;
+        NotifyStatusChange();
+    }
+
+    /// <summary>
+    /// Checks telemetry settings every minute. Reads the configured JSON file and sends a
+    /// formatted telemetry message to <see cref="MeshcomSettings.TelemetryGroup"/> when
+    /// <see cref="MeshcomSettings.TelemetryEnabled"/> is true and the interval has elapsed.
+    /// </summary>
+    private async Task RunTelemetryAsync(CancellationToken stoppingToken)
+    {
+        var lastSent = DateTime.MinValue;
+
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+            }
+            catch (OperationCanceledException) { break; }
+
+            var s = _settings;
+            bool configured = s.TelemetryEnabled
+                && !string.IsNullOrWhiteSpace(s.TelemetryFilePath)
+                && !string.IsNullOrWhiteSpace(s.TelemetryGroup)
+                && s.TelemetryMapping.Count > 0;
+
+            if (!configured)
+            {
+                SetTelemetryStatus(false, null);
+                continue;
+            }
+
+            var interval = TimeSpan.FromHours(Math.Max(1, s.TelemetryIntervalHours));
+
+            if (lastSent == DateTime.MinValue)
+                lastSent = DateTime.Now;
+
+            var nextDue = lastSent + interval;
+            SetTelemetryStatus(true, nextDue > DateTime.Now ? nextDue : DateTime.Now);
+
+            if (DateTime.Now < nextDue)
+                continue;
+
+            await SendTelemetryAsync(s);
+            lastSent = DateTime.Now;
+            SetTelemetryStatus(true, lastSent + interval);
+        }
+
+        SetTelemetryStatus(false, null);
+    }
+
+    private async Task SendTelemetryAsync(MeshcomSettings s)
+    {
+        try
+        {
+            if (!File.Exists(s.TelemetryFilePath))
+            {
+                _logger.LogWarning("Telemetry file not found: {Path}", s.TelemetryFilePath);
+                return;
+            }
+
+            var fileContent = await File.ReadAllTextAsync(s.TelemetryFilePath);
+            using var doc = JsonDocument.Parse(fileContent);
+            var root = doc.RootElement;
+
+            var parts = new List<string>();
+            foreach (var entry in s.TelemetryMapping)
+            {
+                if (string.IsNullOrWhiteSpace(entry.JsonKey)) continue;
+                if (!root.TryGetProperty(entry.JsonKey, out var valueProp)) continue;
+
+                double value;
+                if (valueProp.ValueKind == JsonValueKind.Number)
+                    value = valueProp.GetDouble();
+                else if (valueProp.ValueKind == JsonValueKind.String &&
+                         double.TryParse(valueProp.GetString(),
+                             System.Globalization.NumberStyles.Float,
+                             System.Globalization.CultureInfo.InvariantCulture, out var parsed))
+                    value = parsed;
+                else
+                    continue;
+
+                var decimals  = Math.Max(0, entry.Decimals);
+                var formatted = value.ToString($"F{decimals}", System.Globalization.CultureInfo.InvariantCulture);
+                var label     = string.IsNullOrWhiteSpace(entry.Label) ? entry.JsonKey : entry.Label;
+                parts.Add($"{label}={formatted}{entry.Unit}");
+            }
+
+            if (parts.Count == 0)
+            {
+                _logger.LogWarning("No telemetry values could be read from {Path}", s.TelemetryFilePath);
+                return;
+            }
+
+            var msg = "TM: " + string.Join(" ", parts);
+            if (msg.Length > 150)
+                msg = msg[..150];
+
+            var destination = s.TelemetryGroup.TrimStart('#');
+            _logger.LogInformation("Sending telemetry to {Group}: {Msg}", s.TelemetryGroup, msg);
+            await SendMessageAsync(destination, msg, s.TelemetryGroup);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error reading or sending telemetry from {Path}", s.TelemetryFilePath);
+        }
+    }
+
+    private void SetTelemetryStatus(bool active, DateTime? nextSend)
+    {
+        if (Status.TelemetryActive == active && Status.TelemetryNextSend == nextSend) return;
+        Status.TelemetryActive  = active;
+        Status.TelemetryNextSend = nextSend;
         NotifyStatusChange();
     }
 

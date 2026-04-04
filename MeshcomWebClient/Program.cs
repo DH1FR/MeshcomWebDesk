@@ -1,4 +1,4 @@
-using MeshcomWebClient.Components;
+﻿using MeshcomWebClient.Components;
 using MeshcomWebClient.Models;
 using MeshcomWebClient.Services;
 using Microsoft.AspNetCore.DataProtection;
@@ -11,6 +11,14 @@ var builder = WebApplication.CreateBuilder(args);
 var meshcomSection = builder.Configuration.GetSection(MeshcomSettings.SectionName);
 var logPath = meshcomSection.GetValue<string>("LogPath") ?? @"C:\Temp\Logs";
 var retainDays = meshcomSection.GetValue<int?>("LogRetainDays") ?? 30;
+
+// Load user-written settings override from DataPath (writable volume in Docker).
+// This file is created by SettingsService when the user saves settings via the UI.
+// It is layered on top of appsettings.json so a Docker read-only mount still works.
+var dataPath = meshcomSection.GetValue<string>("DataPath") ?? @"C:\Temp\MeshcomData";
+Directory.CreateDirectory(dataPath);
+var overrideFile = Path.Combine(dataPath, "appsettings.override.json");
+builder.Configuration.AddJsonFile(overrideFile, optional: true, reloadOnChange: true);
 
 Directory.CreateDirectory(logPath);
 

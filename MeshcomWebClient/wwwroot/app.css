@@ -1108,6 +1108,65 @@ h1:focus {
     0%, 100% { opacity: 1; }
     50%       { opacity: 0.2; }
 }
+
+/* ===== Telemetry mapping table ===== */
+.telemetry-mapping-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 0.5rem;
+    font-size: 13px;
+}
+
+.telemetry-mapping-table th,
+.telemetry-mapping-table td {
+    padding: 4px 6px;
+    border: 1px solid #2a2a4a;
+    text-align: left;
+}
+
+.telemetry-mapping-table th {
+    background: #16213e;
+    color: #8b949e;
+    font-weight: 600;
+}
+
+.telemetry-mapping-table input[type=text],
+.telemetry-mapping-table input[type=number] {
+    width: 100%;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    border: 1px solid #2a2a4a;
+    border-radius: 4px;
+    padding: 3px 6px;
+}
+
+.btn-add {
+    background: #1a4a6e;
+    color: #e0e0e0;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 16px;
+    font-size: 13px;
+    cursor: pointer;
+    margin-top: 0.25rem;
+}
+
+.btn-add:hover {
+    background: #1e6091;
+}
+
+.btn-remove {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 6px;
+    color: #e0e0e0;
+}
+
+.btn-remove:hover {
+    color: #f85149;
+}
 .valid.modified:not([type=checkbox]) {
     outline: 1px solid #26b050;
 }
