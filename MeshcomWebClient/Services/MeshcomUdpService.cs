@@ -392,13 +392,49 @@ public partial class MeshcomUdpService : BackgroundService
                 return;
             }
 
-            var msg = "TM: " + string.Join(" ", parts);
-            if (msg.Length > 150)
-                msg = msg[..150];
+            // Pack parts into 150-char buckets.
+            // Reserve 6 chars for the longest possible prefix ("TM99:") + 1 space = 7,
+            // leaving 143 chars for payload.
+            const int MaxMsg    = 150;
+            const int PrefixMax = 7;   // "TM99: "
+            const int BucketLen = MaxMsg - PrefixMax;
+
+            var buckets = new List<string>();
+            var current = new System.Text.StringBuilder();
+
+            foreach (var part in parts)
+            {
+                var sep = current.Length == 0 ? string.Empty : " ";
+                if (current.Length + sep.Length + part.Length > BucketLen)
+                {
+                    if (current.Length > 0)
+                        buckets.Add(current.ToString());
+                    current.Clear();
+                }
+                if (current.Length > 0) current.Append(' ');
+                current.Append(part);
+            }
+            if (current.Length > 0)
+                buckets.Add(current.ToString());
 
             var destination = s.TelemetryGroup.TrimStart('#');
-            _logger.LogInformation("Sending telemetry to {Group}: {Msg}", s.TelemetryGroup, msg);
-            await SendMessageAsync(destination, msg, s.TelemetryGroup);
+
+            for (int i = 0; i < buckets.Count; i++)
+            {
+                // Single bucket → "TM:", multiple → "TM1:", "TM2:", …
+                var prefix = buckets.Count == 1 ? "TM:" : $"TM{i + 1}:";
+                var msg    = $"{prefix} {buckets[i]}";
+
+                _logger.LogInformation(
+                    "Sending telemetry [{Index}/{Total}] to {Group}: {Msg}",
+                    i + 1, buckets.Count, s.TelemetryGroup, msg);
+
+                await SendMessageAsync(destination, msg, s.TelemetryGroup);
+
+                // Brief pause between consecutive packets to avoid node flooding
+                if (i < buckets.Count - 1)
+                    await Task.Delay(TimeSpan.FromSeconds(2));
+            }
         }
         catch (Exception ex)
         {
