@@ -83,8 +83,9 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 - Displays assembly version (e.g. `v1.0.1`), build timestamp and links
 
 ### ⚙️ Settings page
-- Web-based configuration editor at `/settings` – edit all `appsettings.json` values directly in the browser
-- Changes are saved to `appsettings.json` on disk; most settings apply **immediately without restart**
+- Web-based configuration editor at `/settings` – edit all settings directly in the browser
+- Changes are written to `appsettings.override.json` in `DataPath` (Docker-safe read-only mount supported)
+- Most settings apply **immediately without restart**
 - Settings that still require a restart: **Listen-IP / Listen-Port** (socket binding) and **Log-Path / Log-Retention** (Serilog)
 
 ### 📡 Beacon (Bake)
@@ -95,13 +96,17 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 - Beacon appears in the monitor feed and in the corresponding group chat tab
 
 ### 📊 Telemetry (Telemetrie-Sender)
-- **Periodic telemetry messages** – reads a JSON file and sends a compact formatted text message to a group at a configurable interval (minimum 1 h)
+- **Periodic telemetry messages** – reads a JSON file and sends compact formatted text messages to a configurable destination at a configurable interval (minimum 1 h)
 - **Source-agnostic**: any system can write the JSON file – Home Assistant, Node-RED, MQTT bridge, shell script, etc.
-- **Flexible mapping** – up to 5 key → label / unit / decimal-places pairs, fully configurable in the Settings UI without touching source code
+- **HTTP POST endpoint** `POST /api/telemetry` – external sources (e.g. Home Assistant) can push JSON directly; no shared filesystem needed; protected by optional `X-Api-Key` header
+- **Flexible mapping** – unlimited key → label / unit / decimal-places pairs, fully configurable in the Settings UI without touching source code
+- **Auto-split**: if all values exceed 150 chars, messages are automatically split into `TM1:` / `TM2:` / … with a 2-second pause between packets
+- **Destination** – group (e.g. `#262`), broadcast (`*`) or direct callsign (e.g. `OE1KBC-1`)
 - **Status indicator** in the status bar analogue to the beacon
-- Example message sent over LoRa: `TM: temp.out=15.5°C qfe=1013.2hPa PV=3.8kW`
-- Source JSON format: flat key/value object with numeric sensor values (e.g. produced by Home Assistant)
-- 📖 **[Home Assistant integration guide](docs/homeassistant-telemetry.md)** – complete example with weather station sensors, shell command and automation
+- **Live preview** in Settings: shows current file values, formatted output per entry, and exact LoRa message(s)
+- **Instant send button** in Settings for immediate test send without waiting for the interval
+- Example messages: `TM: 🌡=10.7C 🧭=1022hPa 💧=86% 🌬=0.0m/s` or split into `TM1:` / `TM2:` when needed
+- 📖 **[Home Assistant integration guide](docs/homeassistant-telemetry.md)** – complete example with weather station sensors, `rest_command` and automation
 
 ### 📝 Logging (Serilog)
 - Rolling daily log files with configurable retention
@@ -174,13 +179,15 @@ All settings in `MeshcomWebClient/appsettings.json`:
   "BeaconText":         "...",           // beacon text
   "BeaconIntervalHours": 1,              // beacon interval in hours (minimum 1)
   "TelemetryEnabled":      false,        // send periodic telemetry message
-  "TelemetryFilePath":     "/data/telemetry.json", // source JSON file (written by HA etc.)
-  "TelemetryGroup":        "#262",       // target group for telemetry
+  "TelemetryFilePath":     "/data/telemetry.json", // source JSON file (written by HA, script etc.)
+  "TelemetryGroup":        "#262",       // destination: group (#262), broadcast (*), or callsign
   "TelemetryIntervalHours": 1,           // telemetry interval in hours (minimum 1)
-  "TelemetryMapping": [                  // up to 5 entries; change without recompiling
-    { "JsonKey": "aussentemp",  "Label": "temp.out", "Unit": "°C",  "Decimals": 1 },
-    { "JsonKey": "luftdruck",   "Label": "qfe",      "Unit": "hPa", "Decimals": 1 },
-    { "JsonKey": "pv_leistung", "Label": "PV",       "Unit": "kW",  "Decimals": 2 }
+  "TelemetryApiEnabled":   false,        // enable POST /api/telemetry HTTP endpoint
+  "TelemetryApiKey":       "",           // optional X-Api-Key for the endpoint (empty = no auth)
+  "TelemetryMapping": [                  // any number of entries; configure in Settings UI
+    { "JsonKey": "aussentemp",  "Label": "🌡",  "Unit": "C",   "Decimals": 1 },
+    { "JsonKey": "luftdruck",   "Label": "🧭",  "Unit": "hPa", "Decimals": 1 },
+    { "JsonKey": "pv_leistung", "Label": "☀",  "Unit": "kW",  "Decimals": 2 }
   ]
 }
 ```

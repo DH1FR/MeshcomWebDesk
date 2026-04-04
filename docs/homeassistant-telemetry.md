@@ -26,8 +26,12 @@ Aktiviere in den WebClient-Einstellungen (`/settings`, Abschnitt **Telemetrie**)
 |-------------|------|
 | Telemetrie aktiv | ✅ |
 | JSON-Datei | `/app/data/meshcom_telemetry.json` |
+| Ziel | `#262` (Gruppe), `*` (alle) oder Rufzeichen |
 | HTTP-API aktiv | ✅ |
 | API-Key | z.B. `mein-geheimer-schluessel` (leer = keine Authentifizierung) |
+
+> 💡 **Tipp:** Mit dem Button **📡 Telemetrie jetzt senden** kannst du nach dem Speichern sofort einen Probeversand auslösen, ohne eine Stunde zu warten.
+> Mit **🔄 Datei lesen & Vorschau** siehst du die aktuellen Werte aus der JSON-Datei und die exakten LoRa-Nachrichten.
 
 ### Schritt 2 – `configuration.yaml` in Home Assistant
 
