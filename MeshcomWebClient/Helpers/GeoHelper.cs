@@ -42,5 +42,38 @@ public static class GeoHelper
     public static string OsmUrl(double lat, double lon) =>
         $"https://www.openstreetmap.org/?mlat={lat:F6}&mlon={lon:F6}&zoom=12";
 
+    /// <summary>
+    /// Converts decimal-degree coordinates to a Maidenhead (QTH) locator.
+    /// </summary>
+    /// <param name="lat">Latitude in decimal degrees (−90 … +90).</param>
+    /// <param name="lon">Longitude in decimal degrees (−180 … +180).</param>
+    /// <param name="length">4 or 6 characters. Default is 6.</param>
+    /// <returns>Locator string, e.g. "JN48QN".</returns>
+    public static string ToMaidenhead(double lat, double lon, int length = 6)
+    {
+        lon += 180.0;
+        lat += 90.0;
+
+        char f1 = (char)('A' + (int)(lon / 20));
+        char f2 = (char)('A' + (int)(lat / 10));
+
+        lon %= 20;
+        lat %= 10;
+
+        char d1 = (char)('0' + (int)(lon / 2));
+        char d2 = (char)('0' + (int)lat);
+
+        if (length == 4)
+            return $"{f1}{f2}{d1}{d2}";
+
+        lon %= 2;
+        lat %= 1;
+
+        char s1 = (char)('A' + (int)(lon * 12));
+        char s2 = (char)('A' + (int)(lat * 24));
+
+        return $"{f1}{f2}{d1}{d2}{s1}{s2}";
+    }
+
     private static double ToRad(double deg) => deg * Math.PI / 180.0;
 }

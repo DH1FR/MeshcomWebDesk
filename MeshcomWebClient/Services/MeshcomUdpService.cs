@@ -398,11 +398,15 @@ public partial class MeshcomUdpService : BackgroundService
                 return;
             }
 
+            // Build prefix from own GPS position (Maidenhead locator) or fall back to "TM"
+            var locator = (Status.OwnLatitude.HasValue && Status.OwnLongitude.HasValue)
+                ? Helpers.GeoHelper.ToMaidenhead(Status.OwnLatitude.Value, Status.OwnLongitude.Value)
+                : null;
+
             // Pack parts into 150-char buckets.
-            // Reserve 6 chars for the longest possible prefix ("TM99:") + 1 space = 7,
-            // leaving 143 chars for payload.
+            // Reserve up to 11 chars for the longest prefix ("JN48QN/99:") + 1 space.
             const int MaxMsg    = 150;
-            const int PrefixMax = 7;   // "TM99: "
+            const int PrefixMax = 11;
             const int BucketLen = MaxMsg - PrefixMax;
 
             var buckets = new List<string>();
@@ -427,8 +431,11 @@ public partial class MeshcomUdpService : BackgroundService
 
             for (int i = 0; i < buckets.Count; i++)
             {
-                // Single bucket → "TM:", multiple → "TM1:", "TM2:", …
-                var prefix = buckets.Count == 1 ? "TM:" : $"TM{i + 1}:";
+                // Single bucket  → "JN48QN:"  or "TM:"
+                // Multiple buckets → "JN48QN/1:" or "TM1:"
+                string prefix = buckets.Count == 1
+                    ? (locator ?? "TM") + ":"
+                    : (locator ?? "TM") + $"/{i + 1}:";
                 var msg    = $"{prefix} {buckets[i]}";
 
                 _logger.LogInformation(
