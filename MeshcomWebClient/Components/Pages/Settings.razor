@@ -152,6 +152,19 @@
 
                 <label>Interval (Stunden, min. 1)</label>
                 <input type="number" min="1" @bind="_model.TelemetryIntervalHours" />
+
+                <label>HTTP-API aktiv</label>
+                <label class="settings-toggle">
+                    <input type="checkbox" @bind="_model.TelemetryApiEnabled" />
+                    <span>@(_model.TelemetryApiEnabled ? "Aktiv" : "Inaktiv")</span>
+                </label>
+
+                <label>
+                    API-Key<br />
+                    <small>(leer&nbsp;= keine Authentifizierung)</small>
+                </label>
+                <input type="password" @bind="_model.TelemetryApiKey" autocomplete="new-password"
+                       placeholder="Geheimer Schlüssel für POST /api/telemetry" />
             </div>
 
             <div style="margin-top:1rem">
@@ -232,7 +245,9 @@
                     Unit     = m.Unit,
                     Decimals = m.Decimals
                 })
-                .ToList()
+                .ToList(),
+            TelemetryApiEnabled    = s.TelemetryApiEnabled,
+            TelemetryApiKey        = s.TelemetryApiKey
         };
     }
 
@@ -276,6 +291,8 @@
         public string TelemetryGroup         { get; set; } = string.Empty;
         public int    TelemetryIntervalHours { get; set; } = 1;
         public List<TelemetryMappingEntry> TelemetryMapping { get; set; } = [];
+        public bool   TelemetryApiEnabled    { get; set; }
+        public string TelemetryApiKey        { get; set; } = string.Empty;
 
         public MeshcomSettings ToSettings() => new()
         {
@@ -303,7 +320,9 @@
             TelemetryFilePath      = TelemetryFilePath,
             TelemetryGroup         = TelemetryGroup,
             TelemetryIntervalHours = TelemetryIntervalHours < 1 ? 1 : TelemetryIntervalHours,
-            TelemetryMapping       = TelemetryMapping
+            TelemetryMapping       = TelemetryMapping,
+            TelemetryApiEnabled    = TelemetryApiEnabled,
+            TelemetryApiKey        = TelemetryApiKey
         };
     }
 }

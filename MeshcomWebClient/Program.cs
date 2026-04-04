@@ -71,6 +71,51 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
+// POST /api/telemetry – accepts a JSON body from external sources (e.g. Home Assistant)
+// and writes it to TelemetryFilePath so the TelemetryService can pick it up.
+// Protected by an optional X-Api-Key header (configured via TelemetryApiKey).
+app.MapPost("/api/telemetry", async (
+    HttpContext        ctx,
+    IOptionsMonitor<MeshcomSettings> settingsMonitor,
+    ILogger<Program>   logger) =>
+{
+    var s = settingsMonitor.CurrentValue;
+
+    if (!s.TelemetryApiEnabled)
+        return Results.NotFound();
+
+    if (!string.IsNullOrWhiteSpace(s.TelemetryApiKey))
+    {
+        if (!ctx.Request.Headers.TryGetValue("X-Api-Key", out var providedKey)
+            || providedKey != s.TelemetryApiKey)
+        {
+            logger.LogWarning("POST /api/telemetry rejected – invalid or missing X-Api-Key from {Remote}",
+                ctx.Connection.RemoteIpAddress);
+            return Results.Unauthorized();
+        }
+    }
+
+    string body;
+    using (var reader = new System.IO.StreamReader(ctx.Request.Body))
+        body = await reader.ReadToEndAsync();
+
+    try { System.Text.Json.JsonDocument.Parse(body); }
+    catch { return Results.BadRequest("Body is not valid JSON."); }
+
+    if (string.IsNullOrWhiteSpace(s.TelemetryFilePath))
+        return Results.BadRequest("TelemetryFilePath is not configured.");
+
+    var dir = Path.GetDirectoryName(s.TelemetryFilePath);
+    if (!string.IsNullOrWhiteSpace(dir))
+        Directory.CreateDirectory(dir);
+
+    await File.WriteAllTextAsync(s.TelemetryFilePath, body, System.Text.Encoding.UTF8);
+    logger.LogInformation("Telemetry received via HTTP POST from {Remote} → {Path}",
+        ctx.Connection.RemoteIpAddress, s.TelemetryFilePath);
+
+    return Results.Ok(new { written = s.TelemetryFilePath, timestamp = DateTime.UtcNow });
+}).DisableAntiforgery();
+
 // Log effective configuration at startup so it is visible in the log file.
 // Helpful to verify which settings are actually loaded (appsettings.json vs. env vars).
 var startupLog = app.Services.GetRequiredService<ILogger<Program>>();

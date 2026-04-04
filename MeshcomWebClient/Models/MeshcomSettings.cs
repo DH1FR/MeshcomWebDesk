@@ -113,4 +113,17 @@ public class MeshcomSettings
     /// Up to 5 entries are recommended to keep the message within the MeshCom 150-char limit.
     /// </summary>
     public List<TelemetryMappingEntry> TelemetryMapping { get; set; } = [];
+
+    /// <summary>
+    /// When true, the POST /api/telemetry endpoint accepts telemetry JSON from external
+    /// sources (e.g. Home Assistant) and writes it to <see cref="TelemetryFilePath"/>.
+    /// </summary>
+    public bool TelemetryApiEnabled { get; set; } = false;
+
+    /// <summary>
+    /// Optional API key for the POST /api/telemetry endpoint.
+    /// When non-empty the caller must supply a matching X-Api-Key request header.
+    /// Leave empty to disable authentication (only recommended in trusted networks).
+    /// </summary>
+    public string TelemetryApiKey { get; set; } = string.Empty;
 }

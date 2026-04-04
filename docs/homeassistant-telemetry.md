@@ -1,4 +1,4 @@
-# Home Assistant – Telemetrie-Integration
+﻿# Home Assistant – Telemetrie-Integration
 
 Diese Anleitung zeigt, wie du Wetterdaten (oder beliebige andere Sensordaten) aus **Home Assistant** als Telemetrienachrichten über den MeshCom WebClient ins LoRa-Netzwerk sendest.
 
@@ -6,17 +6,88 @@ Diese Anleitung zeigt, wie du Wetterdaten (oder beliebige andere Sensordaten) au
 
 ```
 Home Assistant                WebClient                   MeshCom Node
-─────────────────            ──────────────────          ─────────────
+─────────────────────        ──────────────────          ─────────────
 Sensordaten               →  liest JSON-Datei         →  sendet Textnachricht
-schreibt JSON-Datei          alle X Stunden              ins LoRa-Netz
+schreibt/postet Daten        alle X Stunden              ins LoRa-Netz
 ```
-
-Home Assistant schreibt stündlich eine JSON-Datei mit den aktuellen Messwerten.  
-Der WebClient liest diese Datei und sendet eine kompakte Textnachricht an eine konfigurierte Gruppe.
 
 ---
 
-## Schritt 1 – Shell Command in Home Assistant
+## Variante A – HTTP POST *(empfohlen bei getrennten Hosts)*
+
+Home Assistant sendet die Daten per HTTP POST direkt an den WebClient.
+Keine Netzwerkfreigaben oder SSH-Konfiguration erforderlich.
+
+### Schritt 1 – WebClient Settings aktivieren
+
+Aktiviere in den WebClient-Einstellungen (`/settings`, Abschnitt **Telemetrie**):
+
+| Einstellung | Wert |
+|-------------|------|
+| Telemetrie aktiv | ✅ |
+| JSON-Datei | `/app/data/meshcom_telemetry.json` |
+| HTTP-API aktiv | ✅ |
+| API-Key | z.B. `mein-geheimer-schluessel` (leer = keine Authentifizierung) |
+
+### Schritt 2 – `configuration.yaml` in Home Assistant
+
+```yaml
+rest_command:
+  post_meshcom_telemetry:
+    url: "http://192.168.1.100:5162/api/telemetry"   # WebClient-IP anpassen
+    method: POST
+    headers:
+      Content-Type: application/json
+      X-Api-Key: "mein-geheimer-schluessel"           # muss mit API-Key im WebClient übereinstimmen
+    payload: >-
+      {
+        "timestamp": "{{ now().isoformat() }}",
+        "aussentemp":        {{ states('sensor.tempoutside_2')                              | float(0) }},
+        "luftdruck":         {{ states('sensor.weatherstation_rel_pressure')                | float(0) }},
+        "luftfeuchtigkeit":  {{ states('sensor.weatherstation_rel_humidity_outside')        | float(0) }},
+        "wind_speed":        {{ states('sensor.weatherstation_wind_speed')                  | float(0) }},
+        "wind_gust":         {{ states('sensor.weatherstation_wind_gust_2')                 | float(0) }},
+        "wind_dir":          {{ states('sensor.weatherstation_wind_dir')                    | float(0) }},
+        "regen_24h":         {{ states('sensor.weatherstation_rain_24h')                    | float(0) }},
+        "regen_gesamt":      {{ states('sensor.weatherstation_rain_total')                  | float(0) }}
+      }
+```
+
+### Schritt 3 – Automatisierung in Home Assistant
+
+```yaml
+- alias: "MeshCom Telemetrie senden (HTTP POST)"
+  description: "Wetterdaten jede Stunde per HTTP POST an MeshCom WebClient senden"
+  trigger:
+    - platform: time_pattern
+      minutes: "0"
+  action:
+    - service: rest_command.post_meshcom_telemetry
+  mode: single
+```
+
+### Antwort des Endpoints
+
+| HTTP-Status | Bedeutung |
+|-------------|-----------|
+| `200 OK` | Datei geschrieben, Telemetrie wird beim nächsten Intervall gesendet |
+| `401 Unauthorized` | API-Key fehlt oder stimmt nicht überein |
+| `404 Not Found` | Endpoint ist in den WebClient-Settings deaktiviert |
+| `400 Bad Request` | Body ist kein gültiges JSON oder `TelemetryFilePath` nicht konfiguriert |
+
+Beispiel-Antwort bei Erfolg:
+```json
+{ "written": "/app/data/meshcom_telemetry.json", "timestamp": "2026-04-04T10:00:00Z" }
+```
+
+---
+
+## Variante B – JSON-Datei per Shell Command *(gleicher Host)*
+
+Wenn HA und WebClient-Docker auf **demselben Host** laufen, kann HA
+direkt in das gemountete Data-Volume schreiben.
+
+### Schritt 1 – Shell Command in Home Assistant
 
 Füge folgenden Block in deine `configuration.yaml` ein:
 
@@ -36,36 +107,29 @@ shell_command:
       'regen_24h':         {{ states('sensor.weatherstation_rain_24h')                    | float(0) }},
       'regen_gesamt':      {{ states('sensor.weatherstation_rain_total')                  | float(0) }}
     };
-    open('/config/meshcom_telemetry.json', 'w').write(json.dumps(data, indent=2))
+    open('/opt/meshcom/data/meshcom_telemetry.json', 'w').write(json.dumps(data, indent=2))
     "
 ```
 
-> **Pfadhinweis:** `/config/` ist der Standard-Konfigurationspfad in Home Assistant OS und
-> Home Assistant Docker. Passe den Pfad an, wenn du eine andere Installation verwendest.
+> **Pfadhinweis:** `/opt/meshcom/data/` ist das auf dem Docker-Host gemountete `./data`-Volume
+> des WebClients (`./data:/app/data` in `docker-compose.yml`). Passe den Pfad an deinen Host an.
 
----
-
-## Schritt 2 – Automatisierung in Home Assistant
-
-Füge folgende Automatisierung in deine `automations.yaml` ein:
+### Schritt 2 – Automatisierung
 
 ```yaml
-- alias: "MeshCom Telemetrie exportieren"
-  description: "Wetterdaten jede Stunde für MeshCom WebClient in JSON-Datei schreiben"
+- alias: "MeshCom Telemetrie exportieren (Datei)"
+  description: "Wetterdaten jede Stunde als JSON-Datei für MeshCom WebClient schreiben"
   trigger:
     - platform: time_pattern
-      minutes: "0"          # jede volle Stunde
+      minutes: "0"
   action:
     - service: shell_command.export_meshcom_telemetry
   mode: single
 ```
 
-Nach einem Neustart von Home Assistant (`Entwicklerwerkzeuge → YAML neu laden → Shell Commands`)
-kannst du den Shell Command einmalig manuell ausführen, um die Datei sofort zu erzeugen.
-
 ---
 
-## Schritt 3 – Erzeugte JSON-Datei (Beispiel)
+## Erzeugte JSON-Datei (Beispiel)
 
 ```json
 {
@@ -86,7 +150,7 @@ Die Datei enthält **alle** Messwerte. Im WebClient konfigurierst du, welche dav
 
 ---
 
-## Schritt 4 – WebClient Settings konfigurieren
+## WebClient Settings – TelemetryMapping
 
 Da MeshCom maximal **5 Telemetriewerte** pro Nachricht unterstützt, wähle die für dich
 relevanten Werte aus. Zwei fertige Varianten:
@@ -98,6 +162,8 @@ relevanten Werte aus. Zwei fertige Varianten:
 "TelemetryFilePath":      "/app/data/meshcom_telemetry.json",
 "TelemetryGroup":         "#262",
 "TelemetryIntervalHours": 1,
+"TelemetryApiEnabled":    true,
+"TelemetryApiKey":        "mein-geheimer-schluessel",
 "TelemetryMapping": [
   { "JsonKey": "aussentemp",       "Label": "temp.out", "Unit": "C",   "Decimals": 1 },
   { "JsonKey": "luftdruck",        "Label": "luftdr",   "Unit": "hPa", "Decimals": 1 },
@@ -114,10 +180,6 @@ relevanten Werte aus. Zwei fertige Varianten:
 ### Variante B – Temperatur, Druck, Feuchte, Regen, Windrichtung
 
 ```json
-"TelemetryEnabled":       true,
-"TelemetryFilePath":      "/app/data/meshcom_telemetry.json",
-"TelemetryGroup":         "#262",
-"TelemetryIntervalHours": 1,
 "TelemetryMapping": [
   { "JsonKey": "aussentemp",       "Label": "temp.out",  "Unit": "C",    "Decimals": 1 },
   { "JsonKey": "luftdruck",        "Label": "luftdr",    "Unit": "hPa",  "Decimals": 1 },
@@ -128,66 +190,6 @@ relevanten Werte aus. Zwei fertige Varianten:
 ```
 
 **Gesendete Nachricht:** `TM: temp.out=10.7C luftdr=1022.3hPa humid=86% rain.24h=0.9l/m2 wind.dir=180°`
-
----
-
-## Dateipfad – Docker-Szenario
-
-Da der WebClient in Docker läuft, muss Home Assistant die JSON-Datei in das
-**WebClient-Data-Volume** schreiben, das auf dem Docker-Host gemountet ist.
-
-### Aufbau
-
-```
-Docker-Host:               /opt/meshcom/data/meshcom_telemetry.json
-  ↕  (Volume-Mount ./data:/app/data)
-WebClient-Container:       /app/data/meshcom_telemetry.json
-```
-
-### Shell Command Pfad anpassen
-
-Ändere den Pfad im Shell Command auf das Data-Verzeichnis des WebClients auf dem Host:
-
-```yaml
-shell_command:
-  export_meshcom_telemetry: >-
-    python3 -c "
-    ...
-    open('/opt/meshcom/data/meshcom_telemetry.json', 'w').write(...)
-    "
-```
-
-### TelemetryFilePath im WebClient
-
-```json
-"TelemetryFilePath": "/app/data/meshcom_telemetry.json"
-```
-
----
-
-### Home Assistant selbst in Docker
-
-Falls Home Assistant ebenfalls als Docker-Container läuft, füge in der HA
-`docker-compose.yml` oder im Container-Start-Befehl ein zusätzliches Volume hinzu:
-
-```yaml
-# Home Assistant docker-compose.yml
-services:
-  homeassistant:
-    volumes:
-      - /opt/meshcom/data:/meshcom_export   # WebClient-Data-Verzeichnis einbinden
-```
-
-Schreibe dann im Shell Command nach `/meshcom_export/meshcom_telemetry.json`:
-
-```yaml
-shell_command:
-  export_meshcom_telemetry: >-
-    python3 -c "
-    ...
-    open('/meshcom_export/meshcom_telemetry.json', 'w').write(...)
-    "
-```
 
 ---
 
@@ -209,18 +211,15 @@ shell_command:
 ## Weitere Sensoren hinzufügen
 
 Die JSON-Datei kann beliebig viele Werte enthalten. Du musst **keinen WebClient-Code ändern** –
-füge einfach neue Felder zur JSON-Datei hinzu und konfiguriere das Mapping in den
-WebClient-Settings über `/settings`.
+füge einfach neue Felder hinzu und konfiguriere das Mapping in den WebClient-Settings unter `/settings`.
 
-Beispiel PV-Anlage zusätzlich:
+Beispiel PV-Anlage zusätzlich in `rest_command` oder `shell_command`:
 
 ```yaml
-# In configuration.yaml ergänzen:
-      'pv_leistung':   {{ states('sensor.pv_power') | float(0) }},
-      'batt_soc':      {{ states('sensor.battery_soc') | float(0) }}
+"pv_leistung": {{ states('sensor.pv_power') | float(0) }},
+"batt_soc":    {{ states('sensor.battery_soc') | float(0) }}
 ```
 
 ```json
-// In TelemetryMapping tauschen (max. 5):
 { "JsonKey": "pv_leistung", "Label": "PV", "Unit": "kW", "Decimals": 2 }
 ```

@@ -60,7 +60,9 @@ public class SettingsService
                     ["Label"]    = m.Label,
                     ["Unit"]     = m.Unit,
                     ["Decimals"] = m.Decimals
-                }).ToArray())
+                }).ToArray()),
+                ["TelemetryApiEnabled"] = s.TelemetryApiEnabled,
+                ["TelemetryApiKey"]     = s.TelemetryApiKey
             }
         };
 
