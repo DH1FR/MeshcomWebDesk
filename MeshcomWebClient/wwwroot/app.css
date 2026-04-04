@@ -1079,6 +1079,27 @@ h1:focus {
     background: #40916c;
 }
 
+.btn-send-now {
+    background: #1a4a6e;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.btn-send-now:hover:not(:disabled) {
+    background: #1e6091;
+}
+
+.btn-send-now:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 @media (max-width: 540px) {
     .settings-grid {
         grid-template-columns: 1fr;

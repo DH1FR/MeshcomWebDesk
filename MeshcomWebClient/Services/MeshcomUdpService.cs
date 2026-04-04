@@ -349,6 +349,12 @@ public partial class MeshcomUdpService : BackgroundService
         SetTelemetryStatus(false, null);
     }
 
+    /// <summary>
+    /// Immediately reads the telemetry file and sends all configured values.
+    /// Used by the Settings UI for manual test sends without waiting for the interval.
+    /// </summary>
+    public Task SendTelemetryNowAsync() => SendTelemetryAsync(_settings);
+
     private async Task SendTelemetryAsync(MeshcomSettings s)
     {
         try

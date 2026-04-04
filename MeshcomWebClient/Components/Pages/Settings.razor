@@ -3,6 +3,7 @@
 @using Microsoft.Extensions.Options
 @inject IOptionsMonitor<MeshcomSettings> SettingsMonitor
 @inject SettingsService SettingsService
+@inject MeshcomUdpService UdpService
 
 <PageTitle>Einstellungen – MeshCom Web Client</PageTitle>
 
@@ -247,7 +248,24 @@
 
         <div class="settings-actions">
             <button class="btn-save" @onclick="SaveAsync">💾 Speichern</button>
+            <button class="btn-send-now" @onclick="SendTelemetryNowAsync" disabled="@_sendingNow">
+                @if (_sendingNow)
+                {
+                    <span>⏳ Wird gesendet…</span>
+                }
+                else
+                {
+                    <span>📡 Telemetrie jetzt senden</span>
+                }
+            </button>
         </div>
+
+        @if (_sendResult != null)
+        {
+            <div class="@(_sendResult.StartsWith("✅") ? "settings-success" : "settings-error")" style="margin-top:0.5rem">
+                @_sendResult
+            </div>
+        }
 
     </div>
 </div>
@@ -256,6 +274,27 @@
     private FormModel _model = new();
     private bool _saved;
     private string? _errorMessage;
+    private bool   _sendingNow;
+    private string? _sendResult;
+
+    private async Task SendTelemetryNowAsync()
+    {
+        _sendingNow = true;
+        _sendResult = null;
+        try
+        {
+            await UdpService.SendTelemetryNowAsync();
+            _sendResult = "✅ Telemetrie gesendet.";
+        }
+        catch (Exception ex)
+        {
+            _sendResult = $"❌ Fehler: {ex.Message}";
+        }
+        finally
+        {
+            _sendingNow = false;
+        }
+    }
 
     private List<TelemetryPreviewRow>? _telemetryPreview;
     private List<string>? _telemetryMessages;
