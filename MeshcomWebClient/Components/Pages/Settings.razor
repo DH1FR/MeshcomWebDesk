@@ -364,7 +364,9 @@
             _telemetryPreview = rows;
 
             // Build message buckets (same logic as MeshcomUdpService)
-            const int BucketLen = 143; // 150 - 7 for "TM99: "
+            const int MaxMsg    = 150;
+            const int PrefixMax = 11; // longest prefix e.g. "JN48QN/99:"
+            const int BucketLen = MaxMsg - PrefixMax;
             var buckets = new List<string>();
             var current = new System.Text.StringBuilder();
             foreach (var part in parts)
@@ -380,8 +382,15 @@
             }
             if (current.Length > 0) buckets.Add(current.ToString());
 
+            var ownStatus = UdpService.Status;
+            var locator   = (ownStatus.OwnLatitude.HasValue && ownStatus.OwnLongitude.HasValue)
+                ? MeshcomWebClient.Helpers.GeoHelper.ToMaidenhead(ownStatus.OwnLatitude.Value, ownStatus.OwnLongitude.Value)
+                : null;
+
             _telemetryMessages = buckets
-                .Select((b, i) => buckets.Count == 1 ? $"TM: {b}" : $"TM{i + 1}: {b}")
+                .Select((b, i) => buckets.Count == 1
+                    ? $"{locator ?? "TM"}: {b}"
+                    : $"{locator ?? "TM"}/{i + 1}: {b}")
                 .ToList();
         }
         catch (Exception ex)
