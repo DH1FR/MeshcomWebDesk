@@ -187,7 +187,7 @@ All settings in `MeshcomWebClient/appsettings.json`:
   "TelemetryEnabled":      false,        // send periodic telemetry message
   "TelemetryFilePath":     "/data/telemetry.json", // source JSON file (written by HA, script etc.)
   "TelemetryGroup":        "#262",       // destination: group (#262), broadcast (*), or callsign
-  "TelemetryIntervalHours": 1,           // telemetry interval in hours (minimum 1)
+  "TelemetryScheduleHours":   "11,15",      // send at 11:00 and 15:00 (comma-separated hours 0–23)
   "TelemetryApiEnabled":   false,        // enable POST /api/telemetry HTTP endpoint
   "TelemetryApiKey":       "",           // optional X-Api-Key for the endpoint (empty = no auth)
   "Language":              "de",         // UI language: "de" (German) or "en" (English)

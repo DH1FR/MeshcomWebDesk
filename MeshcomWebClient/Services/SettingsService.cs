@@ -53,7 +53,7 @@ public class SettingsService
                 ["TelemetryEnabled"]       = s.TelemetryEnabled,
                 ["TelemetryFilePath"]      = s.TelemetryFilePath,
                 ["TelemetryGroup"]         = s.TelemetryGroup,
-                ["TelemetryIntervalHours"] = s.TelemetryIntervalHours,
+                ["TelemetryScheduleHours"] = s.TelemetryScheduleHours,
                 ["TelemetryMapping"]       = new JsonArray(s.TelemetryMapping.Select(m => (JsonNode?)new JsonObject
                 {
                     ["JsonKey"]  = m.JsonKey,

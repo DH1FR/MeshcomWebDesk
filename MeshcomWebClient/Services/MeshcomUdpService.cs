@@ -308,7 +308,8 @@ public partial class MeshcomUdpService : BackgroundService
     /// </summary>
     private async Task RunTelemetryAsync(CancellationToken stoppingToken)
     {
-        var lastSent = DateTime.MinValue;
+        // Track the (date, hour) slot already sent to avoid double-firing in the same hour
+        var lastSentSlot = (Date: DateOnly.MinValue, Hour: -1);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -330,23 +331,42 @@ public partial class MeshcomUdpService : BackgroundService
                 continue;
             }
 
-            var interval = TimeSpan.FromHours(Math.Max(1, s.TelemetryIntervalHours));
-
-            if (lastSent == DateTime.MinValue)
-                lastSent = DateTime.Now;
-
-            var nextDue = lastSent + interval;
-            SetTelemetryStatus(true, nextDue > DateTime.Now ? nextDue : DateTime.Now);
-
-            if (DateTime.Now < nextDue)
+            var scheduleHours = ParseScheduleHours(s.TelemetryScheduleHours);
+            if (scheduleHours.Count == 0)
+            {
+                SetTelemetryStatus(false, null);
                 continue;
+            }
 
-            await SendTelemetryAsync(s);
-            lastSent = DateTime.Now;
-            SetTelemetryStatus(true, lastSent + interval);
+            var now         = DateTime.Now;
+            var currentSlot = (DateOnly.FromDateTime(now), now.Hour);
+
+            SetTelemetryStatus(true, ComputeNextScheduledTime(scheduleHours, now));
+
+            if (scheduleHours.Contains(now.Hour) && lastSentSlot != currentSlot)
+            {
+                await SendTelemetryAsync(s);
+                lastSentSlot = currentSlot;
+                SetTelemetryStatus(true, ComputeNextScheduledTime(scheduleHours, DateTime.Now));
+            }
         }
 
         SetTelemetryStatus(false, null);
+    }
+
+    private static HashSet<int> ParseScheduleHours(string input) =>
+        input.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+             .Select(p => int.TryParse(p, out var h) && h >= 0 && h <= 23 ? h : -1)
+             .Where(h => h >= 0)
+             .ToHashSet();
+
+    private static DateTime ComputeNextScheduledTime(HashSet<int> hours, DateTime from)
+    {
+        var sorted   = hours.OrderBy(h => h).ToList();
+        var nextHour = sorted.FirstOrDefault(h => h > from.Hour, -1);
+        return nextHour >= 0
+            ? from.Date.AddHours(nextHour)
+            : from.Date.AddDays(1).AddHours(sorted[0]);
     }
 
     /// <summary>

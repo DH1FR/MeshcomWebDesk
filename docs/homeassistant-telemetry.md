@@ -165,7 +165,7 @@ relevanten Werte aus. Zwei fertige Varianten:
 "TelemetryEnabled":       true,
 "TelemetryFilePath":      "/app/data/meshcom_telemetry.json",
 "TelemetryGroup":         "#262",
-"TelemetryIntervalHours": 1,
+"TelemetryScheduleHours":    "11,15",       // Sendezeiten: 11:00 und 15:00 Uhr
 "TelemetryApiEnabled":    true,
 "TelemetryApiKey":        "mein-geheimer-schluessel",
 "TelemetryMapping": [

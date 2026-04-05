@@ -161,8 +161,11 @@
                 </label>
                 <input type="text" @bind="_model.TelemetryGroup" placeholder="#262 / * / OE1KBC-1" />
 
-                <label>@Loc.T("Interval (Stunden, min. 1)", "Interval (Hours, min. 1)")</label>
-                <input type="number" min="1" @bind="_model.TelemetryIntervalHours" />
+                <label>
+                    @Loc.T("Sendezeiten (Stunden 0\u201323)", "Send times (hours 0\u201323)")<br />
+                    <small>@Loc.T("Kommagetrennt, z.\u00a0B. 11,15 f\u00fcr 11:00 und 15:00 Uhr", "Comma-separated, e.\u00a0g. 11,15 for 11:00 and 15:00")</small>
+                </label>
+                <input type="text" @bind="_model.TelemetryScheduleHours" placeholder="11,15" />
 
                 <label>@Loc.T("HTTP-API aktiv", "HTTP-API Active")</label>
                 <label class="settings-toggle">
@@ -445,7 +448,7 @@
             TelemetryEnabled       = s.TelemetryEnabled,
             TelemetryFilePath      = s.TelemetryFilePath,
             TelemetryGroup         = s.TelemetryGroup,
-            TelemetryIntervalHours = s.TelemetryIntervalHours,
+            TelemetryScheduleHours = s.TelemetryScheduleHours,
             TelemetryMapping       = s.TelemetryMapping
                 .Select(m => new TelemetryMappingEntry
                 {
@@ -501,7 +504,7 @@
         public bool   TelemetryEnabled       { get; set; }
         public string TelemetryFilePath      { get; set; } = string.Empty;
         public string TelemetryGroup         { get; set; } = string.Empty;
-        public int    TelemetryIntervalHours { get; set; } = 1;
+        public string TelemetryScheduleHours { get; set; } = "11";
         public List<TelemetryMappingEntry> TelemetryMapping { get; set; } = [];
         public bool   TelemetryApiEnabled    { get; set; }
         public string TelemetryApiKey        { get; set; } = string.Empty;
@@ -532,7 +535,7 @@
             TelemetryEnabled       = TelemetryEnabled,
             TelemetryFilePath      = TelemetryFilePath,
             TelemetryGroup         = TelemetryGroup,
-            TelemetryIntervalHours = TelemetryIntervalHours < 1 ? 1 : TelemetryIntervalHours,
+            TelemetryScheduleHours = TelemetryScheduleHours,
             TelemetryMapping       = TelemetryMapping,
             TelemetryApiEnabled    = TelemetryApiEnabled,
             TelemetryApiKey        = TelemetryApiKey,

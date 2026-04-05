@@ -104,9 +104,10 @@ public class MeshcomSettings
     public string TelemetryGroup { get; set; } = string.Empty;
 
     /// <summary>
-    /// Interval between telemetry transmissions in hours. Minimum value is 1. Default is 1.
+    /// Comma-separated list of hours (0–23) at which telemetry is sent each day.
+    /// Example: "11,15" sends at 11:00 and 15:00. Empty string disables scheduled sending.
     /// </summary>
-    public int TelemetryIntervalHours { get; set; } = 1;
+    public string TelemetryScheduleHours { get; set; } = "11";
 
     /// <summary>
     /// Mapping of JSON file keys to display label and unit for the telemetry message.
