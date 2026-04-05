@@ -1,0 +1,33 @@
+﻿@inherits LayoutComponentBase
+@inject MeshcomWebDesk.Services.LanguageService Loc
+@implements IDisposable
+
+<div class="app-layout">
+    <header class="app-header">
+        <div class="app-header-brand">
+            <span>📡</span>
+            <span class="app-title">MeshCom WebDesk</span>
+        </div>
+        <nav class="app-nav">
+            <NavLink class="app-nav-link" href="/" Match="NavLinkMatch.All">💬 @Loc.T("Chat", "Chat")</NavLink>
+            <NavLink class="app-nav-link" href="/mh">📻 MH</NavLink>
+            <NavLink class="app-nav-link" href="/settings">⚙️ @Loc.T("Einstellungen", "Settings")</NavLink>
+            <NavLink class="app-nav-link" href="/clear">🗑️ @Loc.T("Löschen", "Clear")</NavLink>
+            <NavLink class="app-nav-link" href="/about">ℹ️ @Loc.T("Über", "About")</NavLink>
+        </nav>
+    </header>
+    <div class="app-body">
+        @Body
+    </div>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+@code {
+    protected override void OnInitialized() => Loc.OnChange += StateHasChanged;
+    public void Dispose() => Loc.OnChange -= StateHasChanged;
+}

@@ -2,12 +2,12 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-COPY MeshcomWebClient/MeshcomWebClient.csproj MeshcomWebClient/
+COPY MeshcomWebDesk/MeshcomWebDesk.csproj MeshcomWebDesk/
 COPY MeshcomWebClient.Client/MeshcomWebClient.Client.csproj MeshcomWebClient.Client/
-RUN dotnet restore MeshcomWebClient/MeshcomWebClient.csproj
+RUN dotnet restore MeshcomWebDesk/MeshcomWebDesk.csproj
 
 COPY . .
-RUN dotnet publish MeshcomWebClient/MeshcomWebClient.csproj \
+RUN dotnet publish MeshcomWebDesk/MeshcomWebDesk.csproj \
     -c Release -r linux-x64 --self-contained true \
     -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true \
     -o /app/publish
@@ -31,4 +31,4 @@ ENV Meshcom__LogPath=/app/logs
 EXPOSE 5162
 EXPOSE 1799/udp
 
-ENTRYPOINT ["./MeshcomWebClient"]
+ENTRYPOINT ["./MeshcomWebDesk"]

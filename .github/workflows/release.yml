@@ -23,7 +23,7 @@ jobs:
 
       - name: Publish Windows x64 (framework-dependent)
         run: |
-          dotnet publish MeshcomWebClient/MeshcomWebClient.csproj \
+          dotnet publish MeshcomWebDesk/MeshcomWebDesk.csproj \
             -c Release \
             -r win-x64 \
             --no-self-contained \
@@ -32,7 +32,7 @@ jobs:
 
       - name: Publish Linux x64 (framework-dependent)
         run: |
-          dotnet publish MeshcomWebClient/MeshcomWebClient.csproj \
+          dotnet publish MeshcomWebDesk/MeshcomWebDesk.csproj \
             -c Release \
             -r linux-x64 \
             --no-self-contained \
@@ -41,7 +41,7 @@ jobs:
 
       - name: Publish macOS x64 / Intel (framework-dependent)
         run: |
-          dotnet publish MeshcomWebClient/MeshcomWebClient.csproj \
+          dotnet publish MeshcomWebDesk/MeshcomWebDesk.csproj \
             -c Release \
             -r osx-x64 \
             --no-self-contained \
@@ -50,7 +50,7 @@ jobs:
 
       - name: Publish macOS arm64 / Apple Silicon (framework-dependent)
         run: |
-          dotnet publish MeshcomWebClient/MeshcomWebClient.csproj \
+          dotnet publish MeshcomWebDesk/MeshcomWebDesk.csproj \
             -c Release \
             -r osx-arm64 \
             --no-self-contained \
@@ -61,38 +61,38 @@ jobs:
         run: |
           cp deploy/appsettings.template.json publish/win-x64/appsettings.json
           cd publish/win-x64
-          zip -r ../../MeshcomWebClient-${{ github.ref_name }}-win-x64.zip .
+          zip -r ../../MeshcomWebDesk-${{ github.ref_name }}-win-x64.zip .
 
       - name: Package Linux tarball
         run: |
           cp deploy/appsettings.template.json publish/linux-x64/appsettings.json
           cp deploy/install.sh publish/linux-x64/
-          cp deploy/meshcom-webclient.service publish/linux-x64/
-          chmod +x publish/linux-x64/MeshcomWebClient
+          cp deploy/meshcom-webdesk.service publish/linux-x64/
+          chmod +x publish/linux-x64/MeshcomWebDesk
           chmod +x publish/linux-x64/install.sh
-          tar -czf MeshcomWebClient-${{ github.ref_name }}-linux-x64.tar.gz \
+          tar -czf MeshcomWebDesk-${{ github.ref_name }}-linux-x64.tar.gz \
             -C publish/linux-x64 .
 
       - name: Package macOS x64 tarball
         run: |
           cp deploy/appsettings.template.json publish/osx-x64/appsettings.json
-          chmod +x publish/osx-x64/MeshcomWebClient
-          tar -czf MeshcomWebClient-${{ github.ref_name }}-osx-x64.tar.gz \
+          chmod +x publish/osx-x64/MeshcomWebDesk
+          tar -czf MeshcomWebDesk-${{ github.ref_name }}-osx-x64.tar.gz \
             -C publish/osx-x64 .
 
       - name: Package macOS arm64 tarball
         run: |
           cp deploy/appsettings.template.json publish/osx-arm64/appsettings.json
-          chmod +x publish/osx-arm64/MeshcomWebClient
-          tar -czf MeshcomWebClient-${{ github.ref_name }}-osx-arm64.tar.gz \
+          chmod +x publish/osx-arm64/MeshcomWebDesk
+          tar -czf MeshcomWebDesk-${{ github.ref_name }}-osx-arm64.tar.gz \
             -C publish/osx-arm64 .
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            MeshcomWebClient-${{ github.ref_name }}-win-x64.zip
-            MeshcomWebClient-${{ github.ref_name }}-linux-x64.tar.gz
-            MeshcomWebClient-${{ github.ref_name }}-osx-x64.tar.gz
-            MeshcomWebClient-${{ github.ref_name }}-osx-arm64.tar.gz
+            MeshcomWebDesk-${{ github.ref_name }}-win-x64.zip
+            MeshcomWebDesk-${{ github.ref_name }}-linux-x64.tar.gz
+            MeshcomWebDesk-${{ github.ref_name }}-osx-x64.tar.gz
+            MeshcomWebDesk-${{ github.ref_name }}-osx-arm64.tar.gz
           generate_release_notes: true

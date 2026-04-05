@@ -1,15 +1,15 @@
 #!/bin/bash
-# MeshCom Web Client – Linux install script
+# MeshCom WebDesk – Linux install script
 # Usage: sudo bash install.sh
 
 set -e
 
 INSTALL_DIR=/opt/meshcom
-SERVICE_NAME=meshcom-webclient
+SERVICE_NAME=meshcom-webdesk
 LOG_DIR=/var/log/meshcom
 USER=meshcom
 
-echo "=== MeshCom Web Client Installer ==="
+echo "=== MeshCom WebDesk Installer ==="
 
 # Create user
 if ! id "$USER" &>/dev/null; then
@@ -32,11 +32,11 @@ else
     echo "[+] Config: appsettings.json (bitte MyCallsign und DeviceIp prüfen!)"
 fi
 
-chmod +x $INSTALL_DIR/MeshcomWebClient
+chmod +x $INSTALL_DIR/MeshcomWebDesk
 chown -R $USER:$USER $INSTALL_DIR
 
 # Install systemd service
-cp meshcom-webclient.service /etc/systemd/system/
+cp meshcom-webdesk.service /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable $SERVICE_NAME
 systemctl start $SERVICE_NAME

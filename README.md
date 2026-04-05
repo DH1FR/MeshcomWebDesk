@@ -1,4 +1,4 @@
-# MeshCom Web Client
+# MeshCom WebDesk
 
 A **Blazor Server** web application for communicating with a [MeshCom 4.0](https://icssw.org/meshcom/) node via UDP (EXTUDP JSON protocol).  
 Built with **.NET 10** and **Blazor Interactive Server**.
@@ -11,9 +11,9 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 MeshCom always reminds me a little of the good old **Packet Radio** days – digital text communication over radio, simple and direct.
 
-However, I could not find any suitable software that provides a **web server** interface for MeshCom accessible from any device (PC, tablet, smartphone) within the local network. That is why I created this **MeshCom Web Client**.
+That is why I created this **MeshCom WebDesk**.
 
-The application runs on **Windows** or **Linux** and makes a full web client for MeshCom available via a simple URL – no installation required on the end device, everything runs directly in the browser.
+and makes a full web client for MeshCom available via a simple URL
 
 ---
 
@@ -122,7 +122,7 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 ## Architecture
 
 ```
-MeshcomWebClient/              ← Blazor Server (ASP.NET Core host)
+MeshcomWebDesk/              ← Blazor Server (ASP.NET Core host)
 │  Program.cs                  ← DI setup, Serilog, hosted services
 │  appsettings.json            ← All configuration
 │
@@ -162,7 +162,7 @@ MeshcomWebClient/              ← Blazor Server (ASP.NET Core host)
 
 ## Configuration
 
-All settings in `MeshcomWebClient/appsettings.json`:
+All settings in `MeshcomWebDesk/appsettings.json`:
 
 ```json
 "Meshcom": {
@@ -220,8 +220,8 @@ Set `"LogUdpTraffic": true` to write every packet to the log file:
 
 Filter the log file:
 ```powershell
-Select-String "\[UDP-RX\]" C:\Temp\Logs\MeshcomWebClient-*.log
-Select-String "\[UDP-TX\]" C:\Temp\Logs\MeshcomWebClient-*.log
+Select-String "\[UDP-RX\]" C:\Temp\Logs\MeshcomWebDesk-*.log
+Select-String "\[UDP-TX\]" C:\Temp\Logs\MeshcomWebDesk-*.log
 ```
 
 ---
@@ -274,7 +274,7 @@ This client communicates with the MeshCom node using the **EXTUDP JSON protocol*
 
 ## Requirements
 
-> 💡 **No build required:** Ready-to-run binaries for Windows and Linux are available under [Releases](https://github.com/DH1FR/MeshcomWebClient/releases/latest).
+> 💡 **No build required:** Ready-to-run binaries for Windows and Linux are available under [Releases](https://github.com/DH1FR/MeshcomWebDesk/releases/latest).
 
 - [.NET 10 Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/10.0) *(ASP.NET Core Runtime, required to run the Windows binary)*
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) *(only required for build from source)*
@@ -297,7 +297,7 @@ This happens because the binary is not code-signed.
 ## Build & Run
 
 ```powershell
-cd MeshcomWebClient
+cd MeshcomWebDesk
 dotnet run --launch-profile lan    # accessible from all devices in the LAN
 # or
 dotnet run                         # localhost only
@@ -325,8 +325,8 @@ newgrp docker
 
 ```bash
 # Clone repository
-git clone https://github.com/DH1FR/MeshcomWebClient.git
-cd MeshcomWebClient
+git clone https://github.com/DH1FR/MeshcomWebDesk.git
+cd MeshcomWebDesk
 
 # Create optional config file (overrides embedded defaults)
 cp deploy/appsettings.linux.json appsettings.json
@@ -370,7 +370,7 @@ docker compose up -d
 Pull the latest changes, rebuild the image and replace the container:
 
 ```bash
-cd MeshcomWebClient
+cd MeshcomWebDesk
 
 # Fetch latest changes
 git pull origin master
@@ -407,7 +407,7 @@ docker compose down --rmi local
 
 Docker is the recommended deployment method. If you prefer not to use Docker, download the binary directly – it is **framework-dependent**, meaning the **.NET 10 Runtime** must be installed on the target machine (no SDK needed).
 
-> 📦 **Download:** [GitHub Releases](https://github.com/DH1FR/MeshcomWebClient/releases/latest)
+> 📦 **Download:** [GitHub Releases](https://github.com/DH1FR/MeshcomWebDesk/releases/latest)
 
 ---
 
@@ -418,22 +418,22 @@ Docker is the recommended deployment method. If you prefer not to use Docker, do
 
 ```powershell
 # Unzip to e.g. C:\meshcom
-Expand-Archive MeshcomWebClient-vX.Y.Z-win-x64.zip -DestinationPath C:\meshcom
+Expand-Archive MeshcomWebDesk-vX.Y.Z-win-x64.zip -DestinationPath C:\meshcom
 
 # Edit configuration
 notepad C:\meshcom\appsettings.json   # set DeviceIp, MyCallsign
 
 # Start
 cd C:\meshcom
-.\MeshcomWebClient.exe
+.\MeshcomWebDesk.exe
 ```
 
 Open browser: **http://localhost:5162**
 
 > To run automatically at Windows startup, register as a Windows service:
 > ```powershell
-> sc.exe create MeshcomWebClient binPath="C:\meshcom\MeshcomWebClient.exe" start=auto
-> sc.exe start MeshcomWebClient
+> sc.exe create MeshcomWebDesk binPath="C:\meshcom\MeshcomWebDesk.exe" start=auto
+> sc.exe start MeshcomWebDesk
 > ```
 
 ---
@@ -447,7 +447,7 @@ Open browser: **http://localhost:5162**
 sudo apt-get update && sudo apt-get install -y aspnetcore-runtime-10.0
 
 # Extract archive
-mkdir meshcom && tar -xzf MeshcomWebClient-vX.Y.Z-linux-x64.tar.gz -C meshcom
+mkdir meshcom && tar -xzf MeshcomWebDesk-vX.Y.Z-linux-x64.tar.gz -C meshcom
 cd meshcom
 
 # Edit configuration (MyCallsign, DeviceIp etc.)
@@ -476,10 +476,10 @@ systemctl restart meshcom-webclient    # restart after config change
 ```bash
 # Extract the archive (choose the right binary for your CPU)
 # Apple Silicon (M1/M2/M3):
-tar -xzf MeshcomWebClient-vX.Y.Z-osx-arm64.tar.gz -C ~/meshcom
+tar -xzf MeshcomWebDesk-vX.Y.Z-osx-arm64.tar.gz -C ~/meshcom
 
 # Intel Mac:
-tar -xzf MeshcomWebClient-vX.Y.Z-osx-x64.tar.gz -C ~/meshcom
+tar -xzf MeshcomWebDesk-vX.Y.Z-osx-x64.tar.gz -C ~/meshcom
 
 cd ~/meshcom
 
@@ -487,16 +487,16 @@ cd ~/meshcom
 nano appsettings.json      # set DeviceIp, MyCallsign
 
 # Allow execution (macOS Gatekeeper)
-xattr -d com.apple.quarantine MeshcomWebClient
+xattr -d com.apple.quarantine MeshcomWebDesk
 
 # Start
-./MeshcomWebClient
+./MeshcomWebDesk
 ```
 
 Open browser: **http://localhost:5162**
 
 > **macOS Gatekeeper:** If you see *"cannot be opened because it is from an unidentified developer"*,  
-> run `xattr -d com.apple.quarantine ./MeshcomWebClient` once before starting.
+> run `xattr -d com.apple.quarantine ./MeshcomWebDesk` once before starting.
 
 ---
 

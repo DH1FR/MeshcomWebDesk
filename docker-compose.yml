@@ -1,8 +1,8 @@
 services:
-  meshcom-webclient:
+  meshcom-webdesk:
     build: .
-    image: meshcom-webclient:latest
-    container_name: meshcom-webclient
+    image: meshcom-webdesk:latest
+    container_name: meshcom-webdesk
     restart: unless-stopped
     network_mode: host          # required for UDP RX from MeshCom device
     volumes:
