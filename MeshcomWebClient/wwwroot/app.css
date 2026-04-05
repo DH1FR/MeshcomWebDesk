@@ -234,6 +234,12 @@ h1:focus {
     color: #b7e4c7;
 }
 
+.msg-call-link {
+    cursor: pointer;
+    text-decoration: underline dotted #4a6a9a;
+}
+.msg-call-link:hover { color: #79c0ff; text-decoration: underline solid; }
+
 .msg-text {
     color: #e0e0e0;
 }

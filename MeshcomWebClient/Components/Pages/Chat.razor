@@ -51,7 +51,16 @@
                     {
                         <div class="message @(msg.IsOutgoing ? "msg-out" : "msg-in")">
                             <span class="msg-time">@msg.Timestamp.ToString("HH:mm:ss")</span>
-                            <span class="msg-call">@(msg.IsOutgoing ? _myCallsign : msg.From):</span>
+                            @if (msg.IsOutgoing)
+                            {
+                                <span class="msg-call">@_myCallsign:</span>
+                            }
+                            else
+                            {
+                                <span class="msg-call msg-call-link"
+                                      @onclick="() => OpenTabFromMonitor(msg.From)"
+                                      title="@Loc.T($"Chat mit {msg.From} öffnen", $"Open chat with {msg.From}")">@msg.From:</span>
+                            }
                             <span class="msg-text">@msg.Text</span>
                             @if (msg.IsOutgoing)
                             {
