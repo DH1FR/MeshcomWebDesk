@@ -88,6 +88,11 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 - Most settings apply **immediately without restart**
 - Settings that still require a restart: **Listen-IP / Listen-Port** (socket binding) and **Log-Path / Log-Retention** (Serilog)
 
+### 🌐 UI Language
+- Full bilingual interface: **Deutsch 🇩🇪** and **English 🇬🇧**
+- Language is selected in **Settings → Language** and persisted in `appsettings.override.json`
+- Switching applies **instantly** across all pages without any page reload or restart
+
 ### 📡 Beacon (Bake)
 - **Periodic beacon** – sends a configurable text to a configurable group at a fixed interval
 - Interval is configurable in whole hours (minimum 1 h); first transmission after one full interval
@@ -150,6 +155,7 @@ MeshcomWebClient/              ← Blazor Server (ASP.NET Core host)
       ChatService.cs           ← Singleton: routing, tabs, MH list, monitor, deduplication
       DataPersistenceService.cs← BackgroundService: load/save state to JSON on disk
       SettingsService.cs       ← Writes appsettings.override.json in DataPath (Docker-safe); changes applied live via IOptionsMonitor
+      LanguageService.cs       ← Singleton: UI language switching (de/en); T(de,en) helper; OnChange event for instant re-render
 ```
 
 ---
@@ -184,6 +190,7 @@ All settings in `MeshcomWebClient/appsettings.json`:
   "TelemetryIntervalHours": 1,           // telemetry interval in hours (minimum 1)
   "TelemetryApiEnabled":   false,        // enable POST /api/telemetry HTTP endpoint
   "TelemetryApiKey":       "",           // optional X-Api-Key for the endpoint (empty = no auth)
+  "Language":              "de",         // UI language: "de" (German) or "en" (English)
   "TelemetryMapping": [                  // any number of entries; configure in Settings UI
     { "JsonKey": "aussentemp",  "Label": "🌡",  "Unit": "C",   "Decimals": 1 },
     { "JsonKey": "luftdruck",   "Label": "🧭",  "Unit": "hPa", "Decimals": 1 },

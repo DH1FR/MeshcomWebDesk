@@ -4,35 +4,42 @@
 @inject IOptionsMonitor<MeshcomSettings> SettingsMonitor
 @inject SettingsService SettingsService
 @inject MeshcomUdpService UdpService
+@inject LanguageService Loc
+@implements IDisposable
 
-<PageTitle>Einstellungen – MeshCom Web Client</PageTitle>
+<PageTitle>@Loc.T("Einstellungen", "Settings") – MeshCom Web Client</PageTitle>
 
 <div class="settings-page">
     <div class="settings-container">
 
         <div class="settings-header">
             <span class="settings-icon">⚙️</span>
-            <h1 class="settings-title">Einstellungen</h1>
+            <h1 class="settings-title">@Loc.T("Einstellungen", "Settings")</h1>
         </div>
 
         <div class="settings-notice">
-            ℹ️ Die meisten Einstellungen werden <strong>sofort</strong> übernommen, ohne Neustart.<br />
-            Ausnahmen: <strong>Listen-IP / Listen-Port</strong> (Socket-Binding) und
-            <strong>Log-Pfad / Log-Aufbewahrung</strong> (Serilog) erfordern einen Neustart der Anwendung.
+            ℹ️ @Loc.T("Die meisten Einstellungen werden", "Most settings are applied")
+            <strong>@Loc.T("sofort", "immediately")</strong>
+            @Loc.T("übernommen, ohne Neustart.", "without a restart.")<br />
+            @Loc.T("Ausnahmen:", "Exceptions:")
+            <strong>Listen-IP / Listen-Port</strong>
+            @Loc.T("(Socket-Binding) und", "(socket binding) and")
+            <strong>@Loc.T("Log-Pfad / Log-Aufbewahrung", "Log Path / Log Retention")</strong>
+            @Loc.T("(Serilog) erfordern einen Neustart der Anwendung.", "(Serilog) require an application restart.")
         </div>
 
         @if (_saved)
         {
-            <div class="settings-success">✅ Einstellungen gespeichert.</div>
+            <div class="settings-success">✅ @Loc.T("Einstellungen gespeichert.", "Settings saved.")</div>
         }
         @if (_errorMessage != null)
         {
-            <div class="settings-error">❌ Fehler: @_errorMessage</div>
+            <div class="settings-error">❌ @Loc.T("Fehler:", "Error:") @_errorMessage</div>
         }
 
-        <!-- Verbindung -->
+        <!-- Verbindung / Connection -->
         <div class="settings-section">
-            <h2 class="settings-section-title">🔌 Verbindung</h2>
+            <h2 class="settings-section-title">🔌 @Loc.T("Verbindung", "Connection")</h2>
             <div class="settings-grid">
                 <label>Listen IP</label>
                 <input type="text" @bind="_model.ListenIp" />
@@ -46,7 +53,7 @@
                 <label>Device Port</label>
                 <input type="number" min="1" max="65535" @bind="_model.DevicePort" />
 
-                <label>Eigenes Rufzeichen</label>
+                <label>@Loc.T("Eigenes Rufzeichen", "Own Callsign")</label>
                 <input type="text" @bind="_model.MyCallsign" />
             </div>
         </div>
@@ -55,16 +62,16 @@
         <div class="settings-section">
             <h2 class="settings-section-title">📝 Logging</h2>
             <div class="settings-grid">
-                <label>Log-Pfad</label>
+                <label>@Loc.T("Log-Pfad", "Log Path")</label>
                 <input type="text" @bind="_model.LogPath" />
 
-                <label>Log-Aufbewahrung (Tage)</label>
+                <label>@Loc.T("Log-Aufbewahrung (Tage)", "Log Retention (Days)")</label>
                 <input type="number" min="1" @bind="_model.LogRetainDays" />
 
-                <label>UDP-Traffic loggen</label>
+                <label>@Loc.T("UDP-Traffic loggen", "Log UDP Traffic")</label>
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.LogUdpTraffic" />
-                    <span>@(_model.LogUdpTraffic ? "Aktiv" : "Inaktiv")</span>
+                    <span>@(_model.LogUdpTraffic ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                 </label>
             </div>
         </div>
@@ -73,28 +80,28 @@
         <div class="settings-section">
             <h2 class="settings-section-title">💬 Chat &amp; Monitor</h2>
             <div class="settings-grid">
-                <label>Monitor-Limit (Einträge)</label>
+                <label>@Loc.T("Monitor-Limit (Einträge)", "Monitor Limit (Entries)")</label>
                 <input type="number" min="10" @bind="_model.MonitorMaxMessages" />
 
-                <label>Gruppenfilter aktiv</label>
+                <label>@Loc.T("Gruppenfilter aktiv", "Group Filter Active")</label>
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.GroupFilterEnabled" />
-                    <span>@(_model.GroupFilterEnabled ? "Aktiv" : "Inaktiv")</span>
+                    <span>@(_model.GroupFilterEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                 </label>
 
                 <label>
-                    Gruppen-Whitelist<br />
-                    <small>(eine pro Zeile, z.&nbsp;B. #262)</small>
+                    @Loc.T("Gruppen-Whitelist", "Group Whitelist")<br />
+                    <small>@Loc.T("(eine pro Zeile, z.\u00a0B. #262)", "(one per line, e.\u00a0g. #262)")</small>
                 </label>
                 <textarea rows="4" @bind="_model.GroupsText"></textarea>
             </div>
         </div>
 
-        <!-- Datenspeicherung -->
+        <!-- Datenspeicherung / Data Storage -->
         <div class="settings-section">
-            <h2 class="settings-section-title">💾 Datenspeicherung</h2>
+            <h2 class="settings-section-title">💾 @Loc.T("Datenspeicherung", "Data Storage")</h2>
             <div class="settings-grid">
-                <label>Datenpfad</label>
+                <label>@Loc.T("Datenpfad", "Data Path")</label>
                 <input type="text" @bind="_model.DataPath" />
             </div>
         </div>
@@ -103,10 +110,10 @@
         <div class="settings-section">
             <h2 class="settings-section-title">↩️ Auto-Reply</h2>
             <div class="settings-grid">
-                <label>Auto-Reply aktiv</label>
+                <label>@Loc.T("Auto-Reply aktiv", "Auto-Reply Active")</label>
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.AutoReplyEnabled" />
-                    <span>@(_model.AutoReplyEnabled ? "Aktiv" : "Inaktiv")</span>
+                    <span>@(_model.AutoReplyEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                 </label>
 
                 <label>Auto-Reply Text</label>
@@ -114,73 +121,73 @@
             </div>
         </div>
 
-        <!-- Bake (Beacon) -->
+        <!-- Bake / Beacon -->
         <div class="settings-section">
-            <h2 class="settings-section-title">📡 Bake (Beacon)</h2>
+            <h2 class="settings-section-title">📡 @Loc.T("Bake (Beacon)", "Beacon")</h2>
             <div class="settings-grid">
-                <label>Bake aktiv</label>
+                <label>@Loc.T("Bake aktiv", "Beacon Active")</label>
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.BeaconEnabled" />
-                    <span>@(_model.BeaconEnabled ? "Aktiv" : "Inaktiv")</span>
+                    <span>@(_model.BeaconEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                 </label>
 
-                <label>Gruppe</label>
+                <label>@Loc.T("Gruppe", "Group")</label>
                 <input type="text" @bind="_model.BeaconGroup" placeholder="#262" />
 
-                <label>Bakentext</label>
+                <label>@Loc.T("Bakentext", "Beacon Text")</label>
                 <input type="text" @bind="_model.BeaconText" />
 
-                <label>Interval (Stunden, min. 1)</label>
+                <label>@Loc.T("Interval (Stunden, min. 1)", "Interval (Hours, min. 1)")</label>
                 <input type="number" min="1" @bind="_model.BeaconIntervalHours" />
             </div>
         </div>
 
-        <!-- Telemetrie -->
+        <!-- Telemetrie / Telemetry -->
         <div class="settings-section">
-            <h2 class="settings-section-title">📊 Telemetrie</h2>
+            <h2 class="settings-section-title">📊 @Loc.T("Telemetrie", "Telemetry")</h2>
             <div class="settings-grid">
-                <label>Telemetrie aktiv</label>
+                <label>@Loc.T("Telemetrie aktiv", "Telemetry Active")</label>
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.TelemetryEnabled" />
-                    <span>@(_model.TelemetryEnabled ? "Aktiv" : "Inaktiv")</span>
+                    <span>@(_model.TelemetryEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                 </label>
 
-                <label>JSON-Datei</label>
+                <label>@Loc.T("JSON-Datei", "JSON File")</label>
                 <input type="text" @bind="_model.TelemetryFilePath" placeholder="C:\Temp\telemetry.json" />
 
                 <label>
-                    Ziel<br />
-                    <small>(Gruppe z.&nbsp;B. #262, * für Alle, oder Rufzeichen)</small>
+                    @Loc.T("Ziel", "Target")<br />
+                    <small>@Loc.T("(Gruppe z.\u00a0B. #262, * für Alle, oder Rufzeichen)", "(Group e.\u00a0g. #262, * for all, or callsign)")</small>
                 </label>
                 <input type="text" @bind="_model.TelemetryGroup" placeholder="#262 / * / OE1KBC-1" />
 
-                <label>Interval (Stunden, min. 1)</label>
+                <label>@Loc.T("Interval (Stunden, min. 1)", "Interval (Hours, min. 1)")</label>
                 <input type="number" min="1" @bind="_model.TelemetryIntervalHours" />
 
-                <label>HTTP-API aktiv</label>
+                <label>@Loc.T("HTTP-API aktiv", "HTTP-API Active")</label>
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.TelemetryApiEnabled" />
-                    <span>@(_model.TelemetryApiEnabled ? "Aktiv" : "Inaktiv")</span>
+                    <span>@(_model.TelemetryApiEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                 </label>
 
                 <label>
                     API-Key<br />
-                    <small>(leer&nbsp;= keine Authentifizierung)</small>
+                    <small>@Loc.T("(leer\u00a0= keine Authentifizierung)", "(empty\u00a0= no authentication)")</small>
                 </label>
                 <input type="password" @bind="_model.TelemetryApiKey" autocomplete="new-password"
-                       placeholder="Geheimer Schlüssel für POST /api/telemetry" />
+                       placeholder="@Loc.T("Geheimer Schlüssel für POST /api/telemetry", "Secret key for POST /api/telemetry")" />
             </div>
 
             <div style="margin-top:1rem">
-                <h3 style="font-size:1rem;margin-bottom:0.5rem">Messwert-Zuordnung</h3>
-                <p><small>JSON-Key: Schlüssel aus der JSON-Datei. Bezeichnung: Anzeigename in der Nachricht. Einheit: z.&nbsp;B. °C, kW, hPa. Dez.: Nachkommastellen.</small></p>
+                <h3 style="font-size:1rem;margin-bottom:0.5rem">@Loc.T("Messwert-Zuordnung", "Measurement Mapping")</h3>
+                <p><small>@Loc.T("JSON-Key: Schlüssel aus der JSON-Datei. Bezeichnung: Anzeigename in der Nachricht. Einheit: z.\u00a0B. °C, kW, hPa. Dez.: Nachkommastellen.", "JSON-Key: key from the JSON file. Label: display name in the message. Unit: e.\u00a0g. °C, kW, hPa. Dec.: decimal places.")</small></p>
                 <table class="telemetry-mapping-table">
                     <thead>
                         <tr>
                             <th>JSON-Key</th>
-                            <th>Bezeichnung</th>
-                            <th>Einheit</th>
-                            <th>Dez.</th>
+                            <th>@Loc.T("Bezeichnung", "Label")</th>
+                            <th>@Loc.T("Einheit", "Unit")</th>
+                            <th>@Loc.T("Dez.", "Dec.")</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -198,13 +205,13 @@
                         }
                     </tbody>
                 </table>
-                <button type="button" class="btn-add" @onclick="() => _model.TelemetryMapping.Add(new TelemetryMappingEntry())">➕ Zeile hinzufügen</button>
+                <button type="button" class="btn-add" @onclick="() => _model.TelemetryMapping.Add(new TelemetryMappingEntry())">➕ @Loc.T("Zeile hinzufügen", "Add Row")</button>
             </div>
 
             <!-- Vorschau -->
             <div style="margin-top:1.25rem">
-                <h3 style="font-size:1rem;margin-bottom:0.5rem">🔍 Vorschau aktueller Telemetriedaten</h3>
-                <button type="button" class="btn-add" @onclick="LoadTelemetryPreviewAsync">🔄 Datei lesen &amp; Vorschau</button>
+                <h3 style="font-size:1rem;margin-bottom:0.5rem">🔍 @Loc.T("Vorschau aktueller Telemetriedaten", "Preview Current Telemetry Data")</h3>
+                <button type="button" class="btn-add" @onclick="LoadTelemetryPreviewAsync">🔄 @Loc.T("Datei lesen & Vorschau", "Read File & Preview")</button>
 
                 @if (_telemetryPreviewError != null)
                 {
@@ -215,7 +222,7 @@
                 {
                     <table class="telemetry-mapping-table" style="margin-top:0.75rem">
                         <thead>
-                            <tr><th>JSON-Key</th><th>Aktueller Wert</th><th>Gesendet als</th></tr>
+                            <tr><th>JSON-Key</th><th>@Loc.T("Aktueller Wert", "Current Value")</th><th>@Loc.T("Gesendet als", "Sent as")</th></tr>
                         </thead>
                         <tbody>
                             @foreach (var row in _telemetryPreview)
@@ -233,7 +240,7 @@
                     @if (_telemetryMessages?.Count > 0)
                     {
                         <div style="margin-top:0.75rem">
-                            <strong style="font-size:13px">Vorschau LoRa-Nachricht@(_telemetryMessages!.Count > 1 ? "en" : ""):</strong>
+                            <strong style="font-size:13px">@Loc.T("Vorschau LoRa-Nachricht", "Preview LoRa Message")@(_telemetryMessages!.Count > 1 ? Loc.T("en", "s") : ""):</strong>
                             @foreach (var msg in _telemetryMessages)
                             {
                                 <div style="font-family:monospace;background:#16213e;color:#c9d1d9;padding:5px 10px;border-radius:4px;margin-top:4px;font-size:12px;word-break:break-all">
@@ -246,16 +253,28 @@
             </div>
         </div>
 
+        <!-- Sprache / Language -->
+        <div class="settings-section">
+            <h2 class="settings-section-title">🌐 @Loc.T("Sprache", "Language")</h2>
+            <div class="settings-grid">
+                <label>@Loc.T("Oberflächensprache", "UI Language")</label>
+                <select @bind="_model.Language">
+                    <option value="de">🇩🇪 Deutsch</option>
+                    <option value="en">🇬🇧 English</option>
+                </select>
+            </div>
+        </div>
+
         <div class="settings-actions">
-            <button class="btn-save" @onclick="SaveAsync">💾 Speichern</button>
+            <button class="btn-save" @onclick="SaveAsync">💾 @Loc.T("Speichern", "Save")</button>
             <button class="btn-send-now" @onclick="SendTelemetryNowAsync" disabled="@_sendingNow">
                 @if (_sendingNow)
                 {
-                    <span>⏳ Wird gesendet…</span>
+                    <span>⏳ @Loc.T("Wird gesendet…", "Sending…")</span>
                 }
                 else
                 {
-                    <span>📡 Telemetrie jetzt senden</span>
+                    <span>📡 @Loc.T("Telemetrie jetzt senden", "Send Telemetry Now")</span>
                 }
             </button>
         </div>
@@ -311,12 +330,12 @@
         var filePath = _model.TelemetryFilePath;
         if (string.IsNullOrWhiteSpace(filePath))
         {
-            _telemetryPreviewError = "Kein Dateipfad konfiguriert.";
+            _telemetryPreviewError = Loc.T("Kein Dateipfad konfiguriert.", "No file path configured.");
             return;
         }
         if (!File.Exists(filePath))
         {
-            _telemetryPreviewError = $"Datei nicht gefunden: {filePath}";
+            _telemetryPreviewError = Loc.T($"Datei nicht gefunden: {filePath}", $"File not found: {filePath}");
             return;
         }
 
@@ -335,7 +354,7 @@
 
                 if (!root.TryGetProperty(entry.JsonKey, out var valueProp))
                 {
-                    rows.Add(new(entry.JsonKey, "–", "⚠️ Key nicht in Datei", true));
+                    rows.Add(new(entry.JsonKey, "–", Loc.T("⚠️ Key nicht in Datei", "⚠️ Key not found in file"), true));
                     continue;
                 }
 
@@ -349,7 +368,7 @@
                     value = parsed;
                 else
                 {
-                    rows.Add(new(entry.JsonKey, valueProp.ToString(), $"⚠️ Kein Zahlenwert", true));
+                    rows.Add(new(entry.JsonKey, valueProp.ToString(), Loc.T("⚠️ Kein Zahlenwert", "⚠️ Not a numeric value"), true));
                     continue;
                 }
 
@@ -395,12 +414,13 @@
         }
         catch (Exception ex)
         {
-            _telemetryPreviewError = $"Fehler: {ex.Message}";
+            _telemetryPreviewError = Loc.T($"Fehler: {ex.Message}", $"Error: {ex.Message}");
         }
     }
 
     protected override void OnInitialized()
     {
+        Loc.OnChange += StateHasChanged;
         var s = SettingsMonitor.CurrentValue;
         _model = new FormModel
         {
@@ -436,9 +456,12 @@
                 })
                 .ToList(),
             TelemetryApiEnabled    = s.TelemetryApiEnabled,
-            TelemetryApiKey        = s.TelemetryApiKey
+            TelemetryApiKey        = s.TelemetryApiKey,
+            Language               = s.Language
         };
     }
+
+    public void Dispose() => Loc.OnChange -= StateHasChanged;
 
     private async Task SaveAsync()
     {
@@ -482,6 +505,7 @@
         public List<TelemetryMappingEntry> TelemetryMapping { get; set; } = [];
         public bool   TelemetryApiEnabled    { get; set; }
         public string TelemetryApiKey        { get; set; } = string.Empty;
+        public string Language               { get; set; } = "de";
 
         public MeshcomSettings ToSettings() => new()
         {
@@ -511,7 +535,8 @@
             TelemetryIntervalHours = TelemetryIntervalHours < 1 ? 1 : TelemetryIntervalHours,
             TelemetryMapping       = TelemetryMapping,
             TelemetryApiEnabled    = TelemetryApiEnabled,
-            TelemetryApiKey        = TelemetryApiKey
+            TelemetryApiKey        = TelemetryApiKey,
+            Language               = Language
         };
     }
 }

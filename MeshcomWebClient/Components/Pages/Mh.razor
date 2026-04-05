@@ -8,14 +8,15 @@
 @inject ChatService ChatService
 @inject MeshcomUdpService UdpService
 @inject IOptions<MeshcomSettings> SettingsOptions
+@inject LanguageService Loc
 
-<PageTitle>MH – Most Recently Heard</PageTitle>
+<PageTitle>MH – @Loc.T("Zuletzt gehört", "Most Recently Heard")</PageTitle>
 
 <div class="mh-page">
 
     @* ── Own position bar ── *@
     <div class="mh-ownpos @(HasOwnPos ? "mh-ownpos-ok" : "mh-ownpos-unknown")">
-        <span class="mh-ownpos-label">📍 Eigene Position:</span>
+        <span class="mh-ownpos-label">📍 @Loc.T("Eigene Position:", "Own Position:")</span>
         @if (HasOwnPos)
         {
             <span class="mh-ownpos-val">
@@ -25,11 +26,11 @@
             </span>
             <span class="mh-ownpos-src">[Node]</span>
             <a class="mh-osm-link" href="@GeoHelper.OsmUrl(_status.OwnLatitude!.Value, _status.OwnLongitude!.Value)"
-               target="_blank" title="Auf Karte anzeigen">🗺️</a>
+               target="_blank" title="@Loc.T("Auf Karte anzeigen", "Show on map")">&#x1f5fa;&#xfe0f;</a>
         }
         else
         {
-            <span class="mh-ownpos-unknown-txt">⏳ Warte auf Positionsdaten vom Node (@_myCallsign)…</span>
+            <span class="mh-ownpos-unknown-txt">⏳ @Loc.T($"Warte auf Positionsdaten vom Node ({_myCallsign})…", $"Waiting for position data from node ({_myCallsign})…")</span>
         }
     </div>
 
@@ -37,11 +38,11 @@
     <div class="mh-header">
         <div class="mh-title-row">
             <h2 class="mh-title">📻 Most Recently Heard</h2>
-            <span class="mh-subtitle">@_stations.Count Station@(_stations.Count != 1 ? "en" : "")</span>
+            <span class="mh-subtitle">@_stations.Count @Loc.T("Station", "Station")@(_stations.Count != 1 ? Loc.T("en", "s") : "")</span>
         </div>
         @if (_stations.Count > 0)
         {
-            <button class="mh-clear-btn" @onclick="ClearList">🗑️ Liste leeren</button>
+            <button class="mh-clear-btn" @onclick="ClearList">🗑️ @Loc.T("Liste leeren", "Clear List")</button>
         }
     </div>
 
@@ -49,8 +50,8 @@
     @if (_stations.Count == 0)
     {
         <div class="mh-empty">
-            <p>Noch keine Stationen gehört.</p>
-            <p class="mh-empty-hint">Empfangene LoRa-Nachrichten erscheinen hier automatisch.</p>
+            <p>@Loc.T("Noch keine Stationen gehört.", "No stations heard yet.")</p>
+            <p class="mh-empty-hint">@Loc.T("Empfangene LoRa-Nachrichten erscheinen hier automatisch.", "Received LoRa messages will appear here automatically.")</p>
         </div>
     }
     else
@@ -59,13 +60,13 @@
             <table class="mh-table">
                 <thead>
                     <tr>
-                        <th>Rufzeichen</th>
-                        <th>Zuletzt gehört</th>
-                        <th class="col-center">Anz.</th>
-                        <th>Letzte Nachricht</th>
-                        <th>GPS-Position</th>
-                        <th class="col-center">Höhe</th>
-                        <th class="col-center">Entfernung</th>
+                        <th>@Loc.T("Rufzeichen", "Callsign")</th>
+                        <th>@Loc.T("Zuletzt gehört", "Last Heard")</th>
+                        <th class="col-center">@Loc.T("Anz.", "Cnt.")</th>
+                        <th>@Loc.T("Letzte Nachricht", "Last Message")</th>
+                        <th>@Loc.T("GPS-Position", "GPS Position")</th>
+                        <th class="col-center">@Loc.T("Höhe", "Alt.")</th>
+                        <th class="col-center">@Loc.T("Entfernung", "Distance")</th>
                         <th class="col-center">🔋</th>
                         <th class="col-center">RSSI</th>
                         <th class="col-center">SNR</th>
@@ -78,7 +79,7 @@
                         var dist = CalcDistance(s);
                         <tr class="mh-row">
                             <td class="mh-callsign">
-                                <span title="@BuildStationTooltip(s)">@s.Callsign</span>
+                                <span title="@BuildStationTooltip(s, Loc.T("Erstmals", "First"))">@s.Callsign</span>
                                 @if (!string.IsNullOrEmpty(MeshcomLookup.HwName(s.HwId)))
                                 {
                                     <span class="mh-hw-badge">@MeshcomLookup.HwName(s.HwId)</span>
@@ -95,8 +96,8 @@
                                 {
                                     <a class="mh-coord-link"
                                        href="@GeoHelper.OsmUrl(s.Latitude.Value, s.Longitude.Value)"
-                                       target="_blank"
-                                       title="Auf Karte anzeigen">
+                                          target="_blank"
+                                          title="@Loc.T("Auf Karte anzeigen", "Show on map")">
                                         @($"{s.Latitude.Value:F4}°{(s.Latitude >= 0 ? "N" : "S")}")
                                         <br />
                                         @($"{s.Longitude.Value:F4}°{(s.Longitude >= 0 ? "E" : "W")}")
@@ -116,7 +117,7 @@
                             <td class="col-center mh-batt">
                                 @if (s.Battery.HasValue)
                                 {
-                                    <span class="@BattClass(s.Battery.Value)" title="Akku @s.Battery%">@s.Battery%</span>
+                                    <span class="@BattClass(s.Battery.Value)" title="@Loc.T($"Akku {s.Battery}%", $"Battery {s.Battery}%")">@s.Battery%</span>
                                 }
                                 else
                                 {
@@ -131,7 +132,7 @@
                             </td>
                             <td>
                                 <button class="mh-chat-btn" @onclick="() => OpenChat(s.Callsign)"
-                                        title="Chat mit @s.Callsign öffnen">💬</button>
+                                        title="@Loc.T($"Chat mit {s.Callsign} öffnen", $"Open chat with {s.Callsign}")">&#x1f4ac;</button>
                             </td>
                         </tr>
                     }
@@ -151,6 +152,7 @@
 
     protected override void OnInitialized()
     {
+        Loc.OnChange += StateHasChanged;
         _myCallsign = SettingsOptions.Value.MyCallsign;
         _status     = UdpService.Status;
         _stations   = ChatService.MhList;
@@ -222,18 +224,19 @@
         _    => "batt-low"
     };
 
-    private static string BuildStationTooltip(HeardStation s)
+    private static string BuildStationTooltip(HeardStation s, string firstLabel)
     {
         var parts = new List<string>();
         if (!string.IsNullOrEmpty(s.Firmware))      parts.Add($"FW: {s.Firmware}");
         if (s.HwId.HasValue)                         parts.Add($"HW-ID: {s.HwId}");
-        if (s.FirstHeard != default)                 parts.Add($"Erstmals: {s.FirstHeard:dd.MM.yy HH:mm}");
+        if (s.FirstHeard != default)                 parts.Add($"{firstLabel}: {s.FirstHeard:dd.MM.yy HH:mm}");
         return parts.Count > 0 ? string.Join(" | ", parts) : s.Callsign;
     }
 
     public void Dispose()
     {
         _disposed = true;
+        Loc.OnChange      -= StateHasChanged;
         ChatService.OnChange      -= OnChanged;
         UdpService.OnStatusChange -= OnStatusChanged;
     }

@@ -1,8 +1,10 @@
 @page "/about"
 @rendermode InteractiveServer
 @using System.Reflection
+@inject MeshcomWebClient.Services.LanguageService Loc
+@implements IDisposable
 
-<PageTitle>Über – MeshCom Web Client</PageTitle>
+<PageTitle>@Loc.T("Über", "About") – MeshCom Web Client</PageTitle>
 
 <div class="about-page">
     <div class="about-card">
@@ -18,9 +20,9 @@
         </p>
 
         <p class="about-description">
-            Webbasierter Client für die Kommunikation mit MeshCom-Nodes<br />
-            über das EXTUDP JSON-Protokoll.<br />
-            Empfangen und senden von LoRa-Nachrichten direkt im Browser.
+            @Loc.T("Webbasierter Client für die Kommunikation mit MeshCom-Nodes", "Web-based client for communicating with MeshCom nodes")<br />
+            @Loc.T("über das EXTUDP JSON-Protokoll.", "via the EXTUDP JSON protocol.")<br />
+            @Loc.T("Empfangen und senden von LoRa-Nachrichten direkt im Browser.", "Receive and send LoRa messages directly in the browser.")
         </p>
 
         <div class="about-divider"></div>
@@ -41,6 +43,9 @@
 </div>
 
 @code {
+    protected override void OnInitialized() => Loc.OnChange += StateHasChanged;
+    public void Dispose() => Loc.OnChange -= StateHasChanged;
+
     private static readonly string _version =
         typeof(About).Assembly.GetName().Version is { } v
             ? $"{v.Major}.{v.Minor}.{v.Build}"

@@ -6,6 +6,7 @@
 @rendermode InteractiveServer
 @inject ChatService ChatService
 @inject MeshcomUdpService UdpService
+@inject LanguageService Loc
 @implements IDisposable
 
 <PageTitle>MeshCom Web Client</PageTitle>
@@ -28,17 +29,17 @@
                     <span class="tab-close" @onclick="() => CloseTab(tab.Key)" @onclick:stopPropagation="true">&times;</span>
                 </button>
             }
-            <button class="tab-button tab-new" @onclick="ShowNewTabDialog" title="Neuen Tab öffnen">+</button>
+            <button class="tab-button tab-new" @onclick="ShowNewTabDialog" title="@Loc.T("Neuen Tab öffnen", "Open new tab")">+</button>
         </div>
 
         @if (_showNewTabInput)
         {
             <div class="new-tab-dialog">
                 <input @bind="_newTabCallsign" @bind:event="oninput"
-                       placeholder="Rufzeichen oder Gruppe (z.B. OE1KBC, #gruppe, *)"
+                       placeholder="@Loc.T("Rufzeichen oder Gruppe (z.B. OE1KBC, #gruppe, *)", "Callsign or group (e.g. OE1KBC, #group, *)") "
                        @onkeydown="OnNewTabKeyDown" />
-                <button class="btn-action" @onclick="CreateNewTab">Öffnen</button>
-                <button class="btn-cancel" @onclick="() => _showNewTabInput = false">Abbrechen</button>
+                <button class="btn-action" @onclick="CreateNewTab">@Loc.T("\u00d6ffnen", "Open")</button>
+                <button class="btn-cancel" @onclick="() => _showNewTabInput = false">@Loc.T("Abbrechen", "Cancel")</button>
             </div>
         }
 
@@ -62,18 +63,17 @@
 
                 <div class="send-bar">
                     <input @bind="_messageText" @bind:event="oninput"
-                           placeholder="Nachricht eingeben..."
+                           placeholder="@Loc.T("Nachricht eingeben...", "Enter message...")"
                            @onkeydown="OnSendKeyDown" />
                     <button class="btn-send" @onclick="SendMessage" disabled="@string.IsNullOrWhiteSpace(_messageText)">
-                        Senden
+                        @Loc.T("Senden", "Send")
                     </button>
                 </div>
             }
             else
             {
                 <div class="no-tab-selected">
-                    <p>Kein Tab ausgewählt. Klicke <strong>+</strong> um einen neuen Chat zu öffnen,
-                       oder warte auf eine eingehende Nachricht.</p>
+                    <p>@Loc.T("Kein Tab ausgewählt. Klicke", "No tab selected. Click") <strong>+</strong> @Loc.T("um einen neuen Chat zu öffnen, oder warte auf eine eingehende Nachricht.", "to open a new chat, or wait for an incoming message.")</p>
                 </div>
             }
         </div>
@@ -83,9 +83,9 @@
     <div class="lower-pane @(_showMonitor ? "" : "lower-pane-collapsed")">
         <div class="pane-header">
             <span>📡 Monitor</span>
-            <span class="msg-count">@_allMessages.Count Einträge</span>
+            <span class="msg-count">@_allMessages.Count @Loc.T("Einträge", "Entries")</span>
             <button class="mon-toggle-btn" @onclick="() => _showMonitor = !_showMonitor"
-                    title="@(_showMonitor ? "Monitor ausblenden" : "Monitor einblenden")">
+                    title="@(_showMonitor ? Loc.T("Monitor ausblenden", "Hide Monitor") : Loc.T("Monitor einblenden", "Show Monitor"))">
                 @(_showMonitor ? "▼" : "▲")
             </button>
         </div>
@@ -108,7 +108,7 @@
                             @if (!string.Equals(m.From, _myCallsign, StringComparison.OrdinalIgnoreCase))
                             {
                                 <span class="mon-call mon-call-link" @onclick="() => OpenTabFromMonitor(m.From)"
-                                      title="Chat mit @m.From öffnen">@m.From</span>
+                                      title="@Loc.T($"Chat mit {m.From} öffnen", $"Open chat with {m.From}")">@m.From</span>
                             }
                             else
                             {
@@ -126,14 +126,14 @@
                             @if (!string.IsNullOrEmpty(m.To))
                             {
                                 <span class="mon-arrow">→</span>
-                                @if (m.IsBroadcast)
+                                if (m.IsBroadcast)
                                 {
-                                    <span class="mon-call mon-bcast">alle</span>
+                                    <span class="mon-call mon-bcast">@Loc.T("alle", "all")</span>
                                 }
                                 else if (!string.Equals(m.To, _myCallsign, StringComparison.OrdinalIgnoreCase))
                                 {
                                     <span class="mon-call mon-call-link" @onclick="() => OpenTabFromMonitor(m.To)"
-                                          title="Chat mit @m.To öffnen">@m.To</span>
+                                          title="@Loc.T($"Chat mit {m.To} öffnen", $"Open chat with {m.To}")">@m.To</span>
                                 }
                                 else
                                 {
@@ -198,16 +198,16 @@
     <div class="status-bar">
         <button class="status-mute-btn @(_soundEnabled ? "" : "status-mute-off")"
                 @onclick="() => _soundEnabled = !_soundEnabled"
-                title="@(_soundEnabled ? "Ton ausschalten" : "Ton einschalten")">
+                title="@(_soundEnabled ? Loc.T("Ton ausschalten", "Mute sound") : Loc.T("Ton einschalten", "Unmute sound"))">
             @(_soundEnabled ? "🔔" : "🔕")
         </button>
         <span class="status-sep">|</span>
         <span class="status-item @(_status.IsListening ? "status-ok" : "status-err")">
-            @(_status.IsListening ? "🟢" : "🔴") UDP @(_status.IsListening ? "Aktiv" : "Inaktiv")
+            @(_status.IsListening ? "🟢" : "🔴") UDP @(_status.IsListening ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))
         </span>
         <span class="status-sep">|</span>
         <span class="status-item @(_status.IsRegistered ? "status-ok" : "status-warn")">
-            @(_status.IsRegistered ? "✅" : "⏳") @(_status.IsRegistered ? "Registriert" : "Nicht registriert")
+            @(_status.IsRegistered ? "✅" : "⏳") @(_status.IsRegistered ? Loc.T("Registriert", "Registered") : Loc.T("Nicht registriert", "Not registered"))
         </span>
         <span class="status-sep">|</span>
         <span class="status-item">📡 @_settings.DeviceIp:@_settings.DevicePort</span>
@@ -218,8 +218,8 @@
         @if (_status.BeaconActive)
         {
             <span class="status-sep">|</span>
-            <span class="status-item" title="Bake aktiv · Gruppe @_settings.BeaconGroup · alle @_settings.BeaconIntervalHours h">
-                <span class="beacon-dot">●</span> Bake
+            <span class="status-item" title="@Loc.T($"Bake aktiv · Gruppe {_settings.BeaconGroup} · alle {_settings.BeaconIntervalHours} h", $"Beacon active · Group {_settings.BeaconGroup} · every {_settings.BeaconIntervalHours} h")">
+                <span class="beacon-dot">●</span> @Loc.T("Bake", "Beacon")
                 @if (_status.BeaconNextSend.HasValue)
                 {
                     <span class="@BeaconTimeCss(_status.BeaconNextSend.Value)"> · @_status.BeaconNextSend.Value.ToString("HH:mm")</span>
@@ -259,7 +259,7 @@
     </ChildContent>
     <ErrorContent Context="ex">
         <div style="padding:1rem;color:#ff6b6b;background:#1a1a2e;border:1px solid #ff6b6b;border-radius:6px;margin:1rem">
-            <strong>Fehler:</strong> @ex.Message
+            <strong>@Loc.T("Fehler:", "Error:")</strong> @ex.Message
         </div>
     </ErrorContent>
 </ErrorBoundary>
@@ -290,6 +290,7 @@
 
     protected override void OnInitialized()
     {
+        Loc.OnChange += StateHasChanged;
         _settings = SettingsOptions.Value;
         _myCallsign = _settings.MyCallsign;
         _status = UdpService.Status;
@@ -472,6 +473,7 @@
     public void Dispose()
     {
         _disposed = true;
+        Loc.OnChange -= StateHasChanged;
         ChatService.OnChange -= OnChatChanged;
         UdpService.OnStatusChange -= OnStatusChanged;
     }

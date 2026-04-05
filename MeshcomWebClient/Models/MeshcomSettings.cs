@@ -126,4 +126,9 @@ public class MeshcomSettings
     /// Leave empty to disable authentication (only recommended in trusted networks).
     /// </summary>
     public string TelemetryApiKey { get; set; } = string.Empty;
+
+    /// <summary>
+    /// UI language. Supported values: "de" (German, default) and "en" (English).
+    /// </summary>
+    public string Language { get; set; } = "de";
 }

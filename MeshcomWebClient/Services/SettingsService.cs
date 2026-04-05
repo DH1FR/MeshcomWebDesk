@@ -62,7 +62,8 @@ public class SettingsService
                     ["Decimals"] = m.Decimals
                 }).ToArray()),
                 ["TelemetryApiEnabled"] = s.TelemetryApiEnabled,
-                ["TelemetryApiKey"]     = s.TelemetryApiKey
+                ["TelemetryApiKey"]     = s.TelemetryApiKey,
+                ["Language"]            = s.Language
             }
         };
 
