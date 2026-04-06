@@ -863,6 +863,10 @@ h1:focus {
         padding-bottom: max(3px, env(safe-area-inset-bottom));
     }
 
+    /* Status bar: only essentials on phones */
+    .status-label { display: none; }
+    .status-detail { display: none !important; }
+
     /* MH table: horizontal scroll on phones */
     .mh-table-wrapper {
         overflow-x: auto;

@@ -212,22 +212,22 @@
         </button>
         <span class="status-sep">|</span>
         <span class="status-item @(_status.IsListening ? "status-ok" : "status-err")">
-            @(_status.IsListening ? "🟢" : "🔴") UDP @(_status.IsListening ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))
+            @(_status.IsListening ? "🟢" : "🔴") <span class="status-label">UDP @(_status.IsListening ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
         </span>
         <span class="status-sep">|</span>
         <span class="status-item @(_status.IsRegistered ? "status-ok" : "status-warn")">
-            @(_status.IsRegistered ? "✅" : "⏳") @(_status.IsRegistered ? Loc.T("Registriert", "Registered") : Loc.T("Nicht registriert", "Not registered"))
+            @(_status.IsRegistered ? "✅" : "⏳") <span class="status-label">@(_status.IsRegistered ? Loc.T("Registriert", "Registered") : Loc.T("Nicht registriert", "Not registered"))</span>
         </span>
-        <span class="status-sep">|</span>
-        <span class="status-item">📡 @_settings.DeviceIp:@_settings.DevicePort</span>
+        <span class="status-sep status-detail">|</span>
+        <span class="status-item status-detail">📡 @_settings.DeviceIp:@_settings.DevicePort</span>
         <span class="status-sep">|</span>
         <span class="status-item">🎙️ @_myCallsign</span>
-        <span class="status-sep">|</span>
-        <span class="status-item">📨 RX @_status.RxCount / TX @_status.TxCount</span>
+        <span class="status-sep status-detail">|</span>
+        <span class="status-item status-detail">📨 RX @_status.RxCount / TX @_status.TxCount</span>
         @if (_status.BeaconActive)
         {
-            <span class="status-sep">|</span>
-            <span class="status-item" title="@Loc.T($"Bake aktiv · Gruppe {_settings.BeaconGroup} · alle {_settings.BeaconIntervalHours} h", $"Beacon active · Group {_settings.BeaconGroup} · every {_settings.BeaconIntervalHours} h")">
+            <span class="status-sep status-detail">|</span>
+            <span class="status-item status-detail" title="@Loc.T($"Bake aktiv · Gruppe {_settings.BeaconGroup} · alle {_settings.BeaconIntervalHours} h", $"Beacon active · Group {_settings.BeaconGroup} · every {_settings.BeaconIntervalHours} h")">
                 <span class="beacon-dot">●</span> @Loc.T("Bake", "Beacon")
                 @if (_status.BeaconNextSend.HasValue)
                 {
@@ -237,25 +237,25 @@
         }
         @if (_status.LastRxTime.HasValue)
         {
-            <span class="status-sep">|</span>
-            <span class="status-item">⏱️ @_status.LastRxTime.Value.ToString("HH:mm:ss") von @_status.LastRxFrom</span>
+            <span class="status-sep status-detail">|</span>
+            <span class="status-item status-detail">⏱️ @_status.LastRxTime.Value.ToString("HH:mm:ss") von @_status.LastRxFrom</span>
         }
         @if (_status.LastRssi.HasValue)
         {
-            <span class="status-sep">|</span>
-            <span class="status-item @RssiCssClass(_status.LastRssi.Value)">
+            <span class="status-sep status-detail">|</span>
+            <span class="status-item status-detail @RssiCssClass(_status.LastRssi.Value)">
                 📶 RSSI @_status.LastRssi dBm&nbsp;&nbsp;SNR @_status.LastSnr?.ToString("F1") dB
             </span>
         }
         @if (_status.LastTxTime.HasValue)
         {
-            <span class="status-sep">|</span>
-            <span class="status-item">📤 @_status.LastTxTime.Value.ToString("HH:mm:ss")</span>
+            <span class="status-sep status-detail">|</span>
+            <span class="status-item status-detail">📤 @_status.LastTxTime.Value.ToString("HH:mm:ss")</span>
         }
         @if (_status.OwnLatitude.HasValue && _status.OwnLongitude.HasValue)
         {
-            <span class="status-sep">|</span>
-            <span class="status-item status-ok">
+            <span class="status-sep status-detail">|</span>
+            <span class="status-item status-detail status-ok">
                 📍 @GeoHelper.FormatCoord(_status.OwnLatitude, _status.OwnLongitude)
                 @if (_status.OwnAltitude.HasValue)
                 {
