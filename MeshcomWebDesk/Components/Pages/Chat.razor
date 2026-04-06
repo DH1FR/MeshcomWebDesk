@@ -29,17 +29,17 @@
                     <span class="tab-close" @onclick="() => CloseTab(tab.Key)" @onclick:stopPropagation="true">&times;</span>
                 </button>
             }
-            <button class="tab-button tab-new" @onclick="ShowNewTabDialog" title="@Loc.T("Neuen Tab öffnen", "Open new tab")">+</button>
+            Loc.T("Neuen Tab öffnen", "Open new tab", "Apri nuova scheda", "Abrir nueva pestaña")
         </div>
 
         @if (_showNewTabInput)
         {
             <div class="new-tab-dialog">
                 <input @bind="_newTabCallsign" @bind:event="oninput"
-                       placeholder="@Loc.T("Rufzeichen oder Gruppe (z.B. OE1KBC, #gruppe, *)", "Callsign or group (e.g. OE1KBC, #group, *)") "
+                       placeholder="@Loc.T("Rufzeichen oder Gruppe (z.B. OE1KBC, #gruppe, *)", "Callsign or group (e.g. OE1KBC, #group, *)", "Nominativo o gruppo (es. OE1KBC, #gruppo, *)", "Indicativo o grupo (p.ej. OE1KBC, #grupo, *)") "
                        @onkeydown="OnNewTabKeyDown" />
-                <button class="btn-action" @onclick="CreateNewTab">@Loc.T("\u00d6ffnen", "Open")</button>
-                <button class="btn-cancel" @onclick="() => _showNewTabInput = false">@Loc.T("Abbrechen", "Cancel")</button>
+                <button class="btn-action" @onclick="CreateNewTab">@Loc.T("\u00d6ffnen", "Open", "Apri", "Abrir")</button>
+                <button class="btn-cancel" @onclick="() => _showNewTabInput = false">@Loc.T("Abbrechen", "Cancel", "Annulla", "Cancelar")</button>
             </div>
         }
 
@@ -59,7 +59,7 @@
                             {
                                 <span class="msg-call msg-call-link"
                                       @onclick="() => OpenTabFromMonitor(msg.From)"
-                                      title="@Loc.T($"Chat mit {msg.From} öffnen", $"Open chat with {msg.From}")">@msg.From:</span>
+                                      title="@Loc.T($"Chat mit {msg.From} öffnen", $"Open chat with {msg.From}", $"Apri chat con {msg.From}", $"Abrir chat con {msg.From}")">@msg.From:</span>
                             }
                             <span class="msg-text">@msg.Text</span>
                             @if (msg.IsOutgoing)
@@ -72,17 +72,17 @@
 
                 <div class="send-bar">
                     <input @bind="_messageText" @bind:event="oninput"
-                           placeholder="@Loc.T("Nachricht eingeben...", "Enter message...")"
+                           placeholder="@Loc.T("Nachricht eingeben...", "Enter message...", "Inserisci messaggio...", "Escribe un mensaje...")"
                            @onkeydown="OnSendKeyDown" />
                     <button class="btn-send" @onclick="SendMessage" disabled="@string.IsNullOrWhiteSpace(_messageText)">
-                        @Loc.T("Senden", "Send")
+                        @Loc.T("Senden", "Send", "Invia", "Enviar")
                     </button>
                 </div>
             }
             else
             {
                 <div class="no-tab-selected">
-                    <p>@Loc.T("Kein Tab ausgewählt. Klicke", "No tab selected. Click") <strong>+</strong> @Loc.T("um einen neuen Chat zu öffnen, oder warte auf eine eingehende Nachricht.", "to open a new chat, or wait for an incoming message.")</p>
+                    Loc.T("um einen neuen Chat zu öffnen, oder warte auf eine eingehende Nachricht.", "to open a new chat, or wait for an incoming message.", "per aprire una nuova chat, o attendi un messaggio in arrivo.", "para abrir un nuevo chat, o espera un mensaje entrante.")
                 </div>
             }
         </div>
@@ -92,9 +92,9 @@
     <div class="lower-pane @(_showMonitor ? "" : "lower-pane-collapsed")">
         <div class="pane-header">
             <span>📡 Monitor</span>
-            <span class="msg-count">@_allMessages.Count @Loc.T("Einträge", "Entries")</span>
+            <span class="msg-count">@_allMessages.Count @Loc.T("Einträge", "Entries", "Voci", "Entradas")</span>
             <button class="mon-toggle-btn" @onclick="() => _showMonitor = !_showMonitor"
-                    title="@(_showMonitor ? Loc.T("Monitor ausblenden", "Hide Monitor") : Loc.T("Monitor einblenden", "Show Monitor"))">
+                    title="@(_showMonitor ? Loc.T("Monitor ausblenden", "Hide Monitor", "Nascondi monitor", "Ocultar monitor") : Loc.T("Monitor einblenden", "Show Monitor", "Mostra monitor", "Mostrar monitor"))">
                 @(_showMonitor ? "▼" : "▲")
             </button>
         </div>
@@ -117,7 +117,7 @@
                             @if (!string.Equals(m.From, _myCallsign, StringComparison.OrdinalIgnoreCase))
                             {
                                 <span class="mon-call mon-call-link" @onclick="() => OpenTabFromMonitor(m.From)"
-                                      title="@Loc.T($"Chat mit {m.From} öffnen", $"Open chat with {m.From}")">@m.From</span>
+                                      title="@Loc.T($"Chat mit {m.From} öffnen", $"Open chat with {m.From}", $"Apri chat con {m.From}", $"Abrir chat con {m.From}")">@m.From</span>
                             }
                             else
                             {
@@ -137,12 +137,12 @@
                                 <span class="mon-arrow">→</span>
                                 if (m.IsBroadcast)
                                 {
-                                    <span class="mon-call mon-bcast">@Loc.T("alle", "all")</span>
+                                    <span class="mon-call mon-bcast">@Loc.T("alle", "all", "tutti", "todos")</span>
                                 }
                                 else if (!string.Equals(m.To, _myCallsign, StringComparison.OrdinalIgnoreCase))
                                 {
                                     <span class="mon-call mon-call-link" @onclick="() => OpenTabFromMonitor(m.To)"
-                                          title="@Loc.T($"Chat mit {m.To} öffnen", $"Open chat with {m.To}")">@m.To</span>
+                                          title="@Loc.T($"Chat mit {m.To} öffnen", $"Open chat with {m.To}", $"Apri chat con {m.To}", $"Abrir chat con {m.To}")">@m.To</span>
                                 }
                                 else
                                 {
@@ -207,16 +207,16 @@
     <div class="status-bar">
         <button class="status-mute-btn @(_soundEnabled ? "" : "status-mute-off")"
                 @onclick="() => _soundEnabled = !_soundEnabled"
-                title="@(_soundEnabled ? Loc.T("Ton ausschalten", "Mute sound") : Loc.T("Ton einschalten", "Unmute sound"))">
+                title="@(_soundEnabled ? Loc.T("Ton ausschalten", "Mute sound", "Disattiva audio", "Silenciar") : Loc.T("Ton einschalten", "Unmute sound", "Attiva audio", "Activar sonido"))">
             @(_soundEnabled ? "🔔" : "🔕")
         </button>
         <span class="status-sep">|</span>
         <span class="status-item @(_status.IsListening ? "status-ok" : "status-err")">
-            @(_status.IsListening ? "🟢" : "🔴") <span class="status-label">UDP @(_status.IsListening ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
+            @(_status.IsListening ? "🟢" : "🔴") <span class="status-label">UDP @(_status.IsListening ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
         </span>
         <span class="status-sep">|</span>
         <span class="status-item @(_status.IsRegistered ? "status-ok" : "status-warn")">
-            @(_status.IsRegistered ? "✅" : "⏳") <span class="status-label">@(_status.IsRegistered ? Loc.T("Registriert", "Registered") : Loc.T("Nicht registriert", "Not registered"))</span>
+            @(_status.IsRegistered ? "✅" : "⏳") <span class="status-label">@(_status.IsRegistered ? Loc.T("Registriert", "Registered", "Registrato", "Registrado") : Loc.T("Nicht registriert", "Not registered", "Non registrato", "No registrado"))</span>
         </span>
         <span class="status-sep status-detail">|</span>
         <span class="status-item status-detail">📡 @_settings.DeviceIp:@_settings.DevicePort</span>
@@ -227,8 +227,8 @@
         @if (_status.BeaconActive)
         {
             <span class="status-sep status-detail">|</span>
-            <span class="status-item status-detail" title="@Loc.T($"Bake aktiv · Gruppe {_settings.BeaconGroup} · alle {_settings.BeaconIntervalHours} h", $"Beacon active · Group {_settings.BeaconGroup} · every {_settings.BeaconIntervalHours} h")">
-                <span class="beacon-dot">●</span> @Loc.T("Bake", "Beacon")
+            <span class="status-item status-detail" title="@Loc.T($"Bake aktiv · Gruppe {_settings.BeaconGroup} · alle {_settings.BeaconIntervalHours} h", $"Beacon active · Group {_settings.BeaconGroup} · every {_settings.BeaconIntervalHours} h", $"Beacon attivo · Gruppo {_settings.BeaconGroup} · ogni {_settings.BeaconIntervalHours} h", $"Baliza activa · Grupo {_settings.BeaconGroup} · cada {_settings.BeaconIntervalHours} h")">
+                <span class="beacon-dot">●</span> @Loc.T("Bake", "Beacon", "Beacon", "Baliza")
                 @if (_status.BeaconNextSend.HasValue)
                 {
                     <span class="@BeaconTimeCss(_status.BeaconNextSend.Value)"> · @_status.BeaconNextSend.Value.ToString("HH:mm")</span>
@@ -268,7 +268,7 @@
     </ChildContent>
     <ErrorContent Context="ex">
         <div style="padding:1rem;color:#ff6b6b;background:#1a1a2e;border:1px solid #ff6b6b;border-radius:6px;margin:1rem">
-            <strong>@Loc.T("Fehler:", "Error:")</strong> @ex.Message
+            <strong>@Loc.T("Fehler:", "Error:", "Errore:", "Error:")</strong> @ex.Message
         </div>
     </ErrorContent>
 </ErrorBoundary>

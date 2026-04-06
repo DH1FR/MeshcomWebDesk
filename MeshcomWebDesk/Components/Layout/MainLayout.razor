@@ -1,4 +1,4 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 @inject MeshcomWebDesk.Services.LanguageService Loc
 @implements IDisposable
 
@@ -11,9 +11,9 @@
         <nav class="app-nav">
             <NavLink class="app-nav-link" href="/" Match="NavLinkMatch.All">💬 <span class="nav-label">@Loc.T("Chat", "Chat")</span></NavLink>
             <NavLink class="app-nav-link" href="/mh">📻 <span class="nav-label">MH</span></NavLink>
-            <NavLink class="app-nav-link" href="/settings">⚙️ <span class="nav-label">@Loc.T("Einstellungen", "Settings")</span></NavLink>
-            <NavLink class="app-nav-link" href="/clear">🗑️ <span class="nav-label">@Loc.T("Löschen", "Clear")</span></NavLink>
-            <NavLink class="app-nav-link" href="/about">ℹ️ <span class="nav-label">@Loc.T("Über", "About")</span></NavLink>
+            <NavLink class="app-nav-link" href="/settings">⚙️ <span class="nav-label">@Loc.T("Einstellungen", "Settings", "Impostazioni", "Configuración")</span></NavLink>
+            <NavLink class="app-nav-link" href="/clear">🗑️ <span class="nav-label">@Loc.T("Löschen", "Clear", "Elimina", "Borrar")</span></NavLink>
+            <NavLink class="app-nav-link" href="/about">ℹ️ <span class="nav-label">@Loc.T("Über", "About", "Info", "Acerca de")</span></NavLink>
         </nav>
     </header>
     <div class="app-body">

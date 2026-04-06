@@ -4,7 +4,7 @@
 @inject MeshcomWebDesk.Services.LanguageService Loc
 @implements IDisposable
 
-<PageTitle>@Loc.T("Über", "About") – MeshCom WebDesk</PageTitle>
+<PageTitle>@Loc.T("Über", "About", "Info", "Acerca de") – MeshCom WebDesk</PageTitle>
 
 <div class="about-page">
     <div class="about-card">
@@ -20,9 +20,9 @@
         </p>
 
         <p class="about-description">
-            @Loc.T("Webbasierter Client für die Kommunikation mit MeshCom-Nodes", "Web-based client for communicating with MeshCom nodes")<br />
-            @Loc.T("über das EXTUDP JSON-Protokoll.", "via the EXTUDP JSON protocol.")<br />
-            @Loc.T("Empfangen und senden von LoRa-Nachrichten direkt im Browser.", "Receive and send LoRa messages directly in the browser.")
+            @Loc.T("Webbasierter Client für die Kommunikation mit MeshCom-Nodes", "Web-based client for communicating with MeshCom nodes", "Client web per la comunicazione con i nodi MeshCom", "Cliente web para la comunicación con nodos MeshCom")<br />
+            @Loc.T("über das EXTUDP JSON-Protokoll.", "via the EXTUDP JSON protocol.", "tramite il protocollo EXTUDP JSON.", "mediante el protocolo EXTUDP JSON.")<br />
+            @Loc.T("Empfangen und senden von LoRa-Nachrichten direkt im Browser.", "Receive and send LoRa messages directly in the browser.", "Ricevi e invia messaggi LoRa direttamente nel browser.", "Recibe y envía mensajes LoRa directamente en el navegador.")
         </p>
 
         <div class="about-divider"></div>

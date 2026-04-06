@@ -4,8 +4,8 @@ using Microsoft.Extensions.Options;
 namespace MeshcomWebDesk.Services;
 
 /// <summary>
-/// Provides UI-language switching between German ("de") and English ("en").
-/// Inject this singleton into Blazor components and call T(de, en) for inline translations.
+/// Provides UI-language switching between German ("de"), English ("en"), Italian ("it") and Spanish ("es").
+/// Inject this singleton into Blazor components and call T(de, en, it, es) for inline translations.
 /// Subscribe to <see cref="OnChange"/> and call StateHasChanged() to re-render on language switch.
 /// </summary>
 public class LanguageService
@@ -29,9 +29,22 @@ public class LanguageService
     /// <summary>Currently active language code ("de" or "en").</summary>
     public string Current => _lang;
 
-    /// <summary>Returns <paramref name="de"/> or <paramref name="en"/> depending on the active language.</summary>
-    public string T(string de, string en) => _lang == "en" ? en : de;
+    /// <summary>Returns the string matching the active language; falls back to <paramref name="de"/> if no translation is provided.</summary>
+    public string T(string de, string en, string? it = null, string? es = null) =>
+        _lang switch
+        {
+            "en" => en,
+            "it" => it ?? de,
+            "es" => es ?? de,
+            _    => de
+        };
 
     private static string Normalize(string? lang) =>
-        lang?.ToLowerInvariant() == "en" ? "en" : "de";
+        lang?.ToLowerInvariant() switch
+        {
+            "en" => "en",
+            "it" => "it",
+            "es" => "es",
+            _    => "de"
+        };
 }
