@@ -90,6 +90,12 @@ public class MeshcomMessage
     /// <summary>Firmware version string (e.g. "4.35p") built from "firmware" + "fw_sub".</summary>
     public string? Firmware { get; set; }
 
+    /// <summary>
+    /// True when the broadcast text is a MeshCom network time-sync packet,
+    /// e.g. "{CET}2026-04-07 18:11:58". These are routed to the monitor only.
+    /// </summary>
+    public bool IsTimeSync { get; set; }
+
     // ── Telemetry fields (type:"tele") ──────────────────────────────────────
     public double? Temp1    { get; set; }
     public double? Temp2    { get; set; }

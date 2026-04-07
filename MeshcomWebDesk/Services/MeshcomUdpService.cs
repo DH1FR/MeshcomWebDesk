@@ -47,6 +47,10 @@ public partial class MeshcomUdpService : BackgroundService
     [GeneratedRegex(@":ack(\d+)$", RegexOptions.IgnoreCase)]
     private static partial Regex AckSequencePattern();
 
+    /// <summary>Detects MeshCom network time-sync broadcasts, e.g. "{CET}2026-04-07 18:11:58".</summary>
+    [GeneratedRegex(@"^\{[A-Z]{2,5}\}\d{4}-\d{2}-\d{2}")]
+    private static partial Regex TimeSyncPattern();
+
     public MeshcomUdpService(
         ILogger<MeshcomUdpService> logger,
         IOptionsMonitor<MeshcomSettings> settings,
@@ -134,6 +138,15 @@ public partial class MeshcomUdpService : BackgroundService
                                 _chatService.AssignOutgoingSequence(message.To, message.SequenceNumber);
                             _logger.LogDebug("Skipping node echo from {From}", message.From);
                             // Do not add node echoes to the monitor – the TX entry is already shown there.
+                        }
+                        else if (message.IsTimeSync)
+                        {
+                            // Time-sync broadcast: monitor only, no chat tab
+                            Status.RxCount++;
+                            Status.LastRxTime = message.Timestamp;
+                            Status.LastRxFrom = message.From;
+                            NotifyStatusChange();
+                            _chatService.AddRawMessage(message);
                         }
                         else if (message.IsAck)
                         {
@@ -629,7 +642,10 @@ public partial class MeshcomUdpService : BackgroundService
                     seqNum = ackSeqMatch.Groups[1].Value;
             }
 
-            // src_type:"node" = local device packet; rssi/snr are 0 and not meaningful
+            // Detect MeshCom time-sync broadcasts: "{CET}2026-04-07 18:11:58"
+            var isTimeSync = !isAck && !isPositionBeacon && !isTelemetry && TimeSyncPattern().IsMatch(msg);
+
+            // src_type:"node"
             var srcType      = root.TryGetProperty("src_type", out var srcTypeProp) ? srcTypeProp.GetString() : "lora";
             var isNodePacket = string.Equals(srcType, "node", StringComparison.OrdinalIgnoreCase);
 
@@ -726,6 +742,7 @@ public partial class MeshcomUdpService : BackgroundService
                 IsPositionBeacon = isPositionBeacon,
                 IsTelemetry      = isTelemetry,
                 IsAck            = isAck,
+                IsTimeSync       = isTimeSync,
                 MsgId            = msgId,
                 SequenceNumber   = seqNum,
                 RelayPath        = relayPath,

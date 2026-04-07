@@ -21,7 +21,7 @@
             {
                 <button class="tab-button @(tab.Key == _activeTabKey ? "active" : "")"
                         @onclick="() => SelectTab(tab.Key)">
-                    @tab.Title
+                    @(tab.Key == "*" ? Loc.T("Alle", "All", "Tutti", "Todos") : tab.Title)
                     @if (tab.UnreadCount > 0)
                     {
                         <span class="tab-unread">@(tab.UnreadCount > 99 ? "99+" : tab.UnreadCount.ToString())</span>
@@ -238,7 +238,7 @@
         @if (_status.LastRxTime.HasValue)
         {
             <span class="status-sep status-detail">|</span>
-            <span class="status-item status-detail">⏱️ @_status.LastRxTime.Value.ToString("HH:mm:ss") von @_status.LastRxFrom</span>
+            <span class="status-item status-detail">⏱️ @_status.LastRxTime.Value.ToString("HH:mm:ss") @Loc.T("von", "from", "da", "de") @_status.LastRxFrom</span>
         }
         @if (_status.LastRssi.HasValue)
         {
@@ -498,6 +498,7 @@
 
     private static string MonType(MeshcomMessage m)
     {
+        if (m.IsTimeSync)                  return "SYS";
         if (m.IsTelemetry)                 return "TEL";
         if (m.IsPositionBeacon)            return "POS";
         if (m.IsAck)                       return "ACK";
@@ -518,6 +519,7 @@
 
     private static string MonRowClass(MeshcomMessage m) =>
         m.IsOutgoing ? "mon-row-tx" :
+        m.IsTimeSync ? "mon-row-sys" :
         m.IsTelemetry ? "mon-row-tele" :
         m.IsPositionBeacon ? "mon-row-pos" :
         m.IsAck ? "mon-row-ack" :
