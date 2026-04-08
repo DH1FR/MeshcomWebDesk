@@ -117,7 +117,32 @@
                 </label>
 
                 <label>Auto-Reply Text</label>
-                <input type="text" @bind="_model.AutoReplyText" />
+                <div class="settings-input-hint">
+                    <input type="text" @bind="_model.AutoReplyText" />
+                    <span class="settings-hint">@Loc.T("{version} wird durch die aktuelle Versionsnummer ersetzt.", "{version} is replaced with the current version number.", "{version} viene sostituito con il numero di versione.", "{version} se reemplaza con el número de versión.")</span>
+                </div>
+
+                <label>@Loc.T("Test-Rufzeichen", "Test Callsign", "Nominativo di test", "Indicativo de prueba")</label>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <input type="text" @bind="_autoReplyTestCallsign" placeholder="z.B. DH1FR-2" style="flex:1" />
+                    <button class="btn-send-now" @onclick="SendAutoReplyTestAsync" disabled="@(_autoReplySending || string.IsNullOrWhiteSpace(_autoReplyTestCallsign))">
+                        @if (_autoReplySending)
+                        {
+                            <span>⏳ @Loc.T("Wird gesendet…", "Sending…", "Invio in corso…", "Enviando…")</span>
+                        }
+                        else
+                        {
+                            <span>📤 @Loc.T("Auto-Reply testen", "Test Auto-Reply", "Testa auto-risposta", "Probar auto-respuesta")</span>
+                        }
+                    </button>
+                </div>
+                @if (_autoReplyResult != null)
+                {
+                    <span></span>
+                    <div class="@(_autoReplyResult.StartsWith("✅") ? "settings-success" : "settings-error")" style="margin-top:0">
+                        @_autoReplyResult
+                    </div>
+                }
             </div>
         </div>
 
@@ -135,7 +160,10 @@
                 <input type="text" @bind="_model.BeaconGroup" placeholder="#262" />
 
                 <label>@Loc.T("Bakentext", "Beacon Text", "Testo beacon", "Texto de baliza")</label>
-                <input type="text" @bind="_model.BeaconText" />
+                <div class="settings-input-hint">
+                    <input type="text" @bind="_model.BeaconText" />
+                    <span class="settings-hint">@Loc.T("{version} wird durch die aktuelle Versionsnummer ersetzt.", "{version} is replaced with the current version number.", "{version} viene sostituito con il numero di versione.", "{version} se reemplaza con el número de versión.")</span>
+                </div>
 
                 <label>@Loc.T("Interval (Stunden, min. 1)", "Interval (Hours, min. 1)", "Intervallo (ore, min. 1)", "Intervalo (horas, mín. 1)")</label>
                 <input type="number" min="1" @bind="_model.BeaconIntervalHours" />
@@ -300,6 +328,9 @@
     private string? _errorMessage;
     private bool   _sendingNow;
     private string? _sendResult;
+    private string  _autoReplyTestCallsign = string.Empty;
+    private bool    _autoReplySending;
+    private string? _autoReplyResult;
 
     private async Task SendTelemetryNowAsync()
     {
@@ -317,6 +348,25 @@
         finally
         {
             _sendingNow = false;
+        }
+    }
+
+    private async Task SendAutoReplyTestAsync()
+    {
+        _autoReplySending = true;
+        _autoReplyResult  = null;
+        try
+        {
+            await UdpService.SendAutoReplyNowAsync(_autoReplyTestCallsign.Trim().ToUpperInvariant());
+            _autoReplyResult = $"✅ {Loc.T("Auto-Reply gesendet an", "Auto-Reply sent to", "Auto-risposta inviata a", "Auto-respuesta enviada a")} {_autoReplyTestCallsign.Trim().ToUpperInvariant()}";
+        }
+        catch (Exception ex)
+        {
+            _autoReplyResult = $"❌ {ex.Message}";
+        }
+        finally
+        {
+            _autoReplySending = false;
         }
     }
 

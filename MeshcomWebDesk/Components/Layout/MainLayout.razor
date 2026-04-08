@@ -6,7 +6,7 @@
     <header class="app-header">
         <div class="app-header-brand">
             <span>📡</span>
-            <span class="app-title">MeshCom WebDesk</span>
+            <span class="app-title">MeshCom WebDesk <span class="app-version">v@_version</span></span>
         </div>
         <nav class="app-nav">
             <NavLink class="app-nav-link" href="/" Match="NavLinkMatch.All">💬 <span class="nav-label">@Loc.T("Chat", "Chat")</span></NavLink>
@@ -28,6 +28,9 @@
 </div>
 
 @code {
+    private string _version =
+        System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? string.Empty;
+
     protected override void OnInitialized() => Loc.OnChange += StateHasChanged;
     public void Dispose() => Loc.OnChange -= StateHasChanged;
 }

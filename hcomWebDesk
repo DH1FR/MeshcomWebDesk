@@ -1,0 +1,10 @@
+[33m50e4ba5[m[33m ([m[1;36mHEAD -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m feat: add email address dh1fr@darc.de to About page
+[33m3c398fa[m Fix missing PageTitle wrapper in Mh.razor
+[33mb9db531[m Fix broken T() calls missing @ and HTML wrappers
+[33m0d136fd[m Add Italian and Spanish translations to all UI strings
+[33mf84c7e5[m Add Italian and Spanish translations to all UI strings
+[33m47cd92b[m[33m ([m[1;33mtag: v1.3.0[m[33m)[m chore: bump version to 1.3.0
+[33m73fa91e[m fix: remove msg and dst fields from UDP registration packet to prevent sending 'info' text over the mesh
+[33m6e4779b[m Update Chat.razor and app.css
+[33m1509be6[m docs: cache-bust screenshot URL
+[33m5db22e4[m New Screenshot.

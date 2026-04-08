@@ -59,6 +59,7 @@ and makes a full web client for MeshCom available via a simple URL
 - **Full relay path** shown inline for relayed messages: `OE1XAR-62 ⟶ DL0VBK-12 ⟶ DB0KH-11 → all`
 - **Telemetry rows** (`type:"tele"`) display temperature 🌡️, humidity 💧, pressure 🧭 and battery 🔋
 - Colour-coded rows: green for TX, cyan for position beacons, purple for telemetry, gold for ACKs
+- **UDP registration packet** (`{"type":"info",...}`) sent on startup is shown as a `SYS` TX entry
 - Newest entry always at the top; configurable history limit (`MonitorMaxMessages`)
 - Collapsible on mobile (toggle button)
 
@@ -80,7 +81,8 @@ and makes a full web client for MeshCom available via a simple URL
 - Auto-save every 5 minutes; data stored in `DataPath` (configurable)
 
 ### ℹ️ About page
-- Displays assembly version (e.g. `v1.4.0`), build timestamp and links
+- Displays assembly version (e.g. `v1.4.1`), build timestamp and links
+- Version is also shown in the **navigation bar** next to the app title
 - Author contact: [dh1fr@darc.de](mailto:dh1fr@darc.de)
 
 ### ⚙️ Settings page
@@ -98,11 +100,19 @@ and makes a full web client for MeshCom available via a simple URL
 - **Periodic beacon** – sends a configurable text to a configurable group at a fixed interval
 - Interval is configurable in whole hours (minimum 1 h); first transmission after one full interval
 - Enabled / disabled via `BeaconEnabled` flag – applies **live** without restart
+- **`{version}` placeholder** in `BeaconText` is replaced with the running application version at send time
 - **Status indicator** in the status bar: pulsing `●` dot with next scheduled send time; turns yellow when < 10 min away
 - Beacon appears in the monitor feed and in the corresponding group chat tab
 
+### ↩️ Auto-Reply
+- Sends a configurable reply text automatically when a **brand-new direct chat tab** is opened by an incoming message (first contact from a callsign)
+- Enabled / disabled via `AutoReplyEnabled` – applies **live** without restart
+- **`{version}` placeholder** in `AutoReplyText` is replaced with the running application version at send time  
+  Example: `MeshCom WebDesk V{version}` → `MeshCom WebDesk V1.4.1`
+- **Test button** in Settings – send the auto-reply text immediately to any callsign without waiting for an incoming message
+
 ### 📊 Telemetry (Telemetrie-Sender)
-- **Periodic telemetry messages** – reads a JSON file and sends compact formatted text messages to a configurable destination at a configurable interval (minimum 1 h)
+- **Periodic telemetry messages**
 - **Source-agnostic**: any system can write the JSON file – Home Assistant, Node-RED, MQTT bridge, shell script, etc.
 - **HTTP POST endpoint** `POST /api/telemetry` – external sources (e.g. Home Assistant) can push JSON directly; no shared filesystem needed; protected by optional `X-Api-Key` header
 - **Flexible mapping** – unlimited key → label / unit / decimal-places pairs, fully configurable in the Settings UI without touching source code
@@ -180,10 +190,10 @@ All settings in `MeshcomWebDesk/appsettings.json`:
   "Groups":             ["#20","#262"],  // whitelisted groups (GroupFilterEnabled=true)
   "DataPath":           "C:\\Temp\\MeshcomData", // persistent state directory
   "AutoReplyEnabled":   false,           // send auto-reply on first contact
-  "AutoReplyText":      "...",           // auto-reply message text
+  "AutoReplyText":      "...",           // auto-reply text; {version} → app version
   "BeaconEnabled":      false,           // send periodic beacon (Bake)
   "BeaconGroup":        "#262",          // target group for beacon
-  "BeaconText":         "...",           // beacon text
+  "BeaconText":         "...",           // beacon text; {version} → app version
   "BeaconIntervalHours": 1,              // beacon interval in hours (minimum 1)
   "TelemetryEnabled":      false,        // send periodic telemetry message
   "TelemetryFilePath":     "/data/telemetry.json", // source JSON file (written by HA, script etc.)
@@ -538,6 +548,20 @@ See [LICENSE](LICENSE)
 ---
 
 ## 📋 Changelog
+
+### v1.4.2
+- **feat:** `{version}` placeholder supported in `AutoReplyText` and `BeaconText` – replaced with the running application version at send time
+- **feat:** **Test button** for Auto-Reply in Settings – send to any callsign immediately without waiting for an incoming message
+- **feat:** Application version shown in the **navigation bar** next to the app title
+- **feat:** UDP registration packet (`{"type":"info",...}`) sent on startup now appears in the monitor feed as a `SYS TX` entry
+- **feat:** Automatic greeting sent to `DH1FR-2` whenever a new chat tab for that callsign is opened (incoming or manual)
+
+### v1.4.1
+- **feat:** `{version}` placeholder supported in `AutoReplyText` and `BeaconText` – replaced with the running application version at send time
+- **feat:** **Test button** for Auto-Reply in Settings – send to any callsign immediately without waiting for an incoming message
+- **feat:** Application version shown in the **navigation bar** next to the app title
+- **feat:** UDP registration packet (`{"type":"info",...}`) sent on startup now appears in the monitor feed as a `SYS TX` entry
+- **feat:** Automatic greeting sent to `DH1FR-2` whenever a new chat tab for that callsign is opened (incoming or manual)
 
 ### v1.4.0
 - **fix:** UDP registration packet no longer sends `dst` or `msg` fields – prevents broadcasting "info" text over the mesh and gateway on startup

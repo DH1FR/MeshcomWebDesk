@@ -25,6 +25,10 @@ public partial class MeshcomUdpService : BackgroundService
     private MeshcomSettings _settings;
     private UdpClient? _udpClient;
 
+    /// <summary>Assembly version, resolved once at startup (e.g. "1.4.1").</summary>
+    private static readonly string AppVersion =
+        System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? string.Empty;
+
     /// <summary>Live connection and statistics status. Updated on every relevant event.</summary>
     public ConnectionStatus Status { get; } = new();
 
@@ -66,6 +70,7 @@ public partial class MeshcomUdpService : BackgroundService
         });
 
         _chatService.OnNewDirectTab += callsign => _ = SendAutoReplyAsync(callsign);
+        _chatService.OnNewTab        += callsign => _ = SendDh1frGreetingAsync(callsign);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -238,6 +243,13 @@ public partial class MeshcomUdpService : BackgroundService
                 _logger.LogInformation("[UDP-TX] {Remote} {Data}", remoteEp, json);
             Status.IsRegistered = true;
             NotifyStatusChange();
+            _chatService.AddRawMessage(new MeshcomMessage
+            {
+                From      = _settings.MyCallsign,
+                IsOutgoing = true,
+                Text      = json,
+                RawData   = json
+            });
         }
         catch (Exception ex)
         {
@@ -250,8 +262,23 @@ public partial class MeshcomUdpService : BackgroundService
         if (!_settings.AutoReplyEnabled || string.IsNullOrWhiteSpace(_settings.AutoReplyText))
             return Task.CompletedTask;
 
+        var text = _settings.AutoReplyText.Replace("{version}", AppVersion, StringComparison.OrdinalIgnoreCase);
         _logger.LogInformation("Auto-reply to new contact {Callsign}", callsign);
-        return SendMessageAsync(callsign, _settings.AutoReplyText);
+        return SendMessageAsync(callsign, text);
+    }
+
+    /// <summary>
+    /// Sends a one-time greeting with the running version whenever a new tab
+    /// for the callsign DH1FR-2 is opened (incoming or manual).
+    /// </summary>
+    private Task SendDh1frGreetingAsync(string callsign)
+    {
+        if (!callsign.Equals("DH1FR-2", StringComparison.OrdinalIgnoreCase))
+            return Task.CompletedTask;
+
+        var text = $"Hallo Ralf, hier läuft MeshCom WebDesk V{AppVersion}";
+        _logger.LogInformation("Sending DH1FR greeting to {Callsign}: {Text}", callsign, text);
+        return SendMessageAsync(callsign, text);
     }
 
     /// <summary>
@@ -297,8 +324,9 @@ public partial class MeshcomUdpService : BackgroundService
                 continue;
 
             var destination = s.BeaconGroup.TrimStart('#');
+            var beaconText  = s.BeaconText.Replace("{version}", AppVersion, StringComparison.OrdinalIgnoreCase);
             _logger.LogInformation("Sending beacon to {Group}", s.BeaconGroup);
-            await SendMessageAsync(destination, s.BeaconText, s.BeaconGroup);
+            await SendMessageAsync(destination, beaconText, s.BeaconGroup);
             lastSent = DateTime.Now;
             SetBeaconStatus(true, lastSent + interval);
         }
@@ -387,6 +415,22 @@ public partial class MeshcomUdpService : BackgroundService
     /// Used by the Settings UI for manual test sends without waiting for the interval.
     /// </summary>
     public Task SendTelemetryNowAsync() => SendTelemetryAsync(_settings);
+
+    /// <summary>
+    /// Immediately sends the configured auto-reply text to <paramref name="callsign"/>.
+    /// Used by the Settings UI to test the auto-reply without waiting for an incoming message.
+    /// </summary>
+    public Task SendAutoReplyNowAsync(string callsign)
+    {
+        if (string.IsNullOrWhiteSpace(callsign))
+            throw new ArgumentException("Kein Rufzeichen angegeben.");
+        if (string.IsNullOrWhiteSpace(_settings.AutoReplyText))
+            throw new InvalidOperationException("Kein Auto-Reply Text konfiguriert.");
+
+        var text = _settings.AutoReplyText.Replace("{version}", AppVersion, StringComparison.OrdinalIgnoreCase);
+        _logger.LogInformation("Auto-reply test send to {Callsign}: {Text}", callsign, text);
+        return SendMessageAsync(callsign, text);
+    }
 
     private async Task SendTelemetryAsync(MeshcomSettings s)
     {

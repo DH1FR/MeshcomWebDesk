@@ -36,6 +36,12 @@ public class ChatService
     /// </summary>
     public event Action<string>? OnNewDirectTab;
 
+    /// <summary>
+    /// Raised whenever a brand-new direct (1:1) tab is created, both by incoming messages
+    /// and by manual tab opening. Not raised for broadcast (*) or group (#) tabs.
+    /// </summary>
+    public event Action<string>? OnNewTab;
+
     public ChatService(IOptionsMonitor<MeshcomSettings> settings, ILogger<ChatService> logger)
     {
         _settings = settings.CurrentValue;
@@ -436,8 +442,12 @@ public class ChatService
         var tab    = _tabs.GetOrAdd(key, newTab);
         bool wasNew = ReferenceEquals(tab, newTab);
 
-        if (triggerAutoReply && wasNew && key != "*" && !key.StartsWith('#'))
-            OnNewDirectTab?.Invoke(key);
+        if (wasNew && key != "*" && !key.StartsWith('#'))
+        {
+            OnNewTab?.Invoke(key);
+            if (triggerAutoReply)
+                OnNewDirectTab?.Invoke(key);
+        }
 
         return tab;
     }
