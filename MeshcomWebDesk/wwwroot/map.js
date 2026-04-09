@@ -108,8 +108,14 @@ window.meshcomMap = (function () {
         // Zoom to a circle of `km` radius around own position
         fitOwn: function (lat, lon, km) {
             if (!_map) return;
-            var circle = L.circle([lat, lon], { radius: (km || 50) * 1000 });
-            _map.fitBounds(circle.getBounds());
+            var r       = km || 50;
+            // 1 degree latitude ≈ 111 km; longitude correction via cos(lat)
+            var dLat    = r / 111.0;
+            var dLon    = r / (111.0 * Math.cos(lat * Math.PI / 180));
+            _map.fitBounds([
+                [lat - dLat, lon - dLon],
+                [lat + dLat, lon + dLon]
+            ]);
         },
 
         invalidateSize: function () { if (_map) _map.invalidateSize(); }

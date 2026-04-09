@@ -133,10 +133,14 @@
 
     private async Task FitOwnAsync()
     {
-        var status = UdpService.Status;
-        if (status.OwnLatitude.HasValue && status.OwnLongitude.HasValue)
-            await JS.InvokeVoidAsync("meshcomMap.fitOwn",
-                status.OwnLatitude.Value, status.OwnLongitude.Value, 50);
+        try
+        {
+            var status = UdpService.Status;
+            if (status.OwnLatitude.HasValue && status.OwnLongitude.HasValue)
+                await JS.InvokeVoidAsync("meshcomMap.fitOwn",
+                    status.OwnLatitude.Value, status.OwnLongitude.Value, 50);
+        }
+        catch (Exception) { }
     }
 
     public void Dispose()

@@ -425,6 +425,94 @@ dotnet run --launch-profile lan-https
 
 ---
 
+## 🔒 HTTPS & Zertifikat – Schritt-für-Schritt / Step by Step
+
+### 🇩🇪 Deutsch
+
+Das selbstsignierte Zertifikat ermöglicht verschlüsselten HTTPS-Zugriff im Heimnetz.
+**Ohne HTTPS** lässt sich die App **nicht als PWA auf Mobilgeräten installieren**.
+
+#### 1. Zertifikat erstellen (einmalig, Windows)
+
+```powershell
+# PowerShell als Administrator öffnen
+cd C:\SRC\RA\MeshcomWebDesk
+
+# IP automatisch erkennen:
+.\scripts\create-lan-cert.ps1
+
+# oder IP manuell angeben:
+.\scripts\create-lan-cert.ps1 -LanIp 192.168.1.100
+```
+
+Das Skript erstellt:
+- `certs/meshcom-lan.pfx` – für Kestrel (wird von der App verwendet)
+- `certs/meshcom-lan.crt` – für Mobilgeräte (dort installieren)
+- Trägt das Zertifikat in Windows `CurrentUser\Root` ein → **kein Browser-Warning mehr** auf dem PC
+
+#### 2. App mit HTTPS starten
+
+```powershell
+cd MeshcomWebDesk
+dotnet run --launch-profile lan-https
+```
+
+Beide Ports laufen gleichzeitig:
+```
+HTTP  → http://192.168.x.x:5162   ← wie bisher, bleibt aktiv
+HTTPS → https://192.168.x.x:5163   ← neu, für PWA
+```
+
+#### 3. Zertifikat auf Mobilgeräten installieren
+
+Die Datei `certs/meshcom-lan.crt` auf das Gerät übertragen (z. B. per E-Mail oder USB).
+
+| Gerät | Pfad |
+|---|---|
+| **iPad / iPhone** (iOS) | Einstellungen → Allgemein → VPN & Geräteverwaltung → Profil installieren → danach: Einstellungen → Allgemein → Info → Zertifikatsvertrauenseinstellungen → Zertifikat aktivieren |
+| **Android** | Einstellungen → Sicherheit → Verschlüsselung & Anmeldedaten → Zertifikat installieren → CA-Zertifikat |
+
+---
+
+## 📱 PWA – Progressive Web App
+
+### Was ist eine PWA?
+
+Eine **Progressive Web App** ist eine normale Webseite, die sich wie eine native App verhält.
+Der Browser bietet an, sie auf dem Gerät zu **installieren** – ohne App Store, ohne Download.
+
+Nach der Installation:
+- Eigenes Icon auf dem Home-Screen / Desktop
+- Öffnet sich **ohne Adressleiste** (wie eine native App)
+- Shortcut-Kacheln für **Chat** und **Karte** im Startmenü (Windows/Android)
+
+> ⚠️ **Offline-Betrieb ist nicht möglich** – MeshCom WebDesk ist Blazor Server und benötigt immer eine Verbindung zum Server.
+
+### PWA installieren
+
+#### 📱 iPhone / iPad (iOS Safari)
+
+1. `https://192.168.x.x:5163` im **Safari** öffnen
+2. Zertifikat muss vorab installiert sein (siehe oben)
+3. Teilen-Symbol ⤵ antippen → **"Zum Home-Bildschirm"**
+4. Namen bestätigen → **Hinzufügen**
+
+#### 🤖 Android (Chrome)
+
+1. `https://192.168.x.x:5163` in **Chrome** öffnen
+2. Zertifikat muss vorab installiert sein
+3. ⋮ Menü → **"App installieren"** oder automatischer Banner am unteren Rand
+
+#### 💻 Windows / Mac (Chrome oder Edge)
+
+1. `https://192.168.x.x:5163` öffnen (Zertifikat wird automatisch vertraut)
+2. In der Adressleiste rechts: **⊕ Installieren**
+3. Oder: ⋮ Menü → **"MeshCom WebDesk installieren"**
+
+Die App bekommt ein eigenes Fenster ohne Browser-UI und erscheint im Startmenü / Taskbar.
+
+---
+
 ## 🐳 Docker – Deployment on Linux
 
 ### Prerequisites
@@ -707,6 +795,11 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 ---
 
 ## 📋 Changelog
+
+### v1.6.4
+- **fix:** 🗺️ **Map – 50km Button** – "An unhandled error has occurred" behoben; `L.circle.getBounds()` ersetzt durch manuelle Haversine-Bounding-Box (funktioniert ohne map context)
+- **docs:** 🔒 **HTTPS & Zertifikat** – vollständige Schritt-für-Schritt-Anleitung (Windows, iOS, Android) in der README
+- **docs:** 📱 **PWA** – erklärt was PWA ist, wie man es auf iPhone/iPad/Android/Windows installiert
 
 ### v1.6.3
 - **feat:** 🔒 **HTTPS for LAN** – `scripts/create-lan-cert.ps1` generates a self-signed cert with IP SAN; new `lan-https` launch profile binds HTTP :5162 + HTTPS :5163 simultaneously; required for PWA installation on Android / iPad / iPhone
