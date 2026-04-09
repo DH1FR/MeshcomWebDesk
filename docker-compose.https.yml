@@ -1,0 +1,24 @@
+﻿# MeshCom WebDesk – HTTPS overlay for docker-compose.yml
+#
+# Prerequisites:
+#   1. Generate certificate:
+#        Linux:   ./scripts/create-lan-cert.sh
+#        Windows: .\scripts\create-lan-cert.ps1
+#   2. Verify certificate exists:
+#        ls certs/meshcom-lan.pfx
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.https.yml up -d --build
+#
+# Or use the helper script (Linux):
+#   ./scripts/start-https.sh
+
+services:
+  meshcom-webdesk:
+    environment:
+      # Switches Kestrel to HTTP :5162 + HTTPS :5163 (loads appsettings.LanHttps.json)
+      - ASPNETCORE_ENVIRONMENT=LanHttps
+    volumes:
+      # Certificate directory (read-only) – must contain meshcom-lan.pfx
+      # Create it with: ./scripts/create-lan-cert.sh
+      - ./certs:/app/certs:ro

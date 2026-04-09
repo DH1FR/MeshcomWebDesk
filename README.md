@@ -226,6 +226,10 @@ MeshcomWebDesk/              ← Blazor Server (ASP.NET Core host)
 ├─ scripts/
 │     create-lan-cert.ps1      ← PowerShell: generates self-signed cert for HTTPS LAN access (Windows)
 │     create-lan-cert.sh       ← Bash: generates self-signed cert for HTTPS LAN access (Linux / Docker)
+│     start-https.sh           ← Bash: starts Docker Compose with HTTPS overlay (checks cert first)
+│
+├─ docker-compose.yml         ← Standard deployment: HTTP only (always works)
+├─ docker-compose.https.yml   ← HTTPS overlay: adds port 5163 + cert volume (requires cert)
 │
 └─ Services/
       MeshcomUdpService.cs     ← BackgroundService: UDP RX/TX, JSON parsing, ACK matching, beacon timer
@@ -481,27 +485,22 @@ dotnet run --launch-profile lan-https
 
 **Linux / Docker Compose:**
 
-In `docker-compose.yml` folgende Änderungen vornehmen:
-
-```yaml
-services:
-  meshcom:
-    # ...bestehende Konfiguration...
-    environment:
-      - ASPNETCORE_ENVIRONMENT=LanHttps   # lädt appsettings.LanHttps.json
-      - TZ=Europe/Berlin
-    volumes:
-      - ./data:/app/data
-      - ./MeshcomWebDesk/certs:/app/certs:ro   # Zertifikat read-only einbinden
-```
-
-> **Ports:** Bei `network_mode: host` sind keine expliziten Port-Mappings nötig.
-> HTTP `:5162` und HTTPS `:5163` laufen gleichzeitig.
+Zwei separate Compose-Dateien – HTTP läuft immer, HTTPS nur wenn Zertifikat vorhanden:
 
 ```bash
-# Container neu starten
+# HTTP only (Standard – immer funktionsfähig):
 docker compose up -d --build
+
+# HTTP + HTTPS (mit Zertifikat-Prüfung):
+./scripts/start-https.sh            # prüft ob certs/meshcom-lan.pfx existiert
+
+# oder manuell:
+docker compose -f docker-compose.yml -f docker-compose.https.yml up -d --build
 ```
+
+> `docker-compose.https.yml` setzt `ASPNETCORE_ENVIRONMENT=LanHttps` und mountet
+> `./certs:/app/certs:ro` – wenn das Verzeichnis leer ist, **startet der Container nicht**.
+> Das Skript `scripts/start-https.sh` prüft das vorab und gibt eine klare Fehlermeldung.
 
 Beide Ports laufen gleichzeitig:
 ```
@@ -841,6 +840,11 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 ---
 
 ## 📋 Changelog
+
+### v1.6.6
+- **feat:** 🐳 **`docker-compose.https.yml`** – HTTPS overlay für Docker Compose; HTTP bleibt in `docker-compose.yml` unverändert; beide Dateien werden mit `-f` kombiniert
+- **feat:** **`scripts/start-https.sh`** – Wrapper-Skript prüft ob `certs/meshcom-lan.pfx` existiert und gibt klare Fehlermeldung wenn nicht; startet dann `docker compose -f ... -f ...`
+- **fix:** `docker-compose.yml` Encoding-Probleme in Kommentaren behoben
 
 ### v1.6.5
 - **feat:** 🔒 **`scripts/create-lan-cert.sh`** – Linux/Docker equivalent of the Windows PowerShell cert script; uses `openssl`, auto-detects LAN IP, exports PFX + CRT

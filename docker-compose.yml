@@ -1,4 +1,4 @@
-services:
+﻿services:
   meshcom-webdesk:
     build: .
     image: meshcom-webdesk:latest
@@ -7,9 +7,9 @@ services:
     network_mode: host          # required for UDP RX from MeshCom device
     volumes:
       - ./logs:/app/logs        # persist log files
-      - ./keys:/app/keys        # persist Data Protection keys (prevents antiforgery errors after restart)
+      - ./keys:/app/keys        # persist Data Protection keys
       - ./data:/app/data        # persist chat state (tabs, MH list, monitor)
-      - ./appsettings.json:/app/appsettings.json:ro   # override config
+      - ./appsettings.json:/app/appsettings.json:ro   # config (read-only)
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - Meshcom__DeviceIp=192.168.1.60
@@ -18,7 +18,18 @@ services:
       - Meshcom__MyCallsign=DH1FR-2
       - Meshcom__LogPath=/app/logs
       - Meshcom__DataPath=/app/data
-      # Env-Variablen überschreiben appsettings.json – nur setzen wenn nötig:
-      # Meshcom__GroupFilterEnabled=true
-      # Meshcom__Groups__0=#OE
-      # Meshcom__Groups__1=#Test
+      # Optional: env vars override appsettings.json - only set if needed:
+      # - Meshcom__GroupFilterEnabled=true
+      # - Meshcom__Groups__0=#OE
+      # - Meshcom__Groups__1=#Test
+
+# ── HTTPS (PWA on mobile) ───────────────────────────────────────────────────
+# Requires certificate in ./certs/ – generate it first:
+#   Linux:   ./scripts/create-lan-cert.sh
+#   Windows: .\scripts\create-lan-cert.ps1
+#
+# Then start with HTTPS overlay:
+#   docker compose -f docker-compose.yml -f docker-compose.https.yml up -d --build
+#
+# Or use the helper script (Linux):
+#   ./scripts/start-https.sh
