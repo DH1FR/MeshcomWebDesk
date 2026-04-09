@@ -143,6 +143,31 @@ and makes a full web client for MeshCom available via a simple URL
 - `maxlength="149"` prevents over-long input in the browser
 - **Server-side guard** in `SendMessageAsync`: logs a warning and aborts send if text exceeds 149 characters
 
+### 🗺️ Live Map
+- Interactive map at `/map` powered by **Leaflet.js + OpenStreetMap**
+- **APRS-style markers**: filled circle colour-coded by RSSI (🟢 > −90 / 🟡 > −105 / 🔴 ≤ −105 dBm) + callsign label below
+- **Own position** shown as gold diamond ◆ (APRS convention)
+- **Popup** on click: callsign, last message, RSSI, battery, altitude
+- **Auto-fit bounds** – map zooms to include all visible stations automatically
+- **Station strip** at the bottom of the map: compact list of all GPS-equipped stations
+- Updates in real-time as new position beacons arrive
+- Nav link 🗺️ added to the navigation bar
+
+### 🔗 Webhook
+- **HTTP POST** to a configurable URL on incoming events
+- Configurable **triggers**: chat messages / position beacons / telemetry (each individually)
+- **JSON payload**: `event`, `timestamp`, `from`, `to`, `text`, `rssi`, `snr`, `latitude`, `longitude`, `altitude`, `battery`, `firmware`, `relay_path`, `src_type`
+- Fire-and-forget (10 s timeout); errors logged and swallowed – never blocks reception
+- Configured in **Settings → 🔗 Webhook**; changes apply **live without restart**
+- Compatible with **Home Assistant** webhooks, Node-RED, n8n, IFTTT, custom endpoints
+
+### 📱 PWA – Progressive Web App
+- **Installable** on any device via the browser's "Add to Home Screen" / "Install" prompt
+- `manifest.webmanifest` with name, icon, `display: standalone`, shortcuts (Chat + Map)
+- **Minimal service worker** – enables install prompt; full offline not possible (Blazor Server requires live connection)
+- **Apple meta tags** for iOS Safari Add-to-Home-Screen
+- Custom **antenna SVG icon** in the app colour scheme
+
 ---
 
 ## Architecture
@@ -153,14 +178,15 @@ MeshcomWebDesk/              ← Blazor Server (ASP.NET Core host)
 │  appsettings.json            ← All configuration
 │
 ├─ Components/
-│  ├─ App.razor                ← HTML shell + JS helpers (scrollToBottom, playNotificationBeep)
+│  ├─ App.razor                ← HTML shell + JS helpers + Leaflet CDN + SW registration
 │  ├─ Layout/
 │  │    MainLayout.razor       ← Top navigation bar
 │  └─ Pages/
 │       Chat.razor             ← Chat tabs + monitor pane + status bar
 │       Mh.razor               ← Most Recently Heard table + own position
+│       Map.razor              ← Live Leaflet map with APRS-style markers
 │       Settings.razor         ← Web-based configuration editor
-│       About.razor            ← Version / copyright / build info
+│       About.razor            ← Version / copyright / build info + PayPal donation link
 │       Clear.razor            ← Data reset page
 │
 ├─ Helpers/
@@ -171,17 +197,26 @@ MeshcomWebDesk/              ← Blazor Server (ASP.NET Core host)
 │     MeshcomMessage.cs        ← Message model (from/to/text/GPS/RSSI/ACK/relay/telemetry)
 │     MeshcomSettings.cs       ← Strongly-typed config (IOptions)
 │     TelemetryMappingEntry.cs ← Telemetry mapping entry (JSON key → label + unit + decimals)
+│     DatabaseSettings.cs      ← DB provider + connection settings + LogInserts
+│     WebhookSettings.cs       ← Webhook URL + trigger flags
 │     ChatTab.cs               ← Tab model with UnreadCount
 │     HeardStation.cs          ← MH list entry (GPS, signal, battery, hardware, firmware)
 │     ConnectionStatus.cs      ← Live UDP status + own GPS position
 │     PersistenceSnapshot.cs   ← Serialisable state snapshot (tabs, MH, monitor, own GPS)
 │
+├─ wwwroot/
+│     map.js                   ← Leaflet JS helpers (init, updateMarkers, APRS icons)
+│     manifest.webmanifest     ← PWA manifest (name, icon, display:standalone, shortcuts)
+│     service-worker.js        ← Minimal SW – enables install prompt
+│     icons/icon.svg           ← Antenna icon in app colour scheme
+│
 └─ Services/
       MeshcomUdpService.cs     ← BackgroundService: UDP RX/TX, JSON parsing, ACK matching, beacon timer
-      ChatService.cs           ← Singleton: routing, tabs, MH list, monitor, deduplication
+      ChatService.cs           ← Singleton: routing, tabs, MH list, monitor, deduplication, webhook trigger
       DataPersistenceService.cs← BackgroundService: load/save state to JSON on disk
       SettingsService.cs       ← Writes appsettings.override.json in DataPath (Docker-safe); changes applied live via IOptionsMonitor
       LanguageService.cs       ← Singleton: UI language switching (de/en); T(de,en) helper; OnChange event for instant re-render
+      WebhookService.cs        ← HTTP POST fire-and-forget on message / position / telemetry events
       Database/
         IMonitorDataSink.cs    ← Interface: WriteAsync(MeshcomMessage)
         MySqlMonitorSink.cs    ← MySQL / MariaDB write sink (MySqlConnector)
@@ -232,6 +267,13 @@ All settings in `MeshcomWebDesk/appsettings.json`:
     "InfluxOrg":             "meshcom",
     "InfluxBucket":          "meshcom",
     "LogInserts":            false       // log every successful write at Information level
+  },
+  "Webhook": {
+    "Enabled":     false,              // send HTTP POST on events
+    "Url":         "",                 // target URL (HTTP POST, JSON body)
+    "OnMessage":   true,               // fire on incoming chat messages
+    "OnPosition":  false,              // fire on incoming position beacons
+    "OnTelemetry": false               // fire on incoming telemetry
   },
   "TelemetryMapping": [                  // any number of entries; configure in Settings UI
     { "JsonKey": "aussentemp",  "Label": "🌡",  "Unit": "C",   "Decimals": 1 },
@@ -631,6 +673,13 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 ---
 
 ## 📋 Changelog
+
+### v1.6.0
+- **feat:** 🗺️ **Live Map** – interactive Leaflet.js + OpenStreetMap map at `/map`; APRS-style circle markers colour-coded by RSSI; own position as gold diamond; auto-fit bounds; real-time updates
+- **feat:** 🔗 **Webhook** – HTTP POST fire-and-forget on incoming messages, position beacons and/or telemetry; configurable URL and triggers in Settings → 🔗 Webhook
+- **feat:** 📱 **PWA** – installable as Progressive Web App ("Add to Home Screen"); `manifest.webmanifest`, minimal service worker, Apple meta tags, custom antenna SVG icon
+- **feat:** ☕ **Donation link** – PayPal link on the About page (`paypal.me/DH1FR`)
+- **docs:** Architecture, Configuration and Changelog updated
 
 ### v1.5.0
 - **feat:** 🗄️ **Database integration (Beta)** – optional MySQL/MariaDB or InfluxDB 2 sink writes every monitor entry to an external database

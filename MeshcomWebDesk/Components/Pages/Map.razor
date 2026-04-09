@@ -1,0 +1,134 @@
+@page "/map"
+@rendermode InteractiveServer
+@using MeshcomWebDesk.Models
+@using MeshcomWebDesk.Services
+@using Microsoft.Extensions.Options
+@inject ChatService ChatService
+@inject MeshcomUdpService UdpService
+@inject LanguageService Loc
+@inject IOptionsMonitor<MeshcomSettings> SettingsMonitor
+@inject IJSRuntime JS
+@implements IDisposable
+
+<PageTitle>🗺️ @Loc.T("Karte", "Map", "Mappa", "Mapa") – MeshCom WebDesk</PageTitle>
+
+<div class="map-page">
+    <div id="meshcom-map" class="map-container"></div>
+
+    @if (!_hasPositions)
+    {
+        <div class="map-no-data">
+            📡 @Loc.T("Noch keine GPS-Positionen empfangen.", "No GPS positions received yet.",
+                       "Nessuna posizione GPS ricevuta.", "Aún no se han recibido posiciones GPS.")
+        </div>
+    }
+
+    @{
+        var withGps = ChatService.MhList.Where(s => s.Latitude.HasValue).OrderByDescending(s => s.LastHeard).ToList();
+    }
+    @if (withGps.Count > 0)
+    {
+        <div class="map-station-strip">
+            @foreach (var s in withGps)
+            {
+                <span class="map-strip-item">
+                    <span class="map-strip-call">@s.Callsign</span>
+                    @if (s.LastRssi.HasValue)
+                    {
+                        <span class="map-strip-rssi @RssiCss(s.LastRssi.Value)">@s.LastRssi dBm</span>
+                    }
+                    @if (s.Battery.HasValue)
+                    {
+                        <span class="map-strip-batt">🔋@s.Battery%</span>
+                    }
+                </span>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private bool _hasPositions;
+    private bool _mapInitialized;
+    private bool _disposed;
+
+    protected override void OnInitialized()
+    {
+        Loc.OnChange            += StateHasChanged;
+        ChatService.OnChange    += OnDataChanged;
+        UdpService.OnStatusChange += OnDataChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await InitMapAsync();
+        else if (_mapInitialized)
+            await UpdateMarkersAsync();
+    }
+
+    private async void OnDataChanged()
+    {
+        if (_disposed) return;
+        try
+        {
+            await InvokeAsync(async () =>
+            {
+                if (_disposed) return;
+                StateHasChanged();
+                if (_mapInitialized)
+                    await UpdateMarkersAsync();
+            });
+        }
+        catch (Exception) { }
+    }
+
+    private async Task InitMapAsync()
+    {
+        var status = UdpService.Status;
+        double lat  = status.OwnLatitude  ?? 47.5;
+        double lon  = status.OwnLongitude ?? 14.0;
+        int    zoom = status.OwnLatitude.HasValue ? 10 : 6;
+
+        await JS.InvokeVoidAsync("meshcomMap.init", "meshcom-map", lat, lon, zoom);
+        _mapInitialized = true;
+        await UpdateMarkersAsync();
+    }
+
+    private async Task UpdateMarkersAsync()
+    {
+        var stations = ChatService.MhList
+            .Where(s => s.Latitude.HasValue && s.Longitude.HasValue)
+            .Select(s => new
+            {
+                callsign = s.Callsign,
+                lat      = s.Latitude!.Value,
+                lon      = s.Longitude!.Value,
+                alt      = s.Altitude,
+                rssi     = s.LastRssi,
+                text     = s.LastMessage,
+                battery  = s.Battery
+            })
+            .ToArray();
+
+        var status   = UdpService.Status;
+        _hasPositions = stations.Length > 0 || status.OwnLatitude.HasValue;
+
+        await JS.InvokeVoidAsync("meshcomMap.updateMarkers",
+            stations,
+            SettingsMonitor.CurrentValue.MyCallsign,
+            status.OwnLatitude,
+            status.OwnLongitude);
+    }
+
+    private static string RssiCss(int rssi) =>
+        rssi > -90 ? "rssi-good" : rssi > -105 ? "rssi-ok" : "rssi-weak";
+
+    public void Dispose()
+    {
+        _disposed = true;
+        Loc.OnChange              -= StateHasChanged;
+        ChatService.OnChange      -= OnDataChanged;
+        UdpService.OnStatusChange -= OnDataChanged;
+    }
+}

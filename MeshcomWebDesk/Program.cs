@@ -54,6 +54,7 @@ builder.Services.AddSingleton<MySqlMonitorSink>();
 builder.Services.AddSingleton<InfluxDbMonitorSink>();
 builder.Services.AddSingleton<IMonitorDataSink, MonitorSinkService>();
 builder.Services.AddSingleton<DatabaseSetupService>();
+builder.Services.AddSingleton<WebhookService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<MeshcomUdpService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<DataPersistenceService>());
 

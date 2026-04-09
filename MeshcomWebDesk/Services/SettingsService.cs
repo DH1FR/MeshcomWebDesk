@@ -74,6 +74,14 @@ public class SettingsService
                     ["InfluxOrg"]             = s.Database.InfluxOrg,
                     ["InfluxBucket"]          = s.Database.InfluxBucket,
                     ["LogInserts"]            = s.Database.LogInserts
+                },
+                ["Webhook"] = new JsonObject
+                {
+                    ["Enabled"]     = s.Webhook.Enabled,
+                    ["Url"]         = s.Webhook.Url,
+                    ["OnMessage"]   = s.Webhook.OnMessage,
+                    ["OnPosition"]  = s.Webhook.OnPosition,
+                    ["OnTelemetry"] = s.Webhook.OnTelemetry
                 }
             }
         };

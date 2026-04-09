@@ -143,4 +143,7 @@ public class MeshcomSettings
 
     /// <summary>Optional database sink. Set Provider to "mysql" or "influxdb2" to activate.</summary>
     public DatabaseSettings Database { get; set; } = new();
+
+    /// <summary>Optional webhook: HTTP POST on incoming messages, position beacons and/or telemetry.</summary>
+    public WebhookSettings Webhook { get; set; } = new();
 }

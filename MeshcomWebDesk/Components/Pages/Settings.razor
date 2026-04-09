@@ -70,7 +70,16 @@
                 <label>@Loc.T("Log-Aufbewahrung (Tage)", "Log Retention (Days)", "Conservazione Log (giorni)", "Retención de Log (días)")</label>
                 <input type="number" min="1" @bind="_model.LogRetainDays" />
 
-                <label>@Loc.T("UDP-Traffic loggen", "Log UDP Traffic", "Registra traffico UDP", "Registrar tráfico UDP")</label>
+                <label>
+                    @Loc.T("UDP-Traffic loggen", "Log UDP Traffic", "Registra traffico UDP", "Registrar tráfico UDP")<br />
+                    <small style="color:#e3b341">
+                        ⚠️ @Loc.T(
+                            "Rufzeichen, Nachrichtentexte und GPS-Koordinaten aller UDP-Pakete werden in die Log-Datei geschrieben. Datenschutz beachten.",
+                            "Callsigns, message texts and GPS coordinates of all UDP packets are written to the log file. Consider privacy implications.",
+                            "Nominativi, testi e coordinate GPS vengono scritti nel log. Considerare la privacy.",
+                            "Los indicativos, textos y coordenadas GPS se escriben en el log. Considerar la privacidad.")
+                    </small>
+                </label>
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.LogUdpTraffic" />
                     <span>@(_model.LogUdpTraffic ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
@@ -309,6 +318,13 @@
         <!-- Datenbank / Database (Beta) -->
         <div class="settings-section">
             <h2 class="settings-section-title">🗄️ @Loc.T("Datenbank (Beta)", "Database (Beta)", "Database (Beta)", "Base de datos (Beta)")</h2>
+            <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
+                🔒 @Loc.T(
+                    "Alle Monitor-Einträge (Rufzeichen, Nachrichtentexte, GPS, RSSI) werden in die externe Datenbank geschrieben. Nur im eigenen, abgesicherten Netz betreiben. Datenschutz beachten.",
+                    "All monitor entries (callsigns, message texts, GPS, RSSI) are written to the external database. Only operate in your own secured network. Consider privacy implications.",
+                    "Tutte le voci monitor vengono scritte nel database esterno. Usare solo in rete protetta. Considerare la privacy.",
+                    "Todas las entradas del monitor se escriben en la base de datos externa. Solo usar en red propia y segura. Considerar la privacidad.")
+            </div>
             <div class="settings-grid">
                 <label>@Loc.T("Anbieter", "Provider", "Provider", "Proveedor")</label>
                 <select @bind="_model.DbProvider" @bind:after="ResetDbTestState">
@@ -439,6 +455,40 @@
                     }
                 }
             }
+        </div>
+
+        <!-- Webhook -->
+        <div class="settings-section">
+            <h2 class="settings-section-title">🔗 Webhook</h2>
+            <div class="settings-grid">
+                <label>@Loc.T("Webhook aktiv", "Webhook Active", "Webhook attivo", "Webhook activo")</label>
+                <label class="settings-toggle">
+                    <input type="checkbox" @bind="_model.WebhookEnabled" />
+                    <span>@(_model.WebhookEnabled ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                </label>
+
+                <label>
+                    URL<br />
+                    <small>@Loc.T("HTTP POST · JSON-Body mit event, from, to, text, rssi, lat, lon …", "HTTP POST · JSON body with event, from, to, text, rssi, lat, lon …", "HTTP POST · corpo JSON con event, from, to, text, rssi, lat, lon …", "HTTP POST · cuerpo JSON con event, from, to, text, rssi, lat, lon …")</small>
+                </label>
+                <input type="text" @bind="_model.WebhookUrl" placeholder="https://homeassistant.local/api/webhook/meshcom" />
+
+                <label>@Loc.T("Auslöser", "Triggers", "Trigger", "Disparadores")</label>
+                <div style="display:flex;flex-direction:column;gap:4px">
+                    <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
+                        <input type="checkbox" @bind="_model.WebhookOnMessage" />
+                        @Loc.T("Nachrichten (msg)", "Messages (msg)", "Messaggi (msg)", "Mensajes (msg)")
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
+                        <input type="checkbox" @bind="_model.WebhookOnPosition" />
+                        @Loc.T("Position (pos)", "Position (pos)", "Posizione (pos)", "Posición (pos)")
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
+                        <input type="checkbox" @bind="_model.WebhookOnTelemetry" />
+                        @Loc.T("Telemetrie (tele)", "Telemetry (tele)", "Telemetria (tele)", "Telemetría (tele)")
+                    </label>
+                </div>
+            </div>
         </div>
 
         <div class="settings-actions">
@@ -709,7 +759,12 @@
             DbInfluxToken           = s.Database.InfluxToken,
             DbInfluxOrg             = s.Database.InfluxOrg,
             DbInfluxBucket          = s.Database.InfluxBucket,
-            DbLogInserts            = s.Database.LogInserts
+            DbLogInserts            = s.Database.LogInserts,
+            WebhookEnabled          = s.Webhook.Enabled,
+            WebhookUrl              = s.Webhook.Url,
+            WebhookOnMessage        = s.Webhook.OnMessage,
+            WebhookOnPosition       = s.Webhook.OnPosition,
+            WebhookOnTelemetry      = s.Webhook.OnTelemetry
         };
     }
 
@@ -770,6 +825,13 @@
         public string DbInfluxBucket          { get; set; } = "meshcom";
         public bool   DbLogInserts            { get; set; }
 
+        // Webhook
+        public bool   WebhookEnabled     { get; set; }
+        public string WebhookUrl         { get; set; } = string.Empty;
+        public bool   WebhookOnMessage   { get; set; } = true;
+        public bool   WebhookOnPosition  { get; set; }
+        public bool   WebhookOnTelemetry { get; set; }
+
         public DatabaseSettings ToDbSettings() => new()
         {
             Provider              = DbProvider,
@@ -813,7 +875,15 @@
             TelemetryApiEnabled    = TelemetryApiEnabled,
             TelemetryApiKey        = TelemetryApiKey,
             Language               = Language,
-            Database               = ToDbSettings()
+            Database               = ToDbSettings(),
+            Webhook = new WebhookSettings
+            {
+                Enabled     = WebhookEnabled,
+                Url         = WebhookUrl,
+                OnMessage   = WebhookOnMessage,
+                OnPosition  = WebhookOnPosition,
+                OnTelemetry = WebhookOnTelemetry
+            }
         };
     }
 }

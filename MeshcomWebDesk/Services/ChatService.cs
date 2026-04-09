@@ -18,6 +18,7 @@ public class ChatService
     private MeshcomSettings _settings;
     private readonly ILogger<ChatService> _logger;
     private readonly IMonitorDataSink _sink;
+    private readonly WebhookService   _webhook;
 
     /// <summary>
     /// Rolling deduplication cache.
@@ -44,11 +45,12 @@ public class ChatService
     /// </summary>
     public event Action<string>? OnNewTab;
 
-    public ChatService(IOptionsMonitor<MeshcomSettings> settings, ILogger<ChatService> logger, IMonitorDataSink sink)
+    public ChatService(IOptionsMonitor<MeshcomSettings> settings, ILogger<ChatService> logger, IMonitorDataSink sink, WebhookService webhook)
     {
         _settings = settings.CurrentValue;
         _logger   = logger;
         _sink     = sink;
+        _webhook  = webhook;
         settings.OnChange(s => _settings = s);
     }
 
@@ -138,6 +140,7 @@ public class ChatService
 
         UpdateMhList(message);
         NotifyChange();
+        _ = _webhook.SendAsync(message, "message");
     }
 
     /// <summary>
@@ -302,6 +305,7 @@ public class ChatService
         UpdateMhList(message);
         lock (_lock) { AppendToMonitor(message); }
         NotifyChange();
+        _ = _webhook.SendAsync(message, "position");
     }
 
     /// <summary>
@@ -313,6 +317,7 @@ public class ChatService
         UpdateMhList(message);
         lock (_lock) { AppendToMonitor(message); }
         NotifyChange();
+        _ = _webhook.SendAsync(message, "telemetry");
     }
 
     /// <summary>Get a specific tab.</summary>

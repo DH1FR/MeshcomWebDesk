@@ -4,7 +4,14 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#16213e" />
+    <meta name="theme-color" content="#0f3460" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MeshCom" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="icons/icon.svg" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <base href="/" />
     <ResourcePreloader />
     <link rel="stylesheet" href="@Assets["app.css"]" />
@@ -20,6 +27,8 @@
         Ein Fehler ist aufgetreten. &nbsp;<a href="." class="reload">Neu laden</a><span class="dismiss">🗙</span>
     </div>
     <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="map.js"></script>
     <script>
         window.scrollToBottom = function (id) {
             var el = document.getElementById(id);
@@ -74,6 +83,11 @@
                 }
             };
         })();
+
+        // Register service worker for PWA install prompt
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/service-worker.js');
+        }
     </script>
 </body>
 

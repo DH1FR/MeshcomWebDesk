@@ -1,0 +1,28 @@
+{
+  "name": "MeshCom WebDesk",
+  "short_name": "MeshCom",
+  "description": "MeshCom 4.0 Web Client for amateur radio",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#0f3460",
+  "lang": "de",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    { "name": "Chat",  "url": "/",    "description": "MeshCom Chat" },
+    { "name": "Karte", "url": "/map", "description": "Live-Karte" }
+  ]
+}
