@@ -876,6 +876,10 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
 ## 📋 Changelog
 
+### v1.6.8
+- **fix:** 📱 **iOS PWA – Leeraum unten** (iPhone + iPad) – `padding-bottom: env(safe-area-inset-bottom)` auf `.app-layout` mit `box-sizing: border-box` verschoben; wirkt jetzt zuverlässig auf allen iOS-Geräten
+- **fix:** 📱 **iOS PWA – Titel zu groß** – Breakpoint von `390px` auf `480px` erhöht (trifft jetzt alle iPhones inkl. 14 Pro / 15 Plus); Schriftgröße auf `11px` reduziert
+
 ### v1.6.7
 - **fix:** 📱 **iOS PWA – Safe Area Insets** – App startete zu weit oben (Inhalt unter Statusleiste) und ließ unten Platz frei; `env(safe-area-inset-top/bottom)` korrekt in Header-Höhe und Body eingebunden
 - **fix:** 📱 **iOS PWA – Titel zu groß** – Auf kleinen iPhones (SE, mini) war „MeshCom WebDesk" zu groß; neue Media Query für `≤390px` reduziert Schriftgröße und blendet Versionsnummer aus

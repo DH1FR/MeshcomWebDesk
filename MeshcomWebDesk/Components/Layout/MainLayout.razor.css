@@ -2,6 +2,10 @@
     height: 100vh;                    /* fallback for older browsers */
     height: -webkit-fill-available;   /* Safari: fills actual visible area */
     height: 100dvh;                   /* dynamic viewport height: excludes mobile browser chrome */
+    /* box-sizing ensures padding-bottom is included in 100dvh,
+       so safe-area-inset-bottom doesn't add extra height */
+    box-sizing: border-box;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -70,8 +74,6 @@
 .app-body {
     flex: 1;
     overflow: hidden;
-    /* Space above iOS home indicator */
-    padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* Hide nav labels on narrow screens */
@@ -81,16 +83,16 @@
     }
 }
 
-/* Smaller brand title on small iPhones (SE, 12 mini etc.) */
-@media (max-width: 390px) {
+/* Smaller brand title on phones (all iPhones up to Plus/Pro Max) */
+@media (max-width: 480px) {
     .app-header-brand {
-        font-size: 12px;
-        gap: 5px;
+        font-size: 11px;
+        gap: 4px;
     }
     .app-version {
         display: none;
     }
     ::deep .app-nav-link {
-        padding: 6px 9px;
+        padding: 6px 8px;
     }
 }
