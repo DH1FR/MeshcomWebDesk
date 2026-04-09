@@ -876,6 +876,10 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
 ## 📋 Changelog
 
+### v1.6.9
+- **fix:** 📱 **iOS PWA – Leeraum unten** (nur in PWA standalone, nicht im Browser) – Ursache war `height: -webkit-fill-available` in `app.css`, das im PWA-Modus eine kleinere Höhe als `100dvh` liefert; ersetzt durch `position: fixed; inset: 0` (von Apple empfohlene Methode für PWA Full-Screen-Layouts)
+- **fix:** 📱 Doppelte `.app-layout`-Definition aus `app.css` entfernt – nur noch in `MainLayout.razor.css` definiert
+
 ### v1.6.8
 - **fix:** 📱 **iOS PWA – Leeraum unten** (iPhone + iPad) – `padding-bottom: env(safe-area-inset-bottom)` auf `.app-layout` mit `box-sizing: border-box` verschoben; wirkt jetzt zuverlässig auf allen iOS-Geräten
 - **fix:** 📱 **iOS PWA – Titel zu groß** – Breakpoint von `390px` auf `480px` erhöht (trifft jetzt alle iPhones inkl. 14 Pro / 15 Plus); Schriftgröße auf `11px` reduziert

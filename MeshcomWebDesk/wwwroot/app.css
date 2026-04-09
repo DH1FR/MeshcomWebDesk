@@ -20,14 +20,7 @@ h1:focus {
 }
 
 /* ===== App Layout ===== */
-.app-layout {
-    height: 100vh;
-    height: -webkit-fill-available;
-    height: 100dvh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
+/* .app-layout is fully defined in MainLayout.razor.css (scoped) */
 
 /* ===== MeshCom Container: horizontal split ===== */
 .meshcom-container {

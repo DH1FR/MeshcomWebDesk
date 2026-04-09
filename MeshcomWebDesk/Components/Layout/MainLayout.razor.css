@@ -1,14 +1,12 @@
 .app-layout {
-    height: 100vh;                    /* fallback for older browsers */
-    height: -webkit-fill-available;   /* Safari: fills actual visible area */
-    height: 100dvh;                   /* dynamic viewport height: excludes mobile browser chrome */
-    /* box-sizing ensures padding-bottom is included in 100dvh,
-       so safe-area-inset-bottom doesn't add extra height */
-    box-sizing: border-box;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-    overflow: hidden;
+    /* position:fixed + inset:0 is the most reliable full-screen method
+       for iOS PWA (recommended by Apple). Pins to viewport edges regardless
+       of dvh / -webkit-fill-available inconsistencies in standalone mode. */
+    position: fixed;
+    inset: 0;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .app-header {
