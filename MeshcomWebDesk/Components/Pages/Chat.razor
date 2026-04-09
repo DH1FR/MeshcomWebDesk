@@ -50,7 +50,7 @@
                     @foreach (var msg in _activeTabMessages)
                     {
                         <div class="message @(msg.IsOutgoing ? "msg-out" : "msg-in")">
-                            <span class="msg-time">@msg.Timestamp.ToString("HH:mm:ss")</span>
+                            <span class="msg-time">@LT(msg.Timestamp).ToString("HH:mm:ss")</span>
                             @if (msg.IsOutgoing)
                             {
                                 <span class="msg-call">@_myCallsign:</span>
@@ -102,7 +102,7 @@
             @foreach (var m in _allMessages)
             {
                 <div class="mon-row @MonRowClass(m)">
-                    <span class="mon-time">@m.Timestamp.ToString("HH:mm:ss")</span>
+                    <span class="mon-time">@LT(m.Timestamp).ToString("HH:mm:ss")</span>
 
                     <span class="mon-badge @MonBadgeClass(m)">@MonType(m)</span>
 
@@ -238,7 +238,7 @@
         @if (_status.LastRxTime.HasValue)
         {
             <span class="status-sep status-detail">|</span>
-            <span class="status-item status-detail">⏱️ @_status.LastRxTime.Value.ToString("HH:mm:ss") @Loc.T("von", "from", "da", "de") @_status.LastRxFrom</span>
+            <span class="status-item status-detail">⏱️ @LT(_status.LastRxTime.Value).ToString("HH:mm:ss") @Loc.T("von", "from", "da", "de") @_status.LastRxFrom</span>
         }
         @if (_status.LastRssi.HasValue)
         {
@@ -250,7 +250,7 @@
         @if (_status.LastTxTime.HasValue)
         {
             <span class="status-sep status-detail">|</span>
-            <span class="status-item status-detail">📤 @_status.LastTxTime.Value.ToString("HH:mm:ss")</span>
+            <span class="status-item status-detail">📤 @LT(_status.LastTxTime.Value).ToString("HH:mm:ss")</span>
         }
         @if (_status.OwnLatitude.HasValue && _status.OwnLongitude.HasValue)
         {
@@ -564,4 +564,6 @@
 
     private static string BeaconTimeCss(DateTime nextSend) =>
         (nextSend - DateTime.Now).TotalMinutes < 10 ? "beacon-time beacon-time-soon" : "beacon-time";
+
+    private DateTime LT(DateTime dt) => dt.AddHours(SettingsOptions.Value.TimeOffsetHours);
 }

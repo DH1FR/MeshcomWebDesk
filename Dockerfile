@@ -15,8 +15,10 @@ RUN dotnet publish MeshcomWebDesk/MeshcomWebDesk.csproj \
 FROM debian:bookworm-slim AS runtime
 WORKDIR /app
 
-# libicu is required by .NET globalization
-RUN apt-get update && apt-get install -y --no-install-recommends libicu-dev && rm -rf /var/lib/apt/lists/*
+# libicu is required by .NET globalization; tzdata for correct local time
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libicu-dev tzdata \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /app/publish .
 
@@ -26,6 +28,7 @@ RUN mkdir -p /app/logs
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS=http://+:5162
 ENV Meshcom__LogPath=/app/logs
+ENV TZ=Europe/Berlin
 
 EXPOSE 5162
 EXPOSE 1799/udp

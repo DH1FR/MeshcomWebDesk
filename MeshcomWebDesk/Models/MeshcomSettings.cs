@@ -56,6 +56,14 @@ public class MeshcomSettings
     public string DataPath { get; set; } = @"C:\Temp\MeshcomData";
 
     /// <summary>
+    /// Hours added to incoming timestamps for local time display.
+    /// Supports half-hour offsets (e.g. 5.5 for IST).
+    /// Set to 0 when the host OS is already in the correct timezone.
+    /// Default is 0.
+    /// </summary>
+    public double TimeOffsetHours { get; set; } = 0;
+
+    /// <summary>
     /// When true, an automatic reply is sent once when a brand-new direct chat tab is
     /// opened by an incoming message (i.e. first contact from a callsign).
     /// Default is false.

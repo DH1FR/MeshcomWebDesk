@@ -86,8 +86,8 @@
                                 }
                             </td>
                             <td class="mh-time">
-                                <span class="mh-date">@s.LastHeard.ToString("dd.MM.yy")</span>
-                                <span class="mh-hour">@s.LastHeard.ToString("HH:mm:ss")</span>
+                                <span class="mh-date">@LT(s.LastHeard).ToString("dd.MM.yy")</span>
+                                <span class="mh-hour">@LT(s.LastHeard).ToString("HH:mm:ss")</span>
                             </td>
                             <td class="col-center mh-count-cell">@s.MessageCount</td>
                             <td class="mh-msg">@Truncate(s.LastMessage, 35)</td>
@@ -232,6 +232,8 @@
         if (s.FirstHeard != default)                 parts.Add($"{firstLabel}: {s.FirstHeard:dd.MM.yy HH:mm}");
         return parts.Count > 0 ? string.Join(" | ", parts) : s.Callsign;
     }
+
+    private DateTime LT(DateTime dt) => dt.AddHours(SettingsOptions.Value.TimeOffsetHours);
 
     public void Dispose()
     {

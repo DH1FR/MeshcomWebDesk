@@ -549,6 +549,10 @@ See [LICENSE](LICENSE)
 
 ## 📋 Changelog
 
+### v1.4.3
+- **feat:** `TimeOffsetHours` setting – configurable UTC offset for timestamp display (supports half-hour offsets, e.g. `5.5` for IST)
+- **fix:** Docker container now runs with `TZ=Europe/Berlin` by default (`tzdata` installed) – `DateTime.Now` correctly reflects MEZ/MESZ including automatic DST switching; `TimeOffsetHours = 0` stays correct in Docker
+
 ### v1.4.2
 - **feat:** `{version}` placeholder supported in `AutoReplyText` and `BeaconText` – replaced with the running application version at send time
 - **feat:** **Test button** for Auto-Reply in Settings – send to any callsign immediately without waiting for an incoming message

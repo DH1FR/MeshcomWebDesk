@@ -83,6 +83,12 @@
                 <label>@Loc.T("Monitor-Limit (Einträge)", "Monitor Limit (Entries)", "Limite monitor (voci)", "Límite monitor (entradas)")</label>
                 <input type="number" min="10" @bind="_model.MonitorMaxMessages" />
 
+                <label>
+                    @Loc.T("Zeitversatz (Stunden)", "Time Offset (Hours)", "Offset orario (ore)", "Desfase horario (horas)")<br />
+                    <small>@Loc.T("UTC-Korrektur für Zeitanzeige, z.\u00a0B. 1 für MEZ, 2 für MESZ, 0 wenn Zeitzone bereits korrekt", "UTC offset for time display, e.\u00a0g. 1 for CET, 2 for CEST, 0 if timezone already correct", "Offset UTC per visualizzazione, es. 1 per CET, 2 per CEST", "Desfase UTC para visualización, p.ej. 1 para CET, 2 para CEST")</small>
+                </label>
+                <input type="number" step="0.5" @bind="_model.TimeOffsetHours" />
+
                 <label>@Loc.T("Gruppenfilter aktiv", "Group Filter Active", "Filtro gruppi attivo", "Filtro de grupos activo")</label>
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.GroupFilterEnabled" />
@@ -491,6 +497,7 @@
             GroupFilterEnabled  = s.GroupFilterEnabled,
             GroupsText          = string.Join("\n", s.Groups),
             DataPath            = s.DataPath,
+            TimeOffsetHours     = s.TimeOffsetHours,
             AutoReplyEnabled    = s.AutoReplyEnabled,
             AutoReplyText       = s.AutoReplyText,
             BeaconEnabled       = s.BeaconEnabled,
@@ -547,6 +554,7 @@
         public bool   GroupFilterEnabled  { get; set; }
         public string GroupsText          { get; set; } = string.Empty;
         public string DataPath            { get; set; } = string.Empty;
+        public double TimeOffsetHours     { get; set; } = 0;
         public bool   AutoReplyEnabled    { get; set; }
         public string AutoReplyText       { get; set; } = string.Empty;
         public bool   BeaconEnabled       { get; set; }
@@ -578,6 +586,7 @@
                 .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .ToList(),
             DataPath            = DataPath,
+            TimeOffsetHours     = TimeOffsetHours,
             AutoReplyEnabled    = AutoReplyEnabled,
             AutoReplyText       = AutoReplyText,
             BeaconEnabled       = BeaconEnabled,
