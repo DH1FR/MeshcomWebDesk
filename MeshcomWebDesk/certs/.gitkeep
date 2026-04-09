@@ -1,0 +1,3 @@
+# certs/ – Zertifikate für HTTPS-LAN-Zugriff
+# Diese Dateien werden NICHT ins Repository eingecheckt (.gitignore).
+# Zertifikat erstellen: scripts/create-lan-cert.ps1

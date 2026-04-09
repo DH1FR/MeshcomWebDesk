@@ -22,3 +22,12 @@ out/
 ## OS
 .DS_Store
 Thumbs.db
+
+## Certificates (never commit private keys)
+certs/*.pfx
+certs/*.p12
+certs/*.key
+certs/*.pem
+
+## Settings override written by SettingsService at runtime
+**/appsettings.override.json
