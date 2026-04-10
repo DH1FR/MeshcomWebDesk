@@ -55,5 +55,12 @@ window.meshcomChat = (function () {
         divider.addEventListener('touchstart', onDown, { passive: false });
     }
 
-    return { initResizer };
+    return {
+        initResizer,
+        getActiveTab: () => localStorage.getItem('meshcom-active-tab') || '',
+        setActiveTab: (key) => {
+            if (key) localStorage.setItem('meshcom-active-tab', key);
+            else     localStorage.removeItem('meshcom-active-tab');
+        }
+    };
 }());

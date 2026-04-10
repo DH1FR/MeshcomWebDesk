@@ -328,6 +328,21 @@
         {
             try { await JS.InvokeVoidAsync("meshcomChat.initResizer"); }
             catch (JSException) { }
+
+            // Restore the previously active tab (survives navigation to MH / Map / Settings)
+            try
+            {
+                var savedKey = await JS.InvokeAsync<string>("meshcomChat.getActiveTab");
+                if (!string.IsNullOrEmpty(savedKey) && _tabs.Any(t => t.Key == savedKey))
+                {
+                    _activeTabKey      = savedKey;
+                    _activeTab         = ChatService.GetTab(savedKey);
+                    _activeTabMessages = ChatService.GetTabMessages(savedKey);
+                    ChatService.ClearUnread(savedKey);
+                    StateHasChanged();
+                }
+            }
+            catch (JSException) { }
         }
 
         if (_scrollMessages)
@@ -430,6 +445,7 @@
         _activeTabMessages = ChatService.GetTabMessages(key);
         ChatService.ClearUnread(key);
         _scrollMessages = true;
+        _ = JS.InvokeVoidAsync("meshcomChat.setActiveTab", key).AsTask();
     }
 
     private void CloseTab(string key)
@@ -439,6 +455,7 @@
         {
             _activeTabKey = string.Empty;
             _activeTab = null;
+            _ = JS.InvokeVoidAsync("meshcomChat.setActiveTab", (object?)null).AsTask();
         }
         RefreshData();
     }
