@@ -82,6 +82,12 @@ public class SettingsService
                     ["OnMessage"]   = s.Webhook.OnMessage,
                     ["OnPosition"]  = s.Webhook.OnPosition,
                     ["OnTelemetry"] = s.Webhook.OnTelemetry
+                },
+                ["Qrz"] = new JsonObject
+                {
+                    ["Enabled"]  = s.Qrz.Enabled,
+                    ["Username"] = s.Qrz.Username,
+                    ["Password"] = s.Qrz.Password
                 }
             }
         };

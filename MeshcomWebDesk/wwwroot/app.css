@@ -599,6 +599,10 @@ h1:focus {
     letter-spacing: 0.03em;
 }
 
+.mh-qrz { white-space: nowrap; }
+.mh-qrz-name { display: block; font-size: 12px; color: #c9d1d9; }
+.mh-qrz-loc  { display: block; font-size: 10px; color: #8b949e; }
+
 .mh-batt { white-space: nowrap; font-size: 11px; }
 .batt-ok   { color: #3fb950; }
 .batt-warn { color: #d29922; }

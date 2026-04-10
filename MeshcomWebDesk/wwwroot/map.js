@@ -85,7 +85,15 @@ window.meshcomMap = (function () {
 
             (stations || []).forEach(function (s) {
                 if (s.lat == null || s.lon == null) return;
-                var popup = '<b>' + esc(s.callsign) + '</b>'
+                var qrzLine = '';
+                if (s.qrzName || s.qrzLoc) {
+                    qrzLine = '<br><span style="font-size:11px;color:#aaa">';
+                    if (s.qrzName) qrzLine += esc(s.qrzName);
+                    if (s.qrzName && s.qrzLoc) qrzLine += ', ';
+                    if (s.qrzLoc)  qrzLine += esc(s.qrzLoc);
+                    qrzLine += '</span>';
+                }
+                var popup = '<b>' + esc(s.callsign) + '</b>' + qrzLine
                     + (s.text     ? '<br><span style="font-size:12px">' + esc(s.text) + '</span>' : '')
                     + (s.rssi     != null ? '<br>RSSI: ' + s.rssi + ' dBm' : '')
                     + (s.battery  != null ? '&nbsp;🔋 ' + s.battery + '%' : '')

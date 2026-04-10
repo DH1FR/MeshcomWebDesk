@@ -7,6 +7,7 @@
 @inject MeshcomUdpService UdpService
 @inject LanguageService Loc
 @inject DatabaseSetupService DatabaseSetupService
+@inject QrzService QrzService
 @implements IDisposable
 
 <PageTitle>@Loc.T("Einstellungen", "Settings", "Impostazioni", "Configuración") – MeshCom WebDesk</PageTitle>
@@ -512,6 +513,57 @@
             </div>
         </div>
 
+        <!-- QRZ.com -->
+        <div class="settings-section">
+            <h2 class="settings-section-title">🔍 QRZ.com</h2>
+            <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
+                ℹ️ @Loc.T(
+                    "Abfragen des QRZ.com XML-API. Kostenloser Account liefert Basisdaten (Vorname, Ort). Ein XML-Abo (ca. $30/Jahr) schaltet vollständige Profildaten frei.",
+                    "Queries the QRZ.com XML API. A free account provides basic data (first name, location). An XML subscription (~$30/year) unlocks full profile data.",
+                    "Interroga l'API XML di QRZ.com. Un account gratuito fornisce dati di base (nome, luogo). Un abbonamento XML (~$30/anno) sblocca il profilo completo.",
+                    "Consulta la API XML de QRZ.com. Una cuenta gratuita proporciona datos básicos (nombre, lugar). Una suscripción XML (~$30/año) desbloquea el perfil completo.")
+            </div>
+            <div class="settings-grid">
+                <label>@Loc.T("QRZ.com aktiv", "QRZ.com Active", "QRZ.com attivo", "QRZ.com activo")</label>
+                <label class="settings-toggle">
+                    <input type="checkbox" @bind="_model.QrzEnabled" />
+                    <span>@(_model.QrzEnabled ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                </label>
+
+                <label>@Loc.T("Benutzername", "Username", "Nome utente", "Usuario")</label>
+                <input type="text" @bind="_model.QrzUsername" autocomplete="username"
+                       placeholder="@Loc.T("QRZ.com Benutzername", "QRZ.com username", "Nome utente QRZ.com", "Usuario QRZ.com")" />
+
+                <label>@Loc.T("Passwort", "Password", "Password", "Contraseña")</label>
+                <input type="password" @bind="_model.QrzPassword" autocomplete="new-password"
+                       placeholder="@Loc.T("QRZ.com Passwort", "QRZ.com password", "Password QRZ.com", "Contraseña QRZ.com")" />
+            </div>
+            @if (_model.QrzEnabled)
+            {
+                <div style="margin-top:0.75rem;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                    <button type="button" class="btn-send-now" @onclick="TestQrzAsync" disabled="@_qrzTesting">
+                        @if (_qrzTesting)
+                        {
+                            <span>⏳ @Loc.T("Teste…", "Testing…", "Test in corso…", "Probando…")</span>
+                        }
+                        else
+                        {
+                            <span>🔍 @Loc.T("Verbindung testen", "Test Connection", "Testa connessione", "Probar conexión")</span>
+                        }
+                    </button>
+                    <button type="button" class="btn-remove" @onclick="ClearQrzCacheAsync">
+                        🗑️ @Loc.T("Cache leeren", "Clear Cache", "Svuota cache", "Vaciar caché")
+                    </button>
+                </div>
+                @if (_qrzTestResult != null)
+                {
+                    <div class="@(_qrzTestResult.StartsWith("✅") ? "settings-success" : "settings-error")" style="margin-top:0.5rem">
+                        @_qrzTestResult
+                    </div>
+                }
+            }
+        </div>
+
         <div class="settings-actions">
             <button class="btn-save" @onclick="SaveAsync">💾 @Loc.T("Speichern", "Save", "Salva", "Guardar")</button>
             <button class="btn-send-now" @onclick="SendTelemetryNowAsync" disabled="@_sendingNow">
@@ -552,6 +604,9 @@
     private bool          _dbTesting;
     private bool          _dbSettingUp;
     private string?       _dbSetupError;
+
+    private bool    _qrzTesting;
+    private string? _qrzTestResult;
 
     private async Task SendTelemetryNowAsync()
     {
@@ -713,6 +768,58 @@
         }
     }
 
+    private async Task TestQrzAsync()
+    {
+        _qrzTesting    = true;
+        _qrzTestResult = null;
+        try
+        {
+            // Apply current form credentials temporarily via a scoped settings override
+            var saved   = SettingsMonitor.CurrentValue.Qrz;
+            var tempSettings = new MeshcomSettings
+            {
+                Qrz = new MeshcomWebDesk.Models.QrzSettings
+                {
+                    Enabled  = true,
+                    Username = _model.QrzUsername,
+                    Password = _model.QrzPassword
+                }
+            };
+
+            // Save first so QrzService picks up the new credentials
+            await SettingsService.SaveMeshcomSettingsAsync(_model.ToSettings());
+            QrzService.ClearCache();
+
+            var testCallsign = _model.MyCallsign.Contains('-')
+                ? _model.MyCallsign[.._model.MyCallsign.IndexOf('-')]
+                : _model.MyCallsign;
+
+            var info = await QrzService.LookupAsync(testCallsign);
+            if (info is not null)
+                _qrzTestResult = $"✅ {testCallsign}: {info.FirstName} / {info.Location}";
+            else
+                _qrzTestResult = Loc.T(
+                    $"⚠️ Kein Eintrag für {testCallsign} gefunden (Login OK oder Rufzeichen unbekannt).",
+                    $"⚠️ No entry found for {testCallsign} (login OK or callsign unknown).",
+                    $"⚠️ Nessun risultato per {testCallsign} (login OK o nominativo sconosciuto).",
+                    $"⚠️ Sin resultado para {testCallsign} (login OK o indicativo desconocido).");
+        }
+        catch (Exception ex)
+        {
+            _qrzTestResult = $"❌ {ex.Message}";
+        }
+        finally
+        {
+            _qrzTesting = false;
+        }
+    }
+
+    private void ClearQrzCacheAsync()
+    {
+        QrzService.ClearCache();
+        _qrzTestResult = Loc.T("✅ Cache geleert.", "✅ Cache cleared.", "✅ Cache svuotata.", "✅ Caché vaciado.");
+    }
+
     private void ResetDbTestState()
     {
         _dbTestResult = null;
@@ -806,7 +913,10 @@
             WebhookUrl              = s.Webhook.Url,
             WebhookOnMessage        = s.Webhook.OnMessage,
             WebhookOnPosition       = s.Webhook.OnPosition,
-            WebhookOnTelemetry      = s.Webhook.OnTelemetry
+            WebhookOnTelemetry      = s.Webhook.OnTelemetry,
+            QrzEnabled              = s.Qrz.Enabled,
+            QrzUsername             = s.Qrz.Username,
+            QrzPassword             = s.Qrz.Password
         };
     }
 
@@ -874,6 +984,11 @@
         public bool   WebhookOnPosition  { get; set; }
         public bool   WebhookOnTelemetry { get; set; }
 
+        // QRZ.com
+        public bool   QrzEnabled   { get; set; }
+        public string QrzUsername  { get; set; } = string.Empty;
+        public string QrzPassword  { get; set; } = string.Empty;
+
         public DatabaseSettings ToDbSettings() => new()
         {
             Provider              = DbProvider,
@@ -925,6 +1040,12 @@
                 OnMessage   = WebhookOnMessage,
                 OnPosition  = WebhookOnPosition,
                 OnTelemetry = WebhookOnTelemetry
+            },
+            Qrz = new MeshcomWebDesk.Models.QrzSettings
+            {
+                Enabled  = QrzEnabled,
+                Username = QrzUsername,
+                Password = QrzPassword
             }
         };
     }

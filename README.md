@@ -45,6 +45,7 @@ and makes a full web client for MeshCom available via a simple URL
   - `✓` blue – node has transmitted over LoRa (sequence number assigned)
   - `✓✓` green – recipient confirmed delivery (APRS ACK received)
 - **Clickable callsigns in the monitor** – click any sender or recipient to open a chat tab instantly
+- **QRZ.com tooltips** – when enabled, hovering over any callsign (tab buttons, chat messages, monitor From/To) shows the operator's first name and home QTH (e.g. `Chat mit DH1FR-2 öffnen · Max, Berlin`)
 - **Audio notification** 🔔 when a new direct message to your own callsign arrives (Web Audio API, no audio file required); mute toggle in the status bar
 
 ### 📻 MH – Most Recently Heard
@@ -54,6 +55,7 @@ and makes a full web client for MeshCom available via a simple URL
 - **Battery level** 🔋 column parsed from `batt` field in position/telemetry packets, colour-coded (🟢 >60% / 🟡 >30% / 🔴 ≤30%)
 - **Hardware badge** – short hardware name from `hw_id` field (e.g. `T-BEAM`, `T-ECHO`, `HELTEC-V3`)
 - **Firmware tooltip** – hover the callsign to see firmware version, hardware ID and first-heard time
+- **QRZ.com callsign data** – when the QRZ.com integration is enabled, a dedicated **Name / Location** column shows each operator's first name and home QTH; the same data also appears as a hover tooltip on every callsign
 - **RSSI / SNR** signal quality with colour coding (green / yellow / red)
 - Altitude correctly converted from APRS feet to metres
 - 🗺️ OpenStreetMap link per station
@@ -162,7 +164,7 @@ and makes a full web client for MeshCom available via a simple URL
 - Interactive map at `/map` powered by **Leaflet.js + OpenStreetMap**
 - **APRS-style markers**: filled circle colour-coded by RSSI (🟢 > −90 / 🟡 > −105 / 🔴 ≤ −105 dBm) + callsign label below
 - **Own position** shown as gold diamond ◆ (APRS convention)
-- **Popup** on click: callsign, last message, RSSI, battery, altitude
+- **Popup** on click: callsign, **QRZ operator name / QTH** (when enabled), last message, RSSI, battery, altitude
 - **First open**: map automatically zooms to a **50 km radius** around own position (once own GPS is known)
 - **View persistence**: last map position and zoom level are saved in `localStorage` and restored on every subsequent visit
 - **Compact info bar** at the bottom: `📡 N Station(en) · 📍 MyCallsign` – clean one-liner regardless of station count
@@ -183,6 +185,23 @@ and makes a full web client for MeshCom available via a simple URL
 - **Minimal service worker** – enables install prompt; full offline not possible (Blazor Server requires live connection)
 - **Apple meta tags** for iOS Safari Add-to-Home-Screen
 - Custom **antenna SVG icon** in the app colour scheme
+
+### 🔍 QRZ.com Callsign Lookup
+- Optional integration with the **[QRZ.com XML API](https://www.qrz.com/page/xml_data.html)** for operator name and home location
+- Requires a free [QRZ.com](https://www.qrz.com/register) account (username + password – no separate API key)
+- **Login flow**: the app fetches a session key automatically on first lookup and refreshes it transparently on expiry
+- **Free account** returns first name + city/QTH – sufficient for all MeshCom WebDesk displays
+- **XML subscription** (~$30/year) unlocks full profile data
+- **SSID stripping**: `DH1FR-2` is looked up as `DH1FR` automatically
+- Results are **cached in memory** per app session – each callsign is only queried once regardless of how many pages display it
+- **Shown everywhere a callsign appears:**
+  - 📻 **MH list** – dedicated *Name / Location* column + hover tooltip on the callsign cell
+  - 💬 **Chat** – hover tooltip on tab buttons (direct chats) and on every callsign in messages and monitor rows
+  - 🗺️ **Map** – callsign popup shows name and QTH below the bold callsign
+- Configured in **Settings → 🔍 QRZ.com**; can be enabled/disabled **live without restart**
+- Test button in Settings: performs a live lookup of your own callsign and shows the result immediately
+- Cache-clear button in Settings: forces fresh lookups after account upgrade or data change
+- All errors (wrong credentials, network failure, unknown callsign) are logged as **Warning** in the Serilog log file
 
 ### 🔒 HTTPS for LAN (required for PWA on mobile)
 - **`scripts/create-lan-cert.ps1`** – one-click self-signed certificate generator for Windows PowerShell
@@ -227,6 +246,7 @@ MeshcomWebDesk/              ← Blazor Server (ASP.NET Core host)
 │     TelemetryMappingEntry.cs ← Telemetry mapping entry (JSON key → label + unit + decimals)
 │     DatabaseSettings.cs      ← DB provider + connection settings + LogInserts
 │     WebhookSettings.cs       ← Webhook URL + trigger flags
+│     QrzSettings.cs           ← QRZ.com credentials + enabled flag
 │     ChatTab.cs               ← Tab model with UnreadCount
 │     HeardStation.cs          ← MH list entry (GPS, signal, battery, hardware, firmware)
 │     ConnectionStatus.cs      ← Live UDP status + own GPS position
@@ -254,6 +274,7 @@ MeshcomWebDesk/              ← Blazor Server (ASP.NET Core host)
       SettingsService.cs       ← Writes appsettings.override.json in DataPath (Docker-safe); changes applied live via IOptionsMonitor
       LanguageService.cs       ← Singleton: UI language switching (de/en); T(de,en) helper; OnChange event for instant re-render
       WebhookService.cs        ← HTTP POST fire-and-forget on message / position / telemetry events
+      QrzService.cs             ← QRZ.com XML API: session login, callsign lookup, in-memory cache
       Database/
         IMonitorDataSink.cs    ← Interface: WriteAsync(MeshcomMessage)
         MySqlMonitorSink.cs    ← MySQL / MariaDB write sink (MySqlConnector)
@@ -311,6 +332,11 @@ All settings in `MeshcomWebDesk/appsettings.json`:
     "OnMessage":   true,               // fire on incoming chat messages
     "OnPosition":  false,              // fire on incoming position beacons
     "OnTelemetry": false               // fire on incoming telemetry
+  },
+  "Qrz": {
+    "Enabled":  false,                 // enable QRZ.com XML API callsign lookups
+    "Username": "",                    // QRZ.com login username (usually your callsign)
+    "Password": ""                     // QRZ.com login password
   },
   "TelemetryMapping": [                  // any number of entries; configure in Settings UI
     { "JsonKey": "aussentemp",  "Label": "🌡",  "Unit": "C",   "Decimals": 1 },

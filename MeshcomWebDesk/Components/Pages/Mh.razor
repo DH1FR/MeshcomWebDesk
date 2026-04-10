@@ -9,6 +9,7 @@
 @inject MeshcomUdpService UdpService
 @inject IOptions<MeshcomSettings> SettingsOptions
 @inject LanguageService Loc
+@inject QrzService QrzService
 
 <PageTitle>MH – @Loc.T("Zuletzt gehört", "Most Recently Heard", "Più recenti", "Más recientes")</PageTitle>
 
@@ -61,6 +62,10 @@
                 <thead>
                     <tr>
                         <th>@Loc.T("Rufzeichen", "Callsign", "Nominativo", "Indicativo")</th>
+                        @if (SettingsOptions.Value.Qrz.Enabled)
+                        {
+                            <th>@Loc.T("Name / Ort", "Name / Location", "Nome / Luogo", "Nombre / Lugar")</th>
+                        }
                         <th>@Loc.T("Zuletzt gehört", "Last Heard", "Ultima ricezione", "último recibido")</th>
                         <th class="col-center">@Loc.T("Anz.", "Cnt.", "N.", "N.")</th>
                         <th>@Loc.T("Letzte Nachricht", "Last Message", "Ultimo messaggio", "último mensaje")</th>
@@ -79,12 +84,33 @@
                         var dist = CalcDistance(s);
                         <tr class="mh-row">
                             <td class="mh-callsign">
-                                <span title="@BuildStationTooltip(s, Loc.T("Erstmals", "First", "Prima volta", "Primera vez"))">@s.Callsign</span>
+                                <span title="@BuildStationTooltip(s, Loc.T("Erstmals", "First", "Prima volta", "Primera vez"), _qrzData.GetValueOrDefault(s.Callsign))">@s.Callsign</span>
                                 @if (!string.IsNullOrEmpty(MeshcomLookup.HwName(s.HwId)))
                                 {
                                     <span class="mh-hw-badge">@MeshcomLookup.HwName(s.HwId)</span>
                                 }
                             </td>
+                            @if (SettingsOptions.Value.Qrz.Enabled)
+                            {
+                                var qrzInfo = _qrzData.GetValueOrDefault(s.Callsign);
+                                <td class="mh-qrz">
+                                    @if (qrzInfo is not null)
+                                    {
+                                        @if (!string.IsNullOrEmpty(qrzInfo.FirstName))
+                                        {
+                                            <span class="mh-qrz-name">@qrzInfo.FirstName</span>
+                                        }
+                                        @if (!string.IsNullOrEmpty(qrzInfo.Location))
+                                        {
+                                            <span class="mh-qrz-loc">@qrzInfo.Location</span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="mh-no-pos">–</span>
+                                    }
+                                </td>
+                            }
                             <td class="mh-time">
                                 <span class="mh-date">@LT(s.LastHeard).ToString("dd.MM.yy")</span>
                                 <span class="mh-hour">@LT(s.LastHeard).ToString("HH:mm:ss")</span>
@@ -147,6 +173,7 @@
     private ConnectionStatus _status = new();
     private string _myCallsign = string.Empty;
     private bool _disposed;
+    private readonly Dictionary<string, QrzInfo?> _qrzData = new(StringComparer.OrdinalIgnoreCase);
 
     private bool HasOwnPos => _status.OwnLatitude.HasValue && _status.OwnLongitude.HasValue;
 
@@ -160,15 +187,22 @@
         UdpService.OnStatusChange += OnStatusChanged;
     }
 
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadQrzDataAsync(_stations);
+    }
+
     private async void OnChanged()
     {
         if (_disposed) return;
         try
         {
+            var newList = ChatService.MhList;
+            await LoadQrzDataAsync(newList);
             await InvokeAsync(() =>
             {
                 if (_disposed) return;
-                _stations = ChatService.MhList;
+                _stations = newList;
                 StateHasChanged();
             });
         }
@@ -188,6 +222,17 @@
             });
         }
         catch (Exception) { }
+    }
+
+    private async Task LoadQrzDataAsync(IReadOnlyList<HeardStation> stations)
+    {
+        if (!SettingsOptions.Value.Qrz.Enabled) return;
+        foreach (var s in stations)
+        {
+            if (_qrzData.ContainsKey(s.Callsign)) continue;
+            var info = await QrzService.LookupAsync(s.Callsign);
+            _qrzData[s.Callsign] = info;
+        }
     }
 
     private double? CalcDistance(HeardStation s)
@@ -224,9 +269,16 @@
         _    => "batt-low"
     };
 
-    private static string BuildStationTooltip(HeardStation s, string firstLabel)
+    private static string BuildStationTooltip(HeardStation s, string firstLabel, QrzInfo? qrz = null)
     {
         var parts = new List<string>();
+        if (qrz is not null)
+        {
+            var qrzParts = new List<string>();
+            if (!string.IsNullOrEmpty(qrz.FirstName)) qrzParts.Add(qrz.FirstName);
+            if (!string.IsNullOrEmpty(qrz.Location))  qrzParts.Add(qrz.Location);
+            if (qrzParts.Count > 0) parts.Add(string.Join(", ", qrzParts));
+        }
         if (!string.IsNullOrEmpty(s.Firmware))      parts.Add($"FW: {s.Firmware}");
         if (s.HwId.HasValue)                         parts.Add($"HW-ID: {s.HwId}");
         if (s.FirstHeard != default)                 parts.Add($"{firstLabel}: {s.FirstHeard:dd.MM.yy HH:mm}");

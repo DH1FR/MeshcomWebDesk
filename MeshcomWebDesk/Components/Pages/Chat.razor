@@ -7,6 +7,7 @@
 @inject ChatService ChatService
 @inject MeshcomUdpService UdpService
 @inject LanguageService Loc
+@inject QrzService QrzService
 @implements IDisposable
 
 <PageTitle>MeshCom Web Client</PageTitle>
@@ -20,7 +21,8 @@
             @foreach (var tab in _tabs)
             {
                 <button class="tab-button @(tab.Key == _activeTabKey ? "active" : "")"
-                        @onclick="() => SelectTab(tab.Key)">
+                        @onclick="() => SelectTab(tab.Key)"
+                        title="@(tab.Key != "*" && !tab.Key.StartsWith('#') ? tab.Title + QrzSuffix(tab.Key) : null)">
                     @(tab.Key == "*" ? Loc.T("Alle", "All", "Tutti", "Todos") : tab.Title)
                     @if (tab.UnreadCount > 0)
                     {
@@ -59,7 +61,7 @@
                             {
                                 <span class="msg-call msg-call-link"
                                       @onclick="() => OpenTabFromMonitor(msg.From)"
-                                      title="@Loc.T($"Chat mit {msg.From} öffnen", $"Open chat with {msg.From}", $"Apri chat con {msg.From}", $"Abrir chat con {msg.From}")">@msg.From:</span>
+                                      title="@(Loc.T($"Chat mit {msg.From} öffnen", $"Open chat with {msg.From}", $"Apri chat con {msg.From}", $"Abrir chat con {msg.From}") + QrzSuffix(msg.From))">@msg.From:</span>
                             }
                             <span class="msg-text">@msg.Text</span>
                             @if (msg.IsOutgoing)
@@ -122,7 +124,7 @@
                             @if (!string.Equals(m.From, _myCallsign, StringComparison.OrdinalIgnoreCase))
                             {
                                 <span class="mon-call mon-call-link" @onclick="() => OpenTabFromMonitor(m.From)"
-                                      title="@Loc.T($"Chat mit {m.From} öffnen", $"Open chat with {m.From}", $"Apri chat con {m.From}", $"Abrir chat con {m.From}")">@m.From</span>
+                                      title="@(Loc.T($"Chat mit {m.From} öffnen", $"Open chat with {m.From}", $"Apri chat con {m.From}", $"Abrir chat con {m.From}") + QrzSuffix(m.From))">@m.From</span>
                             }
                             else
                             {
@@ -147,7 +149,7 @@
                                 else if (!string.Equals(m.To, _myCallsign, StringComparison.OrdinalIgnoreCase))
                                 {
                                     <span class="mon-call mon-call-link" @onclick="() => OpenTabFromMonitor(m.To)"
-                                          title="@Loc.T($"Chat mit {m.To} öffnen", $"Open chat with {m.To}", $"Apri chat con {m.To}", $"Abrir chat con {m.To}")">@m.To</span>
+                                          title="@(Loc.T($"Chat mit {m.To} öffnen", $"Open chat with {m.To}", $"Apri chat con {m.To}", $"Abrir chat con {m.To}") + QrzSuffix(m.To))">@m.To</span>
                                 }
                                 else
                                 {
@@ -282,6 +284,7 @@
     private List<ChatTab> _tabs = [];
     private IReadOnlyList<MeshcomMessage> _allMessages = [];
     private IReadOnlyList<MeshcomMessage> _activeTabMessages = [];
+    private readonly Dictionary<string, QrzInfo?> _qrzData = new(StringComparer.OrdinalIgnoreCase);
     private string _activeTabKey = string.Empty;
     private ChatTab? _activeTab;
     private string _messageText = string.Empty;
@@ -320,6 +323,11 @@
         UdpService.OnStatusChange += OnStatusChanged;
         RefreshData();
         _isInitialized = true;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadQrzDataAsync();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -387,6 +395,9 @@
                 RefreshData();
                 StateHasChanged();
             });
+            await LoadQrzDataAsync();
+            if (!_disposed)
+                await InvokeAsync(StateHasChanged);
         }
         catch (Exception)
         {
@@ -513,6 +524,34 @@
     {
         if (e.Key == "Enter")
             await SendMessage();
+    }
+
+    private string QrzSuffix(string callsign)
+    {
+        if (!SettingsOptions.Value.Qrz.Enabled) return string.Empty;
+        if (!_qrzData.TryGetValue(callsign, out var info) || info is null) return string.Empty;
+        var parts = new List<string>();
+        if (!string.IsNullOrEmpty(info.FirstName)) parts.Add(info.FirstName);
+        if (!string.IsNullOrEmpty(info.Location))  parts.Add(info.Location);
+        return parts.Count > 0 ? " · " + string.Join(", ", parts) : string.Empty;
+    }
+
+    private async Task LoadQrzDataAsync()
+    {
+        if (!SettingsOptions.Value.Qrz.Enabled) return;
+        var callsigns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var m in _allMessages)
+        {
+            if (!string.IsNullOrEmpty(m.From) && !m.From.StartsWith('#') && m.From != "*") callsigns.Add(m.From);
+            if (!string.IsNullOrEmpty(m.To)   && !m.To.StartsWith('#')   && m.To   != "*") callsigns.Add(m.To);
+        }
+        foreach (var t in _tabs)
+            if (t.Key != "*" && !t.Key.StartsWith('#')) callsigns.Add(t.Key);
+        foreach (var cs in callsigns)
+        {
+            if (_qrzData.ContainsKey(cs)) continue;
+            _qrzData[cs] = await QrzService.LookupAsync(cs);
+        }
     }
 
     public void Dispose()

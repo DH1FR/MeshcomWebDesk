@@ -8,6 +8,7 @@
 @inject LanguageService Loc
 @inject IOptionsMonitor<MeshcomSettings> SettingsMonitor
 @inject IJSRuntime JS
+@inject QrzService QrzService
 @implements IDisposable
 
 <PageTitle>🗺️ @Loc.T("Karte", "Map", "Mappa", "Mapa") – MeshCom WebDesk</PageTitle>
@@ -102,9 +103,14 @@
 
     private async Task UpdateMarkersAsync()
     {
-        var stations = ChatService.MhList
-            .Where(s => s.Latitude.HasValue && s.Longitude.HasValue)
-            .Select(s => new
+        var qrzEnabled = SettingsMonitor.CurrentValue.Qrz.Enabled;
+        var withGps    = ChatService.MhList.Where(s => s.Latitude.HasValue && s.Longitude.HasValue).ToList();
+
+        var stationList = new List<object>(withGps.Count);
+        foreach (var s in withGps)
+        {
+            var qrz     = qrzEnabled ? await QrzService.LookupAsync(s.Callsign) : null;
+            stationList.Add(new
             {
                 callsign = s.Callsign,
                 lat      = s.Latitude!.Value,
@@ -112,9 +118,12 @@
                 alt      = s.Altitude,
                 rssi     = s.LastRssi,
                 text     = s.LastMessage,
-                battery  = s.Battery
-            })
-            .ToArray();
+                battery  = s.Battery,
+                qrzName  = qrz?.FirstName,
+                qrzLoc   = qrz?.Location
+            });
+        }
+        var stations = stationList.ToArray();
 
         var status   = UdpService.Status;
         _hasPositions = stations.Length > 0 || status.OwnLatitude.HasValue;

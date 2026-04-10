@@ -146,4 +146,7 @@ public class MeshcomSettings
 
     /// <summary>Optional webhook: HTTP POST on incoming messages, position beacons and/or telemetry.</summary>
     public WebhookSettings Webhook { get; set; } = new();
+
+    /// <summary>Optional QRZ.com XML API integration for callsign lookups in the MH list.</summary>
+    public QrzSettings Qrz { get; set; } = new();
 }
