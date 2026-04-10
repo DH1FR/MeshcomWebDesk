@@ -918,6 +918,14 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
 ## 📋 Changelog
 
+### v1.6.15
+- **feat:** 🔍 **QRZ.com callsign lookup** – optional integration with the QRZ.com XML API; free account returns operator first name + home QTH; session key fetched and refreshed automatically; results cached in memory per session
+  - 📻 **MH list** – dedicated *Name / Location* column + hover tooltip on every callsign
+  - 💬 **Chat** – QRZ data shown as hover tooltip on tab buttons, chat-message callsigns and monitor From/To callsigns
+  - 🗺️ **Map** – callsign popup shows operator name and QTH below the bold callsign
+  - Configured in **Settings → 🔍 QRZ.com**; test button + cache-clear button included; on/off live without restart
+- **fix:** 🐳 **Docker – HTTPS outbound connections** – added `ca-certificates` to `debian:bookworm-slim` runtime image; fixes *"The SSL connection could not be established"* for all outgoing HTTPS calls (QRZ.com, Webhook, InfluxDB Cloud etc.)
+
 ### v1.6.13
 - **feat:** 📡 **Resizable monitor pane** – drag handle between chat and monitor lets the user resize the split freely (mouse + touch); last position persisted in `localStorage`
 - **fix:** DH1FR greeting is now only sent when the tab is opened by an **incoming** message (not when opened manually with `+`)
