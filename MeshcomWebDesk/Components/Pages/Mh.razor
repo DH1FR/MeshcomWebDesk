@@ -35,14 +35,34 @@
         }
     </div>
 
+    @* ── Filtered list (computed once per render) ── *@
+    @{
+        var filteredList = FilteredStations;
+    }
+
     @* ── Header ── *@
     <div class="mh-header">
         <div class="mh-title-row">
             <h2 class="mh-title">📻 Most Recently Heard</h2>
-            <span class="mh-subtitle">@_stations.Count @Loc.T("Station", "Station", "Station", "Station")@(_stations.Count != 1 ? Loc.T("en", "s", "s", "s") : "")</span>
+            <span class="mh-subtitle">
+                @filteredList.Count
+                @if (!string.IsNullOrWhiteSpace(_searchText)) { <span class="mh-search-total"> / @_stations.Count</span> }
+                @Loc.T("Station", "Station", "Station", "Station")@(filteredList.Count != 1 ? Loc.T("en", "s", "s", "s") : "")
+            </span>
         </div>
         @if (_stations.Count > 0)
         {
+            <div class="mh-search-wrap">
+                <input class="mh-search" type="search"
+                       placeholder="@Loc.T("Suchen…", "Search…", "Cerca…", "Buscar…")"
+                       value="@_searchText"
+                       @oninput="e => _searchText = e.Value?.ToString() ?? string.Empty" />
+                @if (!string.IsNullOrEmpty(_searchText))
+                {
+                    <button class="mh-search-clear" @onclick="() => _searchText = string.Empty"
+                            title="@Loc.T("Suche löschen", "Clear search", "Cancella ricerca", "Limpiar búsqueda")">&#xd7;</button>
+                }
+            </div>
             <button class="mh-clear-btn" @onclick="ClearList">🗑️ @Loc.T("Liste leeren", "Clear List", "Svuota lista", "Vaciar lista")</button>
         }
     </div>
@@ -79,7 +99,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var s in _stations)
+                    @foreach (var s in filteredList)
                     {
                         var dist = CalcDistance(s);
                         <tr class="mh-row">
@@ -162,6 +182,17 @@
                             </td>
                         </tr>
                     }
+                    @if (filteredList.Count == 0 && !string.IsNullOrWhiteSpace(_searchText))
+                    {
+                        <tr>
+                            <td colspan="99" class="mh-no-results">
+                                🔍 @Loc.T($"Keine Ergebnisse für \u201e{_searchText}\u201c",
+                                          $"No results for \"{_searchText}\"",
+                                          $"Nessun risultato per \"{_searchText}\"",
+                                          $"Sin resultados para \"{_searchText}\"")
+                            </td>
+                        </tr>
+                    }
                 </tbody>
             </table>
         </div>
@@ -173,7 +204,29 @@
     private ConnectionStatus _status = new();
     private string _myCallsign = string.Empty;
     private bool _disposed;
+    private string _searchText = string.Empty;
     private readonly Dictionary<string, QrzInfo?> _qrzData = new(StringComparer.OrdinalIgnoreCase);
+
+    private IReadOnlyList<HeardStation> FilteredStations =>
+        string.IsNullOrWhiteSpace(_searchText)
+            ? _stations
+            : _stations.Where(MatchesSearch).ToList();
+
+    private bool MatchesSearch(HeardStation s)
+    {
+        var q = _searchText.Trim();
+        if (s.Callsign.Contains(q, StringComparison.OrdinalIgnoreCase))    return true;
+        if (s.LastMessage.Contains(q, StringComparison.OrdinalIgnoreCase)) return true;
+        if (SettingsOptions.Value.Qrz.Enabled &&
+            _qrzData.TryGetValue(s.Callsign, out var qrz) && qrz is not null)
+        {
+            if (!string.IsNullOrEmpty(qrz.FirstName) &&
+                qrz.FirstName.Contains(q, StringComparison.OrdinalIgnoreCase)) return true;
+            if (!string.IsNullOrEmpty(qrz.Location) &&
+                qrz.Location.Contains(q, StringComparison.OrdinalIgnoreCase))  return true;
+        }
+        return false;
+    }
 
     private bool HasOwnPos => _status.OwnLatitude.HasValue && _status.OwnLongitude.HasValue;
 
@@ -253,7 +306,11 @@
         ChatService.OpenTab(callsign.ToUpperInvariant());
     }
 
-    private void ClearList() => ChatService.ClearMhList();
+    private void ClearList()
+    {
+        _searchText = string.Empty;
+        ChatService.ClearMhList();
+    }
 
     private static string Truncate(string text, int max) =>
         text.Length <= max ? text : text[..max] + "…";

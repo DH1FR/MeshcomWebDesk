@@ -31,3 +31,6 @@ certs/*.pem
 
 ## Settings override written by SettingsService at runtime
 **/appsettings.override.json
+
+## Runtime data files (generated at runtime, not part of source)
+**/data/
