@@ -417,6 +417,24 @@ public partial class MeshcomUdpService : BackgroundService
     public Task SendTelemetryNowAsync() => SendTelemetryAsync(_settings);
 
     /// <summary>
+    /// Immediately sends the configured beacon to <see cref="MeshcomSettings.BeaconGroup"/>.
+    /// Used by the Settings UI to test the beacon without waiting for the interval.
+    /// </summary>
+    public Task SendBeaconNowAsync()
+    {
+        var s = _settings;
+        if (string.IsNullOrWhiteSpace(s.BeaconGroup))
+            throw new InvalidOperationException("Keine Baken-Gruppe konfiguriert.");
+        if (string.IsNullOrWhiteSpace(s.BeaconText))
+            throw new InvalidOperationException("Kein Bakentext konfiguriert.");
+
+        var destination = s.BeaconGroup.TrimStart('#');
+        var beaconText  = s.BeaconText.Replace("{version}", AppVersion, StringComparison.OrdinalIgnoreCase);
+        _logger.LogInformation("Beacon test send to {Group}: {Text}", s.BeaconGroup, beaconText);
+        return SendMessageAsync(destination, beaconText, s.BeaconGroup);
+    }
+
+    /// <summary>
     /// Immediately sends the configured auto-reply text to <paramref name="callsign"/>.
     /// Used by the Settings UI to test the auto-reply without waiting for an incoming message.
     /// </summary>

@@ -184,6 +184,27 @@
 
                 <label>@Loc.T("Interval (Stunden, min. 1)", "Interval (Hours, min. 1)", "Intervallo (ore, min. 1)", "Intervalo (horas, mín. 1)")</label>
                 <input type="number" min="1" @bind="_model.BeaconIntervalHours" />
+
+                <label>@Loc.T("Bake testen", "Test Beacon", "Testa beacon", "Probar baliza")</label>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <button class="btn-send-now" @onclick="SendBeaconNowAsync" disabled="@(_beaconSending || string.IsNullOrWhiteSpace(_model.BeaconGroup) || string.IsNullOrWhiteSpace(_model.BeaconText))">
+                        @if (_beaconSending)
+                        {
+                            <span>⏳ @Loc.T("Wird gesendet…", "Sending…", "Invio in corso…", "Enviando…")</span>
+                        }
+                        else
+                        {
+                            <span>📡 @Loc.T("Bake jetzt senden", "Send Beacon Now", "Invia beacon ora", "Enviar baliza ahora")</span>
+                        }
+                    </button>
+                </div>
+                @if (_beaconResult != null)
+                {
+                    <span></span>
+                    <div class="@(_beaconResult.StartsWith("✅") ? "settings-success" : "settings-error")" style="margin-top:0">
+                        @_beaconResult
+                    </div>
+                }
             </div>
         </div>
 
@@ -524,6 +545,8 @@
     private string  _autoReplyTestCallsign = string.Empty;
     private bool    _autoReplySending;
     private string? _autoReplyResult;
+    private bool    _beaconSending;
+    private string? _beaconResult;
 
     private DbTestResult? _dbTestResult;
     private bool          _dbTesting;
@@ -565,6 +588,25 @@
         finally
         {
             _autoReplySending = false;
+        }
+    }
+
+    private async Task SendBeaconNowAsync()
+    {
+        _beaconSending = true;
+        _beaconResult  = null;
+        try
+        {
+            await UdpService.SendBeaconNowAsync();
+            _beaconResult = $"✅ {Loc.T("Bake gesendet an", "Beacon sent to", "Beacon inviato a", "Baliza enviada a")} {_model.BeaconGroup}";
+        }
+        catch (Exception ex)
+        {
+            _beaconResult = $"❌ {ex.Message}";
+        }
+        finally
+        {
+            _beaconSending = false;
         }
     }
 
