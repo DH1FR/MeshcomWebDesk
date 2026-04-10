@@ -114,6 +114,36 @@ h1:focus {
     background: #40916c;
 }
 
+/* QRZ name below callsign in tab button */
+.tab-label-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    line-height: 1.3;
+}
+
+.tab-qrz-name {
+    font-size: 9px;
+    font-weight: 400;
+    color: #6c9ecf;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100px;
+}
+
+.tab-button.active .tab-qrz-name {
+    color: #79c0ff;
+}
+
+/* Inline QRZ firstname badge (monitor / chat – touch-visible) */
+.qrz-badge {
+    font-size: 10px;
+    color: #8b949e;
+    font-style: italic;
+    font-weight: 400;
+}
+
 /* ===== New Tab Dialog ===== */
 .new-tab-dialog {
     display: flex;

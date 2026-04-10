@@ -23,7 +23,13 @@
                 <button class="tab-button @(tab.Key == _activeTabKey ? "active" : "")"
                         @onclick="() => SelectTab(tab.Key)"
                         title="@(tab.Key != "*" && !tab.Key.StartsWith('#') ? tab.Title + QrzSuffix(tab.Key) : null)">
-                    @(tab.Key == "*" ? Loc.T("Alle", "All", "Tutti", "Todos") : tab.Title)
+                    <span class="tab-label-wrap">
+                        <span>@(tab.Key == "*" ? Loc.T("Alle", "All", "Tutti", "Todos") : tab.Title)</span>
+                        @if (tab.Key != "*" && !tab.Key.StartsWith('#') && QrzFirstName(tab.Key) is { } tabFn)
+                        {
+                            <span class="tab-qrz-name">@tabFn</span>
+                        }
+                    </span>
                     @if (tab.UnreadCount > 0)
                     {
                         <span class="tab-unread">@(tab.UnreadCount > 99 ? "99+" : tab.UnreadCount.ToString())</span>
@@ -59,9 +65,10 @@
                             }
                             else
                             {
+                                var msgFn = QrzFirstName(msg.From);
                                 <span class="msg-call msg-call-link"
                                       @onclick="() => OpenTabFromMonitor(msg.From)"
-                                      title="@(Loc.T($"Chat mit {msg.From} öffnen", $"Open chat with {msg.From}", $"Apri chat con {msg.From}", $"Abrir chat con {msg.From}") + QrzSuffix(msg.From))">@msg.From:</span>
+                                      title="@(Loc.T($"Chat mit {msg.From} öffnen", $"Open chat with {msg.From}", $"Apri chat con {msg.From}", $"Abrir chat con {msg.From}") + QrzSuffix(msg.From))">@msg.From@if (msgFn is not null){<span class="qrz-badge"> · @msgFn</span>}:</span>
                             }
                             <span class="msg-text">@msg.Text</span>
                             @if (msg.IsOutgoing)
@@ -123,8 +130,9 @@
                         <span class="mon-routing">
                             @if (!string.Equals(m.From, _myCallsign, StringComparison.OrdinalIgnoreCase))
                             {
+                                var monFn = QrzFirstName(m.From);
                                 <span class="mon-call mon-call-link" @onclick="() => OpenTabFromMonitor(m.From)"
-                                      title="@(Loc.T($"Chat mit {m.From} öffnen", $"Open chat with {m.From}", $"Apri chat con {m.From}", $"Abrir chat con {m.From}") + QrzSuffix(m.From))">@m.From</span>
+                                      title="@(Loc.T($"Chat mit {m.From} öffnen", $"Open chat with {m.From}", $"Apri chat con {m.From}", $"Abrir chat con {m.From}") + QrzSuffix(m.From))">@m.From@if (monFn is not null){<span class="qrz-badge"> · @monFn</span>}</span>
                             }
                             else
                             {
@@ -531,6 +539,13 @@
         if (!string.IsNullOrEmpty(info.FirstName)) parts.Add(info.FirstName);
         if (!string.IsNullOrEmpty(info.Location))  parts.Add(info.Location);
         return parts.Count > 0 ? " · " + string.Join(", ", parts) : string.Empty;
+    }
+
+    private string? QrzFirstName(string callsign)
+    {
+        if (!SettingsOptions.Value.Qrz.Enabled) return null;
+        var fn = _qrzData.GetValueOrDefault(callsign)?.FirstName;
+        return string.IsNullOrEmpty(fn) ? null : fn;
     }
 
     private async Task<bool> LoadQrzDataAsync()
