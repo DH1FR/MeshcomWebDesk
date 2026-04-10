@@ -26,6 +26,8 @@ and makes a full web client for MeshCom available via a simple URL
 
 ![MeshCom Live Map](docs/Screenshot_Map.png)
 
+![Terminal Startup Banner](docs/Screenshot_shell.png)
+
 ---
 
 ## Features
@@ -84,6 +86,12 @@ and makes a full web client for MeshCom available via a simple URL
 - Chat tabs, MH list, monitor history and **own GPS position** are saved to disk on shutdown
 - State is restored automatically on startup – no waiting for the first position beacon
 - Auto-save every 5 minutes; data stored in `DataPath` (configurable)
+
+### 🚀 Startup
+- **ASCII banner** with version number printed to the console/terminal on every start
+- **Browser auto-open**: when launched directly as an executable the default browser opens automatically at `http://localhost:5162`
+- Skipped when running in Docker, as a Windows service, or under systemd
+- **Portable data paths**: all data (`data/`), logs (`logs/`) and keys (`data/keys/`) are stored next to the executable by default – no hard-coded `C:\Temp` paths
 
 ### ℹ️ About page
 - Displays assembly version (e.g. `v1.4.1`), build timestamp and links
