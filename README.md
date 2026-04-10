@@ -5,6 +5,9 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 > **MeshCom Firmware:** Compatible with [icssw-org/MeshCom-Firmware](https://github.com/icssw-org/MeshCom-Firmware) v4.35+
 
+> 💾 **Ready-to-run binaries** (Windows & Linux) – no build required:  
+> 👉 [**Download latest release**](https://github.com/DH1FR/MeshcomWebDesk/releases/latest)
+
 ---
 
 ## 💡 Motivation
@@ -20,6 +23,8 @@ and makes a full web client for MeshCom available via a simple URL
 ## Screenshots
 
 ![MeshCom Web Client](docs/screenshot.png?v=2)
+
+![MeshCom Live Map](docs/Screenshot_Map.png)
 
 ---
 
@@ -98,11 +103,12 @@ and makes a full web client for MeshCom available via a simple URL
 
 ### 📡 Beacon (Bake)
 - **Periodic beacon** – sends a configurable text to a configurable group at a fixed interval
-- Interval is configurable in whole hours (minimum 1 h); first transmission after one full interval
+- Interval is configurable in whole hours (minimum 1 h); first transmission after **one full interval** (no send on every restart)
 - Enabled / disabled via `BeaconEnabled` flag – applies **live** without restart
 - **`{version}` placeholder** in `BeaconText` is replaced with the running application version at send time
 - **Status indicator** in the status bar: pulsing `●` dot with next scheduled send time; turns yellow when < 10 min away
 - Beacon appears in the monitor feed and in the corresponding group chat tab
+- **"Send Beacon Now"** test button in Settings – sends the beacon immediately without waiting for the interval
 
 ### ↩️ Auto-Reply
 - Sends a configurable reply text automatically when a **brand-new direct chat tab** is opened by an incoming message (first contact from a callsign)
@@ -148,7 +154,8 @@ and makes a full web client for MeshCom available via a simple URL
 - **APRS-style markers**: filled circle colour-coded by RSSI (🟢 > −90 / 🟡 > −105 / 🔴 ≤ −105 dBm) + callsign label below
 - **Own position** shown as gold diamond ◆ (APRS convention)
 - **Popup** on click: callsign, last message, RSSI, battery, altitude
-- **Auto-fit bounds** – map zooms to include all visible stations automatically
+- **First open**: map automatically zooms to a **50 km radius** around own position (once own GPS is known)
+- **View persistence**: last map position and zoom level are saved in `localStorage` and restored on every subsequent visit
 - **Compact info bar** at the bottom: `📡 N Station(en) · 📍 MyCallsign` – clean one-liner regardless of station count
 - Updates in real-time as new position beacons arrive
 - Nav link 🗺️ added to the navigation bar
