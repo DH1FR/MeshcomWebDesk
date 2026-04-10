@@ -3,10 +3,37 @@ using MeshcomWebDesk.Models;
 using MeshcomWebDesk.Services;
 using MeshcomWebDesk.Services.Database;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.Options;
 using Serilog;
+using System.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ── Banner ────────────────────────────────────────────────────────────────────
+var bannerVersion = System.Reflection.Assembly.GetExecutingAssembly()
+    .GetName().Version?.ToString(3) ?? "?";
+Console.ForegroundColor = ConsoleColor.Cyan;
+Console.WriteLine($"""
+
+  ███╗   ███╗███████╗███████╗██╗  ██╗ ██████╗ ██████╗ ███╗   ███╗
+  ████╗ ████║██╔════╝██╔════╝██║  ██║██╔════╝██╔═══██╗████╗ ████║
+  ██╔████╔██║█████╗  ███████╗███████║██║     ██║   ██║██╔████╔██║
+  ██║╚██╔╝██║██╔══╝  ╚════██║██╔══██║██║     ██║   ██║██║╚██╔╝██║
+  ██║ ╚═╝ ██║███████╗███████║██║  ██║╚██████╗╚██████╔╝██║ ╚═╝ ██║
+  ╚═╝     ╚═╝╚══════╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚═╝     ╚═╝
+    ██╗    ██╗███████╗██████╗ ██████╗ ███████╗███████╗██╗  ██╗
+    ██║    ██║██╔════╝██╔══██╗██╔══██╗██╔════╝██╔════╝██║ ██╔╝
+    ██║ █╗ ██║█████╗  ██████╔╝██║  ██║█████╗  ███████╗█████╔╝ 
+    ██║███╗██║██╔══╝  ██╔══██╗██║  ██║██╔══╝  ╚════██║██╔═██╗ 
+    ╚███╔███╔╝███████╗██████╔╝██████╔╝███████╗███████║██║  ██╗
+     ╚══╝╚══╝ ╚══════╝╚═════╝ ╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═╝
+                         v{bannerVersion}
+  https://github.com/DH1FR/MeshcomWebDesk
+
+""");
+Console.ResetColor();
 
 // Read Meshcom settings early for log path configuration
 var meshcomSection = builder.Configuration.GetSection(MeshcomSettings.SectionName);
@@ -25,9 +52,17 @@ Directory.CreateDirectory(logPath);
 
 var logFile = Path.Combine(logPath, "MeshcomWebDesk-.log");
 
+// Enable Static Web Assets when running directly from the build output (not published).
+// Without this, a warning is logged and CSS/JS fingerprinting may not resolve correctly.
+// For published binaries (GitHub Releases, Docker) this call is a no-op.
+builder.WebHost.UseStaticWebAssets();
+
 builder.Host.UseSerilog((context, config) => config
     .ReadFrom.Configuration(context.Configuration)
-    .WriteTo.Console()
+    // Console: suppress DB-insert Information logs – they appear in the log file only.
+    .WriteTo.Logger(lc => lc
+        .MinimumLevel.Override("MeshcomWebDesk.Services.Database", Serilog.Events.LogEventLevel.Warning)
+        .WriteTo.Console())
     .WriteTo.File(
         logFile,
         rollingInterval: RollingInterval.Day,
@@ -38,8 +73,9 @@ builder.Host.UseSerilog((context, config) => config
 builder.Services.Configure<MeshcomSettings>(meshcomSection);
 
 // Persist Data Protection keys to disk so antiforgery tokens survive container restarts.
-// The path is configurable via the environment variable DATAPROTECTION_KEYPATH (default: /app/keys).
-var keyPath = Environment.GetEnvironmentVariable("DATAPROTECTION_KEYPATH") ?? "/app/keys";
+// Docker: override via DATAPROTECTION_KEYPATH env variable (e.g. /app/keys).
+// Direct start: stored in dataPath/keys next to the other application data.
+var keyPath = Environment.GetEnvironmentVariable("DATAPROTECTION_KEYPATH") ?? Path.Combine(dataPath, "keys");
 Directory.CreateDirectory(keyPath);
 builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new System.IO.DirectoryInfo(keyPath));
@@ -147,5 +183,53 @@ startupLog.LogInformation(
     cfg.MonitorMaxMessages,
     cfg.DataPath,
     cfg.LogPath);
+
+// Open the default browser automatically when MeshcomWebDesk is launched directly
+// as an executable (double-click or terminal). Skipped when running in Docker,
+// as a Windows service, or under systemd – so no browser pops up on headless systems.
+// Also skipped in Development mode (Visual Studio handles it via launchSettings.json).
+if (!app.Environment.IsDevelopment())
+{
+    var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
+    lifetime.ApplicationStarted.Register(() =>
+    {
+        bool isDocker     = string.Equals(
+            Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER"),
+            "true", StringComparison.OrdinalIgnoreCase);
+        bool isWinService = !Environment.UserInteractive && OperatingSystem.IsWindows();
+        bool isSystemd    = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("INVOCATION_ID"));
+
+        if (isDocker || isWinService || isSystemd)
+        {
+            startupLog.LogDebug("Browser auto-open skipped (Docker={Docker}, WinSvc={WinSvc}, Systemd={Systemd})",
+                isDocker, isWinService, isSystemd);
+            return;
+        }
+
+        // Pick the first HTTP address; fall back to whatever is available.
+        // Replace 0.0.0.0 (bind-all) with localhost for browser navigation.
+        var url = app.Services
+            .GetService<IServer>()
+            ?.Features.Get<IServerAddressesFeature>()
+            ?.Addresses
+            .OrderBy(a => a.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            .FirstOrDefault();
+
+        if (string.IsNullOrEmpty(url)) return;
+
+        url = url.Replace("0.0.0.0", "localhost", StringComparison.Ordinal)
+                 .Replace("[::]",     "localhost", StringComparison.Ordinal);
+
+        try
+        {
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            startupLog.LogInformation("Browser opened at {Url}", url);
+        }
+        catch (Exception ex)
+        {
+            startupLog.LogWarning(ex, "Could not open browser at {Url}", url);
+        }
+    });
+}
 
 app.Run();
