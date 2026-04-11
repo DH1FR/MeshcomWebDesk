@@ -45,6 +45,13 @@ public class ChatService
     /// </summary>
     public event Action<string>? OnNewTab;
 
+    /// <summary>
+    /// The key of the last tab the user actively selected.
+    /// Persisted in memory (singleton lifetime) so Chat.razor can restore it
+    /// immediately in OnInitialized without requiring JS interop.
+    /// </summary>
+    public string ActiveTabKey { get; set; } = string.Empty;
+
     public ChatService(IOptionsMonitor<MeshcomSettings> settings, ILogger<ChatService> logger, IMonitorDataSink sink, WebhookService webhook)
     {
         _settings = settings.CurrentValue;

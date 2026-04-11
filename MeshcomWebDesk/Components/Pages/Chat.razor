@@ -329,6 +329,8 @@
         _status = UdpService.Status;
         ChatService.OnChange += OnChatChanged;
         UdpService.OnStatusChange += OnStatusChanged;
+        // Restore active tab from service memory so the first render already shows the correct tab
+        _activeTabKey = ChatService.ActiveTabKey;
         RefreshData();
         _isInitialized = true;
     }
@@ -340,17 +342,23 @@
             try { await JS.InvokeVoidAsync("meshcomChat.initResizer"); }
             catch (JSException) { }
 
-            // Restore the previously active tab (survives navigation to MH / Map / Settings)
+            // Fallback restore for hard browser reload: ChatService.ActiveTabKey is empty in that case.
+            // On normal navigation (Map → Chat) this is a no-op because OnInitialized already
+            // read the correct key from ChatService.ActiveTabKey.
             try
             {
-                var savedKey = await JS.InvokeAsync<string>("meshcomChat.getActiveTab");
-                if (!string.IsNullOrEmpty(savedKey) && _tabs.Any(t => t.Key == savedKey))
+                if (string.IsNullOrEmpty(ChatService.ActiveTabKey))
                 {
-                    _activeTabKey      = savedKey;
-                    _activeTab         = ChatService.GetTab(savedKey);
-                    _activeTabMessages = ChatService.GetTabMessages(savedKey);
-                    ChatService.ClearUnread(savedKey);
-                    StateHasChanged();
+                    var savedKey = await JS.InvokeAsync<string>("meshcomChat.getActiveTab");
+                    if (!string.IsNullOrEmpty(savedKey) && _tabs.Any(t => t.Key == savedKey))
+                    {
+                        _activeTabKey          = savedKey;
+                        _activeTab             = ChatService.GetTab(savedKey);
+                        _activeTabMessages     = ChatService.GetTabMessages(savedKey);
+                        ChatService.ActiveTabKey = savedKey;
+                        ChatService.ClearUnread(savedKey);
+                        StateHasChanged();
+                    }
                 }
             }
             catch (JSException) { }
@@ -460,6 +468,7 @@
         _activeTab = ChatService.GetTab(key);
         _activeTabMessages = ChatService.GetTabMessages(key);
         ChatService.ClearUnread(key);
+        ChatService.ActiveTabKey = key;
         _scrollMessages = true;
         _ = JS.InvokeVoidAsync("meshcomChat.setActiveTab", key).AsTask();
     }
@@ -471,6 +480,7 @@
         {
             _activeTabKey = string.Empty;
             _activeTab = null;
+            ChatService.ActiveTabKey = string.Empty;
             _ = JS.InvokeVoidAsync("meshcomChat.setActiveTab", (object?)null).AsTask();
         }
         RefreshData();
