@@ -9,7 +9,7 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 > 👉 [**Download latest release**](https://github.com/DH1FR/MeshcomWebDesk/releases/latest)
 
 > ☕ **Do you like my work? Then buy me a coffee!**  
-> [![PayPal](https://img.shields.io/badge/Donate-PayPal-0070ba?logo=paypal&logoColor=white)](https://paypal.me/DH1FR) &nbsp; paypal.me/DH1FR
+> [![PayPal](https://img.shields.io/badge/Donate-PayPal-0070ba?logo=paypal&logoColor=white)](https://paypal.me/DH1FR)
 
 ---
 
