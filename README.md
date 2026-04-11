@@ -942,6 +942,13 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
 ## 📋 Changelog
 
+### v1.6.19
+- **feat:** 🔗 **Clickable URLs in chat & monitor** – `http://` and `https://` URLs in incoming messages are automatically rendered as clickable links; clicking shows a confirmation dialog before opening the external page in a new tab (works correctly in Blazor Server via capture-phase JS handler)
+- **fix:** 🗺️ **Map – Leaflet self-hosted** – Leaflet 1.9.4 is now served from `wwwroot/lib/leaflet/` instead of the `unpkg.com` CDN; eliminates map init errors when the server has no internet access or the CDN is slow to respond (e.g. Docker / LAN-only setups)
+- **fix:** 🐳 **Docker – browser auto-open warning suppressed** – `ENV DOTNET_RUNNING_IN_CONTAINER=true` added to `Dockerfile`; `[WRN] Could not open browser` no longer appears in Docker logs
+- **perf:** ⚡ **QRZ cache – no redundant async calls on navigation** – new `QrzService.TryGetCached()` distinguishes "never queried" from "queried, not found"; components skip the async `LookupAsync` path for all already-known callsigns on every re-mount
+- **docs:** 📖 **Multilingual node-connection guides** – new `docs/node-connection-{de,en,it,es}.md` with step-by-step EXTUDP setup; in-app help banner added to the Connection section in Settings
+
 ### v1.6.16
 - **feat:** 📱 **QRZ-Name im Tab-Button** – der Vorname des Operators erscheint als kleiner Untertitel direkt im Chat-Tab-Button (immer sichtbar, kein Hover nötig)
 - **feat:** 🎟️ **Touch-Display-Support** – QRZ-Vorname wird als festes `· Name`-Badge inline bei jedem Rufzeichen angezeigt (Chat-Nachrichten und Monitor-Zeilen), ohne Hover-Interaktion
