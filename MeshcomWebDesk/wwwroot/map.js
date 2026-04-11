@@ -5,13 +5,22 @@ window.meshcomMap = (function () {
     var _map          = null;
     var _stationLayer = null;
     var _ownLayer     = null;
-    var _lastBounds   = null;   // saved after every updateMarkers for fitAll()
-    var _initialFitDone = false; // fit once on first load, then user controls zoom
-    var _readyToSave    = false; // only persist view after initial fit is complete
+    var _relayLayer   = null;
+    var _lastBounds   = null;
+    var _initialFitDone = false;
+    var _readyToSave    = false;
     var STORAGE_KEY     = 'meshcom_map_view';
 
     function esc(s) {
         return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function formatTelemAge(mins) {
+        if (mins == null || mins < 0) return '';
+        if (mins <  2)    return 'gerade';
+        if (mins <  60)   return 'vor ' + Math.round(mins)      + '\u202Fmin';
+        if (mins < 1440)  return 'vor ' + Math.round(mins / 60) + '\u202Fh';
+        return 'vor ' + Math.round(mins / 1440) + '\u202Fd';
     }
 
     function saveView() {
@@ -22,15 +31,19 @@ window.meshcomMap = (function () {
         } catch (e) { }
     }
 
-    // APRS-style: filled circle (signal-colour) + callsign label below
-    function stationIcon(callsign, rssi) {
+    // APRS-style marker: filled circle (signal colour) + optional relay ring + callsign label
+    function stationIcon(callsign, rssi, hopCount, hasTelem) {
         var sigClass = rssi == null ? 'sig-none'
                      : rssi > -90  ? 'sig-good'
                      : rssi > -105 ? 'sig-ok'
                      :               'sig-weak';
+        var relayClass = hopCount > 1 ? ' aprs-relay-2'
+                       : hopCount > 0 ? ' aprs-relay-1'
+                       :                '';
+        var telemIcon = hasTelem ? '<span class="aprs-telem-icon">\uD83C\uDF21\uFE0F</span>' : '';
         var html = '<div class="aprs-wrap">'
-                 + '<div class="aprs-dot ' + sigClass + '"></div>'
-                 + '<div class="aprs-label">' + esc(callsign) + '</div>'
+                 + '<div class="aprs-dot ' + sigClass + relayClass + '"></div>'
+                 + '<div class="aprs-label">' + esc(callsign) + telemIcon + '</div>'
                  + '</div>';
         return L.divIcon({ className: '', html: html, iconAnchor: [6, 6] });
     }
@@ -44,6 +57,14 @@ window.meshcomMap = (function () {
         return L.divIcon({ className: '', html: html, iconAnchor: [7, 7] });
     }
 
+    // RSSI → line colour (vivid versions for better map contrast)
+    function rssiColor(rssi) {
+        if (rssi == null)    return '#b0bec5';
+        if (rssi > -90)      return '#39d353';
+        if (rssi > -105)     return '#f0c060';
+        return '#ff6b6b';
+    }
+
     return {
         init: function (elementId, ownLat, ownLon) {
             if (_map) { _map.remove(); _map = null; }
@@ -51,7 +72,6 @@ window.meshcomMap = (function () {
             _initialFitDone = false;
             _readyToSave    = false;
 
-            // Restore last saved view (persists across navigation / page reloads)
             var saved = null;
             try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch (e) { }
 
@@ -64,11 +84,11 @@ window.meshcomMap = (function () {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>',
                 maxZoom: 19
             }).addTo(_map);
+            _relayLayer   = L.layerGroup().addTo(_map);   // drawn first (below stations)
             _stationLayer = L.layerGroup().addTo(_map);
             _ownLayer     = L.layerGroup().addTo(_map);
 
             if (saved) {
-                // Saved view restored – skip first-run auto-fit, start saving immediately
                 _initialFitDone = true;
                 _readyToSave    = true;
             }
@@ -76,15 +96,56 @@ window.meshcomMap = (function () {
             _map.on('moveend zoomend', saveView);
         },
 
-        updateMarkers: function (stations, ownCallsign, ownLat, ownLon) {
+        updateMarkers: function (stations, ownCallsign, ownLat, ownLon, relayLines, showRelays) {
             if (!_map) return;
             _stationLayer.clearLayers();
             _ownLayer.clearLayers();
+            _relayLayer.clearLayers();
 
             var bounds = [];
 
+            // ── Relay polylines ───────────────────────────────────────────
+            if (showRelays) {
+                (relayLines || []).forEach(function (line) {
+                    if (!line.coords || line.coords.length < 2) return;
+
+                    // Weight: min 3px (new path) → max 8px (heavily used), logarithmic
+                    var weight    = Math.min(3 + Math.log(Math.max(line.count || 1, 1)) * 1.5, 8);
+                    var dashArray = line.partial ? '4, 8' : '12, 5';
+                    var opacity   = line.partial ? 0.50  : 0.90;
+                    var color     = rssiColor(line.rssi);
+
+                    var label = esc(line.label);
+                    if (line.partial) label += ' <i>(unvollst. Pfad)</i>';
+                    if (line.count > 1) label += ' (' + line.count + '\xd7)';
+
+                    // 1. Dark halo (drawn first = below) for contrast against map tiles
+                    L.polyline(line.coords, {
+                        color:     'rgba(0,0,0,0.75)',
+                        weight:    weight + 3,
+                        opacity:   line.partial ? 0.25 : 0.55,
+                        dashArray: dashArray,
+                        interactive: false
+                    }).addTo(_relayLayer);
+
+                    // 2. Coloured line on top
+                    L.polyline(line.coords, {
+                        color:     color,
+                        weight:    weight,
+                        opacity:   opacity,
+                        dashArray: dashArray
+                    })
+                    .bindTooltip(label, { sticky: true, className: 'relay-tooltip' })
+                    .addTo(_relayLayer);
+                });
+            }
+
+            // ── Station markers ───────────────────────────────────────────            }
+
+            // ── Station markers ───────────────────────────────────────────
             (stations || []).forEach(function (s) {
                 if (s.lat == null || s.lon == null) return;
+
                 var qrzLine = '';
                 if (s.qrzName || s.qrzLoc) {
                     qrzLine = '<br><span style="font-size:11px;color:#aaa">';
@@ -93,12 +154,36 @@ window.meshcomMap = (function () {
                     if (s.qrzLoc)  qrzLine += esc(s.qrzLoc);
                     qrzLine += '</span>';
                 }
-                var popup = '<b>' + esc(s.callsign) + '</b>' + qrzLine
+                var badgeLine = '';
+                if (s.hwName || s.firmware) {
+                    badgeLine = '<br>';
+                    if (s.hwName)   badgeLine += '<span style="display:inline-block;font-size:10px;font-weight:600;background:#0f3460;color:#79c0ff;border-radius:3px;padding:1px 4px;margin-right:3px">' + esc(s.hwName) + '</span>';
+                    if (s.firmware) badgeLine += '<span style="display:inline-block;font-size:10px;font-weight:600;background:#1a2d1a;color:#7ee787;border-radius:3px;padding:1px 4px">' + esc(s.firmware) + '</span>';
+                }
+                var relayLine = '';
+                if (s.hopCount > 0 && s.relayPath) {
+                    var hops = s.relayPath.split(',');
+                    var relayText = hops.slice(1).map(function(h) { return esc(h.trim()); }).join(' \u27f6 ');
+                    relayLine = '<br><span style="font-size:11px;color:#8b949e">Via: ' + relayText + '</span>';
+                }
+                var telemLine = '';
+                if (s.temp != null || s.humidity != null || s.pressure != null) {
+                    telemLine = '<br><span style="font-size:11px;color:#c8d8e8">';
+                    if (s.temp     != null) telemLine += '\uD83C\uDF21\uFE0F\u202F' + s.temp.toFixed(1) + '\u00b0C';
+                    if (s.humidity != null) telemLine += (s.temp != null ? '&nbsp;&nbsp;' : '') + '\uD83D\uDCA7\u202F' + s.humidity.toFixed(0) + '%';
+                    if (s.pressure != null) telemLine += '<br>\uD83E\uDDED\u202F' + s.pressure.toFixed(1) + '\u202FhPa';
+                    telemLine += '</span>';
+                    if (s.telemMins != null) {
+                        telemLine += '<br><span style="font-size:10px;color:#6e7681">\u23f1\u202F' + formatTelemAge(s.telemMins) + '</span>';
+                    }
+                }
+                var popup = '<b>' + esc(s.callsign) + '</b>' + qrzLine + badgeLine + relayLine + telemLine
                     + (s.text     ? '<br><span style="font-size:12px">' + esc(s.text) + '</span>' : '')
                     + (s.rssi     != null ? '<br>RSSI: ' + s.rssi + ' dBm' : '')
-                    + (s.battery  != null ? '&nbsp;🔋 ' + s.battery + '%' : '')
+                    + (s.battery  != null ? '&nbsp;\ud83d\udd0b ' + s.battery + '%' : '')
                     + (s.alt      != null ? '<br>Alt: ' + s.alt + ' m' : '');
-                L.marker([s.lat, s.lon], { icon: stationIcon(s.callsign, s.rssi) })
+
+                L.marker([s.lat, s.lon], { icon: stationIcon(s.callsign, s.rssi, s.hopCount, s.temp != null || s.humidity != null || s.pressure != null) })
                     .bindPopup(popup)
                     .addTo(_stationLayer);
                 bounds.push([s.lat, s.lon]);
@@ -111,11 +196,8 @@ window.meshcomMap = (function () {
                 bounds.push([ownLat, ownLon]);
             }
 
-            // Save bounds for manual fitAll button
             if (bounds.length > 0) _lastBounds = bounds.slice();
 
-            // First open (no saved state): zoom to 50 km around own position,
-            // or fall back to fitting all visible stations.
             if (!_initialFitDone && bounds.length > 0) {
                 _initialFitDone = true;
                 if (ownLat != null && ownLon != null) {
@@ -131,11 +213,10 @@ window.meshcomMap = (function () {
                 } else {
                     _map.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
                 }
-                _readyToSave = true; // begin persisting view after initial fit
+                _readyToSave = true;
             }
         },
 
-        // Zoom to all visible stations + own position
         fitAll: function () {
             if (!_map || !_lastBounds || _lastBounds.length === 0) return;
             if (_lastBounds.length === 1) {
@@ -145,19 +226,16 @@ window.meshcomMap = (function () {
             }
         },
 
-        // Zoom to Europe overview
         fitEurope: function () {
             if (!_map) return;
             _map.fitBounds([[34, -12], [72, 45]]);
         },
 
-        // Zoom to a circle of `km` radius around own position
         fitOwn: function (lat, lon, km) {
             if (!_map) return;
-            var r       = km || 50;
-            // 1 degree latitude ≈ 111 km; longitude correction via cos(lat)
-            var dLat    = r / 111.0;
-            var dLon    = r / (111.0 * Math.cos(lat * Math.PI / 180));
+            var r    = km || 50;
+            var dLat = r / 111.0;
+            var dLon = r / (111.0 * Math.cos(lat * Math.PI / 180));
             _map.fitBounds([
                 [lat - dLat, lon - dLon],
                 [lat + dLat, lon + dLon]
@@ -167,4 +245,3 @@ window.meshcomMap = (function () {
         invalidateSize: function () { if (_map) _map.invalidateSize(); }
     };
 })();
-

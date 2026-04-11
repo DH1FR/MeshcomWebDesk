@@ -59,6 +59,8 @@ public sealed class InfluxDbMonitorSink
         tags.Append($",to={EscapeTag(msg.To)}");
         if (!string.IsNullOrEmpty(msg.SrcType))
             tags.Append($",src_type={EscapeTag(msg.SrcType)}");
+        if (msg.HwId.HasValue)
+            tags.Append($",hw_id={msg.HwId.Value}i");
 
         var fields = new List<string>();
         if (!string.IsNullOrEmpty(msg.Text))      fields.Add($"text={EscapeStr(msg.Text)}");
@@ -70,6 +72,10 @@ public sealed class InfluxDbMonitorSink
         if (msg.Battery.HasValue)                  fields.Add($"battery={msg.Battery.Value}i");
         if (!string.IsNullOrEmpty(msg.Firmware))   fields.Add($"firmware={EscapeStr(msg.Firmware)}");
         if (!string.IsNullOrEmpty(msg.RelayPath))  fields.Add($"relay_path={EscapeStr(msg.RelayPath)}");
+        if (msg.Temp1.HasValue)                    fields.Add($"temp1={msg.Temp1.Value:F2}");
+        if (msg.Temp2.HasValue)                    fields.Add($"temp2={msg.Temp2.Value:F2}");
+        if (msg.Humidity.HasValue)                 fields.Add($"humidity={msg.Humidity.Value:F1}");
+        if (msg.Pressure.HasValue)                 fields.Add($"pressure={msg.Pressure.Value:F2}");
         fields.Add($"is_outgoing={msg.IsOutgoing.ToString().ToLowerInvariant()}");
         fields.Add($"is_position_beacon={msg.IsPositionBeacon.ToString().ToLowerInvariant()}");
         fields.Add($"is_telemetry={msg.IsTelemetry.ToString().ToLowerInvariant()}");

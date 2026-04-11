@@ -3,6 +3,7 @@ namespace MeshcomWebDesk.Helpers;
 /// <summary>
 /// Static lookup tables for MeshCom protocol constants.
 /// Source: https://icssw.org/meshcom-2-0-protokoll/
+///         https://github.com/icssw-org/MeshCom-Firmware (README – Hardware ID table)
 /// </summary>
 public static class MeshcomLookup
 {
@@ -25,7 +26,18 @@ public static class MeshcomLookup
         11 => "HELTEC-V1",
         12 => "T-BEAM-AXP",
         39 => "EBYTE-E22",
+        41 => "HELTEC-TRACK",
+        42 => "HELTEC-STICK",
         43 => "HELTEC-V3",
+        44 => "HELTEC-E290",
+        45 => "T-BEAM-1262",
+        46 => "T-DECK-PLUS",
+        47 => "TBEAM-SUP",
+        48 => "EBYTE-E22-S3",
+        49 => "T-LORA-PAGER",
+        50 => "T-DECK-PRO",
+        51 => "T-BEAM-1W",
+        52 => "HELTEC-V4",
         null => string.Empty,
         var id => $"HW-{id}"
     };

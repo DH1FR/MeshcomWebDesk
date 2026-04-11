@@ -2,6 +2,7 @@
 @rendermode InteractiveServer
 @using MeshcomWebDesk.Models
 @using MeshcomWebDesk.Services
+@using MeshcomWebDesk.Helpers
 @using Microsoft.Extensions.Options
 @inject ChatService ChatService
 @inject MeshcomUdpService UdpService
@@ -27,8 +28,69 @@
                 title="@Loc.T("50 km Radius um eigene Position", "50 km radius around own position", "50 km raggio intorno alla propria posizione", "Radio de 50 km alrededor de la propia posición")">
             📍 50 km
         </button>
+        <button class="map-ctrl-btn @(_showRelayLines ? "map-ctrl-active" : "")"
+                @onclick="ToggleRelayLines"
+                title="@Loc.T("Weiterleitungspfade ein/ausblenden", "Toggle relay paths", "Mostra/nascondi percorsi relay", "Mostrar/ocultar rutas de relé")">
+            🔗 @Loc.T("Pfade", "Paths", "Percorsi", "Rutas")
+        </button>
     </div>
-    <div id="meshcom-map" class="map-container"></div>
+    <div class="map-wrapper">
+        <div id="meshcom-map" class="map-container"></div>
+
+        @* ===== Floating legend ===== *@
+        <div class="map-legend @(_showLegend ? "" : "map-legend-collapsed")">
+            <button class="map-legend-toggle" @onclick="() => _showLegend = !_showLegend"
+                    title="@Loc.T("Legende ein/ausblenden", "Toggle legend", "Mostra/nascondi legenda", "Mostrar/ocultar leyenda")">
+                @(_showLegend ? "▼" : "▲") @Loc.T("Legende", "Legend", "Legenda", "Leyenda")
+            </button>
+            @if (_showLegend)
+            {
+                <div class="map-legend-body">
+                    <div class="map-legend-section">@Loc.T("Stationen", "Stations", "Stazioni", "Estaciones")</div>
+                    <div class="map-legend-row">
+                        <span class="leg-dot"></span>
+                        <span>@Loc.T("Direkt empfangen", "Directly heard", "Ricezione diretta", "Recepción directa")</span>
+                    </div>
+                    <div class="map-legend-row">
+                        <span class="leg-dot aprs-relay-1"></span>
+                        <span>@Loc.T("1 Relay-Hop", "1 relay hop", "1 hop relay", "1 salto relay")</span>
+                    </div>
+                    <div class="map-legend-row">
+                        <span class="leg-dot aprs-relay-2"></span>
+                        <span>@Loc.T("2+ Relay-Hops", "2+ relay hops", "2+ hop relay", "2+ saltos relay")</span>
+                    </div>
+                    <div class="map-legend-row">
+                        <span class="leg-dot-own"></span>
+                        <span>@Loc.T("Eigene Position", "Own position", "Posizione propria", "Posición propia")</span>
+                    </div>
+                    @if (_showRelayLines)
+                    {
+                        <div class="map-legend-section">@Loc.T("Relay-Pfade", "Relay paths", "Percorsi relay", "Rutas relay")</div>
+                        <div class="map-legend-row">
+                            <span class="leg-line leg-line-good"></span>
+                            <span>RSSI &gt; −90 dBm</span>
+                        </div>
+                        <div class="map-legend-row">
+                            <span class="leg-line leg-line-ok"></span>
+                            <span>RSSI −90 … −105 dBm</span>
+                        </div>
+                        <div class="map-legend-row">
+                            <span class="leg-line leg-line-weak"></span>
+                            <span>RSSI &lt; −105 dBm</span>
+                        </div>
+                        <div class="map-legend-row">
+                            <span class="leg-line leg-line-partial"></span>
+                            <span>@Loc.T("Unvollst. Pfad", "Partial path", "Percorso parziale", "Ruta parcial")</span>
+                        </div>
+                        <div class="map-legend-row">
+                            <span class="leg-line-weight"></span>
+                            <span>@Loc.T("= Häufigkeit", "= frequency", "= frequenza", "= frecuencia")</span>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
 
     @if (!_hasPositions)
     {
@@ -59,6 +121,8 @@
     private bool _hasPositions;
     private bool _mapInitialized;
     private bool _disposed;
+    private bool _showRelayLines = true;
+    private bool _showLegend    = true;
 
     protected override void OnInitialized()
     {
@@ -121,34 +185,99 @@
     private async Task UpdateMarkersAsync()
     {
         var qrzEnabled = SettingsMonitor.CurrentValue.Qrz.Enabled;
-        var stations = ChatService.MhList
+        var mhList     = ChatService.MhList;
+        var status     = UdpService.Status;
+
+        var stations = mhList
             .Where(s => s.Latitude.HasValue && s.Longitude.HasValue)
             .Select(s =>
             {
                 var qrz = qrzEnabled ? QrzService.GetCached(s.Callsign) : null;
                 return new
                 {
-                    callsign = s.Callsign,
-                    lat      = s.Latitude!.Value,
-                    lon      = s.Longitude!.Value,
-                    alt      = s.Altitude,
-                    rssi     = s.LastRssi,
-                    text     = s.LastMessage,
-                    battery  = s.Battery,
-                    qrzName  = qrz?.FirstName,
-                    qrzLoc   = qrz?.Location
+                    callsign  = s.Callsign,
+                    lat       = s.Latitude!.Value,
+                    lon       = s.Longitude!.Value,
+                    alt       = s.Altitude,
+                    rssi      = s.LastRssi,
+                    text      = s.LastMessage,
+                    battery   = s.Battery,
+                    hwName    = MeshcomLookup.HwName(s.HwId),
+                    firmware  = s.Firmware,
+                    qrzName   = qrz?.FirstName,
+                    qrzLoc    = qrz?.Location,
+                    hopCount  = s.HopCount,
+                    relayPath = s.LastRelayPath,
+                    temp      = s.Temp1,
+                    humidity  = s.Humidity,
+                    pressure  = s.Pressure,
+                    telemMins = s.LastTelemetryTime.HasValue
+                        ? (int)(DateTime.UtcNow - s.LastTelemetryTime.Value).TotalMinutes
+                        : (int?)null
                 };
             })
             .ToArray();
 
-        var status   = UdpService.Status;
+        // Build relay polylines: only when all hops have known GPS positions
+        var posLookup = mhList
+            .Where(s => s.Latitude.HasValue && s.Longitude.HasValue)
+            .ToDictionary(s => s.Callsign,
+                          s => new[] { s.Latitude!.Value, s.Longitude!.Value },
+                          StringComparer.OrdinalIgnoreCase);
+
+        double[]? ownPos = status.OwnLatitude.HasValue && status.OwnLongitude.HasValue
+            ? [status.OwnLatitude.Value, status.OwnLongitude.Value]
+            : null;
+
+        var relayLines = new List<object>();
+        if (ownPos is not null)
+        {
+            foreach (var s in mhList.Where(s => s.HopCount > 0 && !string.IsNullOrEmpty(s.LastRelayPath)))
+            {
+                var hops    = s.LastRelayPath!.Split(',');
+                var coords  = new List<double[]>();
+                var skipped = 0;
+
+                foreach (var hop in hops)
+                {
+                    if (posLookup.TryGetValue(hop.Trim(), out var p))
+                        coords.Add(p);
+                    else
+                        skipped++;
+                }
+
+                // Need at least the originating station to draw a meaningful line
+                if (coords.Count >= 1)
+                {
+                    coords.Add(ownPos);
+                    relayLines.Add(new
+                    {
+                        coords  = coords.ToArray(),
+                        rssi    = s.LastRssi,
+                        label   = string.Join(" ⟶ ", hops),
+                        count   = s.RelayPathCount,
+                        partial = skipped > 0
+                    });
+                }
+            }
+        }
+
         _hasPositions = stations.Length > 0 || status.OwnLatitude.HasValue;
 
         await JS.InvokeVoidAsync("meshcomMap.updateMarkers",
             stations,
             SettingsMonitor.CurrentValue.MyCallsign,
             status.OwnLatitude,
-            status.OwnLongitude);
+            status.OwnLongitude,
+            relayLines,
+            _showRelayLines);
+    }
+
+    private async Task ToggleRelayLines()
+    {
+        _showRelayLines = !_showRelayLines;
+        if (_mapInitialized)
+            await UpdateMarkersAsync();
     }
 
     private static string RssiCss(int rssi) =>

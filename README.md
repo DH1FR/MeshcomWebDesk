@@ -437,7 +437,18 @@ This client communicates with the MeshCom node using the **EXTUDP JSON protocol*
 | 8 | T-DECK | LilyGO T-Deck |
 | 9 | RAK4631 | Wisblock RAK4631 |
 | 10–11, 43 | HELTEC-V1/V2/V3 | Heltec WiFi LoRa 32 |
-| 39 | EBYTE-E22 | Ebyte LoRa E22 |
+| 39 | EBYTE-E22 | Ebyte LoRa E22 (ESP32) |
+| 41 | HELTEC-TRACK | Heltec Wireless Tracker |
+| 42 | HELTEC-STICK | Heltec Wireless Stick v3 |
+| 44 | HELTEC-E290 | Heltec E-Ink E290 |
+| 45 | T-BEAM-1262 | TTGO T-Beam 1.2 SX1262 |
+| 46 | T-DECK-PLUS | LilyGO T-Deck Plus |
+| 47 | TBEAM-SUP | TTGO T-Beam Supreme |
+| 48 | EBYTE-E22-S3 | Ebyte LoRa E22 (ESP32-S3) |
+| 49 | T-LORA-PAGER | LilyGO T-Lora Pager |
+| 50 | T-DECK-PRO | LilyGO T-Deck Pro |
+| 51 | T-BEAM-1W | LilyGO T-Beam 1W |
+| 52 | HELTEC-V4 | Heltec WiFi LoRa 32 v4 |
 
 > **Note:** Altitude in position packets follows APRS convention (feet). The client converts to metres automatically.
 

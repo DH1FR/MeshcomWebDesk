@@ -143,6 +143,11 @@ public sealed class DatabaseSetupService
                         src_type           VARCHAR(8),
                         battery            TINYINT UNSIGNED,
                         firmware           VARCHAR(16),
+                        hw_id              TINYINT UNSIGNED,
+                        temp1              FLOAT,
+                        temp2              FLOAT,
+                        humidity           FLOAT,
+                        pressure           FLOAT,
                         is_outgoing        TINYINT(1)    NOT NULL DEFAULT 0,
                         is_position_beacon TINYINT(1)    NOT NULL DEFAULT 0,
                         is_telemetry       TINYINT(1)    NOT NULL DEFAULT 0,
@@ -154,6 +159,11 @@ public sealed class DatabaseSetupService
                 await cmd.ExecuteNonQueryAsync(ct);
                 _logger.LogInformation("MySQL: Tabelle '{Table}' angelegt", settings.MySqlTableName);
             }
+            else
+            {
+                // Silently add columns that may be missing in tables created by older versions.
+                await MigrateTableAsync(conn, settings.MySqlTableName, ct);
+            }
 
             return null;
         }
@@ -161,6 +171,37 @@ public sealed class DatabaseSetupService
         {
             _logger.LogError(ex, "MySQL: Setup fehlgeschlagen");
             return ex.Message;
+        }
+    }
+
+    /// <summary>
+    /// Silently adds columns that exist in newer schema versions but may be missing
+    /// from tables created by older versions of MeshCom WebDesk.
+    /// Uses ALTER TABLE … ADD COLUMN IF NOT EXISTS (MySQL 8.0+).
+    /// </summary>
+    private async Task MigrateTableAsync(MySqlConnection conn, string tableName, CancellationToken ct)
+    {
+        var newColumns = new[]
+        {
+            ("hw_id",    "TINYINT UNSIGNED"),
+            ("temp1",    "FLOAT"),
+            ("temp2",    "FLOAT"),
+            ("humidity", "FLOAT"),
+            ("pressure", "FLOAT"),
+        };
+
+        foreach (var (col, colDef) in newColumns)
+        {
+            try
+            {
+                await using var cmd = new MySqlCommand(
+                    $"ALTER TABLE `{tableName}` ADD COLUMN IF NOT EXISTS `{col}` {colDef}", conn);
+                await cmd.ExecuteNonQueryAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug("MySQL migration: could not add column '{Col}': {Message}", col, ex.Message);
+            }
         }
     }
 

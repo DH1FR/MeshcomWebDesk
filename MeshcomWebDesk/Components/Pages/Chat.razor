@@ -117,13 +117,18 @@
             @foreach (var m in _allMessages)
             {
                 <div class="mon-row @MonRowClass(m)">
-                    <span class="mon-time">@LT(m.Timestamp).ToString("HH:mm:ss")</span>
+                    <span class="mon-time" title="@(m.MsgId is not null ? $"ID: {m.MsgId}" : null)">@LT(m.Timestamp).ToString("HH:mm:ss")</span>
 
                     <span class="mon-badge @MonBadgeClass(m)">@MonType(m)</span>
 
                     <span class="mon-dir @(m.IsOutgoing ? "mon-tx" : "mon-rx")">
                         @(m.IsOutgoing ? "TX" : "RX")
                     </span>
+
+                    @if (!m.IsOutgoing && !string.IsNullOrEmpty(m.SrcType))
+                    {
+                        <span class="mon-src @SrcTypeCss(m.SrcType)">@SrcTypeLabel(m.SrcType)</span>
+                    }
 
                     @* Routing: From [⟶ Relay1 ⟶ Relay2 …] → To *@
                     @if (!string.IsNullOrEmpty(m.From))
@@ -191,6 +196,18 @@
                             @if (!string.IsNullOrEmpty(dist))
                             {
                                 <span class="mon-dist">&nbsp;·&nbsp;📏&nbsp;@dist</span>
+                            }
+                            @if (m.Battery.HasValue)
+                            {
+                                <span class="mon-alt">&nbsp;·&nbsp;🔋 @m.Battery%</span>
+                            }
+                            @if (!string.IsNullOrEmpty(MeshcomLookup.HwName(m.HwId)))
+                            {
+                                <span class="mh-hw-badge">&nbsp;@MeshcomLookup.HwName(m.HwId)</span>
+                            }
+                            @if (!string.IsNullOrEmpty(m.Firmware))
+                            {
+                                <span class="mh-fw-badge">@m.Firmware</span>
                             }
                         </span>
                     }
@@ -592,6 +609,22 @@
         ChatService.OnChange -= OnChatChanged;
         UdpService.OnStatusChange -= OnStatusChanged;
     }
+
+    private static string SrcTypeCss(string src) => src.ToLowerInvariant() switch
+    {
+        "lora" => "mon-src-lora",
+        "udp"  => "mon-src-udp",
+        "node" => "mon-src-node",
+        _      => "mon-src-other"
+    };
+
+    private static string SrcTypeLabel(string src) => src.ToLowerInvariant() switch
+    {
+        "lora" => "LoRa",
+        "udp"  => "UDP",
+        "node" => "Node",
+        _      => src.ToUpperInvariant()
+    };
 
     private static string RssiCssClass(int rssi) => rssi switch
     {

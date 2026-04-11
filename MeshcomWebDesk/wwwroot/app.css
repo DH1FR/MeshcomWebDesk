@@ -450,6 +450,13 @@ h1:focus {
 .mon-rx     { color: #79c0ff; }
 .mon-tx     { color: #56d364; }
 
+/* Source type badge – shows where the packet was received from */
+.mon-src       { font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px; white-space: nowrap; letter-spacing: 0.04em; }
+.mon-src-lora  { background: #0a2a35; color: #4de8f0; }
+.mon-src-udp   { background: #0d2048; color: #79c0ff; }
+.mon-src-node  { background: #0a2a15; color: #56d364; }
+.mon-src-other { background: #2a2a2a; color: #8b949e; }
+
 /* Routing */
 .mon-routing {
     display: flex;
@@ -682,6 +689,19 @@ h1:focus {
     font-weight: 600;
     background: #0f3460;
     color: #79c0ff;
+    border-radius: 3px;
+    padding: 1px 4px;
+    vertical-align: middle;
+    letter-spacing: 0.03em;
+}
+
+.mh-fw-badge {
+    display: inline-block;
+    margin-left: 4px;
+    font-size: 9px;
+    font-weight: 600;
+    background: #1a2d1a;
+    color: #7ee787;
     border-radius: 3px;
     padding: 1px 4px;
     vertical-align: middle;
@@ -1461,9 +1481,126 @@ h1:focus {
     cursor: not-allowed;
 }
 
+.map-ctrl-btn.map-ctrl-active {
+    background: #1a5a9a;
+    color: #fff;
+    border-color: #4a9aff;
+}
+
 .map-container {
     flex: 1;
     min-height: 0;
+}
+
+/* Wrapper: relative so the legend can float over the map */
+.map-wrapper {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+}
+
+.map-wrapper .map-container {
+    width: 100%;
+    height: 100%;
+}
+
+/* ── Floating legend ──────────────────────────────────────────── */
+.map-legend {
+    position: absolute;
+    bottom: 30px;
+    right: 10px;
+    z-index: 1000;
+    background: rgba(13, 17, 23, 0.90);
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    font-size: 11px;
+    color: #cdd9e5;
+    min-width: 168px;
+    backdrop-filter: blur(4px);
+    pointer-events: all;
+}
+
+.map-legend-collapsed .map-legend-body { display: none; }
+
+.map-legend-toggle {
+    width: 100%;
+    background: none;
+    border: none;
+    color: #8b949e;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 10px;
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.map-legend-toggle:hover { color: #cdd9e5; }
+
+.map-legend-body {
+    padding: 2px 10px 8px;
+    border-top: 1px solid #21262d;
+}
+
+.map-legend-section {
+    color: #8b949e;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    margin: 7px 0 3px;
+}
+
+.map-legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 3px 0;
+}
+
+/* Marker swatches */
+.leg-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid rgba(0, 0, 0, 0.45);
+    box-shadow: 0 0 3px rgba(0, 0, 0, 0.7);
+    background: #58a6ff;
+    flex-shrink: 0;
+}
+.leg-dot.aprs-relay-1 { box-shadow: 0 0 0 3px rgba(86,211,100,0.40), 0 0 3px rgba(0,0,0,0.7); }
+.leg-dot.aprs-relay-2 { box-shadow: 0 0 0 3px rgba(227,179,65,0.50), 0 0 0 6px rgba(227,179,65,0.22), 0 0 3px rgba(0,0,0,0.7); }
+
+.leg-dot-own {
+    width: 10px;
+    height: 10px;
+    background: #e3b341;
+    border: 1.5px solid rgba(255, 255, 255, 0.55);
+    border-radius: 2px;
+    transform: rotate(45deg);
+    flex-shrink: 0;
+}
+
+/* Line swatches */
+.leg-line {
+    width: 28px;
+    height: 0;
+    border-top: 2px dashed;
+    flex-shrink: 0;
+}
+.leg-line-good    { border-color: #39d353; }
+.leg-line-ok      { border-color: #f0c060; }
+.leg-line-weak    { border-color: #ff6b6b; }
+.leg-line-partial { border-top: 2px dotted #b0bec5; opacity: 0.55; }
+
+.leg-line-weight {
+    width: 28px;
+    height: 4px;
+    background: linear-gradient(to right, #8b949e 0%, #8b949e 40%, #8b949e 100%);
+    clip-path: polygon(0 50%, 100% 0, 100% 100%);
+    opacity: 0.65;
+    flex-shrink: 0;
 }
 
 /* Leaflet APRS-style markers */
@@ -1489,6 +1626,24 @@ h1:focus {
 .aprs-dot.sig-weak { background: #f85149; }
 .aprs-dot.sig-none { background: #58a6ff; }
 
+/* Relay hop indicator: glowing ring(s) around the dot */
+.aprs-dot.aprs-relay-1 {
+    box-shadow: 0 0 0 3px rgba(86, 211, 100, 0.35), 0 0 5px rgba(0, 0, 0, 0.7);
+}
+.aprs-dot.aprs-relay-2 {
+    box-shadow: 0 0 0 3px rgba(227, 179, 65, 0.45), 0 0 0 6px rgba(227, 179, 65, 0.2), 0 0 5px rgba(0, 0, 0, 0.7);
+}
+
+/* Relay path tooltip */
+.relay-tooltip {
+    background: #161b22;
+    color: #cdd9e5;
+    border: 1px solid #30363d;
+    font-family: "Cascadia Code", "Fira Code", monospace;
+    font-size: 11px;
+    padding: 3px 7px;
+}
+
 /* Own position: gold diamond */
 .aprs-dot.aprs-own {
     width: 14px;
@@ -1512,6 +1667,13 @@ h1:focus {
     white-space: nowrap;
     letter-spacing: 0.02em;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.aprs-telem-icon {
+    font-size: 9px;
+    margin-left: 2px;
+    opacity: 0.85;
+    vertical-align: middle;
 }
 
 .aprs-own-label { color: #ffd97d; background: rgba(0, 0, 0, 0.75); }

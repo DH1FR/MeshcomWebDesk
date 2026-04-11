@@ -50,4 +50,38 @@ public class HeardStation
 
     /// <summary>Firmware version string (e.g. "4.35p").</summary>
     public string? Firmware { get; set; }
+
+    /// <summary>
+    /// Full relay path of the last received packet (e.g. "OE1XAR-62,DL0VBK-12,DB0KH-11").
+    /// Index 0 = originating station; subsequent entries = relay nodes.
+    /// Null when the station was heard directly without any relay.
+    /// </summary>
+    public string? LastRelayPath { get; set; }
+
+    /// <summary>Number of relay hops in the last received packet (0 = direct reception).</summary>
+    public int HopCount { get; set; }
+
+    /// <summary>
+    /// Number of packets received via <see cref="LastRelayPath"/>.
+    /// Resets to 1 whenever the relay path changes.
+    /// Used to scale relay polyline thickness on the map.
+    /// </summary>
+    public int RelayPathCount { get; set; }
+
+    // ── Telemetry (last received tele packet) ──────────────────────────────
+
+    /// <summary>Last measured temperature in °C (Temp1 field of the tele packet).</summary>
+    public double? Temp1 { get; set; }
+
+    /// <summary>Last measured relative humidity in %.</summary>
+    public double? Humidity { get; set; }
+
+    /// <summary>Last measured atmospheric pressure in hPa.</summary>
+    public double? Pressure { get; set; }
+
+    /// <summary>
+    /// UTC timestamp of the last received telemetry packet.
+    /// Used to display data freshness on the map.
+    /// </summary>
+    public DateTime? LastTelemetryTime { get; set; }
 }

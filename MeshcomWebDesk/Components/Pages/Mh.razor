@@ -109,6 +109,10 @@
                                 {
                                     <span class="mh-hw-badge">@MeshcomLookup.HwName(s.HwId)</span>
                                 }
+                                @if (!string.IsNullOrEmpty(s.Firmware))
+                                {
+                                    <span class="mh-fw-badge">@s.Firmware</span>
+                                }
                             </td>
                             @if (SettingsOptions.Value.Qrz.Enabled)
                             {
@@ -350,7 +354,6 @@
             if (!string.IsNullOrEmpty(qrz.Location))  qrzParts.Add(qrz.Location);
             if (qrzParts.Count > 0) parts.Add(string.Join(", ", qrzParts));
         }
-        if (!string.IsNullOrEmpty(s.Firmware))      parts.Add($"FW: {s.Firmware}");
         if (s.HwId.HasValue)                         parts.Add($"HW-ID: {s.HwId}");
         if (s.FirstHeard != default)                 parts.Add($"{firstLabel}: {s.FirstHeard:dd.MM.yy HH:mm}");
         return parts.Count > 0 ? string.Join(" | ", parts) : s.Callsign;
