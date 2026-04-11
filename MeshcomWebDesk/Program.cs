@@ -61,7 +61,8 @@ builder.Host.UseSerilog((context, config) => config
     .ReadFrom.Configuration(context.Configuration)
     // Console: suppress DB-insert Information logs – they appear in the log file only.
     .WriteTo.Logger(lc => lc
-        .MinimumLevel.Override("MeshcomWebDesk.Services.Database", Serilog.Events.LogEventLevel.Warning)
+        .MinimumLevel.Override("MeshcomWebDesk.Services.Database",  Serilog.Events.LogEventLevel.Warning)
+        .MinimumLevel.Override("MeshcomWebDesk.Services.QrzService", Serilog.Events.LogEventLevel.Warning)
         .WriteTo.Console())
     .WriteTo.File(
         logFile,

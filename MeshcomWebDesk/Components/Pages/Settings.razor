@@ -321,6 +321,25 @@
                     }
                 }
             </div>
+
+            <div style="margin-top:1rem">
+                <button class="btn-send-now" @onclick="SendTelemetryNowAsync" disabled="@_sendingNow">
+                    @if (_sendingNow)
+                    {
+                        <span>⏳ @Loc.T("Wird gesendet…", "Sending…", "Invio in corso…", "Enviando…")</span>
+                    }
+                    else
+                    {
+                        <span>📡 @Loc.T("Telemetrie jetzt senden", "Send Telemetry Now", "Invia telemetria ora", "Enviar telemetría ahora")</span>
+                    }
+                </button>
+                @if (_sendResult != null)
+                {
+                    <div class="@(_sendResult.StartsWith("✅") ? "settings-success" : "settings-error")" style="margin-top:0.5rem">
+                        @_sendResult
+                    </div>
+                }
+            </div>
         </div>
 
         <!-- Sprache / Language -->
@@ -537,6 +556,21 @@
                 <label>@Loc.T("Passwort", "Password", "Password", "Contraseña")</label>
                 <input type="password" @bind="_model.QrzPassword" autocomplete="new-password"
                        placeholder="@Loc.T("QRZ.com Passwort", "QRZ.com password", "Password QRZ.com", "Contraseña QRZ.com")" />
+
+                <label>
+                    @Loc.T("Anfragen loggen", "Log Requests", "Registra richieste", "Registrar solicitudes")<br />
+                    <small>@Loc.T("Jede Abfrage (Cache & API) wird in die Log-Datei geschrieben.", "Every lookup (cache &amp; API) is written to the log file.", "Ogni ricerca (cache &amp; API) viene scritta nel log.", "Cada consulta (caché &amp; API) se escribe en el log.")</small>
+                </label>
+                <label class="settings-toggle">
+                    <input type="checkbox" @bind="_model.QrzLogRequests" />
+                    <span>@(_model.QrzLogRequests ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                </label>
+
+                <label>
+                    @Loc.T("Cache-Gültigkeit (Tage)", "Cache validity (days)", "Validità cache (giorni)", "Validez caché (días)")<br />
+                    <small>@Loc.T("0\u00a0= unbegrenzt (nie erneuern)", "0\u00a0= unlimited (never refresh)", "0\u00a0= illimitato (mai aggiornare)", "0\u00a0= ilimitado (nunca renovar)")</small>
+                </label>
+                <input type="number" min="0" @bind="_model.QrzCacheMaxAgeDays" />
             </div>
             @if (_model.QrzEnabled)
             {
@@ -566,24 +600,7 @@
 
         <div class="settings-actions">
             <button class="btn-save" @onclick="SaveAsync">💾 @Loc.T("Speichern", "Save", "Salva", "Guardar")</button>
-            <button class="btn-send-now" @onclick="SendTelemetryNowAsync" disabled="@_sendingNow">
-                @if (_sendingNow)
-                {
-                    <span>⏳ @Loc.T("Wird gesendet…", "Sending…", "Invio in corso…", "Enviando…")</span>
-                }
-                else
-                {
-                    <span>📡 @Loc.T("Telemetrie jetzt senden", "Send Telemetry Now", "Invia telemetria ora", "Enviar telemetría ahora")</span>
-                }
-            </button>
         </div>
-
-        @if (_sendResult != null)
-        {
-            <div class="@(_sendResult.StartsWith("✅") ? "settings-success" : "settings-error")" style="margin-top:0.5rem">
-                @_sendResult
-            </div>
-        }
 
     </div>
 </div>
@@ -916,7 +933,9 @@
             WebhookOnTelemetry      = s.Webhook.OnTelemetry,
             QrzEnabled              = s.Qrz.Enabled,
             QrzUsername             = s.Qrz.Username,
-            QrzPassword             = s.Qrz.Password
+            QrzPassword             = s.Qrz.Password,
+            QrzLogRequests          = s.Qrz.LogRequests,
+            QrzCacheMaxAgeDays      = s.Qrz.CacheMaxAgeDays
         };
     }
 
@@ -985,9 +1004,11 @@
         public bool   WebhookOnTelemetry { get; set; }
 
         // QRZ.com
-        public bool   QrzEnabled   { get; set; }
-        public string QrzUsername  { get; set; } = string.Empty;
-        public string QrzPassword  { get; set; } = string.Empty;
+        public bool   QrzEnabled         { get; set; }
+        public string QrzUsername        { get; set; } = string.Empty;
+        public string QrzPassword        { get; set; } = string.Empty;
+        public bool   QrzLogRequests     { get; set; }
+        public int    QrzCacheMaxAgeDays { get; set; } = 30;
 
         public DatabaseSettings ToDbSettings() => new()
         {
@@ -1043,9 +1064,11 @@
             },
             Qrz = new MeshcomWebDesk.Models.QrzSettings
             {
-                Enabled  = QrzEnabled,
-                Username = QrzUsername,
-                Password = QrzPassword
+                Enabled         = QrzEnabled,
+                Username        = QrzUsername,
+                Password        = QrzPassword,
+                LogRequests     = QrzLogRequests,
+                CacheMaxAgeDays = QrzCacheMaxAgeDays
             }
         };
     }

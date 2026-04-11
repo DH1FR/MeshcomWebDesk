@@ -85,9 +85,11 @@ public class SettingsService
                 },
                 ["Qrz"] = new JsonObject
                 {
-                    ["Enabled"]  = s.Qrz.Enabled,
-                    ["Username"] = s.Qrz.Username,
-                    ["Password"] = s.Qrz.Password
+                    ["Enabled"]         = s.Qrz.Enabled,
+                    ["Username"]        = s.Qrz.Username,
+                    ["Password"]        = s.Qrz.Password,
+                    ["LogRequests"]     = s.Qrz.LogRequests,
+                    ["CacheMaxAgeDays"] = s.Qrz.CacheMaxAgeDays
                 }
             }
         };
