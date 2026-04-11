@@ -49,10 +49,11 @@ window.meshcomMap = (function () {
     }
 
     // Own position: gold diamond + label
-    function ownIcon(callsign) {
+    function ownIcon(callsign, hasTelem) {
+        var telemIcon = hasTelem ? '<span class="aprs-telem-icon">\uD83C\uDF21\uFE0F</span>' : '';
         var html = '<div class="aprs-wrap">'
                  + '<div class="aprs-dot aprs-own"></div>'
-                 + '<div class="aprs-label aprs-own-label">' + esc(callsign) + '</div>'
+                 + '<div class="aprs-label aprs-own-label">' + esc(callsign) + telemIcon + '</div>'
                  + '</div>';
         return L.divIcon({ className: '', html: html, iconAnchor: [7, 7] });
     }
@@ -218,7 +219,7 @@ window.meshcomMap = (function () {
                     ownPopup += '<br><span style="font-size:10px;color:#6e7681">\uD83D\uDCE1 '
                               + esc(info.deviceIp) + ':' + (info.devicePort || '') + '</span>';
 
-                L.marker([ownLat, ownLon], { icon: ownIcon(ownCallsign) })
+                L.marker([ownLat, ownLon], { icon: ownIcon(ownCallsign, info.temp != null || info.humidity != null || info.pressure != null) })
                     .bindPopup(ownPopup)
                     .addTo(_ownLayer);
                 bounds.push([ownLat, ownLon]);
