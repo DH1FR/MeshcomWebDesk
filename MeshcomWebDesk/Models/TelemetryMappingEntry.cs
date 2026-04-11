@@ -13,4 +13,11 @@ public class TelemetryMappingEntry
 
     /// <summary>Number of decimal places to display. Default is 1.</summary>
     public int Decimals { get; set; } = 1;
+
+    /// <summary>
+    /// Optional weather role for the map popup.
+    /// Allowed values: "temp", "humidity", "pressure", or empty (no role).
+    /// Takes precedence over unit-based auto-detection.
+    /// </summary>
+    public string WeatherRole { get; set; } = string.Empty;
 }

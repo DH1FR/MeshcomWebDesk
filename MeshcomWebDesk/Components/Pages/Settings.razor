@@ -268,6 +268,7 @@
                             <th>@Loc.T("Bezeichnung", "Label", "Etichetta", "Etiqueta")</th>
                             <th>@Loc.T("Einheit", "Unit", "Unità", "Unidad")</th>
                             <th>@Loc.T("Dez.", "Dec.", "Dec.", "Dec.")</th>
+                            <th>@Loc.T("Karte", "Map", "Mappa", "Mapa")</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -280,6 +281,14 @@
                                 <td><input type="text" @bind="e.Label" /></td>
                                 <td><input type="text" @bind="e.Unit" /></td>
                                 <td><input type="number" min="0" max="4" style="width:4rem" @bind="e.Decimals" /></td>
+                                <td>
+                                    <select @bind="e.WeatherRole" title="@Loc.T("Karten-Rolle für Wetter-Popup", "Map role for weather popup", "Ruolo mappa per popup meteo", "Rol de mapa para popup meteorológico")">
+                                        <option value="">–</option>
+                                        <option value="temp">🌡️ @Loc.T("Temp.", "Temp.", "Temp.", "Temp.")</option>
+                                        <option value="humidity">💧 @Loc.T("Feuchte", "Humidity", "Umidità", "Humedad")</option>
+                                        <option value="pressure">🧭 @Loc.T("Druck", "Pressure", "Pressione", "Presión")</option>
+                                    </select>
+                                </td>
                                 <td><button type="button" class="btn-remove" @onclick="() => _model.TelemetryMapping.Remove(e)">🗑️</button></td>
                             </tr>
                         }

@@ -484,11 +484,20 @@ public partial class MeshcomUdpService : BackgroundService
                 else
                     continue;
 
-                // Capture well-known weather values by unit for map popup
-                var unitNorm = entry.Unit.Trim().TrimStart('°').ToLowerInvariant();
-                if      (unitNorm is "c")                     ownTemp      ??= value;
-                else if (unitNorm is "%")                     ownHumidity  ??= value;
-                else if (unitNorm is "hpa" or "mbar" or "mb") ownPressure  ??= value;
+                // Capture well-known weather values for map popup.
+                // Explicit WeatherRole takes precedence; unit-based detection is the fallback
+                // for entries that were configured before the Role field was introduced.
+                var role = entry.WeatherRole.Trim().ToLowerInvariant();
+                if (role == string.Empty)
+                {
+                    var unitNorm = entry.Unit.Trim().TrimStart('°').ToLowerInvariant();
+                    if      (unitNorm is "c")                      role = "temp";
+                    else if (unitNorm is "%")                      role = "humidity";
+                    else if (unitNorm is "hpa" or "mbar" or "mb")  role = "pressure";
+                }
+                if      (role == "temp")     ownTemp     ??= value;
+                else if (role == "humidity") ownHumidity ??= value;
+                else if (role == "pressure") ownPressure ??= value;
 
                 var decimals  = Math.Max(0, entry.Decimals);
                 var formatted = value.ToString($"F{decimals}", System.Globalization.CultureInfo.InvariantCulture);
