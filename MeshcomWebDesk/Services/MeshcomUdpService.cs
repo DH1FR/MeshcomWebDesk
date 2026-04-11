@@ -720,7 +720,8 @@ public partial class MeshcomUdpService : BackgroundService
             var srcType      = root.TryGetProperty("src_type", out var srcTypeProp) ? srcTypeProp.GetString() : "lora";
             var isNodePacket = string.Equals(srcType, "node", StringComparison.OrdinalIgnoreCase);
 
-            int?    rssi = (!isNodePacket && root.TryGetProperty("rssi", out var rssiProp)) ? rssiProp.GetInt32()  : null;
+            int? rssiRaw = (!isNodePacket && root.TryGetProperty("rssi", out var rssiProp)) ? rssiProp.GetInt32() : null;
+            int?    rssi = rssiRaw is < 0 ? rssiRaw : null;   // 0 or positive = invalid/unset firmware default
             double? snr  = (!isNodePacket && root.TryGetProperty("snr",  out var snrProp))  ? snrProp.GetDouble() : null;
 
             // ── msg_id ───────────────────────────────────────────────────────
