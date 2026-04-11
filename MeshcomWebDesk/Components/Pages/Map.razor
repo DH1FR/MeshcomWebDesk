@@ -264,7 +264,13 @@
 
         _hasPositions = stations.Length > 0 || status.OwnLatitude.HasValue;
 
-        var cfg     = SettingsMonitor.CurrentValue;
+        var cfg = SettingsMonitor.CurrentValue;
+
+        // Own station telemetry: look up own callsign in MhList (populated when the node
+        // echoes back its own tele packet via UDP).
+        var ownMh = mhList.FirstOrDefault(s =>
+            string.Equals(s.Callsign, cfg.MyCallsign, StringComparison.OrdinalIgnoreCase));
+
         var ownInfo = new
         {
             alt        = status.OwnAltitude,
@@ -277,7 +283,13 @@
             beaconNext = status.BeaconNextSend.HasValue
                 ? status.BeaconNextSend.Value.ToString("HH:mm") : null,
             deviceIp   = cfg.DeviceIp,
-            devicePort = cfg.DevicePort
+            devicePort = cfg.DevicePort,
+            temp       = ownMh?.Temp1,
+            humidity   = ownMh?.Humidity,
+            pressure   = ownMh?.Pressure,
+            telemMins  = ownMh?.LastTelemetryTime.HasValue == true
+                ? (int)(DateTime.UtcNow - ownMh.LastTelemetryTime!.Value).TotalMinutes
+                : (int?)null
         };
 
         await JS.InvokeVoidAsync("meshcomMap.updateMarkers",

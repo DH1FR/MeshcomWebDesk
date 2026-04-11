@@ -200,6 +200,15 @@ window.meshcomMap = (function () {
                     ownPopup += '<br>RSSI: ' + info.rssi + ' dBm';
                     if (info.snr != null) ownPopup += ' / SNR: ' + info.snr.toFixed(1) + ' dB';
                 }
+                if (info.temp != null || info.humidity != null || info.pressure != null) {
+                    ownPopup += '<br><span style="font-size:11px;color:#c8d8e8">';
+                    if (info.temp     != null) ownPopup += '\uD83C\uDF21\uFE0F\u202F' + info.temp.toFixed(1) + '\u00b0C';
+                    if (info.humidity != null) ownPopup += (info.temp != null ? '&nbsp;&nbsp;' : '') + '\uD83D\uDCA7\u202F' + info.humidity.toFixed(0) + '%';
+                    if (info.pressure != null) ownPopup += '<br>\uD83E\uDDED\u202F' + info.pressure.toFixed(1) + '\u202FhPa';
+                    ownPopup += '</span>';
+                    if (info.telemMins != null)
+                        ownPopup += '<br><span style="font-size:10px;color:#6e7681">\u23f1\u202F' + formatTelemAge(info.telemMins) + '</span>';
+                }
                 ownPopup += '<br>\uD83D\uDCE8 RX ' + (info.rxCount || 0) + ' / TX ' + (info.txCount || 0);
                 if (info.beacon) {
                     ownPopup += '<br>\uD83D\uDD35 Beacon';
