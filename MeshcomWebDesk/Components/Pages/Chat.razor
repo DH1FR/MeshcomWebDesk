@@ -3,6 +3,7 @@
 @using MeshcomWebDesk.Services
 @using MeshcomWebDesk.Helpers
 @using Microsoft.Extensions.Options
+@using System.Text.RegularExpressions
 @rendermode InteractiveServer
 @inject ChatService ChatService
 @inject MeshcomUdpService UdpService
@@ -70,7 +71,7 @@
                                       @onclick="() => OpenTabFromMonitor(msg.From)"
                                       title="@(Loc.T($"Chat mit {msg.From} öffnen", $"Open chat with {msg.From}", $"Apri chat con {msg.From}", $"Abrir chat con {msg.From}") + QrzSuffix(msg.From))">@msg.From@if (msgFn is not null){<span class="qrz-badge"> · @msgFn</span>}:</span>
                             }
-                            <span class="msg-text">@msg.Text</span>
+                            <span class="msg-text">@FormatMessageWithLinks(msg.Text)</span>
                             @if (msg.IsOutgoing)
                             {
                                 <span class="@AckCssClass(msg)" title="@AckTooltip(msg)">@AckIcon(msg)</span>
@@ -195,7 +196,7 @@
                     }
                     else if (!string.IsNullOrEmpty(m.Text) && !m.Text.StartsWith('{'))
                     {
-                        <span class="mon-content mon-text">"@m.Text"</span>
+                        <span class="mon-content mon-text">"@FormatMessageWithLinks(m.Text)"</span>
                     }
                     else if (string.IsNullOrEmpty(m.From))
                     {
@@ -630,6 +631,37 @@
         m.IsAck ? "mon-row-ack" :
         !string.IsNullOrEmpty(m.From) ? "mon-row-msg" :
         "mon-row-sys";
+
+    private static readonly Regex UrlRegex = new(
+        @"https?://[^\s<>""'\]\)\[]{1,2000}",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    private MarkupString FormatMessageWithLinks(string text)
+    {
+        if (string.IsNullOrEmpty(text) || !text.Contains("://"))
+            return new MarkupString(System.Net.WebUtility.HtmlEncode(text));
+
+        var jsMsg = Loc.T(
+            "Externer Link – diese Seite wird außerhalb von MeshCom WebDesk geöffnet.\nFortfahren?",
+            "External link – this page opens outside MeshCom WebDesk.\nContinue?",
+            "Link esterno – questa pagina si aprirà fuori da MeshCom WebDesk.\nContinuare?",
+            "Enlace externo – esta página se abrirá fuera de MeshCom WebDesk.\n¿Continuar?")
+            .Replace("\\", "\\\\").Replace("'", "\\'");
+
+        var sb = new System.Text.StringBuilder();
+        var lastIndex = 0;
+        foreach (Match match in UrlRegex.Matches(text))
+        {
+            sb.Append(System.Net.WebUtility.HtmlEncode(text[lastIndex..match.Index]));
+            var href    = System.Net.WebUtility.HtmlEncode(match.Value);
+            var display = System.Net.WebUtility.HtmlEncode(
+                match.Value.Length > 55 ? match.Value[..55] + "\u2026" : match.Value);
+            sb.Append($"<a class=\"msg-url\" href=\"{href}\" target=\"_blank\" rel=\"noopener noreferrer\" onclick=\"return confirm('{jsMsg}')\">{display}</a>");
+            lastIndex = match.Index + match.Length;
+        }
+        sb.Append(System.Net.WebUtility.HtmlEncode(text[lastIndex..]));
+        return new MarkupString(sb.ToString());
+    }
 
     private static string MonTruncate(string s, int max) =>
         s.Length <= max ? s : s[..max] + "…";
