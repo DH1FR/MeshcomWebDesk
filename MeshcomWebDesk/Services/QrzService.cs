@@ -29,7 +29,7 @@ public class QrzService
 
     private string? _sessionKey;
     private readonly SemaphoreSlim _loginLock = new(1, 1);
-    private readonly ConcurrentDictionary<string, QrzInfo?> _cache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, QrzCacheEntry> _cache = new(StringComparer.OrdinalIgnoreCase);
 
     public QrzService(IOptionsMonitor<MeshcomSettings> settingsMonitor, ILogger<QrzService> logger)
     {
@@ -57,11 +57,28 @@ public class QrzService
         // Strip SSID suffix (e.g. "DH1FR-2" → "DH1FR")
         var bare = callsign.Contains('-') ? callsign[..callsign.IndexOf('-')] : callsign;
 
-        if (_cache.TryGetValue(bare, out var cached))
-            return cached;
+        if (_cache.TryGetValue(bare, out var cached) && cached is not null)
+        {
+            var maxAge = settings.CacheMaxAgeDays;
+            var ageDays = (DateTime.UtcNow - cached.CachedAt).TotalDays;
+            if (maxAge <= 0 || ageDays < maxAge)
+            {
+                if (settings.LogRequests)
+                    _logger.LogInformation("QRZ lookup (cache): {Callsign} → {Result} (age: {Age:F0}d)", bare,
+                        cached.Info is null ? "not found" : $"{cached.Info.FirstName}, {cached.Info.Location}",
+                        ageDays);
+                return cached.Info;
+            }
+            _cache.TryRemove(bare, out _);
+            if (settings.LogRequests)
+                _logger.LogInformation("QRZ cache expired for {Callsign} ({Age:F0}d ≥ {Max}d), refreshing…", bare, ageDays, maxAge);
+        }
 
         var result = await FetchAsync(bare, settings);
-        _cache[bare] = result;
+        if (settings.LogRequests)
+            _logger.LogInformation("QRZ lookup (API): {Callsign} → {Result}", bare,
+                result is null ? "not found" : $"{result.FirstName}, {result.Location}");
+        _cache[bare] = new QrzCacheEntry(result, DateTime.UtcNow);
         SaveCacheToDisk();
         return result;
     }
@@ -85,8 +102,7 @@ public class QrzService
     public QrzInfo? GetCached(string callsign)
     {
         var bare = callsign.Contains('-') ? callsign[..callsign.IndexOf('-')] : callsign;
-        _cache.TryGetValue(bare, out var info);
-        return info;
+        return _cache.TryGetValue(bare, out var entry) && entry is not null ? entry.Info : null;
     }
 
     // ── Disk persistence ───────────────────────────────────────────────────────
@@ -97,15 +113,16 @@ public class QrzService
         try
         {
             var json = File.ReadAllText(_cacheFilePath);
-            var dict = JsonSerializer.Deserialize<Dictionary<string, QrzInfo?>>(json);
+            var dict = JsonSerializer.Deserialize<Dictionary<string, QrzCacheEntry>>(json);
             if (dict is null) return;
             foreach (var (key, value) in dict)
-                _cache[key] = value;
+                if (value is not null)
+                    _cache[key] = value;
             _logger.LogInformation("QRZ cache restored: {Count} entries from {Path}", dict.Count, _cacheFilePath);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("Failed to load QRZ cache from disk: {Message}", ex.Message);
+            _logger.LogWarning("Failed to load QRZ cache from disk (format changed?): {Message}", ex.Message);
         }
     }
 
@@ -139,7 +156,11 @@ public class QrzService
             try
             {
                 var url = $"{BaseUrl}?s={Uri.EscapeDataString(key)};callsign={Uri.EscapeDataString(callsign)}";
+                if (settings.LogRequests)
+                    _logger.LogInformation("QRZ >> GET {Url}", $"{BaseUrl}?s=***;callsign={Uri.EscapeDataString(callsign)}");
                 var xml = await _http.GetStringAsync(url);
+                if (settings.LogRequests)
+                    _logger.LogInformation("QRZ << {Response}", xml);
                 var doc = XDocument.Parse(xml);
                 XNamespace ns = "http://xmldata.qrz.com";
 
@@ -204,7 +225,11 @@ public class QrzService
             }
 
             var url = $"{BaseUrl}?username={Uri.EscapeDataString(settings.Username)}&password={Uri.EscapeDataString(settings.Password)}&agent=MeshcomWebDesk";
+            if (settings.LogRequests)
+                _logger.LogInformation("QRZ >> GET {Url}", $"{BaseUrl}?username={Uri.EscapeDataString(settings.Username)}&password=***&agent=MeshcomWebDesk");
             var xml = await _http.GetStringAsync(url);
+            if (settings.LogRequests)
+                _logger.LogInformation("QRZ << {Response}", xml);
             var doc = XDocument.Parse(xml);
             XNamespace ns = "http://xmldata.qrz.com";
 
@@ -234,3 +259,6 @@ public class QrzService
 
 /// <summary>Basic QRZ.com callsign data (first name and city/location).</summary>
 public sealed record QrzInfo(string? FirstName, string? Location);
+
+/// <summary>An in-memory and on-disk cache entry that wraps <see cref="QrzInfo"/> with its fetch timestamp.</summary>
+internal sealed record QrzCacheEntry(QrzInfo? Info, DateTime CachedAt);
