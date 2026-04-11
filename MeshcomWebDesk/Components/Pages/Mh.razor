@@ -238,6 +238,13 @@
         _stations   = ChatService.MhList;
         ChatService.OnChange      += OnChanged;
         UdpService.OnStatusChange += OnStatusChanged;
+
+        // Pre-fill QRZ data synchronously from the persistent in-memory cache so the
+        // first render already shows names/locations without a round-trip to OnAfterRenderAsync.
+        if (SettingsOptions.Value.Qrz.Enabled)
+            foreach (var s in _stations)
+                if (QrzService.TryGetCached(s.Callsign, out var info))
+                    _qrzData[s.Callsign] = info;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -282,19 +289,17 @@
     private async Task<bool> LoadQrzDataAsync(IReadOnlyList<HeardStation> stations)
     {
         if (!SettingsOptions.Value.Qrz.Enabled) return false;
-        var added = false;
+        var changed = false;
         foreach (var s in stations)
         {
             if (_qrzData.ContainsKey(s.Callsign)) continue;
+            changed = true;   // any new entry warrants a re-render
             if (QrzService.TryGetCached(s.Callsign, out var cached))
-                _qrzData[s.Callsign] = cached;          // already known – sync, no log entry
+                _qrzData[s.Callsign] = cached;          // sync – already in persistent cache
             else
-            {
-                _qrzData[s.Callsign] = await QrzService.LookupAsync(s.Callsign);   // new callsign
-                added = true;
-            }
+                _qrzData[s.Callsign] = await QrzService.LookupAsync(s.Callsign);   // API call
         }
-        return added;
+        return changed;
     }
 
     private double? CalcDistance(HeardStation s)
