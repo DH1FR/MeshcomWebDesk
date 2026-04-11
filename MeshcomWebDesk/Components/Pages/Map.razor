@@ -264,13 +264,30 @@
 
         _hasPositions = stations.Length > 0 || status.OwnLatitude.HasValue;
 
+        var cfg     = SettingsMonitor.CurrentValue;
+        var ownInfo = new
+        {
+            alt        = status.OwnAltitude,
+            posSource  = status.OwnPositionSource,
+            rssi       = status.LastRssi,
+            snr        = status.LastSnr,
+            rxCount    = status.RxCount,
+            txCount    = status.TxCount,
+            beacon     = status.BeaconActive,
+            beaconNext = status.BeaconNextSend.HasValue
+                ? status.BeaconNextSend.Value.ToString("HH:mm") : null,
+            deviceIp   = cfg.DeviceIp,
+            devicePort = cfg.DevicePort
+        };
+
         await JS.InvokeVoidAsync("meshcomMap.updateMarkers",
             stations,
-            SettingsMonitor.CurrentValue.MyCallsign,
+            cfg.MyCallsign,
             status.OwnLatitude,
             status.OwnLongitude,
             relayLines,
-            _showRelayLines);
+            _showRelayLines,
+            ownInfo);
     }
 
     private async Task ToggleRelayLines()

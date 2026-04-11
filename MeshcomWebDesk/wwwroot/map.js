@@ -96,7 +96,7 @@ window.meshcomMap = (function () {
             _map.on('moveend zoomend', saveView);
         },
 
-        updateMarkers: function (stations, ownCallsign, ownLat, ownLon, relayLines, showRelays) {
+        updateMarkers: function (stations, ownCallsign, ownLat, ownLon, relayLines, showRelays, ownInfo) {
             if (!_map) return;
             _stationLayer.clearLayers();
             _ownLayer.clearLayers();
@@ -190,8 +190,27 @@ window.meshcomMap = (function () {
             });
 
             if (ownLat != null && ownLon != null) {
+                var info = ownInfo || {};
+                var ownPopup = '<b>' + esc(ownCallsign) + '</b>';
+                if (info.posSource)
+                    ownPopup += '<br><span style="font-size:11px;color:#aaa">' + esc(info.posSource) + '</span>';
+                if (info.alt      != null)
+                    ownPopup += '<br>Alt: ' + info.alt + ' m';
+                if (info.rssi     != null) {
+                    ownPopup += '<br>RSSI: ' + info.rssi + ' dBm';
+                    if (info.snr != null) ownPopup += ' / SNR: ' + info.snr.toFixed(1) + ' dB';
+                }
+                ownPopup += '<br>\uD83D\uDCE8 RX ' + (info.rxCount || 0) + ' / TX ' + (info.txCount || 0);
+                if (info.beacon) {
+                    ownPopup += '<br>\uD83D\uDD35 Beacon';
+                    if (info.beaconNext) ownPopup += ' \u00b7 ' + esc(info.beaconNext);
+                }
+                if (info.deviceIp)
+                    ownPopup += '<br><span style="font-size:10px;color:#6e7681">\uD83D\uDCE1 '
+                              + esc(info.deviceIp) + ':' + (info.devicePort || '') + '</span>';
+
                 L.marker([ownLat, ownLon], { icon: ownIcon(ownCallsign) })
-                    .bindPopup('<b>' + esc(ownCallsign) + '</b><br>(eigene Position)')
+                    .bindPopup(ownPopup)
                     .addTo(_ownLayer);
                 bounds.push([ownLat, ownLon]);
             }
