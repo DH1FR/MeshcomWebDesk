@@ -44,7 +44,9 @@ and makes a full web client for MeshCom available via a simple URL
 
 ---
 
-## Screenshots
+## Screenshots & Demo
+
+<video src="docs/MeshComWebDesk.mp4" controls width="100%"></video>
 
 ![MeshCom Web Client](docs/screenshot.png?v=2)
 
