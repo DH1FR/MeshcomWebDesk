@@ -1,0 +1,50 @@
+<div class="send-bar">
+    <input @bind="_text" @bind:event="oninput"
+           placeholder="@Loc.T("Nachricht eingeben...", "Enter message...", "Inserisci messaggio...", "Escribe un mensaje...")"
+           maxlength="149"
+           @onkeydown="OnKeyDown" />
+    <span class="char-counter @CounterCss">@_text.Length/149</span>
+    <button class="btn-send" @onclick="SendAsync"
+            disabled="@(!CanSend)">
+        @Loc.T("Senden", "Send", "Invia", "Enviar")
+    </button>
+</div>
+
+@implements IDisposable
+
+@code {
+    [Parameter, EditorRequired] public EventCallback<string> OnSend { get; set; }
+
+    [Inject] private LanguageService Loc { get; set; } = default!;
+
+    private string _text = string.Empty;
+    private const int MaxLength = 149;
+
+    private bool CanSend =>
+        !string.IsNullOrWhiteSpace(_text) && _text.Length <= MaxLength;
+
+    private string CounterCss => _text.Length switch
+    {
+        >= 145 => "char-danger",
+        >= 130 => "char-warn",
+        _      => string.Empty
+    };
+
+    protected override void OnInitialized() => Loc.OnChange += StateHasChanged;
+
+    public void Dispose() => Loc.OnChange -= StateHasChanged;
+
+    private async Task SendAsync()
+    {
+        if (!CanSend) return;
+        var text = _text;
+        _text = string.Empty;
+        await OnSend.InvokeAsync(text);
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await SendAsync();
+    }
+}

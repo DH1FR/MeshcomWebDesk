@@ -80,17 +80,7 @@
                     }
                 </div>
 
-                <div class="send-bar">
-                    <input @bind="_messageText" @bind:event="oninput"
-                           placeholder="@Loc.T("Nachricht eingeben...", "Enter message...", "Inserisci messaggio...", "Escribe un mensaje...")"
-                           maxlength="149"
-                           @onkeydown="OnSendKeyDown" />
-                    <span class="char-counter @CharCounterCss">@_messageText.Length/149</span>
-                    <button class="btn-send" @onclick="SendMessage"
-                            disabled="@(string.IsNullOrWhiteSpace(_messageText) || _messageText.Length > MaxMessageLength)">
-                        @Loc.T("Senden", "Send", "Invia", "Enviar")
-                    </button>
-                </div>
+                <SendBar OnSend="HandleSendMessage" />
             }
             else
             {
@@ -313,16 +303,7 @@
     private readonly Dictionary<string, QrzInfo?> _qrzData = new(StringComparer.OrdinalIgnoreCase);
     private string _activeTabKey = string.Empty;
     private ChatTab? _activeTab;
-    private string _messageText = string.Empty;
     private string _newTabCallsign = string.Empty;
-
-    private const int MaxMessageLength = 149;
-    private string CharCounterCss => _messageText.Length switch
-    {
-        >= 145 => "char-danger",
-        >= 130 => "char-warn",
-        _      => string.Empty
-    };
     private bool _showNewTabInput;
     private string _myCallsign = string.Empty;
     private bool _disposed;
@@ -565,23 +546,14 @@
             _showNewTabInput = false;
     }
 
-    private async Task SendMessage()
+    private async Task HandleSendMessage(string text)
     {
-        if (string.IsNullOrWhiteSpace(_messageText) || _activeTab == null)
-            return;
-
+        if (_activeTab == null) return;
         // Strip leading '#' for group tabs – the node uses the raw group number (e.g. "262"),
         // the '#' is an internal UI convention only.
         // Pass the original tab key so the outgoing message is routed to the correct '#' tab.
         var destination = _activeTab.Key == "*" ? "CQCQCQ" : _activeTab.Key.TrimStart('#');
-        await UdpService.SendMessageAsync(destination, _messageText, _activeTab.Key);
-        _messageText = string.Empty;
-    }
-
-    private async Task OnSendKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter")
-            await SendMessage();
+        await UdpService.SendMessageAsync(destination, text, _activeTab.Key);
     }
 
     private string QrzSuffix(string callsign)
