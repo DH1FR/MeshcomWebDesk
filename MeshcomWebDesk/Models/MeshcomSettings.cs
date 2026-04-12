@@ -77,6 +77,19 @@ public class MeshcomSettings
         "---=== MeshcomWebDesk - https://github.com/DH1FR/MeshcomWebDesk ===---";
 
     /// <summary>
+    /// When true, incoming direct messages starting with -- are interpreted as bot commands.
+    /// Default is false.
+    /// </summary>
+    public bool BotEnabled { get; set; } = false;
+
+    /// <summary>
+    /// User-defined bot commands appended to the built-in ones.
+    /// Each entry maps a --name to a static response text.
+    /// Response text supports the same {variable} placeholders as AutoReplyText.
+    /// </summary>
+    public List<BotCommandEntry> BotCommands { get; set; } = [];
+
+    /// <summary>
     /// When true, a beacon message is sent periodically to <see cref="BeaconGroup"/>.
     /// Default is false.
     /// </summary>

@@ -46,6 +46,12 @@ public class ChatService
     public event Action<string>? OnNewTab;
 
     /// <summary>
+    /// Raised when an incoming direct message addressed to us starts with "--" (bot command).
+    /// Fired after the message is recorded in the tab so the bot reply appears after it.
+    /// </summary>
+    public event Action<MeshcomMessage>? OnBotCommand;
+
+    /// <summary>
     /// The key of the last tab the user actively selected.
     /// Persisted in memory (singleton lifetime) so Chat.razor can restore it
     /// immediately in OnInitialized without requiring JS interop.
@@ -159,6 +165,12 @@ public class ChatService
 
         NotifyChange();
         _ = _webhook.SendAsync(message, "message");
+
+        // Fire bot command event for direct messages to us starting with "--"
+        if (!message.IsBroadcast &&
+            string.Equals(message.To, _settings.MyCallsign, StringComparison.OrdinalIgnoreCase) &&
+            (message.Text?.StartsWith("--", StringComparison.Ordinal) ?? false))
+            OnBotCommand?.Invoke(message);
     }
 
     /// <summary>

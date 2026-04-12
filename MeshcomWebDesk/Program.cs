@@ -1,6 +1,7 @@
 ﻿using MeshcomWebDesk.Components;
 using MeshcomWebDesk.Models;
 using MeshcomWebDesk.Services;
+using MeshcomWebDesk.Services.Bot;
 using MeshcomWebDesk.Services.Database;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -83,6 +84,10 @@ builder.Services.AddDataProtection()
 
 // Register services
 builder.Services.AddSingleton<ChatService>();
+builder.Services.AddSingleton<IBotCommand, VersionCommand>();
+builder.Services.AddSingleton<IBotCommand, TimeCommand>();
+builder.Services.AddSingleton<IBotCommand, MhCommand>();
+builder.Services.AddSingleton<BotCommandService>();
 builder.Services.AddSingleton<MeshcomUdpService>();
 builder.Services.AddSingleton<DataPersistenceService>();
 builder.Services.AddSingleton<SettingsService>();

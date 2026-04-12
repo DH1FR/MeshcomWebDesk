@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
 using MeshcomWebDesk.Helpers;
 using MeshcomWebDesk.Models;
+using MeshcomWebDesk.Services.Bot;
 
 namespace MeshcomWebDesk.Services;
 
@@ -23,6 +24,7 @@ public partial class MeshcomUdpService : BackgroundService
     private readonly ILogger<MeshcomUdpService> _logger;
     private readonly ChatService _chatService;
     private readonly QrzService  _qrzService;
+    private readonly BotCommandService _botCommandService;
     private MeshcomSettings _settings;
     private UdpClient? _udpClient;
 
@@ -60,12 +62,14 @@ public partial class MeshcomUdpService : BackgroundService
         ILogger<MeshcomUdpService> logger,
         IOptionsMonitor<MeshcomSettings> settings,
         ChatService chatService,
-        QrzService qrzService)
+        QrzService qrzService,
+        BotCommandService botCommandService)
     {
-        _logger      = logger;
-        _chatService = chatService;
-        _qrzService  = qrzService;
-        _settings    = settings.CurrentValue;
+        _logger             = logger;
+        _chatService        = chatService;
+        _qrzService         = qrzService;
+        _botCommandService  = botCommandService;
+        _settings           = settings.CurrentValue;
         settings.OnChange(s =>
         {
             _settings = s;
@@ -73,6 +77,7 @@ public partial class MeshcomUdpService : BackgroundService
         });
 
         _chatService.OnNewDirectTab += callsign => _ = SendAutoReplyAsync(callsign);
+        _chatService.OnBotCommand   += msg      => _ = HandleBotCommandAsync(msg);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -265,6 +270,16 @@ public partial class MeshcomUdpService : BackgroundService
         var text = ExpandVariables(_settings.AutoReplyText, callsign);
         _logger.LogInformation("Auto-reply to new contact {Callsign}", callsign);
         return SendMessageAsync(callsign, text);
+    }
+
+    private async Task HandleBotCommandAsync(MeshcomMessage message)
+    {
+        if (!_settings.BotEnabled) return;
+
+        var reply = await _botCommandService.ExecuteAsync(message.Text!, message.From);
+        reply = ExpandVariables(reply, message.From);
+        _logger.LogInformation("Bot reply to {From}: {Reply}", message.From, reply);
+        await SendMessageAsync(message.From, reply);
     }
 
     /// <summary>
