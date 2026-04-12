@@ -284,6 +284,10 @@ public partial class MeshcomUdpService : BackgroundService
         if (callsign != null && _settings.Qrz.Enabled)
             _qrzService.TryGetCached(callsign, out qrz);
 
+        var route = station?.LastRelayPath != null
+            ? string.Join(" \u2192 ", station.LastRelayPath.Split(',').Select(h => h.Trim()))
+            : string.Empty;
+
         return template
             .Replace("{version}",   AppVersion,                                        StringComparison.OrdinalIgnoreCase)
             .Replace("{mycall}",    _settings.MyCallsign,                              StringComparison.OrdinalIgnoreCase)
@@ -293,6 +297,8 @@ public partial class MeshcomUdpService : BackgroundService
             .Replace("{rssi}",      station?.LastRssi?.ToString()      ?? string.Empty, StringComparison.OrdinalIgnoreCase)
             .Replace("{snr}",       station?.LastSnr?.ToString("F1")   ?? string.Empty, StringComparison.OrdinalIgnoreCase)
             .Replace("{hw}",        MeshcomLookup.HwName(station?.HwId),               StringComparison.OrdinalIgnoreCase)
+            .Replace("{route}",     route,                                             StringComparison.OrdinalIgnoreCase)
+            .Replace("{hops}",      station?.HopCount.ToString()       ?? string.Empty, StringComparison.OrdinalIgnoreCase)
             .Replace("{date}",      now.ToString("dd.MM.yyyy"),                        StringComparison.OrdinalIgnoreCase)
             .Replace("{time}",      now.ToString("HH:mm"),                             StringComparison.OrdinalIgnoreCase);
     }
