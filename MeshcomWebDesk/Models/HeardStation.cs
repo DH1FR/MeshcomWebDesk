@@ -62,6 +62,12 @@ public class HeardStation
     public int HopCount { get; set; }
 
     /// <summary>
+    /// True once a direct (non-relayed) chat message or ACK has been received from this station.
+    /// Used to draw a direct-link line on the map. Not set for passively heard beacons.
+    /// </summary>
+    public bool DirectLinkConfirmed { get; set; }
+
+    /// <summary>
     /// Number of packets received via <see cref="LastRelayPath"/>.
     /// Resets to 1 whenever the relay path changes.
     /// Used to scale relay polyline thickness on the map.

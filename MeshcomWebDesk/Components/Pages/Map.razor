@@ -261,8 +261,8 @@
                 }
             }
 
-            // Direct connections (HopCount == 0): no relay node in path, draw a straight line
-            foreach (var s in mhList.Where(s => s.HopCount == 0 && posLookup.ContainsKey(s.Callsign)))
+            // Direct connections: ACK or direct chat received without relay, GPS position known
+            foreach (var s in mhList.Where(s => s.HopCount == 0 && s.DirectLinkConfirmed && posLookup.ContainsKey(s.Callsign)))
             {
                 relayLines.Add(new
                 {

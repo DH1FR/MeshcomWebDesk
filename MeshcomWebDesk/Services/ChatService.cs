@@ -428,9 +428,11 @@ public class ChatService
                 Battery          = message.Battery,
                 HwId             = message.HwId,
                 Firmware         = message.Firmware,
-                LastRelayPath    = message.RelayPath,
-                HopCount         = message.RelayPath?.Split(',').Length - 1 ?? 0,
-                RelayPathCount   = message.RelayPath != null ? 1 : 0,
+                LastRelayPath        = message.RelayPath,
+                HopCount             = message.RelayPath?.Split(',').Length - 1 ?? 0,
+                RelayPathCount       = message.RelayPath != null ? 1 : 0,
+                DirectLinkConfirmed  = (message.IsAck || (!message.IsPositionBeacon && !message.IsTelemetry && !message.IsBroadcast))
+                                       && message.RelayPath == null,
                 Temp1             = message.IsTelemetry ? message.Temp1     : null,
                 Humidity          = message.IsTelemetry ? message.Humidity  : null,
                 Pressure          = message.IsTelemetry ? message.Pressure  : null,
@@ -450,6 +452,10 @@ public class ChatService
                 if (message.Battery.HasValue) s.Battery  = message.Battery;
                 if (message.HwId.HasValue)    s.HwId     = message.HwId;
                 if (!string.IsNullOrEmpty(message.Firmware)) s.Firmware = message.Firmware;
+                if ((message.IsAck || (!message.IsPositionBeacon && !message.IsTelemetry && !message.IsBroadcast))
+                    && message.RelayPath == null)
+                    s.DirectLinkConfirmed = true;
+
                 if (message.RelayPath is not null)
                 {
                     var hops = message.RelayPath.Split(',').Length - 1;
