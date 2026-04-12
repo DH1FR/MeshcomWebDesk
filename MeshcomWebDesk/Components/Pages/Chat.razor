@@ -360,6 +360,8 @@
             try { await JS.InvokeVoidAsync("meshcomChat.initResizer"); }
             catch (JSException) { }
 
+            var needsRender = false;
+
             // Restore monitor visibility: null = never saved → default visible
             try
             {
@@ -368,7 +370,7 @@
                 if (targetVisible != _showMonitor)
                 {
                     _showMonitor = targetVisible;
-                    StateHasChanged();
+                    needsRender = true;
                 }
             }
             catch (JSException) { }
@@ -388,13 +390,16 @@
                         _activeTabMessages     = ChatService.GetTabMessages(savedKey);
                         ChatService.ActiveTabKey = savedKey;
                         ChatService.ClearUnread(savedKey);
-                        StateHasChanged();
+                        needsRender = true;
                     }
                 }
             }
             catch (JSException) { }
 
             if (await LoadQrzDataAsync())
+                needsRender = true;
+
+            if (needsRender)
                 StateHasChanged();
         }
 

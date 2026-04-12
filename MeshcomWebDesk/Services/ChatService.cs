@@ -311,7 +311,14 @@ public class ChatService
 
             _tabs.Clear();
             foreach (var tab in snapshot.Tabs)
-                _tabs[tab.Key] = tab;
+            {
+                bool isGroup = tab.Key.StartsWith('#');
+                bool tabAllowed = !isGroup
+                    || !_settings.GroupFilterEnabled
+                    || _settings.Groups.Contains(tab.Key, StringComparer.OrdinalIgnoreCase);
+                if (tabAllowed)
+                    _tabs[tab.Key] = tab;
+            }
 
             _mhList.Clear();
             foreach (var station in snapshot.MhList)
