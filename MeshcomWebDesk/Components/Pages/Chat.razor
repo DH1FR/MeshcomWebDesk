@@ -328,7 +328,7 @@
     private bool _disposed;
     private ConnectionStatus _status = new();
     private MeshcomSettings _settings = new();
-    private bool _showMonitor = true;
+    private bool _showMonitor = false;
     private bool _scrollMessages;
     private bool _soundEnabled = true;
     private bool _playSound;
@@ -360,13 +360,14 @@
             try { await JS.InvokeVoidAsync("meshcomChat.initResizer"); }
             catch (JSException) { }
 
-            // Restore monitor visibility (collapsed/expanded) from previous session
+            // Restore monitor visibility: null = never saved → default visible
             try
             {
                 var monVis = await JS.InvokeAsync<bool?>("meshcomChat.getMonitorVisible");
-                if (monVis.HasValue && monVis.Value != _showMonitor)
+                var targetVisible = monVis ?? true;   // first visit: show monitor
+                if (targetVisible != _showMonitor)
                 {
-                    _showMonitor = monVis.Value;
+                    _showMonitor = targetVisible;
                     StateHasChanged();
                 }
             }
