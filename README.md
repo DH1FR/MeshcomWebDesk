@@ -154,6 +154,26 @@ and makes a full web client for MeshCom available via a simple URL
   Example: `MeshCom WebDesk V{version}` → `MeshCom WebDesk V1.4.1`
 - **Test button** in Settings – send the auto-reply text immediately to any callsign without waiting for an incoming message
 
+### 🤖 Bot – Remote commands via direct message
+- **Command-based auto-responses** for incoming direct messages
+- Trigger: any direct message starting with `--` (two hyphens) or `—` (em dash, as typed by many MeshCom clients and mobile keyboards)
+- **Built-in commands:**
+
+  | Command | Response |
+  |---------|----------|
+  | `--help` | List of all registered commands |
+  | `--version` | `MeshcomWebDesk vX.Y.Z` |
+  | `--time` | Current date and time |
+  | `--mh` | Count and callsigns of recently heard stations |
+
+- **User-defined commands** fully configurable in **Settings → 🤖 Bot** – no code changes required:
+  - `Name` – command name without `--` (e.g. `info`)
+  - `Response` – reply text; supports all `{variable}` placeholders (`{mycall}`, `{callsign}`, `{version}`, `{rssi}`, `{snr}`, `{hw}`, `{route}`, `{hops}`, `{date}`, `{time}`, …)
+  - `Description` – optional short text shown in `--help` output
+- **Developer extension**: implement `IBotCommand` and register via `services.AddSingleton<IBotCommand, MyCommand>()` in `Program.cs`
+- **Auto-split**: replies longer than 149 characters are automatically split into consecutive packets (2 s pause between parts) – same strategy as multi-bucket telemetry
+- Enabled / disabled via `BotEnabled` – applies **live without restart**
+
 ### 📊 Telemetry (Telemetrie-Sender)
 - **Periodic telemetry messages**
 - **Source-agnostic**: any system can write the JSON file – Home Assistant, Node-RED, MQTT bridge, shell script, etc.
@@ -185,6 +205,7 @@ and makes a full web client for MeshCom available via a simple URL
 - **Character counter** `X/149` next to the input field: grey → yellow (≥ 130) → red bold (≥ 145)
 - `maxlength="149"` prevents over-long input in the browser
 - **Server-side guard** in `SendMessageAsync`: logs a warning and aborts send if text exceeds 149 characters
+- **Bot replies and beacon texts** that exceed 149 characters are automatically **split** into multiple packets (2 s pause between parts) rather than being dropped
 
 ### 🗺️ Live Map
 - Interactive map at `/map` powered by **Leaflet.js + OpenStreetMap**
@@ -294,13 +315,20 @@ MeshcomWebDesk/              ← Blazor Server (ASP.NET Core host)
 ├─ docker-compose.https.yml   ← HTTPS overlay: adds port 5163 + cert volume (requires cert)
 │
 └─ Services/
-      MeshcomUdpService.cs     ← BackgroundService: UDP RX/TX, JSON parsing, ACK matching, beacon timer
-      ChatService.cs           ← Singleton: routing, tabs, MH list, monitor, deduplication, webhook trigger
+      MeshcomUdpService.cs     ← BackgroundService: UDP RX/TX, JSON parsing, ACK matching, beacon timer, bot reply sender
+      ChatService.cs           ← Singleton: routing, tabs, MH list, monitor, deduplication, webhook trigger, OnBotCommand event
       DataPersistenceService.cs← BackgroundService: load/save state to JSON on disk
       SettingsService.cs       ← Writes appsettings.override.json in DataPath (Docker-safe); changes applied live via IOptionsMonitor
       LanguageService.cs       ← Singleton: UI language switching (de/en); T(de,en) helper; OnChange event for instant re-render
       WebhookService.cs        ← HTTP POST fire-and-forget on message / position / telemetry events
       QrzService.cs             ← QRZ.com XML API: session login, callsign lookup, in-memory cache
+      Bot/
+        IBotCommand.cs         ← Interface for all bot commands (Name, Description, ExecuteAsync)
+        BotCommandService.cs   ← Dispatcher: parses --name [args], builds --help, hot-reloads user commands from config
+        VersionCommand.cs      ← --version: returns app version
+        TimeCommand.cs         ← --time: returns current date/time
+        MhCommand.cs           ← --mh: returns MH list count + callsigns
+        ConfiguredBotCommand.cs← Wrapper for BotCommands entries from appsettings.json
       Database/
         IMonitorDataSink.cs    ← Interface: WriteAsync(MeshcomMessage)
         MySqlMonitorSink.cs    ← MySQL / MariaDB write sink (MySqlConnector)
@@ -331,6 +359,10 @@ All settings in `MeshcomWebDesk/appsettings.json`:
   "DataPath":           "C:\\Temp\\MeshcomData", // persistent state directory
   "AutoReplyEnabled":   false,           // send auto-reply on first contact
   "AutoReplyText":      "...",           // auto-reply text; {version} → app version
+  "BotEnabled":         false,           // enable remote command bot (-- prefix)
+  "BotCommands": [                       // user-defined bot commands (built-in: --help/--version/--time/--mh)
+    { "Name": "info", "Response": "QTH: Wien, HW: {hw}, 73 de {mycall}!", "Description": "Stationsinfo" }
+  ],
   "BeaconEnabled":      false,           // send periodic beacon (Bake)
   "BeaconGroup":        "#262",          // target group for beacon
   "BeaconText":         "...",           // beacon text; {version} → app version
