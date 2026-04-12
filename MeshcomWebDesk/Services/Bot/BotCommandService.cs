@@ -1,6 +1,7 @@
 using System.Text;
 using Microsoft.Extensions.Options;
 using MeshcomWebDesk.Models;
+using MeshcomWebDesk.Services;
 
 namespace MeshcomWebDesk.Services.Bot;
 
@@ -14,11 +15,13 @@ namespace MeshcomWebDesk.Services.Bot;
 public class BotCommandService
 {
     private readonly IReadOnlyList<IBotCommand> _builtinCommands;
+    private readonly LanguageService _lang;
     private MeshcomSettings _settings;
 
-    public BotCommandService(IEnumerable<IBotCommand> builtinCommands, IOptionsMonitor<MeshcomSettings> settings)
+    public BotCommandService(IEnumerable<IBotCommand> builtinCommands, IOptionsMonitor<MeshcomSettings> settings, LanguageService lang)
     {
         _builtinCommands = builtinCommands.ToList();
+        _lang            = lang;
         _settings        = settings.CurrentValue;
         settings.OnChange(s => _settings = s);
     }
@@ -68,13 +71,13 @@ public class BotCommandService
             c => string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase));
 
         return cmd is null
-            ? $"Unbekannter Befehl: --{name}. Mit --help erhältst Du alle Befehle."
+            ? $"{_lang.T("Unbekannter Befehl", "Unknown command", "Comando sconosciuto", "Comando desconocido")}: --{name}. {_lang.T("Mit --help erhältst Du alle Befehle.", "Use --help to see all commands.", "Usa --help per vedere tutti i comandi.", "Usa --help para ver todos los comandos.")}"
             : await cmd.ExecuteAsync(args, senderCallsign);
     }
 
     private string BuildHelp()
     {
-        var sb = new StringBuilder("Befehle: --help");
+        var sb = new StringBuilder($"{_lang.T("Befehle", "Commands", "Comandi", "Comandos")}: --help");
         foreach (var cmd in AllCommands)
             sb.Append($", --{cmd.Name}");
         return sb.ToString();
