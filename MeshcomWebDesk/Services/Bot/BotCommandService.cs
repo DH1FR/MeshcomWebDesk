@@ -23,9 +23,14 @@ public class BotCommandService
         settings.OnChange(s => _settings = s);
     }
 
-    /// <summary>Returns true when <paramref name="text"/> is a bot command (starts with --).</summary>
+    /// <summary>
+    /// Returns true when <paramref name="text"/> is a bot command.
+    /// Accepts both <c>--</c> (two hyphens) and <c>\u2014</c> (em dash, typed automatically
+    /// by some MeshCom clients / mobile keyboards instead of --).
+    /// </summary>
     public static bool IsCommand(string? text) =>
-        text != null && text.StartsWith("--", StringComparison.Ordinal);
+        text != null &&
+        (text.StartsWith("--", StringComparison.Ordinal) || text.StartsWith('\u2014'));
 
     /// <summary>
     /// All currently active commands: built-in (DI-registered) plus user-defined (from config).
@@ -43,8 +48,15 @@ public class BotCommandService
     /// </summary>
     public async Task<string> ExecuteAsync(string text, string senderCallsign)
     {
-        // Strip the leading "--" and split into name + optional arguments
-        var body  = text.Length > 2 ? text[2..] : string.Empty;
+        // Strip the leading "--" or "—" (em dash U+2014, sent by some MeshCom clients / mobile keyboards)
+        string body;
+        if (text.StartsWith("--", StringComparison.Ordinal))
+            body = text.Length > 2 ? text[2..] : string.Empty;
+        else if (text.Length > 0 && text[0] == '\u2014')
+            body = text.Length > 1 ? text[1..] : string.Empty;
+        else
+            body = text;
+
         var parts = body.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var name  = parts.Length > 0 ? parts[0].ToLowerInvariant() : string.Empty;
         var args  = parts.Length > 1 ? parts[1..] : [];

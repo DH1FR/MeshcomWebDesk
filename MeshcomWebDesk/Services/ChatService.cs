@@ -166,10 +166,10 @@ public class ChatService
         NotifyChange();
         _ = _webhook.SendAsync(message, "message");
 
-        // Fire bot command event for direct messages to us starting with "--"
+        // Fire bot command event for direct messages to us starting with "--" or em dash
         if (!message.IsBroadcast &&
             string.Equals(message.To, _settings.MyCallsign, StringComparison.OrdinalIgnoreCase) &&
-            (message.Text?.StartsWith("--", StringComparison.Ordinal) ?? false))
+            MeshcomWebDesk.Services.Bot.BotCommandService.IsCommand(message.Text))
             OnBotCommand?.Invoke(message);
     }
 
