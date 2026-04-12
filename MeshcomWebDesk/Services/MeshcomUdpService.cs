@@ -155,14 +155,12 @@ public partial class MeshcomUdpService : BackgroundService
                         }
                         else if (message.IsAck)
                         {
-                            // APRS ACK – monitor only, no chat tab; mark matching message as delivered
+                            // APRS ACK – mark as delivered, update relay path in MH list, add to monitor
                             Status.RxCount++;
                             Status.LastRxTime = message.Timestamp;
                             Status.LastRxFrom = message.From;
                             NotifyStatusChange();
-                            if (message.SequenceNumber != null)
-                                _chatService.MarkMessageAcknowledged(message.SequenceNumber);
-                            _chatService.AddRawMessage(message);
+                            _chatService.AddAck(message);
                         }
                         else if (message.IsPositionBeacon)
                         {

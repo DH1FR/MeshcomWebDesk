@@ -239,6 +239,23 @@ public class ChatService
         NotifyChange();
     }
 
+    /// <summary>
+    /// Processes an incoming APRS ACK: marks the matched outgoing message as delivered,
+    /// updates the relay path and signal data for the sending station in the MH list
+    /// (so the connection appears on the map), and appends the ACK to the monitor feed.
+    /// </summary>
+    public void AddAck(MeshcomMessage message)
+    {
+        if (message.SequenceNumber != null)
+            MarkMessageAcknowledged(message.SequenceNumber);
+
+        // Update relay path / RSSI for this station so the map shows the connection
+        UpdateMhList(message);
+
+        lock (_lock) { AppendToMonitor(message); }
+        NotifyChange();
+    }
+
     /// <summary>Remove all entries from the MH list.</summary>
     public void ClearMhList()
     {
@@ -392,9 +409,9 @@ public class ChatService
                 Callsign         = message.From,
                 FirstHeard       = message.Timestamp,
                 LastHeard        = message.Timestamp,
-                MessageCount     = (message.IsPositionBeacon || message.IsTelemetry) ? 0 : 1,
-                LastDestination  = message.To,
-                LastMessage      = message.Text,
+                MessageCount     = (message.IsPositionBeacon || message.IsTelemetry || message.IsAck) ? 0 : 1,
+                LastDestination  = message.IsAck ? string.Empty : message.To,
+                LastMessage      = message.IsAck ? string.Empty : message.Text,
                 LastRssi         = message.Rssi,
                 LastSnr          = message.Snr,
                 Latitude         = message.Latitude,
@@ -415,7 +432,7 @@ public class ChatService
             (_, s) =>
             {
                 s.LastHeard = message.Timestamp;
-                if (!message.IsPositionBeacon && !message.IsTelemetry)
+                if (!message.IsPositionBeacon && !message.IsTelemetry && !message.IsAck)
                 {
                     s.MessageCount++;
                     s.LastDestination = message.To;
