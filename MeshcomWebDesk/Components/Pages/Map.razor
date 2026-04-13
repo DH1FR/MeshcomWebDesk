@@ -28,6 +28,11 @@
                 title="@Loc.T("50 km Radius um eigene Position", "50 km radius around own position", "50 km raggio intorno alla propria posizione", "Radio de 50 km alrededor de la propia posición")">
             📍 50 km
         </button>
+        <button class="map-ctrl-btn" @onclick="FitOwn25Async"
+                disabled="@(!UdpService.Status.OwnLatitude.HasValue)"
+                title="@Loc.T("25 km Radius um eigene Position", "25 km radius around own position", "25 km raggio intorno alla propria posizione", "Radio de 25 km alrededor de la propia posición")">
+            📍 25 km
+        </button>
         <button class="map-ctrl-btn @(_showRelayLines ? "map-ctrl-active" : "")"
                 @onclick="ToggleRelayLines"
                 title="@Loc.T("Weiterleitungspfade ein/ausblenden", "Toggle relay paths", "Mostra/nascondi percorsi relay", "Mostrar/ocultar rutas de relé")">
@@ -370,6 +375,18 @@
             if (status.OwnLatitude.HasValue && status.OwnLongitude.HasValue)
                 await JS.InvokeVoidAsync("meshcomMap.fitOwn",
                     status.OwnLatitude.Value, status.OwnLongitude.Value, 50);
+        }
+        catch (Exception) { }
+    }
+
+    private async Task FitOwn25Async()
+    {
+        try
+        {
+            var status = UdpService.Status;
+            if (status.OwnLatitude.HasValue && status.OwnLongitude.HasValue)
+                await JS.InvokeVoidAsync("meshcomMap.fitOwn",
+                    status.OwnLatitude.Value, status.OwnLongitude.Value, 25);
         }
         catch (Exception) { }
     }
