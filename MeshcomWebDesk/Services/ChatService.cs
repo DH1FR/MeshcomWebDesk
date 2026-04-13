@@ -249,15 +249,36 @@ public class ChatService
     /// <summary>
     /// Marks the outgoing message with the given sequence number as acknowledged
     /// after an APRS ACK packet has been received.
+    /// <para>
+    /// If no message with that exact sequence number is found (because the node never
+    /// echoed back a <c>{NNN}</c> marker), falls back to matching the last unacknowledged
+    /// outgoing message addressed to <paramref name="ackSender"/>.
+    /// </para>
     /// </summary>
-    public void MarkMessageAcknowledged(string sequenceNumber)
+    public void MarkMessageAcknowledged(string sequenceNumber, string? ackSender = null)
     {
         lock (_lock)
         {
+            // Primary match: exact sequence number
             var msg = _allMessages.LastOrDefault(m =>
                 m.IsOutgoing && m.SequenceNumber == sequenceNumber);
+
+            // Fallback: match last unacknowledged outgoing message to the ACK sender.
+            // This covers the case where the node never sent a {NNN} echo so the
+            // outgoing message still has SequenceNumber = "TX".
+            if (msg == null && ackSender != null)
+            {
+                msg = _allMessages.LastOrDefault(m =>
+                    m.IsOutgoing &&
+                    !m.IsAcknowledged &&
+                    string.Equals(m.To, ackSender, StringComparison.OrdinalIgnoreCase));
+            }
+
             if (msg != null)
+            {
+                msg.SequenceNumber = sequenceNumber;   // assign real seq# if available
                 msg.IsAcknowledged = true;
+            }
         }
         NotifyChange();
     }
@@ -270,7 +291,7 @@ public class ChatService
     public void AddAck(MeshcomMessage message)
     {
         if (message.SequenceNumber != null)
-            MarkMessageAcknowledged(message.SequenceNumber);
+            MarkMessageAcknowledged(message.SequenceNumber, message.From);
 
         // Update relay path / RSSI for this station so the map shows the connection
         UpdateMhList(message);

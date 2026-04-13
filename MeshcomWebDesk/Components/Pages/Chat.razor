@@ -723,9 +723,15 @@
 
     private static string AckTooltip(MeshcomMessage m)
     {
-        if (m.IsAcknowledged)              return "Zugestellt";
-        if (m.SequenceNumber == "TX")      return "Gesendet (kein ACK für Gruppe/Broadcast)";
-        if (m.SequenceNumber != null)      return $"Gesendet (Seq #{m.SequenceNumber})";
+        if (m.IsAcknowledged) return "Zugestellt";
+        if (m.SequenceNumber != null)
+        {
+            if (m.To == "*" || m.To.StartsWith('#'))
+                return "Gesendet (kein ACK für Gruppe/Broadcast)";
+            if (m.SequenceNumber != "TX")
+                return $"Gesendet (Seq #{m.SequenceNumber}) · warte auf ACK…";
+            return "Gesendet · warte auf Bestätigung (ACK)…";
+        }
         return "Warte auf Node-Echo…";
     }
 
