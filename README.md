@@ -988,7 +988,30 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
 ## 📋 Changelog
 
-### v1.6.19
+### v1.7.0
+- **feat:** 🤖 **Bot command system** – incoming direct messages starting with `--` (or `—` em dash) are interpreted as bot commands; built-in: `--help`, `--version`, `--time`, `--mh`; fully configurable user-defined commands with `{variable}` placeholder support in **Settings → 🤖 Bot**; `IBotCommand` interface for developer extensions
+- **feat:** ↩️ **Auto-Reply – `{route}` and `{hops}` template variables** – relay path and hop count from the sender's last message are now available in `AutoReplyText`
+- **feat:** ⚙️ **Auto-Reply – collapsible variable reference table** in Settings; all supported `{variable}` placeholders with live example values shown inline
+- **fix:** ↩️ **Auto-Reply ordering** – auto-reply is now sent _after_ the incoming message is stored in the tab so the reply always appears below the trigger message in the conversation
+- **fix:** ↩️ **Auto-Reply first-contact data** – `UpdateMhList` is called before `GetOrCreateTab` so RSSI, relay path and hardware data from the first message are immediately available to `ExpandVariables`
+- **fix:** 🤖 **Bot – em dash support** – MeshCom clients and mobile keyboards often convert `--` to `—` (U+2014); both variants now accepted as command prefix
+- **fix:** 🤖 **Bot – silent exception handling** – `HandleBotCommandAsync` wrapped in `try/catch` so errors are always logged and never swallowed silently
+- **fix:** 🤖 **Bot / 📡 Beacon – auto-split** – replies and beacon texts longer than 149 characters are automatically split into multiple packets (2 s pause between parts); previously they were silently dropped
+- **fix:** 💾 **Settings – `TimeOffsetHours` persistence** – this field was missing from `SettingsService.SaveMeshcomSettingsAsync` and was reset to 0 on every UI save
+- **fix:** ⚙️ **Settings – `WeatherRole` persistence** – `WeatherRole` was not written to the override file when saving telemetry mapping via the UI
+- **fix:** 🗺️ **Map – direct-link lines** – corrected detection logic so direct (0-hop) connections are drawn reliably; broadcast replies and ACKs also count as confirmed direct links
+- **perf:** 💬 **Chat – `SendBar` extracted** – input bar moved to its own component (`SendBar.razor`) to isolate re-renders and prevent the entire chat from re-rendering on every keystroke
+
+### v1.6.20
+- **feat:** 🗺️ **Map – relay path lines** – lines between relaying stations drawn from incoming relay paths and ACK return paths; colour-coded by hop count
+- **feat:** 🗺️ **Map – own station popup** – own position marker now shows callsign, own GPS source, and own telemetry values (temperature, humidity, pressure) when available
+- **feat:** 🗺️ **Map – thermometer icon** on own station marker when telemetry has been sent recently
+- **feat:** 📊 **Explicit `WeatherRole` per telemetry mapping entry** – each entry can declare `"temp"`, `"humidity"` or `"pressure"` role explicitly; unit-based auto-detection is the fallback for older configs
+- **fix:** 💬 **Chat – monitor visibility persisted across navigation** – monitor collapsed/expanded state is now preserved when navigating away and back
+- **fix:** 💬 **Chat – splitscreen jump on navigation return** eliminated
+- **fix:** 💬 **Chat – batch `OnAfterRenderAsync` re-renders**; snapshot tabs filtered by group whitelist on load
+- **fix:** ⚙️ **Settings – privacy warning labels** cleaned up; DB-insert notice kept only in the database section
+- **perf:** 📻 **MH – QRZ data loaded from cache synchronously on first render** – no more delayed flicker when returning to the MH page
 - **feat:** 🔗 **Clickable URLs in chat & monitor** – `http://` and `https://` URLs in incoming messages are automatically rendered as clickable links; clicking shows a confirmation dialog before opening the external page in a new tab (works correctly in Blazor Server via capture-phase JS handler)
 - **fix:** 🗺️ **Map – Leaflet self-hosted** – Leaflet 1.9.4 is now served from `wwwroot/lib/leaflet/` instead of the `unpkg.com` CDN; eliminates map init errors when the server has no internet access or the CDN is slow to respond (e.g. Docker / LAN-only setups)
 - **fix:** 🐳 **Docker – browser auto-open warning suppressed** – `ENV DOTNET_RUNNING_IN_CONTAINER=true` added to `Dockerfile`; `[WRN] Could not open browser` no longer appears in Docker logs
