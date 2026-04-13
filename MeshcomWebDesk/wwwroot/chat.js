@@ -67,7 +67,9 @@ window.meshcomChat = (function () {
             return v === null ? null : v === '1';
         },
         setMonitorVisible: (visible) =>
-            localStorage.setItem('meshcom-monitor-visible', visible ? '1' : '0')
+            localStorage.setItem('meshcom-monitor-visible', visible ? '1' : '0'),
+        getSettingsSections: () => localStorage.getItem('meshcom-settings-sections'),
+        setSettingsSections: (csv) => localStorage.setItem('meshcom-settings-sections', csv ?? '')
     };
 }());
 

@@ -585,15 +585,24 @@ public class ChatService
         if (string.IsNullOrEmpty(message.From)) return;
         var list = _settings.WatchCallsigns;
         if (list.Count == 0) return;
-        if (message.IsAck            && !_settings.WatchOnAck)      return;
-        if (message.IsPositionBeacon && !_settings.WatchOnPosition)  return;
-        if (message.IsTelemetry      && !_settings.WatchOnTelemetry) return;
-        if (!message.IsAck && !message.IsPositionBeacon && !message.IsTelemetry && !_settings.WatchOnMessage) return;
+
+        var typeLabel = message.IsAck ? "ACK" : message.IsPositionBeacon ? "POS" : message.IsTelemetry ? "TEL" : "MSG";
+        _logger.LogDebug("Watchlist check: From={From} Type={Type} List=[{List}]",
+            message.From, typeLabel, string.Join(",", list));
+
+        if (message.IsAck            && !_settings.WatchOnAck)      { _logger.LogDebug("Watchlist: ACK filtered out"); return; }
+        if (message.IsPositionBeacon && !_settings.WatchOnPosition)  { _logger.LogDebug("Watchlist: POS filtered out"); return; }
+        if (message.IsTelemetry      && !_settings.WatchOnTelemetry) { _logger.LogDebug("Watchlist: TEL filtered out"); return; }
+        if (!message.IsAck && !message.IsPositionBeacon && !message.IsTelemetry && !_settings.WatchOnMessage) { _logger.LogDebug("Watchlist: MSG filtered out"); return; }
+
         foreach (var entry in list)
         {
             if (string.IsNullOrWhiteSpace(entry)) continue;
-            if (MatchesWatchEntry(message.From, entry.Trim()))
+            var matched = MatchesWatchEntry(message.From, entry.Trim());
+            _logger.LogDebug("Watchlist: '{From}' vs '{Entry}' → {Match}", message.From, entry.Trim(), matched);
+            if (matched)
             {
+                _logger.LogInformation("Watchlist HIT: {From} ({Type})", message.From, typeLabel);
                 OnWatchlistHit?.Invoke(message.From, message);
                 return;
             }

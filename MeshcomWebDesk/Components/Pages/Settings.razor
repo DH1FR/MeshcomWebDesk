@@ -8,6 +8,7 @@
 @inject LanguageService Loc
 @inject DatabaseSetupService DatabaseSetupService
 @inject QrzService QrzService
+@inject IJSRuntime JS
 @implements IDisposable
 
 <PageTitle>@Loc.T("Einstellungen", "Settings", "Impostazioni", "Configuración") – MeshCom WebDesk</PageTitle>
@@ -810,9 +811,31 @@
     private bool    _qrzTesting;
     private string? _qrzTestResult;
 
-    private readonly HashSet<string> _openSections = [];
+    private HashSet<string> _openSections = [];
     private bool IsOpen(string id) => _openSections.Contains(id);
-    private void Toggle(string id) { if (!_openSections.Remove(id)) _openSections.Add(id); }
+    private void Toggle(string id)
+    {
+        if (!_openSections.Remove(id)) _openSections.Add(id);
+        _ = JS.InvokeVoidAsync("meshcomChat.setSettingsSections",
+                string.Join(",", _openSections)).AsTask();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            var saved = await JS.InvokeAsync<string?>("meshcomChat.getSettingsSections");
+            if (saved is not null)
+            {
+                _openSections = saved.Length > 0
+                    ? new HashSet<string>(saved.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                    : [];
+                StateHasChanged();
+            }
+        }
+        catch (JSException) { }
+    }
 
     private async Task SendTelemetryNowAsync()
     {
