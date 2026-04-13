@@ -69,6 +69,12 @@ public class MeshcomSettings
     public bool WatchOnAck { get; set; } = false;
 
     /// <summary>
+    /// How long (in minutes) the watchlist toast stays visible before auto-dismissing.
+    /// Minimum 1, default 5.
+    /// </summary>
+    public int WatchAlertMinutes { get; set; } = 5;
+
+    /// <summary>
     /// Directory path for persistent state storage (chat tabs, MH list, monitor feed).
     /// Data is loaded on startup and saved every 5 minutes and on graceful shutdown.
     /// </summary>

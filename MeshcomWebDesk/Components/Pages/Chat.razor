@@ -657,11 +657,12 @@
                     _playWatchlistSound = true;
                 StateHasChanged();
             });
-            await Task.Delay(TimeSpan.FromSeconds(302));
+            await Task.Delay(TimeSpan.FromSeconds(Math.Max(1, SettingsOptions.Value.WatchAlertMinutes) * 60 + 2));
             if (!_disposed)
                 await InvokeAsync(() =>
                 {
-                    _watchlistAlerts.RemoveAll(a => (DateTime.Now - a.Time).TotalMinutes > 5);
+                    var limit = Math.Max(1, SettingsOptions.Value.WatchAlertMinutes);
+                    _watchlistAlerts.RemoveAll(a => (DateTime.Now - a.Time).TotalMinutes > limit);
                     StateHasChanged();
                 });
         }

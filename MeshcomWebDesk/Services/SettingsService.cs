@@ -48,6 +48,7 @@ public class SettingsService
                 ["WatchOnPosition"]     = s.WatchOnPosition,
                 ["WatchOnTelemetry"]    = s.WatchOnTelemetry,
                 ["WatchOnAck"]          = s.WatchOnAck,
+                ["WatchAlertMinutes"]   = s.WatchAlertMinutes,
                 ["DataPath"]            = s.DataPath,
                 ["TimeOffsetHours"]     = s.TimeOffsetHours,
                 ["AutoReplyEnabled"]    = s.AutoReplyEnabled,

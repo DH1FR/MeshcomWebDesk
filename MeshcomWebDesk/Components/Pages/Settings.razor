@@ -530,6 +530,11 @@
                         @Loc.T("Bestätigungen (ACK)", "Acknowledgements (ACK)", "Conferme (ACK)", "Confirmaciones (ACK)")
                     </label>
                 </div>
+
+                <label>
+                    @Loc.T("Anzeigedauer (Minuten)", "Display duration (minutes)", "Durata visualizzazione (minuti)", "Duración de visualización (minutos)")
+                </label>
+                <input type="number" min="1" max="60" @bind="_model.WatchAlertMinutes" />
             </div>
         </div>
 
@@ -1111,6 +1116,7 @@
             WatchOnPosition     = s.WatchOnPosition,
             WatchOnTelemetry    = s.WatchOnTelemetry,
             WatchOnAck          = s.WatchOnAck,
+            WatchAlertMinutes   = s.WatchAlertMinutes,
             DataPath            = s.DataPath,
             TimeOffsetHours     = s.TimeOffsetHours,
             AutoReplyEnabled    = s.AutoReplyEnabled,
@@ -1196,6 +1202,7 @@
         public bool   WatchOnPosition     { get; set; } = true;
         public bool   WatchOnTelemetry    { get; set; } = false;
         public bool   WatchOnAck          { get; set; } = false;
+        public int    WatchAlertMinutes    { get; set; } = 5;
         public string DataPath            { get; set; } = string.Empty;
         public double TimeOffsetHours     { get; set; } = 0;
         public bool   AutoReplyEnabled    { get; set; }
@@ -1273,6 +1280,7 @@
             WatchOnPosition     = WatchOnPosition,
             WatchOnTelemetry    = WatchOnTelemetry,
             WatchOnAck          = WatchOnAck,
+            WatchAlertMinutes   = Math.Max(1, WatchAlertMinutes),
             DataPath            = DataPath,
             TimeOffsetHours     = TimeOffsetHours,
             AutoReplyEnabled    = AutoReplyEnabled,
