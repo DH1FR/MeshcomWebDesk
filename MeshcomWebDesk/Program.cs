@@ -10,11 +10,12 @@ using Microsoft.Extensions.Options;
 using Serilog;
 using System.Diagnostics;
 
-var builder = WebApplication.CreateBuilder(args);
-
 // When running as a Windows Service the working directory defaults to System32.
-// Set it to the executable's directory so relative paths (logs/, data/) resolve correctly.
+// Must be set BEFORE CreateBuilder so the content root (appsettings.json, wwwroot, …)
+// resolves to the executable's directory instead of System32.
 Environment.CurrentDirectory = AppContext.BaseDirectory;
+
+var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseWindowsService(options => options.ServiceName = "MeshcomWebDesk");
 
 // ── Banner ────────────────────────────────────────────────────────────────────
