@@ -50,8 +50,17 @@ Name: "desktopicon";  Description: "Desktop-Verknüpfung erstellen";            
 Name: "autostart";    Description: "Browser beim Windows-Start automatisch öffnen"; GroupDescription: "Autostart:"; Flags: unchecked
 
 [Files]
-Source: "publish\win-x64\{#AppExeName}";   DestDir: "{app}"; Flags: ignoreversion
-Source: "publish\win-x64\appsettings.json"; DestDir: "{app}"; Flags: ignoreversion onlyifdoesntexist
+; All root-level publish files (exe, static-assets manifest, native DLLs, web.config, …)
+; appsettings.json and .pdb are handled separately or excluded.
+Source: "publish\win-x64\*"; \
+  DestDir: "{app}"; Flags: ignoreversion; \
+  Excludes: "appsettings.json,appsettings.Development.json,*.pdb"
+; Static web assets – Bootstrap, Leaflet, Blazor framework JS, icons, CSS, …
+Source: "publish\win-x64\wwwroot\*"; \
+  DestDir: "{app}\wwwroot"; Flags: ignoreversion recursesubdirs createallsubdirs
+; appsettings.json: only install if not already present (preserve user config on upgrade)
+Source: "publish\win-x64\appsettings.json"; \
+  DestDir: "{app}"; Flags: ignoreversion onlyifdoesntexist
 
 [Dirs]
 ; Ensure the service (LocalSystem) can write logs, data and keys
