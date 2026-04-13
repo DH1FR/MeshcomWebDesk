@@ -1005,16 +1005,13 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
 ## 📋 Changelog
 
-### v1.8.1
+### v1.7.1
 - **feat:** 🔐 **Encrypted sensitive settings** – `MySqlConnectionString`, `InfluxToken`, `Qrz.Password` and `TelemetryApiKey` are now encrypted in `appsettings.override.json` using the ASP.NET Core Data Protection API (`dp:` prefix); `IPostConfigureOptions<MeshcomSettings>` decrypts them transparently on load; plain-text values in existing files pass through unchanged (backward compatible); keys stored in `DataPath/keys`
-- **feat:** ⚙️ **Settings – collapsible section state persisted** – expanded/collapsed state of all 13 sections is saved to `localStorage` (`meshcom-settings-sections`) and restored on every visit; was previously reset on every page navigation
-- **feat:** 📻 **Watchlist – configurable toast duration** – new `WatchAlertMinutes` setting (default 5, min 1) controls how long the watchlist toast stays visible before auto-dismissing; configurable in **Settings → 📻 Watchlist**
-
-### v1.8.0
-- **feat:** 📻 **Watchlist – callsign alert system** – configurable list of callsigns to watch; matching supports base-callsign wildcards (`DH1FR` matches all SSIDs) or exact SSID matching (`DH1FR-1`); triggers an ascending three-tone alert beep (distinct from the message beep) and a self-dismissing toast notification in the UI; per-type filters for MSG / POS / TEL / ACK; telemetry alerts off by default to avoid noise from periodic packets; respects the global mute toggle
-- **feat:** ⚙️ **Settings – collapsible sections** – all 13 settings sections are now individually collapsible; all start collapsed for a compact initial view; state persists during the session
-- **feat:** 🔗 **Webhook – telemetry fields in payload** – `temp1`, `temp2`, `humidity`, `pressure` are now included in the webhook JSON for `eventType="telemetry"`; `null` fields remain omitted via `WhenWritingNull`
-- **fix:** ⚙️ **Settings – Watchlist persistence** – `WatchCallsigns`, `WatchOnMessage`, `WatchOnPosition`, `WatchOnTelemetry` and `WatchOnAck` were not written to `appsettings.override.json`; fixed in `SettingsService.SaveMeshcomSettingsAsync`
+- **feat:** 📻 **Watchlist – callsign alert system** – configurable list of callsigns to watch; matching supports base-callsign wildcards (`DH1FR` matches all SSIDs) or exact SSID matching (`DH1FR-1`); triggers an ascending three-tone alert beep and a self-dismissing toast notification; per-type filters (MSG / POS / TEL / ACK); telemetry alerts off by default; respects the global mute toggle
+- **feat:** 📻 **Watchlist – configurable toast duration** – new `WatchAlertMinutes` setting (default 5, min 1) configurable in **Settings → 📻 Watchlist**
+- **feat:** ⚙️ **Settings – collapsible sections** – all 13 sections individually collapsible; all start collapsed by default; expanded/collapsed state saved to `localStorage` and restored on every visit
+- **feat:** 🔗 **Webhook – telemetry fields in payload** – `temp1`, `temp2`, `humidity`, `pressure` added to `eventType="telemetry"` payload
+- **fix:** ⚙️ **Settings – Watchlist persistence** – `WatchCallsigns` and `WatchOn*` flags were missing from `SettingsService`
 
 ### v1.7.0
 - **feat:** 🤖 **Bot command system** – incoming direct messages starting with `--` (or `—` em dash) are interpreted as bot commands; built-in: `--help`, `--version`, `--time`, `--mh`; fully configurable user-defined commands with `{variable}` placeholder support in **Settings → 🤖 Bot**; `IBotCommand` interface for developer extensions
