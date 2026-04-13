@@ -33,6 +33,20 @@
                 title="@Loc.T("Weiterleitungspfade ein/ausblenden", "Toggle relay paths", "Mostra/nascondi percorsi relay", "Mostrar/ocultar rutas de relé")">
             🔗 @Loc.T("Pfade", "Paths", "Percorsi", "Rutas")
         </button>
+        <span class="map-ctrl-sep"></span>
+        <input class="map-search-input"
+               value="@_searchCallsign"
+               @oninput="OnSearchInput"
+               @onkeyup="OnSearchKeyUp"
+               placeholder="@Loc.T("Rufzeichen...", "Callsign...", "Nominativo...", "Indicativo...")" />
+        <button class="map-ctrl-btn" @onclick="SearchCallsignAsync"
+                title="@Loc.T("Rufzeichen suchen", "Search callsign", "Cerca nominativo", "Buscar indicativo")">
+            🔍
+        </button>
+        @if (_searchNotFound)
+        {
+            <span class="map-search-notfound">@Loc.T("Nicht gefunden", "Not found", "Non trovato", "No encontrado")</span>
+        }
     </div>
     <div class="map-wrapper">
         <div id="meshcom-map" class="map-container"></div>
@@ -123,6 +137,8 @@
     private bool _disposed;
     private bool _showRelayLines = true;
     private bool _showLegend    = true;
+    private string _searchCallsign = "";
+    private bool   _searchNotFound;
 
     protected override void OnInitialized()
     {
@@ -338,6 +354,29 @@
             if (status.OwnLatitude.HasValue && status.OwnLongitude.HasValue)
                 await JS.InvokeVoidAsync("meshcomMap.fitOwn",
                     status.OwnLatitude.Value, status.OwnLongitude.Value, 50);
+        }
+        catch (Exception) { }
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        _searchCallsign = e.Value?.ToString() ?? "";
+        _searchNotFound = false;
+    }
+
+    private async Task OnSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await SearchCallsignAsync();
+    }
+
+    private async Task SearchCallsignAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_searchCallsign)) return;
+        try
+        {
+            var found = await JS.InvokeAsync<bool>("meshcomMap.searchCallsign", _searchCallsign.Trim());
+            _searchNotFound = !found;
         }
         catch (Exception) { }
     }

@@ -1488,6 +1488,34 @@ h1:focus {
     border-color: #4a9aff;
 }
 
+.map-ctrl-sep {
+    width: 1px;
+    background: #1a4a8a;
+    margin: 2px 4px;
+    align-self: stretch;
+}
+
+.map-search-input {
+    background: #0a1628;
+    color: #a0c4ff;
+    border: 1px solid #1a4a8a;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 12px;
+    width: 130px;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.map-search-input::placeholder { color: #3a5a7a; }
+.map-search-input:focus { border-color: #4a9aff; }
+
+.map-search-notfound {
+    color: #ff6b6b;
+    font-size: 12px;
+    align-self: center;
+}
+
 .map-container {
     flex: 1;
     min-height: 0;

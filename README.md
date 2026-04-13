@@ -211,7 +211,8 @@ and makes a full web client for MeshCom available via a simple URL
 - Interactive map at `/map` powered by **Leaflet.js + OpenStreetMap**
 - **APRS-style markers**: filled circle colour-coded by RSSI (🟢 > −90 / 🟡 > −105 / 🔴 ≤ −105 dBm) + callsign label below
 - **Own position** shown as gold diamond ◆ (APRS convention)
-- **Popup** on click: callsign, **QRZ operator name / QTH** (when enabled), last message, RSSI, battery, altitude
+- **Popup** on click: callsign, **QRZ operator name / QTH** (when enabled), last message, RSSI, battery, altitude, and a direct **🔗 aprs.fi link** (opens station info page in new tab)
+- **Callsign search** 🔍 – search field in the control bar; press Enter or click the button to jump directly to the station and open its popup; shows „Not found" if no match
 - **First open**: map automatically zooms to a **50 km radius** around own position (once own GPS is known)
 - **View persistence**: last map position and zoom level are saved in `localStorage` and restored on every subsequent visit
 - **Compact info bar** at the bottom: `📡 N Station(en) · 📍 MyCallsign` – clean one-liner regardless of station count

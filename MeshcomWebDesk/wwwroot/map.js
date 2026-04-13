@@ -2,14 +2,15 @@
 // Called from Map.razor via JS interop
 
 window.meshcomMap = (function () {
-    var _map          = null;
-    var _stationLayer = null;
-    var _ownLayer     = null;
-    var _relayLayer   = null;
-    var _lastBounds   = null;
-    var _initialFitDone = false;
-    var _readyToSave    = false;
-    var STORAGE_KEY     = 'meshcom_map_view';
+    var _map             = null;
+    var _stationLayer    = null;
+    var _ownLayer        = null;
+    var _relayLayer      = null;
+    var _lastBounds      = null;
+    var _stationMarkers  = {};
+    var _initialFitDone  = false;
+    var _readyToSave     = false;
+    var STORAGE_KEY      = 'meshcom_map_view';
 
     function esc(s) {
         return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -80,6 +81,7 @@ window.meshcomMap = (function () {
             var startLon  = (saved && saved.lon  != null) ? saved.lon  : (ownLon  != null ? ownLon  : 14.0);
             var startZoom = (saved && saved.zoom != null) ? saved.zoom : 6;
 
+            _stationMarkers = {};
             _map = L.map(elementId).setView([startLat, startLon], startZoom);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>',
@@ -102,6 +104,7 @@ window.meshcomMap = (function () {
             _stationLayer.clearLayers();
             _ownLayer.clearLayers();
             _relayLayer.clearLayers();
+            _stationMarkers = {};
 
             var bounds = [];
 
@@ -178,15 +181,19 @@ window.meshcomMap = (function () {
                         telemLine += '<br><span style="font-size:10px;color:#6e7681">\u23f1\u202F' + formatTelemAge(s.telemMins) + '</span>';
                     }
                 }
+                var aprsLink = '<br><a href="https://aprs.fi/info/a/' + encodeURIComponent(s.callsign)
+                    + '" target="_blank" rel="noopener" style="font-size:11px;color:#58a6ff">🔗 aprs.fi</a>';
                 var popup = '<b>' + esc(s.callsign) + '</b>' + qrzLine + badgeLine + relayLine + telemLine
                     + (s.text     ? '<br><span style="font-size:12px">' + esc(s.text) + '</span>' : '')
                     + (s.rssi     != null ? '<br>RSSI: ' + s.rssi + ' dBm' : '')
                     + (s.battery  != null ? '&nbsp;\ud83d\udd0b ' + s.battery + '%' : '')
-                    + (s.alt      != null ? '<br>Alt: ' + s.alt + ' m' : '');
+                    + (s.alt      != null ? '<br>Alt: ' + s.alt + ' m' : '')
+                    + aprsLink;
 
-                L.marker([s.lat, s.lon], { icon: stationIcon(s.callsign, s.rssi, s.hopCount, s.temp != null || s.humidity != null || s.pressure != null) })
+                var _m = L.marker([s.lat, s.lon], { icon: stationIcon(s.callsign, s.rssi, s.hopCount, s.temp != null || s.humidity != null || s.pressure != null) })
                     .bindPopup(popup)
                     .addTo(_stationLayer);
+                _stationMarkers[s.callsign.toUpperCase()] = _m;
                 bounds.push([s.lat, s.lon]);
             });
 
@@ -218,10 +225,15 @@ window.meshcomMap = (function () {
                 if (info.deviceIp)
                     ownPopup += '<br><span style="font-size:10px;color:#6e7681">\uD83D\uDCE1 '
                               + esc(info.deviceIp) + ':' + (info.devicePort || '') + '</span>';
+                if (ownCallsign)
+                    ownPopup += '<br><a href="https://aprs.fi/info/a/' + encodeURIComponent(ownCallsign)
+                              + '" target="_blank" rel="noopener" style="font-size:11px;color:#58a6ff">🔗 aprs.fi</a>';
 
-                L.marker([ownLat, ownLon], { icon: ownIcon(ownCallsign, info.temp != null || info.humidity != null || info.pressure != null) })
+                var _ownM = L.marker([ownLat, ownLon], { icon: ownIcon(ownCallsign, info.temp != null || info.humidity != null || info.pressure != null) })
                     .bindPopup(ownPopup)
                     .addTo(_ownLayer);
+                if (ownCallsign)
+                    _stationMarkers[ownCallsign.toUpperCase()] = _ownM;
                 bounds.push([ownLat, ownLon]);
             }
 
@@ -269,6 +281,16 @@ window.meshcomMap = (function () {
                 [lat - dLat, lon - dLon],
                 [lat + dLat, lon + dLon]
             ]);
+        },
+
+        searchCallsign: function (callsign) {
+            if (!_map || !callsign) return false;
+            var key    = callsign.trim().toUpperCase();
+            var marker = _stationMarkers[key];
+            if (!marker) return false;
+            _map.setView(marker.getLatLng(), Math.max(_map.getZoom(), 13));
+            marker.openPopup();
+            return true;
         },
 
         invalidateSize: function () { if (_map) _map.invalidateSize(); }
