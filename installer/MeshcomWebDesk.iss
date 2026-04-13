@@ -45,9 +45,9 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "german";  MessagesFile: "compiler:Languages\German.isl"
 
 [Tasks]
-Name: "startservice"; Description: "Dienst nach der Installation starten";      GroupDescription: "Windows-Dienst:"; Flags: checked
-Name: "desktopicon";   Description: "Desktop-Verknüpfung erstellen";                    GroupDescription: "Symbole:";         Flags: checked
-Name: "autostart";    Description: "Browser beim Windows-Start automatisch öffnen"; GroupDescription: "Autostart:";      Flags: unchecked
+Name: "startservice"; Description: "Dienst nach der Installation starten";          GroupDescription: "Windows-Dienst:"
+Name: "desktopicon";  Description: "Desktop-Verknüpfung erstellen";                 GroupDescription: "Symbole:"
+Name: "autostart";    Description: "Browser beim Windows-Start automatisch öffnen"; GroupDescription: "Autostart:"; Flags: unchecked
 
 [Files]
 Source: "publish\win-x64\{#AppExeName}";   DestDir: "{app}"; Flags: ignoreversion
