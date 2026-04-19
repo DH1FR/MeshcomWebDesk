@@ -215,6 +215,7 @@ public class ChatService
     public ChatTab OpenTab(string key)
     {
         var tab = GetOrCreateTab(key);
+        ActiveTabKey = key;
         NotifyChange();
         return tab;
     }
