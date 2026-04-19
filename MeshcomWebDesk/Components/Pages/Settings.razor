@@ -9,6 +9,7 @@
 @inject DatabaseSetupService DatabaseSetupService
 @inject QrzService QrzService
 @inject IJSRuntime JS
+@inject MeshcomWebDesk.Services.Bot.BotCommandService BotCommandService
 @implements IDisposable
 
 <PageTitle>@Loc.T("Einstellungen", "Settings", "Impostazioni", "Configuración") – MeshCom WebDesk</PageTitle>
@@ -299,6 +300,37 @@
                                     </table>
                                 }
                             </div>
+
+                            <div class="settings-grid" style="margin-top:1rem">
+                                <label>@Loc.T("Befehl testen", "Test Command", "Testa comando", "Probar comando")</label>
+                                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                                    <input type="text" @bind="_botTestCommand"
+                                           placeholder="--ping"
+                                           style="flex:2; min-width:100px; font-family:monospace" />
+                                    <input type="text" @bind="_botTestCallsign"
+                                           placeholder="@Loc.T("Rufzeichen (opt.)", "Callsign (opt.)", "Nominativo (opz.)", "Indicativo (opt.)")"
+                                           style="flex:1; min-width:80px" />
+                                    <button class="btn-send-now" @onclick="TestBotCommandAsync"
+                                            disabled="@(_botTesting || string.IsNullOrWhiteSpace(_botTestCommand))">
+                                        @if (_botTesting)
+                                        {
+                                            <span>⏳ @Loc.T("Wird ausgeführt…", "Running…", "Esecuzione…", "Ejecutando…")</span>
+                                        }
+                                        else
+                                        {
+                                            <span>🧪 @Loc.T("Befehl testen", "Test Command", "Testa comando", "Probar comando")</span>
+                                        }
+                                    </button>
+                                </div>
+                                @if (_botTestResult != null)
+                                {
+                                    <span></span>
+                                    <div class="@(_botTestResult.StartsWith("✅") ? "settings-success" : "settings-error")" style="margin-top:0;word-break:break-word">
+                                        @_botTestResult
+                                    </div>
+                                }
+                            </div>
+
                         </div>
 
                         <!-- Bake / Beacon -->
@@ -805,6 +837,10 @@
     private string? _autoReplyResult;
     private bool    _showAutoReplyVars;
     private bool    _showBotVars;
+    private string  _botTestCommand   = string.Empty;
+    private string  _botTestCallsign  = string.Empty;
+    private bool    _botTesting;
+    private string? _botTestResult;
     private bool    _beaconSending;
     private string? _beaconResult;
 
@@ -877,6 +913,27 @@
         finally
         {
             _autoReplySending = false;
+        }
+    }
+
+    private async Task TestBotCommandAsync()
+    {
+        _botTesting   = true;
+        _botTestResult = null;
+        try
+        {
+            var cmd      = _botTestCommand.Trim();
+            var callsign = string.IsNullOrWhiteSpace(_botTestCallsign) ? "TEST-1" : _botTestCallsign.Trim().ToUpperInvariant();
+            var reply    = await BotCommandService.ExecuteAsync(cmd, callsign);
+            _botTestResult = $"✅ {reply}";
+        }
+        catch (Exception ex)
+        {
+            _botTestResult = $"❌ {ex.Message}";
+        }
+        finally
+        {
+            _botTesting = false;
         }
     }
 
