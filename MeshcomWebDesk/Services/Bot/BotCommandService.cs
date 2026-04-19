@@ -30,10 +30,14 @@ public class BotCommandService
     /// Returns true when <paramref name="text"/> is a bot command.
     /// Accepts both <c>--</c> (two hyphens) and <c>\u2014</c> (em dash, typed automatically
     /// by some MeshCom clients / mobile keyboards instead of --).
+    /// Also accepts a bare <c>ping</c> keyword (case-insensitive) for compatibility with
+    /// clients that send plain "ping" without a command prefix.
     /// </summary>
     public static bool IsCommand(string? text) =>
         text != null &&
-        (text.StartsWith("--", StringComparison.Ordinal) || text.StartsWith('\u2014'));
+        (text.StartsWith("--", StringComparison.Ordinal) ||
+         text.StartsWith('\u2014') ||
+         text.Trim().Equals("ping", StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// All currently active commands: built-in (DI-registered) plus user-defined (from config).
@@ -51,6 +55,10 @@ public class BotCommandService
     /// </summary>
     public async Task<string> ExecuteAsync(string text, string senderCallsign, MeshcomMessage? context = null)
     {
+        // Normalize bare "ping" (case-insensitive) to "--ping" so it is dispatched like any other command
+        if (text.Trim().Equals("ping", StringComparison.OrdinalIgnoreCase))
+            text = "--ping";
+
         // Strip the leading "--" or "—" (em dash U+2014, sent by some MeshCom clients / mobile keyboards)
         string body;
         if (text.StartsWith("--", StringComparison.Ordinal))
