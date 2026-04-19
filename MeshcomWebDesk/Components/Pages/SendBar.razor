@@ -1,23 +1,53 @@
-<div class="send-bar">
-    <input @bind="_text" @bind:event="oninput"
-           placeholder="@Loc.T("Nachricht eingeben...", "Enter message...", "Inserisci messaggio...", "Escribe un mensaje...")"
-           maxlength="149"
-           @onkeydown="OnKeyDown" />
-    <span class="char-counter @CounterCss">@_text.Length/149</span>
-    <button class="btn-send" @onclick="SendAsync"
-            disabled="@(!CanSend)">
-        @Loc.T("Senden", "Send", "Invia", "Enviar")
-    </button>
+@using Microsoft.Extensions.Options
+@using MeshcomWebDesk.Models
+@using MeshcomWebDesk.Services
+@inject IOptionsMonitor<MeshcomSettings> SettingsMonitor
+@inject MeshcomUdpService UdpService
+
+<div class="send-bar-wrap">
+    @if (_flyoutOpen && _quickTexts.Count > 0)
+    {
+        <div class="quicktext-flyout">
+            @foreach (var qt in _quickTexts)
+            {
+                <button class="quicktext-btn" @onclick="() => LoadQuickText(qt.Text)" title="@qt.Text">
+                    @qt.Label
+                </button>
+            }
+            <button class="quicktext-close" @onclick="() => _flyoutOpen = false" title="@Loc.T("Schließen", "Close", "Chiudi", "Cerrar")">✕</button>
+        </div>
+    }
+    <div class="send-bar">
+        @if (_quickTexts.Count > 0)
+        {
+            <button class="btn-quicktext @(_flyoutOpen ? "btn-quicktext-active" : "")"
+                    @onclick="ToggleFlyout"
+                    title="@Loc.T("Schnelltexte", "Quick Texts", "Testi rapidi", "Textos rápidos")">⚡</button>
+        }
+        <input @bind="_text" @bind:event="oninput"
+               placeholder="@Loc.T("Nachricht eingeben...", "Enter message...", "Inserisci messaggio...", "Escribe un mensaje...")"
+               maxlength="149"
+               @onkeydown="OnKeyDown" />
+        <span class="char-counter @CounterCss">@_text.Length/149</span>
+        <button class="btn-send" @onclick="SendAsync"
+                disabled="@(!CanSend)">
+            @Loc.T("Senden", "Send", "Invia", "Enviar")
+        </button>
+    </div>
 </div>
 
 @implements IDisposable
 
 @code {
     [Parameter, EditorRequired] public EventCallback<string> OnSend { get; set; }
+    /// <summary>Callsign of the current chat partner (or group). Used for {callsign}, {rssi}, … variable expansion.</summary>
+    [Parameter] public string? Callsign { get; set; }
 
     [Inject] private LanguageService Loc { get; set; } = default!;
 
     private string _text = string.Empty;
+    private bool   _flyoutOpen;
+    private List<QuickTextEntry> _quickTexts = [];
     private const int MaxLength = 149;
 
     private bool CanSend =>
@@ -30,9 +60,30 @@
         _      => string.Empty
     };
 
-    protected override void OnInitialized() => Loc.OnChange += StateHasChanged;
+    protected override void OnInitialized()
+    {
+        Loc.OnChange += StateHasChanged;
+        LoadQuickTextsFromSettings();
+        SettingsMonitor.OnChange(_ => { LoadQuickTextsFromSettings(); InvokeAsync(StateHasChanged); });
+    }
 
     public void Dispose() => Loc.OnChange -= StateHasChanged;
+
+    private void LoadQuickTextsFromSettings()
+    {
+        _quickTexts = SettingsMonitor.CurrentValue.QuickTexts
+            .Where(q => !string.IsNullOrWhiteSpace(q.Label) && !string.IsNullOrWhiteSpace(q.Text))
+            .ToList();
+    }
+
+    private void ToggleFlyout() => _flyoutOpen = !_flyoutOpen;
+
+    private void LoadQuickText(string text)
+    {
+        var expanded = UdpService.ExpandVariables(text, Callsign);
+        _text       = expanded.Length > MaxLength ? expanded[..MaxLength] : expanded;
+        _flyoutOpen = false;
+    }
 
     private async Task SendAsync()
     {

@@ -115,7 +115,12 @@ public class SettingsService
                     ["Password"]        = Encrypt(s.Qrz.Password),
                     ["LogRequests"]     = s.Qrz.LogRequests,
                     ["CacheMaxAgeDays"] = s.Qrz.CacheMaxAgeDays
-                }
+                },
+                ["QuickTexts"] = new JsonArray(s.QuickTexts.Select(q => (JsonNode?)new JsonObject
+                {
+                    ["Label"] = q.Label,
+                    ["Text"]  = q.Text
+                }).ToArray())
             }
         };
 
