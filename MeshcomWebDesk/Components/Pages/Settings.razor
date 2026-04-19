@@ -925,6 +925,7 @@
             var cmd      = _botTestCommand.Trim();
             var callsign = string.IsNullOrWhiteSpace(_botTestCallsign) ? "TEST-1" : _botTestCallsign.Trim().ToUpperInvariant();
             var reply    = await BotCommandService.ExecuteAsync(cmd, callsign);
+            reply        = UdpService.ExpandVariables(reply, callsign);
             _botTestResult = $"✅ {reply}";
         }
         catch (Exception ex)

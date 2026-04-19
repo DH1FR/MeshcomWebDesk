@@ -343,7 +343,7 @@ public partial class MeshcomUdpService : BackgroundService
     /// When <paramref name="callsign"/> is provided, caller-specific variables are resolved.
     /// Variables with no value available are replaced with an empty string.
     /// </summary>
-    private string ExpandVariables(string template, string? callsign = null)
+    public string ExpandVariables(string template, string? callsign = null)
     {
         var now     = DateTime.Now;
         var station = callsign != null
