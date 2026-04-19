@@ -89,6 +89,10 @@ public class DataPersistenceService : BackgroundService
             var snapshot = JsonSerializer.Deserialize<PersistenceSnapshot>(json);
             if (snapshot is not null)
             {
+                // Migration: set default LastSrcType for stations persisted before this field was introduced
+                foreach (var s in snapshot.MhList.Where(s => s.LastSrcType == null))
+                    s.LastSrcType = "lora";
+
                 _chatService.LoadSnapshot(snapshot);
 
                 if (snapshot.OwnLatitude.HasValue && snapshot.OwnLongitude.HasValue)

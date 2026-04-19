@@ -359,7 +359,11 @@ public partial class MeshcomUdpService : BackgroundService
             ? string.Join(" \u2192 ", station.LastRelayPath.Split(',').Select(h => h.Trim()))
             : string.Empty;
 
-        var srcType  = station?.LastSrcType ?? string.Empty;
+        // For stations loaded from an older persisted snapshot (before LastSrcType was introduced),
+        // LastSrcType may be null. Fall back to "lora" when the station is known but the type is missing.
+        var srcType  = station != null
+            ? (station.LastSrcType ?? "lora")
+            : string.Empty;
         var srcLabel = srcType.ToLowerInvariant() switch
         {
             "lora" => "LoRa",
@@ -865,7 +869,7 @@ public partial class MeshcomUdpService : BackgroundService
             var isTimeSync = !isAck && !isPositionBeacon && !isTelemetry && TimeSyncPattern().IsMatch(msg);
 
             // src_type:"node"
-            var srcType      = root.TryGetProperty("src_type", out var srcTypeProp) ? srcTypeProp.GetString() : "lora";
+            var srcType      = root.TryGetProperty("src_type", out var srcTypeProp) ? (srcTypeProp.GetString() ?? "lora") : "lora";
             var isNodePacket = string.Equals(srcType, "node", StringComparison.OrdinalIgnoreCase);
 
             int? rssiRaw = (!isNodePacket && root.TryGetProperty("rssi", out var rssiProp)) ? rssiProp.GetInt32() : null;
