@@ -183,6 +183,8 @@
                             <td>
                                 <button class="mh-chat-btn" @onclick="() => OpenChat(s.Callsign)"
                                         title="@Loc.T($"Chat mit {s.Callsign} öffnen", $"Open chat with {s.Callsign}", $"Apri chat con {s.Callsign}", $"Abrir chat con {s.Callsign}")">&#x1f4ac;</button>
+                                <button class="mh-remove-btn" @onclick="() => RemoveStation(s.Callsign)"
+                                        title="@Loc.T($"{s.Callsign} aus Liste entfernen", $"Remove {s.Callsign} from list", $"Rimuovi {s.Callsign} dalla lista", $"Eliminar {s.Callsign} de la lista")">✕</button>
                             </td>
                         </tr>
                     }
@@ -318,6 +320,11 @@
     private void OpenChat(string callsign)
     {
         ChatService.OpenTab(callsign.ToUpperInvariant());
+    }
+
+    private void RemoveStation(string callsign)
+    {
+        ChatService.RemoveFromMhList(callsign);
     }
 
     private void ClearList()

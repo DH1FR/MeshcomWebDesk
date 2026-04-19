@@ -315,6 +315,12 @@ public class ChatService
         NotifyChange();
     }
 
+    public void RemoveFromMhList(string callsign)
+    {
+        _mhList.TryRemove(callsign, out _);
+        NotifyChange();
+    }
+
     /// <summary>
     /// Clears all chat tabs, MH list and monitor entries.
     /// Called from the UI "Daten löschen" page.
