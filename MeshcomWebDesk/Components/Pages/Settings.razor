@@ -793,7 +793,7 @@
                 </label>
                 <input type="number" min="0" @bind="_model.QrzCacheMaxAgeDays" />
             </div>
-            @if (_model.QrzEnabled)
+            @if (_model.QrzEnabled && IsOpen("qrz"))
             {
                 <div style="margin-top:0.75rem;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                     <button type="button" class="btn-send-now" @onclick="TestQrzAsync" disabled="@_qrzTesting">
