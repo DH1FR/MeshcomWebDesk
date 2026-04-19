@@ -381,6 +381,37 @@ h1:focus {
 }
 
 /* ===== Lower Pane – Monitor ===== */
+
+/* Monitor title bar – alles in einer Zeile, Filter schrumpft bei Platzmangel */
+.pane-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px;
+    background: #161b22;
+    border-bottom: 1px solid #21262d;
+    flex-shrink: 0;
+    min-height: 30px;
+    flex-wrap: nowrap;
+    overflow: hidden;
+}
+
+.pane-header-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #8b949e;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.pane-header .msg-count {
+    font-size: 11px;
+    color: #6e7681;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
 .lower-pane {
     flex: 1;
     display: flex;
@@ -403,6 +434,7 @@ h1:focus {
     display: flex;
     align-items: center;
     flex: 1;
+    min-width: 80px;
     max-width: 280px;
     background: #161b22;
     border: 1px solid #30363d;
