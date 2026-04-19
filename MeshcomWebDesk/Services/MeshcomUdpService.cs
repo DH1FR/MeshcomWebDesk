@@ -359,6 +359,15 @@ public partial class MeshcomUdpService : BackgroundService
             ? string.Join(" \u2192 ", station.LastRelayPath.Split(',').Select(h => h.Trim()))
             : string.Empty;
 
+        var srcType  = station?.LastSrcType ?? string.Empty;
+        var srcLabel = srcType.ToLowerInvariant() switch
+        {
+            "lora" => "LoRa",
+            "udp"  => "UDP/Gateway",
+            "node" => "Node",
+            _      => srcType
+        };
+
         return template
             .Replace("{version}",   AppVersion,                                        StringComparison.OrdinalIgnoreCase)
             .Replace("{mycall}",    _settings.MyCallsign,                              StringComparison.OrdinalIgnoreCase)
@@ -370,6 +379,8 @@ public partial class MeshcomUdpService : BackgroundService
             .Replace("{hw}",        MeshcomLookup.HwName(station?.HwId),               StringComparison.OrdinalIgnoreCase)
             .Replace("{route}",     route,                                             StringComparison.OrdinalIgnoreCase)
             .Replace("{hops}",      station?.HopCount.ToString()       ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace("{srctype}",   srcType,                                            StringComparison.OrdinalIgnoreCase)
+            .Replace("{srctype-label}", srcLabel,                                       StringComparison.OrdinalIgnoreCase)
             .Replace("{date}",      now.ToString("dd.MM.yyyy"),                        StringComparison.OrdinalIgnoreCase)
             .Replace("{time}",      now.ToString("HH:mm"),                             StringComparison.OrdinalIgnoreCase);
     }

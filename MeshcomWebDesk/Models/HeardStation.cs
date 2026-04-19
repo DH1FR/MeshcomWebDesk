@@ -62,6 +62,12 @@ public class HeardStation
     public int HopCount { get; set; }
 
     /// <summary>
+    /// Source type of the last received packet: <c>"lora"</c> (direct LoRa RF),
+    /// <c>"udp"</c> (gateway / UDP bridge), or <c>"node"</c> (local node echo).
+    /// </summary>
+    public string? LastSrcType { get; set; }
+
+    /// <summary>
     /// True once a direct (non-relayed) chat message or ACK has been received from this station.
     /// Used to draw a direct-link line on the map. Not set for passively heard beacons.
     /// </summary>
