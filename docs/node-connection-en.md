@@ -65,11 +65,36 @@ sudo ufw allow 1799/udp
 
 ---
 
+## Monitor Filter
+
+The **monitor pane** (lower area) has a search field 🔍 in its title bar.
+
+- Type any **callsign** or **text fragment** to instantly filter the rows
+- Searches: `From`, `To`, `message text`, `raw data`
+- **Case-insensitive**, position in text does not matter
+- The counter switches to `X / Y Entries` while a filter is active
+- The **×** button clears the filter
+
+---
+
+## Status Bar Indicator
+
+| Symbol | Meaning |
+|--------|---------|
+| 🔴 UDP **No socket** | UDP port could not be bound (e.g. port already in use) |
+| 🟡 UDP **Waiting for signal** | Socket active, but no packet received from the node yet |
+| 🟢 UDP **Receiving** | At least one UDP packet has been received from the node |
+
+> ℹ️ Since UDP is connectionless, there is no classic "connected" state. Green means data is actually arriving.
+
+---
+
 ## Common Problems
 
 | Symptom | Possible Cause |
 |---------|---------------|
-| Status: 🔴 Inactive | Node is not sending to the correct IP / wrong port |
+| Status: 🔴 No socket | UDP port already in use or permission error |
+| Status: 🟡 Waiting for signal | Node is not sending to the correct IP / wrong port |
 | No incoming messages | Firewall blocking UDP 1799 |
 | Can send but not receive | Listen IP incorrect (e.g. specific IP instead of `0.0.0.0`) |
 | Can receive but not send | Device IP or Device Port incorrect |

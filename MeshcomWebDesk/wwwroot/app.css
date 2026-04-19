@@ -381,6 +381,37 @@ h1:focus {
 }
 
 /* ===== Lower Pane – Monitor ===== */
+
+/* Monitor title bar – alles in einer Zeile, Filter schrumpft bei Platzmangel */
+.pane-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px;
+    background: #161b22;
+    border-bottom: 1px solid #21262d;
+    flex-shrink: 0;
+    min-height: 30px;
+    flex-wrap: nowrap;
+    overflow: hidden;
+}
+
+.pane-header-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #8b949e;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.pane-header .msg-count {
+    font-size: 11px;
+    color: #6e7681;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
 .lower-pane {
     flex: 1;
     display: flex;
@@ -397,6 +428,47 @@ h1:focus {
     font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
     font-size: 12px;
 }
+
+/* Monitor filter */
+.mon-filter-wrap {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 80px;
+    max-width: 280px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 4px;
+    padding: 0 6px;
+    gap: 4px;
+}
+.mon-filter-icon {
+    font-size: 11px;
+    opacity: 0.6;
+    flex-shrink: 0;
+}
+.mon-filter-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #c9d1d9;
+    font-size: 12px;
+    padding: 2px 0;
+    min-width: 0;
+}
+.mon-filter-input::placeholder { color: #484f58; }
+.mon-filter-clear {
+    background: none;
+    border: none;
+    color: #8b949e;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+    flex-shrink: 0;
+}
+.mon-filter-clear:hover { color: #f85149; }
 
 /* One monitor row */
 .mon-row {

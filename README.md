@@ -98,9 +98,10 @@ and makes a full web client for MeshCom available via a simple URL
 - Newest entry always at the top; configurable history limit (`MonitorMaxMessages`)
 - **Resizable**: drag the divider bar between chat and monitor to adjust the split – last position is saved in `localStorage` and restored on the next visit
 - Collapsible on mobile (toggle button)
+- **Live filter** 🔍 in the monitor title bar – type any callsign or text fragment to instantly show only matching rows; the entry counter switches to `X / Y Entries` while a filter is active; clear with the × button
 
 ### 📊 Status bar
-- UDP socket state (🟢 Active / 🔴 Inactive) and registration status
+- Three-state UDP indicator: 🔴 **No socket** (bind failed) · 🟡 **Waiting for signal** (socket open, no packet yet) · 🟢 **Receiving** (at least one packet received) – semantically correct for connectionless UDP
 - Last RX timestamp, sender callsign, RSSI / SNR with colour coding
 - TX counter, own callsign, device IP:Port
 - Own GPS position with source label (Node / Browser GPS)
@@ -167,11 +168,15 @@ and makes a full web client for MeshCom available via a simple URL
   | `--version` | `MeshcomWebDesk vX.Y.Z` |
   | `--time` | Current date and time |
   | `--mh` | Count and callsigns of recently heard stations |
+  | `--ping` | `Pong! 👋 <callsign> \| RSSI: -87 dBm, SNR: 6.5 dB \| Route (2 hops): OE1XAR-62,DB0TAW-13 \| Received: 14:32:07` |
+  | `--echo <text>` | Echoes `<text>` back to the sender |
 
+- **Bare `ping` keyword**: a direct message containing only `ping` (case-insensitive, with optional surrounding whitespace) is treated identically to `--ping` – useful for clients that do not support the `--` prefix
 - **User-defined commands** fully configurable in **Settings → 🤖 Bot** – no code changes required:
   - `Name` – command name without `--` (e.g. `info`)
   - `Response` – reply text; supports all `{variable}` placeholders (`{mycall}`, `{callsign}`, `{version}`, `{rssi}`, `{snr}`, `{hw}`, `{route}`, `{hops}`, `{date}`, `{time}`, …)
   - `Description` – optional short text shown in `--help` output
+- **Test button** in Settings – enter any command (e.g. `--ping`) and an optional sender callsign; the bot executes the command locally (dry-run, no UDP send) and shows the exact reply including all expanded `{variable}` placeholders
 - **Developer extension**: implement `IBotCommand` and register via `services.AddSingleton<IBotCommand, MyCommand>()` in `Program.cs`
 - **Auto-split**: replies longer than 149 characters are automatically split into consecutive packets (2 s pause between parts) – same strategy as multi-bucket telemetry
 - Enabled / disabled via `BotEnabled` – applies **live without restart**
@@ -336,10 +341,12 @@ MeshcomWebDesk/              ← Blazor Server (ASP.NET Core host)
       QrzService.cs             ← QRZ.com XML API: session login, callsign lookup, in-memory cache
       Bot/
         IBotCommand.cs         ← Interface for all bot commands (Name, Description, ExecuteAsync)
-        BotCommandService.cs   ← Dispatcher: parses --name [args], builds --help, hot-reloads user commands from config
+        BotCommandService.cs   ← Dispatcher: parses --name [args], builds --help, hot-reloads user commands from config; normalises bare "ping" keyword
         VersionCommand.cs      ← --version: returns app version
         TimeCommand.cs         ← --time: returns current date/time
         MhCommand.cs           ← --mh: returns MH list count + callsigns
+        PingCommand.cs         ← --ping / bare "ping": pong with RSSI, SNR, relay route and receive timestamp
+        EchoCommand.cs         ← --echo <text>: echoes arguments back to the sender
         ConfiguredBotCommand.cs← Wrapper for BotCommands entries from appsettings.json
       Database/
         IMonitorDataSink.cs    ← Interface: WriteAsync(MeshcomMessage)

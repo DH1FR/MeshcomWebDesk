@@ -1,3 +1,5 @@
+using MeshcomWebDesk.Models;
+
 namespace MeshcomWebDesk.Services.Bot;
 
 /// <summary>
@@ -18,4 +20,12 @@ public interface IBotCommand
     /// by <see cref="MeshcomUdpService"/> before sending.
     /// </summary>
     Task<string> ExecuteAsync(string[] args, string senderCallsign);
+
+    /// <summary>
+    /// Executes the command with optional message context (RSSI, relay path, timestamp).
+    /// Default implementation delegates to <see cref="ExecuteAsync(string[], string)"/>.
+    /// Override to make use of the full incoming message metadata.
+    /// </summary>
+    Task<string> ExecuteAsync(string[] args, string senderCallsign, MeshcomMessage? context)
+        => ExecuteAsync(args, senderCallsign);
 }

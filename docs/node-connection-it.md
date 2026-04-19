@@ -65,11 +65,36 @@ sudo ufw allow 1799/udp
 
 ---
 
+## Filtro Monitor
+
+Il **riquadro monitor** (area inferiore) ha un campo di ricerca 🔍 nella barra del titolo.
+
+- Digita un **nominativo** o un **frammento di testo** per filtrare le righe immediatamente
+- Ricerca in: `Da`, `A`, `testo del messaggio`, `dati grezzi`
+- **Non distingue maiuscole/minuscole**, la posizione nel testo non ha importanza
+- Il contatore passa a `X / Y Voci` quando un filtro è attivo
+- Il pulsante **×** cancella il filtro
+
+---
+
+## Indicatore di stato nella barra di stato
+
+| Simbolo | Significato |
+|---------|-------------|
+| 🔴 UDP **Nessun socket** | La porta UDP non è stata associata (es. porta già occupata) |
+| 🟡 UDP **Attesa segnale** | Socket attivo, ma nessun pacchetto ricevuto dal nodo |
+| 🟢 UDP **Ricezione OK** | Almeno un pacchetto UDP è stato ricevuto dal nodo |
+
+> ℹ️ Poiché UDP è senza connessione, non esiste un classico stato "connesso". Verde significa che i dati arrivano effettivamente.
+
+---
+
 ## Problemi comuni
 
 | Sintomo | Possibile causa |
 |---------|----------------|
-| Stato: 🔴 Inactive | Il nodo non invia all'IP corretto / porta errata |
+| Stato: 🔴 Nessun socket | Porta UDP già occupata o errore di permesso |
+| Stato: 🟡 Attesa segnale | Il nodo non invia all'IP corretto / porta errata |
 | Nessun messaggio in arrivo | Il firewall blocca UDP 1799 |
 | Può inviare ma non ricevere | Listen IP errato (es. IP specifico invece di `0.0.0.0`) |
 | Può ricevere ma non inviare | Device IP o Device Port errati |

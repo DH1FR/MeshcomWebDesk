@@ -97,6 +97,8 @@ builder.Services.AddSingleton<ChatService>();
 builder.Services.AddSingleton<IBotCommand, VersionCommand>();
 builder.Services.AddSingleton<IBotCommand, TimeCommand>();
 builder.Services.AddSingleton<IBotCommand, MhCommand>();
+builder.Services.AddSingleton<IBotCommand, PingCommand>();
+builder.Services.AddSingleton<IBotCommand, EchoCommand>();
 builder.Services.AddSingleton<BotCommandService>();
 builder.Services.AddSingleton<MeshcomUdpService>();
 builder.Services.AddSingleton<DataPersistenceService>();

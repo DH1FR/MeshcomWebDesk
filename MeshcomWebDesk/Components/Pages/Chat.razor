@@ -35,7 +35,7 @@
                     {
                         <span class="tab-unread">@(tab.UnreadCount > 99 ? "99+" : tab.UnreadCount.ToString())</span>
                     }
-                    <span class="tab-close" @onclick="() => CloseTab(tab.Key)" @onclick:stopPropagation="true">&times;</span>
+                    <span class="tab-close" @onclick="() => ConfirmCloseTab(tab.Key)" @onclick:stopPropagation="true">&times;</span>
                 </button>
             }
             <button class="tab-button tab-new" @onclick="ShowNewTabDialog" title="@Loc.T("Neuen Tab öffnen", "Open new tab", "Apri nuova scheda", "Abrir nueva pestaña")">+</button>
@@ -96,15 +96,35 @@
     @* ===== LOWER AREA: Monitor ===== *@
     <div id="lower-pane" class="lower-pane @(_showMonitor ? "" : "lower-pane-collapsed")">
         <div class="pane-header">
-            <span>📡 Monitor</span>
-            <span class="msg-count">@_allMessages.Count @Loc.T("Einträge", "Entries", "Voci", "Entradas")</span>
+            <span class="pane-header-title">📡 Monitor</span>
+            <span class="mon-filter-wrap">
+                <span class="mon-filter-icon">🔍</span>
+                <input class="mon-filter-input"
+                       value="@_monitorFilter"
+                       @oninput="e => _monitorFilter = e.Value?.ToString() ?? string.Empty"
+                       placeholder="@Loc.T("Rufzeichen oder Text…", "Callsign or text…", "Nominativo o testo…", "Indicativo o texto…")" />
+                @if (!string.IsNullOrEmpty(_monitorFilter))
+                {
+                    <button class="mon-filter-clear" @onclick="() => _monitorFilter = string.Empty" title="@Loc.T("Filter löschen", "Clear filter", "Cancella filtro", "Borrar filtro")">×</button>
+                }
+            </span>
+            <span class="msg-count">
+                @if (string.IsNullOrEmpty(_monitorFilter))
+                {
+                    @($"{_allMessages.Count} {Loc.T("Einträge", "Entries", "Voci", "Entradas")}")
+                }
+                else
+                {
+                    @($"{_filteredMessages.Count} / {_allMessages.Count} {Loc.T("Einträge", "Entries", "Voci", "Entradas")}")
+                }
+            </span>
             <button class="mon-toggle-btn" @onclick="ToggleMonitorAsync"
                     title="@(_showMonitor ? Loc.T("Monitor ausblenden", "Hide Monitor", "Nascondi monitor", "Ocultar monitor") : Loc.T("Monitor einblenden", "Show Monitor", "Mostra monitor", "Mostrar monitor"))">
                 @(_showMonitor ? "▼" : "▲")
             </button>
         </div>
         <div class="mon-list" id="raw-messages">
-            @foreach (var m in _allMessages)
+            @foreach (var m in _filteredMessages)
             {
                 <div class="mon-row @MonRowClass(m)">
                     <span class="mon-time" title="@(m.MsgId is not null ? $"ID: {m.MsgId}" : null)">@LT(m.Timestamp).ToString("HH:mm:ss")</span>
@@ -253,12 +273,8 @@
             @(_soundEnabled ? "🔔" : "🔕")
         </button>
         <span class="status-sep">|</span>
-        <span class="status-item @(_status.IsListening ? "status-ok" : "status-err")">
-            @(_status.IsListening ? "🟢" : "🔴") <span class="status-label">UDP @(_status.IsListening ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
-        </span>
-        <span class="status-sep">|</span>
-        <span class="status-item @(_status.IsRegistered ? "status-ok" : "status-warn")">
-            @(_status.IsRegistered ? "✅" : "⏳") <span class="status-label">@(_status.IsRegistered ? Loc.T("Registriert", "Registered", "Registrato", "Registrado") : Loc.T("Nicht registriert", "Not registered", "Non registrato", "No registrado"))</span>
+        <span class="status-item @UdpStatusCss">
+            @UdpStatusIcon <span class="status-label">UDP @UdpStatusLabel</span>
         </span>
         <span class="status-sep status-detail">|</span>
         <span class="status-item status-detail">📡 @_settings.DeviceIp:@_settings.DevicePort</span>
@@ -334,6 +350,21 @@
     private bool _playSound;
     private bool _isInitialized;
     private DateTime _lastNotificationTime = DateTime.MinValue;
+    private string _monitorFilter = string.Empty;
+
+    private IReadOnlyList<MeshcomMessage> _filteredMessages =>
+        string.IsNullOrWhiteSpace(_monitorFilter)
+            ? _allMessages
+            : _allMessages.Where(m =>
+                Contains(m.From,    _monitorFilter) ||
+                Contains(m.To,      _monitorFilter) ||
+                Contains(m.Text,    _monitorFilter) ||
+                Contains(m.RawData, _monitorFilter))
+              .ToList();
+
+    private static bool Contains(string? value, string filter) =>
+        !string.IsNullOrEmpty(value) &&
+        value.Contains(filter, StringComparison.OrdinalIgnoreCase);
 
     private record WatchlistAlert(string Callsign, string EventType, DateTime Time);
     private List<WatchlistAlert> _watchlistAlerts = [];
@@ -526,6 +557,20 @@
         ChatService.ActiveTabKey = key;
         _scrollMessages = true;
         _ = JS.InvokeVoidAsync("meshcomChat.setActiveTab", key).AsTask();
+    }
+
+    private async Task ConfirmCloseTab(string key)
+    {
+        var tab = _tabs.FirstOrDefault(t => t.Key == key);
+        var label = tab?.Title ?? key;
+        var msg = Loc.T(
+            $"Tab \"{label}\" wirklich schließen?",
+            $"Close tab \"{label}\"?",
+            $"Chiudere la scheda \"{label}\"?",
+            $"¿Cerrar la pestaña \"{label}\"?");
+        var confirmed = await JS.InvokeAsync<bool>("confirm", msg);
+        if (confirmed)
+            CloseTab(key);
     }
 
     private void CloseTab(string key)
@@ -807,6 +852,20 @@
 
     private static string BeaconTimeCss(DateTime nextSend) =>
         (nextSend - DateTime.Now).TotalMinutes < 10 ? "beacon-time beacon-time-soon" : "beacon-time";
+
+    private string UdpStatusCss => !_status.IsListening ? "status-err"
+        : _status.HasReceivedData ? "status-ok"
+        : "status-warn";
+
+    private string UdpStatusIcon => !_status.IsListening ? "🔴"
+        : _status.HasReceivedData ? "🟢"
+        : "🟡";
+
+    private string UdpStatusLabel => !_status.IsListening
+        ? Loc.T("Kein Socket", "No socket", "Nessun socket", "Sin socket")
+        : _status.HasReceivedData
+            ? Loc.T("Empfang OK", "Receiving", "Ricezione OK", "Recibiendo")
+            : Loc.T("Warte auf Signal", "Waiting for signal", "Attesa segnale", "Esperando señal");
 
     private DateTime LT(DateTime dt) => dt.AddHours(SettingsOptions.Value.TimeOffsetHours);
 }

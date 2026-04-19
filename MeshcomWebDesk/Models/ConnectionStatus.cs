@@ -11,6 +11,9 @@ public class ConnectionStatus
     /// <summary>True after the registration packet was successfully sent to the device.</summary>
     public bool IsRegistered { get; set; }
 
+    /// <summary>True once at least one UDP packet has been received from the device.</summary>
+    public bool HasReceivedData => LastRxTime.HasValue;
+
     /// <summary>Timestamp of the last received UDP packet.</summary>
     public DateTime? LastRxTime { get; set; }
 
