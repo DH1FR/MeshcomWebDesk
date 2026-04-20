@@ -29,6 +29,9 @@ h1:focus {
     display: flex;
     flex-direction: column;
     height: 100%;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     overflow: hidden;
 }
 
@@ -38,6 +41,8 @@ h1:focus {
     display: flex;
     flex-direction: column;
     min-height: 0;
+    min-width: 0;
+    max-width: 100%;
 }
 
 /* ===== Tab Bar ===== */
@@ -50,6 +55,8 @@ h1:focus {
     border-bottom: 1px solid #0f3460;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .tab-button {
@@ -156,7 +163,7 @@ h1:focus {
 
 .new-tab-dialog input {
     flex: 1;
-    min-width: 180px;
+    min-width: 0;
     padding: 6px 10px;
     border: 1px solid #0f3460;
     border-radius: 4px;
@@ -199,6 +206,8 @@ h1:focus {
     display: flex;
     flex-direction: column;
     min-height: 0;
+    min-width: 0;
+    max-width: 100%;
     overflow: hidden;
 }
 
