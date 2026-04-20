@@ -837,7 +837,7 @@ h1:focus {
 
 .mh-table td { padding: 6px 10px; vertical-align: middle; }
 
-.mh-callsign  { font-weight: 700; color: #a0c4ff; white-space: nowrap; }
+.mh-callsign  { font-weight: 700; color: #a0c4ff; white-space: nowrap; overflow: visible; position: relative; }
 
 .mh-hw-badge {
     display: inline-block;
@@ -919,7 +919,12 @@ h1:focus {
     flex-wrap: wrap;
     align-items: center;
     gap: 4px;
+    z-index: 1;
 }
+
+/* Beim Hover/Tap die Zeile in den Vordergrund heben */
+.mh-cs-wrap:hover,
+.mh-cs-wrap.mh-cs-pinned { z-index: 600; }
 
 .mh-cs-label {
     cursor: pointer;
@@ -932,17 +937,30 @@ h1:focus {
 .mh-station-card {
     display: none;
     position: absolute;
-    top: calc(100% + 6px);
+    top: 100%;
     left: 0;
-    z-index: 500;
+    z-index: 600;
     background: #16213e;
     border: 1px solid #1a4a8a;
     border-radius: 8px;
-    padding: 10px 12px;
+    /* padding-top schafft visuellen Abstand OHNE Hover-Gap */
+    padding: 0 12px 10px;
+    padding-top: 10px;
+    margin-top: 4px;
     min-width: 210px;
     max-width: 280px;
     box-shadow: 0 6px 20px rgba(0,0,0,0.6);
     pointer-events: all;
+}
+
+/* Unsichtbare Brücke zwischen Rufzeichen und Card: füllt den Gap */
+.mh-station-card::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 0;
+    right: 0;
+    height: 6px;
 }
 
 /* Show on hover (desktop) */
