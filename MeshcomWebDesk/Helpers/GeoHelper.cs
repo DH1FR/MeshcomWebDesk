@@ -39,8 +39,10 @@ public static class GeoHelper
     }
 
     /// <summary>OpenStreetMap URL for a single coordinate.</summary>
-    public static string OsmUrl(double lat, double lon) =>
-        $"https://www.openstreetmap.org/?mlat={lat:F6}&mlon={lon:F6}&zoom=12";
+using System.Globalization;
+
+public static string OsmUrl(double lat, double lon) =>
+    $"https://www.openstreetmap.org/?mlat={lat.ToString("F6", CultureInfo.InvariantCulture)}&mlon={lon.ToString("F6", CultureInfo.InvariantCulture)}&zoom=12";
 
     /// <summary>
     /// Converts decimal-degree coordinates to a Maidenhead (QTH) locator.
