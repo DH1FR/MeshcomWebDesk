@@ -74,11 +74,12 @@ and makes a full web client for MeshCom available via a simple URL
 - **Clickable callsigns in the monitor** – click any sender or recipient to open a chat tab instantly
 - **QRZ.com tooltips** – when enabled, hovering over any callsign (tab buttons, chat messages, monitor From/To) shows the operator's first name and home QTH (e.g. `Chat mit DH1FR-2 öffnen · Max, Berlin`)
 - **Audio notification** 🔔 when a new direct message to your own callsign arrives (Web Audio API, no audio file required); mute toggle in the status bar
-- **⚡ Quick Texts** – configurable one-click text buttons in the send bar; clicking a button loads the predefined text into the input field for review before sending; supports all `{variable}` placeholders (`{mycall}`, `{callsign}`, `{rssi}`, `{time}`, `{date}`, …); configured in **Settings → ⚡ Quick Texts**
+- **⚡ Quick Texts** – configurable one-click text buttons in the send bar; clicking a button loads the predefined text into the input field for review before sending; supports all `{variable}` placeholders (`{mycall}`, `{callsign}`, `{locator}`, `{rssi}`, `{time}`, `{date}`, …); configured in **Settings → ⚡ Quick Texts**
 
 ### 📻 MH – Most Recently Heard
 - Live table of all heard stations with last message, timestamp and message count
 - **GPS position** parsed from EXTUDP position packets (`lat_dir` / `long_dir` APRS format)
+- **QTH Locator** – Maidenhead locator (e.g. `JN48QN`) calculated from GPS coordinates; shown below the GPS position in the MH table and in the station card popup; also available as `{locator}` placeholder in Auto-Reply, Bot commands and Quick Texts
 - **Distance calculation** (Haversine) from own position to each heard station
 - **Battery level** 🔋 column parsed from `batt` field in position/telemetry packets, colour-coded (🟢 >60% / 🟡 >30% / 🔴 ≤30%)
 - **Hardware badge** – short hardware name from `hw_id` field (e.g. `T-BEAM`, `T-ECHO`, `HELTEC-V3`, `T-ETH-ELITE`)
@@ -176,7 +177,7 @@ and makes a full web client for MeshCom available via a simple URL
 - **Bare `ping` keyword**: a direct message containing only `ping` (case-insensitive, with optional surrounding whitespace) is treated identically to `--ping` – useful for clients that do not support the `--` prefix
 - **User-defined commands** fully configurable in **Settings → 🤖 Bot** – no code changes required:
   - `Name` – command name without `--` (e.g. `info`)
-  - `Response` – reply text; supports all `{variable}` placeholders (`{mycall}`, `{callsign}`, `{version}`, `{rssi}`, `{snr}`, `{hw}`, `{route}`, `{hops}`, `{date}`, `{time}`, …)
+  - `Response` – reply text; supports all `{variable}` placeholders (`{mycall}`, `{callsign}`, `{locator}`, `{version}`, `{rssi}`, `{snr}`, `{hw}`, `{route}`, `{hops}`, `{date}`, `{time}`, …)
   - `Description` – optional short text shown in `--help` output
 - **Test button** in Settings – enter any command (e.g. `--ping`) and an optional sender callsign; the bot executes the command locally (dry-run, no UDP send) and shows the exact reply including all expanded `{variable}` placeholders
 - **Developer extension**: implement `IBotCommand` and register via `services.AddSingleton<IBotCommand, MyCommand>()` in `Program.cs`

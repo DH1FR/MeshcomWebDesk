@@ -159,6 +159,11 @@
                                                 <span class="mh-sc-lbl">📏</span>
                                                 <span>@GeoHelper.FormatDistance(distCard.Value)</span>
                                             }
+                                            @if (s.Latitude.HasValue && s.Longitude.HasValue)
+                                            {
+                                                <span class="mh-sc-lbl">QTH</span>
+                                                <span style="font-family:monospace">@GeoHelper.ToMaidenhead(s.Latitude.Value, s.Longitude.Value)</span>
+                                            }
                                             @if (!string.IsNullOrEmpty(s.Firmware))
                                             {
                                                 <span class="mh-sc-lbl">FW</span>

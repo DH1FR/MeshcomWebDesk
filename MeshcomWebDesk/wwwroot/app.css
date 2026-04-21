@@ -917,6 +917,14 @@ h1:focus {
 }
 .mh-coord-link:hover { text-decoration: underline; }
 .mh-no-pos    { color: #30363d; }
+.mh-locator {
+    display: block;
+    font-size: 10px;
+    font-family: "Cascadia Code", "Fira Code", monospace;
+    color: #6e7681;
+    margin-top: 2px;
+    letter-spacing: 0.04em;
+}
 .mh-alt       { color: #8b949e; white-space: nowrap; }
 .mh-dist      { color: #6c757d; white-space: nowrap; }
 .dist-known   { color: #e0e0e0; font-weight: 600; }

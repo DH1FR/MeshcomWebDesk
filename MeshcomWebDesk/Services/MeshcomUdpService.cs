@@ -372,12 +372,17 @@ public partial class MeshcomUdpService : BackgroundService
             _      => srcType
         };
 
+        var locator = (station?.Latitude.HasValue == true && station.Longitude.HasValue)
+            ? Helpers.GeoHelper.ToMaidenhead(station.Latitude.Value, station.Longitude.Value)
+            : string.Empty;
+
         return template
             .Replace("{version}",   AppVersion,                                        StringComparison.OrdinalIgnoreCase)
             .Replace("{mycall}",    _settings.MyCallsign,                              StringComparison.OrdinalIgnoreCase)
             .Replace("{callsign}",  callsign              ?? string.Empty,             StringComparison.OrdinalIgnoreCase)
             .Replace("{dest-name}", qrz?.FirstName        ?? string.Empty,             StringComparison.OrdinalIgnoreCase)
             .Replace("{dest-loc}",  qrz?.Location         ?? string.Empty,             StringComparison.OrdinalIgnoreCase)
+            .Replace("{locator}",   locator,                                           StringComparison.OrdinalIgnoreCase)
             .Replace("{rssi}",      station?.LastRssi?.ToString()      ?? string.Empty, StringComparison.OrdinalIgnoreCase)
             .Replace("{snr}",       station?.LastSnr?.ToString("F1")   ?? string.Empty, StringComparison.OrdinalIgnoreCase)
             .Replace("{hw}",        MeshcomLookup.HwName(station?.HwId),               StringComparison.OrdinalIgnoreCase)
