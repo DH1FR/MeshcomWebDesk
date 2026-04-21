@@ -255,6 +255,11 @@ h1:focus {
     font-size: 11px;
     color: #6c757d;
     margin-right: 6px;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    line-height: 1.15;
+    vertical-align: middle;
 }
 
 .msg-call {
@@ -582,6 +587,20 @@ h1:focus {
     color: #8b949e;
     white-space: nowrap;
     min-width: 58px;
+    display: inline-flex;
+    flex-direction: column;
+    line-height: 1.15;
+}
+
+/* When date is shown, keep min-width wide enough for "dd.MM. HH:mm" */
+.mon-time-dated { min-width: 52px; }
+
+/* Shared compact date prefix line (shown above time for non-today entries) */
+.ts-date {
+    font-size: 9px;
+    color: #6e7681;
+    line-height: 1.15;
+    letter-spacing: 0.01em;
 }
 
 /* Type badge */

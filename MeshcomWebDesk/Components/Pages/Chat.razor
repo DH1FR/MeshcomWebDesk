@@ -59,7 +59,11 @@
                     @foreach (var msg in _activeTabMessages)
                     {
                         <div class="message @(msg.IsOutgoing ? "msg-out" : "msg-in")">
-                            <span class="msg-time">@LT(msg.Timestamp).ToString("HH:mm:ss")</span>
+                            <span class="msg-time">
+                                @{ var msgTs = LT(msg.Timestamp); var msgDate = TsDate(msgTs); }
+                                @if (msgDate != null) { <span class="ts-date">@msgDate</span> }
+                                @msgTs.ToString(msgDate == null ? "HH:mm:ss" : "HH:mm")
+                            </span>
                             @if (msg.IsOutgoing)
                             {
                                 <span class="msg-call">@_myCallsign:</span>
@@ -127,7 +131,11 @@
             @foreach (var m in _filteredMessages)
             {
                 <div class="mon-row @MonRowClass(m)">
-                    <span class="mon-time" title="@(m.MsgId is not null ? $"ID: {m.MsgId}" : null)">@LT(m.Timestamp).ToString("HH:mm:ss")</span>
+                    @{ var monTs = LT(m.Timestamp); var monDate = TsDate(monTs); }
+                    <span class="mon-time @(monDate != null ? "mon-time-dated" : "")" title="@(m.MsgId is not null ? $"ID: {m.MsgId}" : null)">
+                        @if (monDate != null) { <span class="ts-date">@monDate</span> }
+                        @monTs.ToString(monDate == null ? "HH:mm:ss" : "HH:mm")
+                    </span>
 
                     <span class="mon-badge @MonBadgeClass(m)">@MonType(m)</span>
 
@@ -868,4 +876,11 @@
             : Loc.T("Warte auf Signal", "Waiting for signal", "Attesa segnale", "Esperando señal");
 
     private DateTime LT(DateTime dt) => dt.AddHours(SettingsOptions.Value.TimeOffsetHours);
+
+    /// <summary>
+    /// Returns the date prefix "dd.MM." when <paramref name="dt"/> is not today, otherwise null.
+    /// Used to show a compact date line above the time only for older entries.
+    /// </summary>
+    private static string? TsDate(DateTime dt) =>
+        dt.Date == DateTime.Today ? null : dt.ToString("dd.MM.");
 }
