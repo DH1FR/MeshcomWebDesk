@@ -55,8 +55,69 @@ window.meshcomChat = (function () {
         divider.addEventListener('touchstart', onDown, { passive: false });
     }
 
+    function initTabDrag(dotNetRef) {
+        var tabBar = document.querySelector('.tab-bar');
+        if (!tabBar || tabBar.dataset.dragInit) return;
+        tabBar.dataset.dragInit = '1';
+
+        var dragKey  = null;
+        var hoverBtn = null;
+
+        tabBar.addEventListener('dragstart', function (e) {
+            var btn = e.target.closest('[data-tab-key]');
+            if (!btn) return;
+            dragKey = btn.dataset.tabKey;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', dragKey);
+            btn.classList.add('tab-dragging');
+        });
+
+        tabBar.addEventListener('dragover', function (e) {
+            var btn = e.target.closest('[data-tab-key]');
+            if (!btn || !dragKey) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            if (btn !== hoverBtn) {
+                if (hoverBtn) hoverBtn.classList.remove('tab-drag-over');
+                hoverBtn = btn.dataset.tabKey !== dragKey ? btn : null;
+                if (hoverBtn) hoverBtn.classList.add('tab-drag-over');
+            }
+        });
+
+        tabBar.addEventListener('dragleave', function (e) {
+            var btn = e.target.closest('[data-tab-key]');
+            if (btn && btn === hoverBtn) {
+                btn.classList.remove('tab-drag-over');
+                hoverBtn = null;
+            }
+        });
+
+        tabBar.addEventListener('drop', function (e) {
+            e.preventDefault();
+            var btn = e.target.closest('[data-tab-key]');
+            if (hoverBtn) { hoverBtn.classList.remove('tab-drag-over'); hoverBtn = null; }
+            tabBar.querySelectorAll('[data-tab-key].tab-dragging').forEach(function (b) {
+                b.classList.remove('tab-dragging');
+            });
+            if (!btn || !dragKey || btn.dataset.tabKey === dragKey) { dragKey = null; return; }
+            var toKey   = btn.dataset.tabKey;
+            var fromKey = dragKey;
+            dragKey = null;
+            dotNetRef.invokeMethodAsync('MoveTab', fromKey, toKey);
+        });
+
+        tabBar.addEventListener('dragend', function () {
+            if (hoverBtn) { hoverBtn.classList.remove('tab-drag-over'); hoverBtn = null; }
+            tabBar.querySelectorAll('[data-tab-key].tab-dragging').forEach(function (b) {
+                b.classList.remove('tab-dragging');
+            });
+            dragKey = null;
+        });
+    }
+
     return {
         initResizer,
+        initTabDrag,
         getActiveTab:      () => localStorage.getItem('meshcom-active-tab') || '',
         setActiveTab:      (key) => {
             if (key) localStorage.setItem('meshcom-active-tab', key);
@@ -68,6 +129,12 @@ window.meshcomChat = (function () {
         },
         setMonitorVisible: (visible) =>
             localStorage.setItem('meshcom-monitor-visible', visible ? '1' : '0'),
+        getTabOrder: () => {
+            var v = localStorage.getItem('meshcom-tab-order');
+            try { return v ? JSON.parse(v) : []; } catch (e) { return []; }
+        },
+        setTabOrder: (keys) =>
+            localStorage.setItem('meshcom-tab-order', JSON.stringify(keys || [])),
         getSettingsSections: () => localStorage.getItem('meshcom-settings-sections'),
         setSettingsSections: (csv) => localStorage.setItem('meshcom-settings-sections', csv ?? '')
     };

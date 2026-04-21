@@ -22,6 +22,8 @@
             @foreach (var tab in _tabs)
             {
                 <button class="tab-button @(tab.Key == _activeTabKey ? "active" : "")"
+                        draggable="true"
+                        data-tab-key="@tab.Key"
                         @onclick="() => SelectTab(tab.Key)"
                         title="@(tab.Key != "*" && !tab.Key.StartsWith('#') ? tab.Title + QrzSuffix(tab.Key) : null)">
                     <span class="tab-label-wrap">
@@ -359,6 +361,8 @@
     private bool _isInitialized;
     private DateTime _lastNotificationTime = DateTime.MinValue;
     private string _monitorFilter = string.Empty;
+    private List<string> _tabOrder = [];
+    private DotNetObjectReference<Chat>? _dotNetRef;
 
     private IReadOnlyList<MeshcomMessage> _filteredMessages =>
         string.IsNullOrWhiteSpace(_monitorFilter)
@@ -440,6 +444,24 @@
             }
             catch (JSException) { }
 
+            // Restore saved tab order
+            try
+            {
+                var order = await JS.InvokeAsync<string[]?>("meshcomChat.getTabOrder");
+                if (order != null && order.Length > 0)
+                {
+                    _tabOrder = [.. order];
+                    ApplyTabOrder();
+                    needsRender = true;
+                }
+            }
+            catch (JSException) { }
+
+            // Initialize tab drag-and-drop
+            _dotNetRef ??= DotNetObjectReference.Create(this);
+            try { await JS.InvokeVoidAsync("meshcomChat.initTabDrag", _dotNetRef); }
+            catch (JSException) { }
+
             if (await LoadQrzDataAsync())
                 needsRender = true;
 
@@ -508,6 +530,7 @@
     private void RefreshData()
     {
         _tabs = ChatService.Tabs.ToList();
+        ApplyTabOrder();
         _allMessages = ChatService.AllMessages;
 
         // If active tab was closed, select first available
@@ -584,6 +607,8 @@
     private void CloseTab(string key)
     {
         ChatService.CloseTab(key);
+        if (_tabOrder.Remove(key))
+            _ = JS.InvokeVoidAsync("meshcomChat.setTabOrder", _tabOrder).AsTask();
         if (_activeTabKey == key)
         {
             _activeTabKey = string.Empty;
@@ -686,10 +711,39 @@
     public void Dispose()
     {
         _disposed = true;
+        _dotNetRef?.Dispose();
         Loc.OnChange -= StateHasChanged;
         ChatService.OnChange -= OnChatChanged;
         UdpService.OnStatusChange -= OnStatusChanged;
         ChatService.OnWatchlistHit -= HandleWatchlistHit;
+    }
+
+    private void ApplyTabOrder()
+    {
+        if (_tabOrder.Count == 0) return;
+        _tabs = _tabs
+            .OrderBy(t =>
+            {
+                var idx = _tabOrder.IndexOf(t.Key);
+                return idx < 0 ? int.MaxValue : idx;
+            })
+            .ToList();
+    }
+
+    [JSInvokable]
+    public void MoveTab(string fromKey, string toKey)
+    {
+        if (string.IsNullOrEmpty(fromKey) || string.IsNullOrEmpty(toKey) || fromKey == toKey)
+            return;
+        var fromIdx = _tabs.FindIndex(t => t.Key == fromKey);
+        var toIdx   = _tabs.FindIndex(t => t.Key == toKey);
+        if (fromIdx < 0 || toIdx < 0) return;
+        var tab = _tabs[fromIdx];
+        _tabs.RemoveAt(fromIdx);
+        _tabs.Insert(toIdx, tab);
+        _tabOrder = _tabs.Select(t => t.Key).ToList();
+        _ = JS.InvokeVoidAsync("meshcomChat.setTabOrder", _tabOrder).AsTask();
+        StateHasChanged();
     }
 
     private async void HandleWatchlistHit(string callsign, MeshcomMessage message)

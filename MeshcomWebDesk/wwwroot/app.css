@@ -78,6 +78,20 @@ h1:focus {
     background: #1a4a8a;
 }
 
+.tab-button[draggable="true"] {
+    cursor: grab;
+}
+
+.tab-button.tab-dragging {
+    opacity: 0.45;
+    cursor: grabbing;
+}
+
+.tab-button.tab-drag-over {
+    border-left: 3px solid #79c0ff;
+    background: #1a3a6a;
+}
+
 .tab-button.active {
     background: #1a1a2e;
     color: #fff;
