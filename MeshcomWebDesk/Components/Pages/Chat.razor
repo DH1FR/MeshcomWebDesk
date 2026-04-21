@@ -882,5 +882,5 @@
     /// Used to show a compact date line above the time only for older entries.
     /// </summary>
     private static string? TsDate(DateTime dt) =>
-        dt.Date == DateTime.Today ? null : dt.ToString("dd.MM.");
+        dt.Date == DateTime.Today ? null : dt.ToString("dd.MM.yy");
 }
