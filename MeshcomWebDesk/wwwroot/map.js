@@ -186,8 +186,11 @@ window.meshcomMap = (function () {
                 var popup = '<b>' + esc(s.callsign) + '</b>' + qrzLine + badgeLine + relayLine + telemLine
                     + (s.text     ? '<br><span style="font-size:12px">' + esc(s.text) + '</span>' : '')
                     + (s.rssi     != null ? '<br>RSSI: ' + s.rssi + ' dBm' : '')
-                    + (s.battery  != null ? '&nbsp;\ud83d\udd0b ' + s.battery + '%' : '')
+                    + (s.battery  != null ? '&nbsp;🔋 ' + s.battery + '%' : '')
                     + (s.alt      != null ? '<br>Alt: ' + s.alt + ' m' : '')
+                    + (s.locator  ? '<br><span style="font-size:11px">QTH: <code>' + esc(s.locator) + '</code></span>' : '')
+                    + '<br><a href="https://www.openstreetmap.org/?mlat=' + s.lat.toFixed(6) + '&mlon=' + s.lon.toFixed(6) + '&zoom=14" target="_blank" rel="noopener" style="font-size:11px;color:#58a6ff">'
+                    + '📍 ' + s.lat.toFixed(4) + (s.lat >= 0 ? '°N' : '°S') + ' ' + s.lon.toFixed(4) + (s.lon >= 0 ? '°E' : '°W') + '</a>'
                     + aprsLink;
 
                 var _m = L.marker([s.lat, s.lon], { icon: stationIcon(s.callsign, s.rssi, s.hopCount, s.temp != null || s.humidity != null || s.pressure != null) })

@@ -245,6 +245,7 @@
                     qrzLoc    = qrz?.Location,
                     hopCount  = s.HopCount,
                     relayPath = s.LastRelayPath,
+                    locator   = GeoHelper.ToMaidenhead(s.Latitude!.Value, s.Longitude!.Value),
                     temp      = s.Temp1,
                     humidity  = s.Humidity,
                     pressure  = s.Pressure,
