@@ -1087,6 +1087,15 @@ h1:focus {
 }
 .mh-sc-btn-aprs:hover { background: #2d6a4f; color: #fff; }
 
+.mh-sc-gps {
+    color: #58a6ff;
+    text-decoration: none;
+    font-family: monospace;
+    font-size: 11px;
+    white-space: nowrap;
+}
+.mh-sc-gps:hover { text-decoration: underline; }
+
 .mh-remove-btn {
     background: none;
     border: none;
