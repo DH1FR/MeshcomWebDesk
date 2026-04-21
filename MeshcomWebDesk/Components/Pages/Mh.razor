@@ -10,6 +10,7 @@
 @inject IOptions<MeshcomSettings> SettingsOptions
 @inject LanguageService Loc
 @inject QrzService QrzService
+@inject NavigationManager Nav
 
 <PageTitle>MH – @Loc.T("Zuletzt gehört", "Most Recently Heard", "Più recenti", "Más recientes")</PageTitle>
 
@@ -104,15 +105,85 @@
                         var dist = CalcDistance(s);
                         <tr class="mh-row">
                             <td class="mh-callsign">
-                                <span title="@BuildStationTooltip(s, Loc.T("Erstmals", "First", "Prima volta", "Primera vez"), _qrzData.GetValueOrDefault(s.Callsign))">@s.Callsign</span>
-                                @if (!string.IsNullOrEmpty(MeshcomLookup.HwName(s.HwId)))
-                                {
-                                    <span class="mh-hw-badge">@MeshcomLookup.HwName(s.HwId)</span>
-                                }
-                                @if (!string.IsNullOrEmpty(s.Firmware))
-                                {
-                                    <span class="mh-fw-badge">@s.Firmware</span>
-                                }
+                                <div class="mh-cs-wrap @(_cardCallsign == s.Callsign ? "mh-cs-pinned" : "")"
+                                     @onmouseenter="() => _cardCallsign = s.Callsign"
+                                     @onmouseleave="() => { if (_cardCallsign == s.Callsign) _cardCallsign = null; }">
+                                    <span class="mh-cs-label" @onclick="() => ToggleCard(s.Callsign)">
+                                        @s.Callsign
+                                    </span>
+                                    @if (!string.IsNullOrEmpty(MeshcomLookup.HwName(s.HwId)))
+                                    {
+                                        <span class="mh-hw-badge">@MeshcomLookup.HwName(s.HwId)</span>
+                                    }
+                                    @if (!string.IsNullOrEmpty(s.Firmware))
+                                    {
+                                        <span class="mh-fw-badge">@s.Firmware</span>
+                                    }
+
+                                    @* ── Station Card (hover + tap) ── *@
+                                    <div class="mh-station-card">
+                                        @{ var qrzCard = _qrzData.GetValueOrDefault(s.Callsign);
+                                           var distCard = CalcDistance(s); }
+                                        <div class="mh-sc-header">
+                                            <span class="mh-sc-call">@s.Callsign</span>
+                                            @if (!string.IsNullOrEmpty(MeshcomLookup.HwName(s.HwId)))
+                                            {
+                                                <span class="mh-hw-badge">@MeshcomLookup.HwName(s.HwId)</span>
+                                            }
+                                        </div>
+                                        @if (qrzCard is not null)
+                                        {
+                                            <div class="mh-sc-qrz">
+                                                @if (!string.IsNullOrEmpty(qrzCard.FirstName)) { <span>@qrzCard.FirstName</span> }
+                                                @if (!string.IsNullOrEmpty(qrzCard.Location))  { <span class="mh-sc-loc">@qrzCard.Location</span> }
+                                            </div>
+                                        }
+                                        <div class="mh-sc-grid">
+                                            @if (s.LastRssi.HasValue)
+                                            {
+                                                <span class="mh-sc-lbl">RSSI</span>
+                                                <span class="@RssiClass(s.LastRssi)">@s.LastRssi dBm</span>
+                                            }
+                                            @if (s.LastSnr.HasValue)
+                                            {
+                                                <span class="mh-sc-lbl">SNR</span>
+                                                <span>@($"{s.LastSnr:F1}") dB</span>
+                                            }
+                                            @if (s.Battery.HasValue)
+                                            {
+                                                <span class="mh-sc-lbl">🔋</span>
+                                                <span class="@BattClass(s.Battery.Value)">@s.Battery%</span>
+                                            }
+                                            @if (distCard.HasValue)
+                                            {
+                                                <span class="mh-sc-lbl">📏</span>
+                                                <span>@GeoHelper.FormatDistance(distCard.Value)</span>
+                                            }
+                                            @if (!string.IsNullOrEmpty(s.Firmware))
+                                            {
+                                                <span class="mh-sc-lbl">FW</span>
+                                                <span>@s.Firmware</span>
+                                            }
+                                        </div>
+                                        @if (!string.IsNullOrEmpty(s.LastMessage))
+                                        {
+                                            <div class="mh-sc-msg">@Truncate(s.LastMessage, 60)</div>
+                                        }
+                                        <div class="mh-sc-actions">
+                                            <button class="mh-sc-btn mh-sc-btn-chat"
+                                                    @onclick="() => OpenChat(s.Callsign)"
+                                                    @onclick:stopPropagation="true">
+                                                💬 @Loc.T("Chat öffnen", "Open Chat", "Apri chat", "Abrir chat")
+                                            </button>
+                                            <a class="mh-sc-btn mh-sc-btn-aprs"
+                                               href="https://aprs.fi/#!call=a/@(Uri.EscapeDataString(s.Callsign))"
+                                               target="_blank" rel="noopener"
+                                               @onclick:stopPropagation="true">
+                                                🔗 aprs.fi
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
                             </td>
                             @if (SettingsOptions.Value.Qrz.Enabled)
                             {
@@ -183,6 +254,8 @@
                             <td>
                                 <button class="mh-chat-btn" @onclick="() => OpenChat(s.Callsign)"
                                         title="@Loc.T($"Chat mit {s.Callsign} öffnen", $"Open chat with {s.Callsign}", $"Apri chat con {s.Callsign}", $"Abrir chat con {s.Callsign}")">&#x1f4ac;</button>
+                                <button class="mh-remove-btn" @onclick="() => RemoveStation(s.Callsign)"
+                                        title="@Loc.T($"{s.Callsign} aus Liste entfernen", $"Remove {s.Callsign} from list", $"Rimuovi {s.Callsign} dalla lista", $"Eliminar {s.Callsign} de la lista")">✕</button>
                             </td>
                         </tr>
                     }
@@ -209,6 +282,7 @@
     private string _myCallsign = string.Empty;
     private bool _disposed;
     private string _searchText = string.Empty;
+    private string? _cardCallsign;   // callsign whose station card is currently shown (hover or tap)
     private readonly Dictionary<string, QrzInfo?> _qrzData = new(StringComparer.OrdinalIgnoreCase);
 
     private IReadOnlyList<HeardStation> FilteredStations =>
@@ -318,6 +392,15 @@
     private void OpenChat(string callsign)
     {
         ChatService.OpenTab(callsign.ToUpperInvariant());
+        Nav.NavigateTo("/");
+    }
+
+    private void ToggleCard(string callsign) =>
+        _cardCallsign = _cardCallsign == callsign ? null : callsign;
+
+    private void RemoveStation(string callsign)
+    {
+        ChatService.RemoveFromMhList(callsign);
     }
 
     private void ClearList()

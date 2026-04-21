@@ -187,4 +187,10 @@ public class MeshcomSettings
 
     /// <summary>Optional QRZ.com XML API integration for callsign lookups in the MH list.</summary>
     public QrzSettings Qrz { get; set; } = new();
+
+    /// <summary>
+    /// User-defined quick-text buttons shown in the send bar flyout.
+    /// Clicking a button loads the text into the input field for review before sending.
+    /// </summary>
+    public List<QuickTextEntry> QuickTexts { get; set; } = [];
 }

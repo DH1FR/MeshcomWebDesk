@@ -215,6 +215,7 @@ public class ChatService
     public ChatTab OpenTab(string key)
     {
         var tab = GetOrCreateTab(key);
+        ActiveTabKey = key;
         NotifyChange();
         return tab;
     }
@@ -312,6 +313,12 @@ public class ChatService
     public void ClearMhList()
     {
         _mhList.Clear();
+        NotifyChange();
+    }
+
+    public void RemoveFromMhList(string callsign)
+    {
+        _mhList.TryRemove(callsign, out _);
         NotifyChange();
     }
 
@@ -485,6 +492,7 @@ public class ChatService
                 LastRelayPath        = message.RelayPath,
                 HopCount             = message.RelayPath?.Split(',').Length - 1 ?? 0,
                 RelayPathCount       = message.RelayPath != null ? 1 : 0,
+                LastSrcType          = message.SrcType,
                 DirectLinkConfirmed  = (message.IsAck || (!message.IsPositionBeacon && !message.IsTelemetry))
                                        && message.RelayPath == null,
                 Temp1             = message.IsTelemetry ? message.Temp1     : null,
@@ -506,6 +514,7 @@ public class ChatService
                 if (message.Battery.HasValue) s.Battery  = message.Battery;
                 if (message.HwId.HasValue)    s.HwId     = message.HwId;
                 if (!string.IsNullOrEmpty(message.Firmware)) s.Firmware = message.Firmware;
+                if (!string.IsNullOrEmpty(message.SrcType))  s.LastSrcType = message.SrcType;
                 if ((message.IsAck || (!message.IsPositionBeacon && !message.IsTelemetry))
                     && message.RelayPath == null)
                     s.DirectLinkConfirmed = true;

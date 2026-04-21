@@ -174,6 +174,8 @@
                                 <tr><td><code>{hw}</code></td>       <td>@Loc.T("Hardware-Name",        "Hardware name",         "Nome hardware",          "Nombre hardware")</td>      <td style="font-family:monospace">T-BEAM</td></tr>
                                 <tr><td><code>{route}</code></td>    <td>@Loc.T("Relay-Pfad (leer = direkt)","Relay path (empty = direct)","Percorso relay (vuoto = diretto)","Ruta relay (vacío = directo)")</td> <td style="font-family:monospace">OE1KBC → DB0TAW</td></tr>
                                 <tr><td><code>{hops}</code></td>     <td>@Loc.T("Anzahl Relay-Hops (0 = direkt)","Relay hop count (0 = direct)","Numero hop relay (0 = diretto)","Número saltos relay (0 = directo)")</td> <td style="font-family:monospace">1</td></tr>
+                                <tr><td><code>{srctype}</code></td>  <td>@Loc.T("Verbindungstyp (roh)","Connection type (raw)","Tipo connessione (raw)","Tipo conexión (raw)")</td> <td style="font-family:monospace">lora</td></tr>
+                                <tr><td><code>{srctype-label}</code></td><td>@Loc.T("Verbindungstyp (lesbar)","Connection type (readable)","Tipo connessione (leggibile)","Tipo conexión (legible)")</td><td style="font-family:monospace">LoRa / UDP/Gateway</td></tr>
                                 <tr><td><code>{date}</code></td>     <td>@Loc.T("Aktuelles Datum",      "Current date",          "Data corrente",          "Fecha actual")</td>         <td style="font-family:monospace">@now.ToString("dd.MM.yyyy")</td></tr>
                                 <tr><td><code>{time}</code></td>     <td>@Loc.T("Aktuelle Uhrzeit",     "Current time",          "Ora corrente",           "Hora actual")</td>          <td style="font-family:monospace">@now.ToString("HH:mm")</td></tr>
                             </tbody>
@@ -294,6 +296,8 @@
                                             <tr><td><code>{hw}</code></td>       <td>@Loc.T("Hardware-Name",          "Hardware name",     "Nome hardware",        "Nombre hardware")</td>   <td style="font-family:monospace">T-BEAM</td></tr>
                                             <tr><td><code>{route}</code></td>    <td>@Loc.T("Relay-Pfad",             "Relay path",        "Percorso relay",       "Ruta relay")</td>        <td style="font-family:monospace">OE1KBC → DB0TAW</td></tr>
                                             <tr><td><code>{hops}</code></td>     <td>@Loc.T("Anzahl Relay-Hops",      "Relay hop count",   "Numero hop relay",     "Número saltos")</td>     <td style="font-family:monospace">1</td></tr>
+                                            <tr><td><code>{srctype}</code></td>  <td>@Loc.T("Verbindungstyp (roh)",   "Connection type (raw)", "Tipo connessione (raw)", "Tipo conexión (raw)")</td> <td style="font-family:monospace">lora</td></tr>
+                                            <tr><td><code>{srctype-label}</code></td><td>@Loc.T("Verbindungstyp (lesbar)", "Connection type (readable)", "Tipo connessione (leggibile)", "Tipo conexión (legible)")</td><td style="font-family:monospace">LoRa / UDP/Gateway</td></tr>
                                             <tr><td><code>{date}</code></td>     <td>@Loc.T("Aktuelles Datum",        "Current date",      "Data corrente",        "Fecha actual")</td>      <td style="font-family:monospace">@now.ToString("dd.MM.yyyy")</td></tr>
                                             <tr><td><code>{time}</code></td>     <td>@Loc.T("Aktuelle Uhrzeit",       "Current time",      "Ora corrente",         "Hora actual")</td>       <td style="font-family:monospace">@now.ToString("HH:mm")</td></tr>
                                         </tbody>
@@ -819,6 +823,90 @@
             }
         </div>
 
+        <!-- Schnelltexte / Quick Texts -->
+        <div class="settings-section @(IsOpen("quicktexts") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("quicktexts")'>
+                ⚡ @Loc.T("Schnelltexte", "Quick Texts", "Testi rapidi", "Textos rápidos")
+                <span class="section-chevron">@(IsOpen("quicktexts") ? "▲" : "▼")</span>
+            </h2>
+            <div>
+                <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
+                    ℹ️ @Loc.T(
+                        "Schnelltexte erscheinen als Buttons in der Sendeleiste (⚡). Klick lädt den Text in das Eingabefeld – Du kannst ihn noch anpassen, bevor Du sendest.",
+                        "Quick texts appear as buttons in the send bar (⚡). A click loads the text into the input field – you can still edit before sending.",
+                        "I testi rapidi appaiono come pulsanti nella barra di invio (⚡). Il clic carica il testo nel campo – puoi ancora modificarlo prima di inviare.",
+                        "Los textos rápidos aparecen como botones en la barra de envío (⚡). Al hacer clic el texto se carga en el campo – aún puedes editarlo antes de enviar.")
+                </div>
+                <table class="telemetry-mapping-table">
+                    <thead>
+                        <tr>
+                            <th style="width:140px">@Loc.T("Bezeichnung", "Label", "Etichetta", "Etiqueta")</th>
+                            <th>@Loc.T("Text (max. 149 Zeichen)", "Text (max. 149 characters)", "Testo (max. 149 caratteri)", "Texto (máx. 149 caracteres)")</th>
+                            <th style="width:36px"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var qt in _model.QuickTexts)
+                        {
+                            <tr>
+                                <td><input type="text" @bind="qt.Label" placeholder="@Loc.T("z. B. 73", "e.g. 73", "es. 73", "p.ej. 73")" style="width:100%" /></td>
+                                <td>
+                                    <div style="display:flex;align-items:center;gap:6px">
+                                        <input type="text" @bind="qt.Text" maxlength="149"
+                                               placeholder="@Loc.T("Nachrichtentext…", "Message text…", "Testo messaggio…", "Texto del mensaje…")"
+                                               style="width:100%" />
+                                        <span style="font-size:11px;color:#6e7681;white-space:nowrap">@qt.Text.Length/149</span>
+                                    </div>
+                                </td>
+                                <td><button type="button" class="btn-remove" @onclick="() => _model.QuickTexts.Remove(qt)">✕</button></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            <div style="margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem">
+                <button type="button" class="btn-add"
+                        @onclick="() => _model.QuickTexts.Add(new QuickTextEntry())">
+                    + @Loc.T("Schnelltext hinzufügen", "Add Quick Text", "Aggiungi testo rapido", "Añadir texto rápido")
+                </button>
+                <button type="button" class="btn-add" style="padding:2px 10px;font-size:12px"
+                        @onclick="() => _showQuickTextVars = !_showQuickTextVars">
+                    📋 @(_showQuickTextVars
+                        ? Loc.T("Variablen ausblenden", "Hide Variables", "Nascondi variabili", "Ocultar variables")
+                        : Loc.T("Verfügbare Variablen", "Available Variables", "Variabili disponibili", "Variables disponibles"))
+                </button>
+            </div>
+            @if (_showQuickTextVars)
+            {
+                var now = DateTime.Now;
+                <div style="margin-top:0.75rem;overflow-x:auto">
+                    <table class="telemetry-mapping-table" style="font-size:12px">
+                        <thead>
+                            <tr>
+                                <th>@Loc.T("Variable", "Variable", "Variabile", "Variable")</th>
+                                <th>@Loc.T("Beschreibung", "Description", "Descrizione", "Descripción")</th>
+                                <th>@Loc.T("Beispiel", "Example", "Esempio", "Ejemplo")</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>{mycall}</code></td>    <td>@Loc.T("Eigenes Rufzeichen",       "Own callsign",         "Nominativo proprio",       "Indicativo propio")</td>      <td style="font-family:monospace">@SettingsMonitor.CurrentValue.MyCallsign</td></tr>
+                            <tr><td><code>{callsign}</code></td>  <td>@Loc.T("Rufzeichen Gesprächspartner", "Chat partner callsign", "Nominativo interlocutore", "Indicativo interlocutor")</td> <td style="font-family:monospace">OE1KBC-1</td></tr>
+                            <tr><td><code>{dest-name}</code></td> <td>@Loc.T("Vorname (QRZ)",            "First name (QRZ)",     "Nome (QRZ)",               "Nombre (QRZ)")</td>           <td style="font-family:monospace">Max</td></tr>
+                            <tr><td><code>{dest-loc}</code></td>  <td>@Loc.T("Standort (QRZ)",           "Location (QRZ)",       "Posizione (QRZ)",          "Ubicación (QRZ)")</td>        <td style="font-family:monospace">Vienna, AT</td></tr>
+                            <tr><td><code>{rssi}</code></td>      <td>@Loc.T("RSSI (letzter Empfang)",   "RSSI (last RX)",       "RSSI (ultima RX)",         "RSSI (última RX)")</td>       <td style="font-family:monospace">-85</td></tr>
+                            <tr><td><code>{snr}</code></td>       <td>@Loc.T("SNR (letzter Empfang)",    "SNR (last RX)",        "SNR (ultima RX)",          "SNR (última RX)")</td>        <td style="font-family:monospace">6.5</td></tr>
+                            <tr><td><code>{hw}</code></td>        <td>@Loc.T("Hardware-Typ",             "Hardware type",        "Tipo hardware",            "Tipo hardware")</td>           <td style="font-family:monospace">T-Beam</td></tr>
+                            <tr><td><code>{route}</code></td>     <td>@Loc.T("Relay-Pfad",               "Relay path",           "Percorso relay",           "Ruta relay")</td>              <td style="font-family:monospace">OE1KBC → DB0TAW</td></tr>
+                            <tr><td><code>{hops}</code></td>      <td>@Loc.T("Anzahl Relay-Hops",        "Relay hop count",      "Numero hop relay",         "Número saltos")</td>           <td style="font-family:monospace">1</td></tr>
+                            <tr><td><code>{version}</code></td>   <td>@Loc.T("App-Version",              "App version",          "Versione app",             "Versión app")</td>             <td style="font-family:monospace">1.0.0</td></tr>
+                            <tr><td><code>{date}</code></td>      <td>@Loc.T("Aktuelles Datum",          "Current date",         "Data corrente",            "Fecha actual")</td>            <td style="font-family:monospace">@now.ToString("dd.MM.yyyy")</td></tr>
+                            <tr><td><code>{time}</code></td>      <td>@Loc.T("Aktuelle Uhrzeit",         "Current time",         "Ora corrente",             "Hora actual")</td>             <td style="font-family:monospace">@now.ToString("HH:mm")</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            }
+            </div>
+        </div>
+
         <div class="settings-actions">
             <button class="btn-save" @onclick="SaveAsync">💾 @Loc.T("Speichern", "Save", "Salva", "Guardar")</button>
         </div>
@@ -837,6 +925,7 @@
     private string? _autoReplyResult;
     private bool    _showAutoReplyVars;
     private bool    _showBotVars;
+    private bool    _showQuickTextVars;
     private string  _botTestCommand   = string.Empty;
     private string  _botTestCallsign  = string.Empty;
     private bool    _botTesting;
@@ -1221,7 +1310,10 @@
             QrzUsername             = s.Qrz.Username,
             QrzPassword             = s.Qrz.Password,
             QrzLogRequests          = s.Qrz.LogRequests,
-            QrzCacheMaxAgeDays      = s.Qrz.CacheMaxAgeDays
+            QrzCacheMaxAgeDays      = s.Qrz.CacheMaxAgeDays,
+            QuickTexts              = s.QuickTexts
+                .Select(q => new QuickTextEntry { Label = q.Label, Text = q.Text })
+                .ToList()
         };
     }
 
@@ -1304,6 +1396,9 @@
         public bool   QrzLogRequests     { get; set; }
         public int    QrzCacheMaxAgeDays { get; set; } = 30;
 
+        // Quick Texts
+        public List<QuickTextEntry> QuickTexts { get; set; } = [];
+
         public DatabaseSettings ToDbSettings() => new()
         {
             Provider              = DbProvider,
@@ -1373,7 +1468,8 @@
                 Password        = QrzPassword,
                 LogRequests     = QrzLogRequests,
                 CacheMaxAgeDays = QrzCacheMaxAgeDays
-            }
+            },
+            QuickTexts = QuickTexts
         };
     }
 }

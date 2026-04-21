@@ -29,6 +29,9 @@ h1:focus {
     display: flex;
     flex-direction: column;
     height: 100%;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     overflow: hidden;
 }
 
@@ -38,6 +41,8 @@ h1:focus {
     display: flex;
     flex-direction: column;
     min-height: 0;
+    min-width: 0;
+    max-width: 100%;
 }
 
 /* ===== Tab Bar ===== */
@@ -50,6 +55,8 @@ h1:focus {
     border-bottom: 1px solid #0f3460;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .tab-button {
@@ -156,7 +163,7 @@ h1:focus {
 
 .new-tab-dialog input {
     flex: 1;
-    min-width: 180px;
+    min-width: 0;
     padding: 6px 10px;
     border: 1px solid #0f3460;
     border-radius: 4px;
@@ -199,6 +206,8 @@ h1:focus {
     display: flex;
     flex-direction: column;
     min-height: 0;
+    min-width: 0;
+    max-width: 100%;
     overflow: hidden;
 }
 
@@ -289,6 +298,78 @@ h1:focus {
 .ack-sent    { color: #a0c4ff; }
 .ack-ok      { color: #3fb950; font-weight: 700; }
 
+/* ===== Send Bar Wrapper (Quick Texts) ===== */
+.send-bar-wrap {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+}
+
+/* Quick Text Flyout */
+.quicktext-flyout {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 6px 10px;
+    background: #16213e;
+    border-top: 1px solid #0f3460;
+    align-items: center;
+}
+
+.quicktext-btn {
+    background: #0f3460;
+    color: #a0c4ff;
+    border: 1px solid #1a4a8a;
+    border-radius: 5px;
+    padding: 4px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, color 0.15s;
+}
+
+.quicktext-btn:hover {
+    background: #1a5a9a;
+    color: #fff;
+}
+
+.quicktext-close {
+    background: none;
+    border: none;
+    color: #6c757d;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 6px;
+    margin-left: auto;
+    line-height: 1;
+    border-radius: 4px;
+    transition: color 0.15s;
+}
+
+.quicktext-close:hover { color: #f85149; }
+
+/* ⚡ Button in SendBar */
+.btn-quicktext {
+    background: #0f3460;
+    color: #a0c4ff;
+    border: 1px solid #1a4a8a;
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-size: 14px;
+    cursor: pointer;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s;
+}
+
+.btn-quicktext:hover,
+.btn-quicktext-active {
+    background: #1a5a9a;
+    color: #fff;
+}
+
 /* ===== Send Bar ===== */
 .send-bar {
     display: flex;
@@ -296,6 +377,9 @@ h1:focus {
     padding: 8px 12px;
     background: #16213e;
     border-top: 1px solid #0f3460;
+    width: 100%;
+    box-sizing: border-box;
+    min-width: 0;
 }
 
 .send-bar input {
@@ -753,7 +837,7 @@ h1:focus {
 
 .mh-table td { padding: 6px 10px; vertical-align: middle; }
 
-.mh-callsign  { font-weight: 700; color: #a0c4ff; white-space: nowrap; }
+.mh-callsign  { font-weight: 700; color: #a0c4ff; white-space: nowrap; overflow: visible; position: relative; }
 
 .mh-hw-badge {
     display: inline-block;
@@ -827,7 +911,153 @@ h1:focus {
     border-radius: 4px;
     transition: background 0.15s;
 }
-.mh-chat-btn:hover { background: rgba(255,255,255,0.1); }
+
+/* ===== MH Station Card (hover popup on callsign) ===== */
+.mh-cs-wrap {
+    position: relative;
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    z-index: 1;
+}
+
+/* Beim Hover/Tap die Zeile in den Vordergrund heben */
+.mh-cs-wrap:hover,
+.mh-cs-wrap.mh-cs-pinned { z-index: 600; }
+
+.mh-cs-label {
+    cursor: pointer;
+    font-weight: 700;
+    color: #a0c4ff;
+    white-space: nowrap;
+}
+.mh-cs-label:hover { color: #79c0ff; text-decoration: underline dotted; }
+
+.mh-station-card {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 600;
+    background: #16213e;
+    border: 1px solid #1a4a8a;
+    border-radius: 8px;
+    /* padding-top schafft visuellen Abstand OHNE Hover-Gap */
+    padding: 0 12px 10px;
+    padding-top: 10px;
+    margin-top: 4px;
+    min-width: 210px;
+    max-width: 280px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+    pointer-events: all;
+}
+
+/* Unsichtbare Brücke zwischen Rufzeichen und Card: füllt den Gap */
+.mh-station-card::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 0;
+    right: 0;
+    height: 6px;
+}
+
+/* Show on hover (desktop) */
+.mh-cs-wrap:hover .mh-station-card { display: block; }
+/* Show when pinned via tap (mobile) */
+.mh-cs-pinned .mh-station-card     { display: block; }
+
+.mh-sc-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 5px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #0f3460;
+}
+
+.mh-sc-call {
+    font-weight: 700;
+    font-size: 14px;
+    color: #a0c4ff;
+}
+
+.mh-sc-qrz {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin-bottom: 6px;
+    font-size: 12px;
+    color: #c9d1d9;
+}
+.mh-sc-loc { color: #8b949e; font-size: 11px; }
+
+.mh-sc-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 2px 8px;
+    font-size: 11px;
+    margin-bottom: 6px;
+}
+.mh-sc-lbl { color: #6e7681; }
+
+.mh-sc-msg {
+    font-size: 11px;
+    color: #8b949e;
+    font-style: italic;
+    margin-bottom: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mh-sc-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.mh-sc-btn {
+    flex: 1;
+    padding: 5px 8px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    transition: background 0.15s;
+    white-space: nowrap;
+}
+.mh-sc-btn-chat {
+    background: #0f3460;
+    color: #a0c4ff;
+    border: 1px solid #1a4a8a;
+}
+.mh-sc-btn-chat:hover { background: #1a5a9a; color: #fff; }
+
+.mh-sc-btn-aprs {
+    background: #1a2d1a;
+    color: #7ee787;
+    border: 1px solid #2d6a4f;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.mh-sc-btn-aprs:hover { background: #2d6a4f; color: #fff; }
+
+.mh-remove-btn {
+    background: none;
+    border: none;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 2px 5px;
+    border-radius: 4px;
+    color: #8b949e;
+    transition: background 0.15s, color 0.15s;
+    margin-left: 2px;
+}
+.mh-remove-btn:hover { background: rgba(248,81,73,0.15); color: #f85149; }
 
 /* ===== About Page ===== */
 .about-page {
@@ -1080,6 +1310,22 @@ h1:focus {
 
     .send-bar input {
         font-size: 16px; /* prevent iOS zoom */
+        min-width: 0;    /* allow shrinking below intrinsic size */
+    }
+
+    .btn-send {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+
+    .btn-quicktext {
+        padding: 8px 8px;
+        font-size: 13px;
+    }
+
+    .char-counter {
+        min-width: 2.8rem;
+        font-size: 10px;
     }
 
     .new-tab-dialog input {

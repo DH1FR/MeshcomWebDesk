@@ -18,7 +18,8 @@
 A **Blazor Server** web application for communicating with a [MeshCom 4.0](https://icssw.org/meshcom/) node via UDP (EXTUDP JSON protocol).  
 Built with **.NET 10** and **Blazor Interactive Server**.
 
-> **MeshCom Firmware:** Compatible with [icssw-org/MeshCom-Firmware](https://github.com/icssw-org/MeshCom-Firmware) v4.35+
+> **MeshCom Firmware:** Compatible with [icssw-org/MeshCom-Firmware](https://github.com/icssw-org/MeshCom-Firmware) v4.35+  
+> Hardware IDs 1–53 supported (`TLORA`, `T-BEAM`, `T-ECHO`, `T-DECK`, `T-DECK-PLUS`, `T-DECK-PRO`, `T-ETH-ELITE`, `HELTEC-V1`–`V4`, `RAK4631`, `EBYTE-E22`, `T5-EPAPER`, …)
 
 > 💾 **Ready-to-run binaries** (Windows & Linux) – no build required:  
 > 👉 [**Download latest release**](https://github.com/DH1FR/MeshcomWebDesk/releases/latest)
@@ -73,13 +74,14 @@ and makes a full web client for MeshCom available via a simple URL
 - **Clickable callsigns in the monitor** – click any sender or recipient to open a chat tab instantly
 - **QRZ.com tooltips** – when enabled, hovering over any callsign (tab buttons, chat messages, monitor From/To) shows the operator's first name and home QTH (e.g. `Chat mit DH1FR-2 öffnen · Max, Berlin`)
 - **Audio notification** 🔔 when a new direct message to your own callsign arrives (Web Audio API, no audio file required); mute toggle in the status bar
+- **⚡ Quick Texts** – configurable one-click text buttons in the send bar; clicking a button loads the predefined text into the input field for review before sending; supports all `{variable}` placeholders (`{mycall}`, `{callsign}`, `{rssi}`, `{time}`, `{date}`, …); configured in **Settings → ⚡ Schnelltexte**
 
 ### 📻 MH – Most Recently Heard
 - Live table of all heard stations with last message, timestamp and message count
 - **GPS position** parsed from EXTUDP position packets (`lat_dir` / `long_dir` APRS format)
 - **Distance calculation** (Haversine) from own position to each heard station
 - **Battery level** 🔋 column parsed from `batt` field in position/telemetry packets, colour-coded (🟢 >60% / 🟡 >30% / 🔴 ≤30%)
-- **Hardware badge** – short hardware name from `hw_id` field (e.g. `T-BEAM`, `T-ECHO`, `HELTEC-V3`)
+- **Hardware badge** – short hardware name from `hw_id` field (e.g. `T-BEAM`, `T-ECHO`, `HELTEC-V3`, `T-ETH-ELITE`)
 - **Firmware tooltip** – hover the callsign to see firmware version, hardware ID and first-heard time
 - **QRZ.com callsign data** – when the QRZ.com integration is enabled, a dedicated **Name / Location** column shows each operator's first name and home QTH; the same data also appears as a hover tooltip on every callsign
 - **RSSI / SNR** signal quality with colour coding (green / yellow / red)
@@ -133,7 +135,7 @@ and makes a full web client for MeshCom available via a simple URL
 - Changes are written to `appsettings.override.json` in `DataPath` (Docker-safe read-only mount supported)
 - Most settings apply **immediately without restart**
 - Settings that still require a restart: **Listen-IP / Listen-Port** (socket binding) and **Log-Path / Log-Retention** (Serilog)
-- **Collapsible sections** – all 13 setting sections can be individually expanded/collapsed; all start collapsed so the page is compact by default; state is saved in `localStorage` and **restored on every visit**
+- **Collapsible sections** – all 14 setting sections can be individually expanded/collapsed; all start collapsed so the page is compact by default; state is saved in `localStorage` and **restored on every visit**
 - **Encrypted sensitive fields** – `MySqlConnectionString`, `InfluxToken`, `Qrz.Password` and `TelemetryApiKey` are encrypted with the ASP.NET Core Data Protection API before being written to `appsettings.override.json` (prefix `dp:`); existing plain-text values continue to work and are encrypted on the next save
 
 ### 🌐 UI Language
@@ -308,6 +310,7 @@ MeshcomWebDesk/              ← Blazor Server (ASP.NET Core host)
 │     MeshcomMessage.cs        ← Message model (from/to/text/GPS/RSSI/ACK/relay/telemetry)
 │     MeshcomSettings.cs       ← Strongly-typed config (IOptions)
 │     TelemetryMappingEntry.cs ← Telemetry mapping entry (JSON key → label + unit + decimals)
+│     QuickTextEntry.cs        ← Quick-text button entry (label + text, supports {variables})
 │     DatabaseSettings.cs      ← DB provider + connection settings + LogInserts
 │     WebhookSettings.cs       ← Webhook URL + trigger flags
 │     QrzSettings.cs           ← QRZ.com credentials + enabled flag

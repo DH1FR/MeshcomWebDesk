@@ -359,6 +359,19 @@ public partial class MeshcomUdpService : BackgroundService
             ? string.Join(" \u2192 ", station.LastRelayPath.Split(',').Select(h => h.Trim()))
             : string.Empty;
 
+        // For stations loaded from an older persisted snapshot (before LastSrcType was introduced),
+        // LastSrcType may be null. Fall back to "lora" when the station is known but the type is missing.
+        var srcType  = station != null
+            ? (station.LastSrcType ?? "lora")
+            : string.Empty;
+        var srcLabel = srcType.ToLowerInvariant() switch
+        {
+            "lora" => "LoRa",
+            "udp"  => "UDP/Gateway",
+            "node" => "Node",
+            _      => srcType
+        };
+
         return template
             .Replace("{version}",   AppVersion,                                        StringComparison.OrdinalIgnoreCase)
             .Replace("{mycall}",    _settings.MyCallsign,                              StringComparison.OrdinalIgnoreCase)
@@ -369,7 +382,9 @@ public partial class MeshcomUdpService : BackgroundService
             .Replace("{snr}",       station?.LastSnr?.ToString("F1")   ?? string.Empty, StringComparison.OrdinalIgnoreCase)
             .Replace("{hw}",        MeshcomLookup.HwName(station?.HwId),               StringComparison.OrdinalIgnoreCase)
             .Replace("{route}",     route,                                             StringComparison.OrdinalIgnoreCase)
-            .Replace("{hops}",      station?.HopCount.ToString()       ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace("{hops}",          station?.HopCount.ToString()       ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace("{srctype-label}", srcLabel,                                            StringComparison.OrdinalIgnoreCase)
+            .Replace("{srctype}",       srcType,                                             StringComparison.OrdinalIgnoreCase)
             .Replace("{date}",      now.ToString("dd.MM.yyyy"),                        StringComparison.OrdinalIgnoreCase)
             .Replace("{time}",      now.ToString("HH:mm"),                             StringComparison.OrdinalIgnoreCase);
     }
@@ -854,7 +869,7 @@ public partial class MeshcomUdpService : BackgroundService
             var isTimeSync = !isAck && !isPositionBeacon && !isTelemetry && TimeSyncPattern().IsMatch(msg);
 
             // src_type:"node"
-            var srcType      = root.TryGetProperty("src_type", out var srcTypeProp) ? srcTypeProp.GetString() : "lora";
+            var srcType      = root.TryGetProperty("src_type", out var srcTypeProp) ? (srcTypeProp.GetString() ?? "lora") : "lora";
             var isNodePacket = string.Equals(srcType, "node", StringComparison.OrdinalIgnoreCase);
 
             int? rssiRaw = (!isNodePacket && root.TryGetProperty("rssi", out var rssiProp)) ? rssiProp.GetInt32() : null;

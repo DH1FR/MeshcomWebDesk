@@ -72,6 +72,9 @@
 .app-body {
     flex: 1;
     overflow: hidden;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 /* Hide nav labels on narrow screens */
