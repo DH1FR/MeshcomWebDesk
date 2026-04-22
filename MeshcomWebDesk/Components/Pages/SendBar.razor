@@ -3,6 +3,7 @@
 @using MeshcomWebDesk.Services
 @inject IOptionsMonitor<MeshcomSettings> SettingsMonitor
 @inject MeshcomUdpService UdpService
+@inject SettingsService SettingsSvc
 
 <div class="send-bar-wrap">
     @if (_flyoutOpen && _quickTexts.Count > 0)
@@ -100,34 +101,34 @@
         if (fromIdx < 0 || fromIdx >= _quickTexts.Count || toIdx < 0 || toIdx >= _quickTexts.Count || fromIdx == toIdx)
             return;
 
-        // Reorder in-memory list
+        // Reorder the in-memory list
         var item = _quickTexts[fromIdx];
         _quickTexts.RemoveAt(fromIdx);
         _quickTexts.Insert(toIdx, item);
 
-        // Persist: update the settings QuickTexts with new order
-        var settings = SettingsMonitor.CurrentValue;
-        var fullList = settings.QuickTexts;
+        // Persist: replace the valid entries in the settings list with the new order
+        var fullList   = SettingsMonitor.CurrentValue.QuickTexts;
+        var validIdxs  = fullList
+            .Select((q, i) => new { q, i })
+            .Where(x => !string.IsNullOrWhiteSpace(x.q.Label) && !string.IsNullOrWhiteSpace(x.q.Text))
+            .Select(x => x.i)
+            .ToList();
 
-        // Rebuild the full list preserving empty/invalid entries at their positions
-        // but reordering the valid ones
-        var validEntries = fullList.Where(q => !string.IsNullOrWhiteSpace(q.Label) && !string.IsNullOrWhiteSpace(q.Text)).ToList();
-        if (fromIdx < validEntries.Count && toIdx < validEntries.Count)
+        if (fromIdx < validIdxs.Count && toIdx < validIdxs.Count)
         {
-            var entry = validEntries[fromIdx];
+            // Build reordered list of valid entries
+            var validEntries = validIdxs.Select(i => fullList[i]).ToList();
+            var moved = validEntries[fromIdx];
             validEntries.RemoveAt(fromIdx);
-            validEntries.Insert(toIdx, entry);
+            validEntries.Insert(toIdx, moved);
 
-            // Replace valid entries in the full list
-            var vi = 0;
-            for (var i = 0; i < fullList.Count && vi < validEntries.Count; i++)
-            {
-                if (!string.IsNullOrWhiteSpace(fullList[i].Label) && !string.IsNullOrWhiteSpace(fullList[i].Text))
-                {
-                    fullList[i] = validEntries[vi++];
-                }
-            }
+            // Write back into the full list at the same slot positions
+            for (var i = 0; i < validIdxs.Count; i++)
+                fullList[validIdxs[i]] = validEntries[i];
         }
+
+        // Save to appsettings.override.json
+        _ = SettingsSvc.SaveMeshcomSettingsAsync(SettingsMonitor.CurrentValue);
 
         await InvokeAsync(StateHasChanged);
     }
