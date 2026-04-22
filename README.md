@@ -74,7 +74,8 @@ and makes a full web client for MeshCom available via a simple URL
 - **Clickable callsigns in the monitor** – click any sender or recipient to open a chat tab instantly
 - **QRZ.com tooltips** – when enabled, hovering over any callsign (tab buttons, chat messages, monitor From/To) shows the operator's first name and home QTH (e.g. `Chat mit DH1FR-2 öffnen · Max, Berlin`)
 - **Audio notification** 🔔 when a new direct message to your own callsign arrives (Web Audio API, no audio file required); mute toggle in the status bar
-- **⚡ Quick Texts** – configurable one-click text buttons in the send bar; clicking a button loads the predefined text into the input field for review before sending; supports all `{variable}` placeholders (`{mycall}`, `{callsign}`, `{locator}`, `{rssi}`, `{time}`, `{date}`, …); configured in **Settings → ⚡ Quick Texts**
+- **⚡ Quick Texts** – configurable one-click text buttons in the send bar; clicking a button loads the predefined text into the input field for review before sending; supports all `{variable}` placeholders (`{mycall}`, `{mylocator}`, `{callsign}`, `{locator}`, `{rssi}`, `{time}`, `{date}`, …); buttons can be **reordered by drag & drop** in the flyout; new order is saved immediately; configured in **Settings → ⚡ Quick Texts**
+- **Variable expansion in the send bar** – type any `{variable}` directly in the message input field; press **Tab** to expand as a preview; variables are always expanded automatically on send
 - **Draggable tabs** – chat tabs can be reordered by drag & drop; order is saved in `localStorage` and restored on every visit
 - **Timestamps** – time is always shown as `HH:mm:ss`; for messages not from today a compact date (`dd.MM.yy`) is shown below the time without increasing row height
 
@@ -85,7 +86,7 @@ and makes a full web client for MeshCom available via a simple URL
 - **Station card popup** – hovering (desktop) or tapping (mobile) a callsign shows a rich card with QRZ name/QTH, RSSI/SNR, battery, distance, QTH locator, GPS coordinates (as OSM link) and firmware; buttons: **💬 Open Chat** and **🔗 aprs.fi**
 - **Distance calculation** (Haversine) from own position to each heard station
 - **Battery level** 🔋 column parsed from `batt` field in position/telemetry packets, colour-coded (🟢 >60% / 🟡 >30% / 🔴 ≤30%)
-- **Hardware badge** – short hardware name from `hw_id` field (e.g. `T-BEAM`, `T-ECHO`, `HELTEC-V3`, `T-ETH-ELITE`)
+- **Search / filter** 🔍 – search field in the header; type callsign, message text or QRZ name; results debounced (250 ms); Enter applies immediately; clearing the field resets instantly
 - **Firmware tooltip** – hover the callsign to see firmware version, hardware ID and first-heard time
 - **QRZ.com callsign data** – when the QRZ.com integration is enabled, a dedicated **Name / Location** column shows each operator's first name and home QTH; the same data also appears as a hover tooltip on every callsign
 - **RSSI / SNR** signal quality with colour coding (green / yellow / red)
@@ -151,7 +152,7 @@ and makes a full web client for MeshCom available via a simple URL
 - **Periodic beacon** – sends a configurable text to a configurable group at a fixed interval
 - Interval is configurable in whole hours (minimum 1 h); first transmission after **one full interval** (no send on every restart)
 - Enabled / disabled via `BeaconEnabled` flag – applies **live** without restart
-- **`{version}` placeholder** in `BeaconText` is replaced with the running application version at send time
+- **Supported placeholders** in `BeaconText`: `{version}`, `{mycall}`, `{mylocator}`, `{date}`, `{time}` – shown as inline hint in Settings
 - **Status indicator** in the status bar: pulsing `●` dot with next scheduled send time; turns yellow when < 10 min away
 - Beacon appears in the monitor feed and in the corresponding group chat tab
 - **"Send Beacon Now"** test button in Settings – sends the beacon immediately without waiting for the interval
@@ -159,8 +160,8 @@ and makes a full web client for MeshCom available via a simple URL
 ### ↩️ Auto-Reply
 - Sends a configurable reply text automatically when a **brand-new direct chat tab** is opened by an incoming message (first contact from a callsign)
 - Enabled / disabled via `AutoReplyEnabled` – applies **live** without restart
-- **`{version}` placeholder** in `AutoReplyText` is replaced with the running application version at send time  
-  Example: `MeshCom WebDesk V{version}` → `MeshCom WebDesk V1.4.1`
+- **Supported placeholders** in `AutoReplyText`: `{mycall}`, `{mylocator}`, `{callsign}`, `{locator}`, `{dest-name}`, `{dest-loc}`, `{rssi}`, `{snr}`, `{hw}`, `{route}`, `{hops}`, `{srctype}`, `{srctype-label}`, `{date}`, `{time}`, `{version}`  
+  Example: `MeshCom WebDesk V{version} – QTH: {mylocator}` → `MeshCom WebDesk V1.7.6 – QTH: JN48QN`
 - **Test button** in Settings – send the auto-reply text immediately to any callsign without waiting for an incoming message
 
 ### 🤖 Bot – Remote commands via direct message
@@ -180,7 +181,7 @@ and makes a full web client for MeshCom available via a simple URL
 - **Bare `ping` keyword**: a direct message containing only `ping` (case-insensitive, with optional surrounding whitespace) is treated identically to `--ping`
 - **User-defined commands** fully configurable in **Settings → 🤖 Bot** – no code changes required:
   - `Name` – command name without `--` (e.g. `info`)
-  - `Response` – reply text; supports all `{variable}` placeholders (`{mycall}`, `{callsign}`, `{locator}`, `{version}`, `{rssi}`, `{snr}`, `{hw}`, `{route}`, `{hops}`, `{date}`, `{time}`, …)
+  - `Response` – reply text; supports all `{variable}` placeholders (`{mycall}`, `{mylocator}`, `{callsign}`, `{locator}`, `{version}`, `{rssi}`, `{snr}`, `{hw}`, `{route}`, `{hops}`, `{srctype}`, `{srctype-label}`, `{date}`, `{time}`)
   - `Description` – optional short text shown in `--help` output
 - **Test button** in Settings – enter any command (e.g. `--ping`) and an optional sender callsign; the bot executes the command locally (dry-run, no UDP send) and shows the exact reply including all expanded `{variable}` placeholders
 - **Developer extension**: implement `IBotCommand` and register via `services.AddSingleton<IBotCommand, MyCommand>()` in `Program.cs`
@@ -1018,6 +1019,14 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 ---
 
 ## 📋 Changelog
+
+### v1.7.6
+- **feat:** ⚡ **Quick Texts – drag & drop reorder** – buttons in the flyout can be reordered by drag & drop; new order saved immediately to `appsettings.override.json`
+- **feat:** 🔧 **`{mylocator}` variable** – own QTH Maidenhead locator (from Node GPS) available in all template texts: Auto-Reply, Bot commands, Quick Texts and Beacon
+- **feat:** 💬 **Variable expansion in send bar** – `{variables}` can be typed directly in the message input; **Tab** expands inline as preview; **Send** always expands automatically
+- **perf:** 📻 **MH search debounce** – same optimisation as monitor filter: 250 ms debounce, Enter applies immediately, clearing resets instantly
+- **fix:** 📡 **Broadcast TX uses `dst *`** – outgoing messages in the ALL channel now use `*` as destination (not `CQCQCQ`) matching the MeshCom protocol spec
+- **fix:** ⚠️ **Remove `::deep` from global CSS** – `::deep` is only valid in scoped `.razor.css` files; removed from `app.css`
 
 ### v1.7.5
 - **feat:** 💬 **Draggable chat tabs** – tabs can be reordered by drag & drop; order persisted in `localStorage`
