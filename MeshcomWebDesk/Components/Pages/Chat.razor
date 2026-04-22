@@ -107,11 +107,12 @@
                 <span class="mon-filter-icon">🔍</span>
                 <input class="mon-filter-input"
                        value="@_monitorFilter"
-                       @oninput="e => _monitorFilter = e.Value?.ToString() ?? string.Empty"
+                       @oninput="OnMonitorFilterInput"
+                       @onkeydown="OnMonitorFilterKeyDown"
                        placeholder="@Loc.T("Rufzeichen oder Text…", "Callsign or text…", "Nominativo o testo…", "Indicativo o texto…")" />
                 @if (!string.IsNullOrEmpty(_monitorFilter))
                 {
-                    <button class="mon-filter-clear" @onclick="() => _monitorFilter = string.Empty" title="@Loc.T("Filter löschen", "Clear filter", "Cancella filtro", "Borrar filtro")">×</button>
+                    <button class="mon-filter-clear" @onclick="ClearMonitorFilter" title="@Loc.T("Filter löschen", "Clear filter", "Cancella filtro", "Borrar filtro")">×</button>
                 }
             </span>
             <span class="msg-count">
@@ -384,6 +385,15 @@
     private async Task OnMonitorFilterInput(ChangeEventArgs e)
     {
         _monitorFilter = e.Value?.ToString() ?? string.Empty;
+
+        // Empty field: apply immediately without debounce
+        if (string.IsNullOrEmpty(_monitorFilter))
+        {
+            _filterDebounce?.Cancel();
+            RebuildFilterCache();
+            return;
+        }
+
         // Cancel any pending debounce
         _filterDebounce?.Cancel();
         _filterDebounce = new CancellationTokenSource();
@@ -395,6 +405,16 @@
             StateHasChanged();
         }
         catch (OperationCanceledException) { }
+    }
+
+    private void OnMonitorFilterKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            _filterDebounce?.Cancel();
+            RebuildFilterCache();
+            StateHasChanged();
+        }
     }
 
     private void ClearMonitorFilter()
