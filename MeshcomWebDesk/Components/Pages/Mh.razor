@@ -36,9 +36,9 @@
         }
     </div>
 
-    @* ── Filtered list (computed once per render) ── *@
+    @* ── Filtered list (cached, rebuilt on search change or station update) ── *@
     @{
-        var filteredList = FilteredStations;
+        var filteredList = _cachedFilteredStations;
     }
 
     @* ── Header ── *@
@@ -57,10 +57,11 @@
                 <input class="mh-search" type="search"
                        placeholder="@Loc.T("Suchen…", "Search…", "Cerca…", "Buscar…")"
                        value="@_searchText"
-                       @oninput="e => _searchText = e.Value?.ToString() ?? string.Empty" />
+                       @oninput="OnSearchInput"
+                       @onkeydown="OnSearchKeyDown" />
                 @if (!string.IsNullOrEmpty(_searchText))
                 {
-                    <button class="mh-search-clear" @onclick="() => _searchText = string.Empty"
+                    <button class="mh-search-clear" @onclick="ClearSearch"
                             title="@Loc.T("Suche löschen", "Clear search", "Cancella ricerca", "Limpiar búsqueda")">&#xd7;</button>
                 }
             </div>
@@ -296,13 +297,56 @@
     private string _myCallsign = string.Empty;
     private bool _disposed;
     private string _searchText = string.Empty;
-    private string? _cardCallsign;   // callsign whose station card is currently shown (hover or tap)
+    private IReadOnlyList<HeardStation> _cachedFilteredStations = [];
+    private CancellationTokenSource? _searchDebounce;
+    private string? _cardCallsign;
     private readonly Dictionary<string, QrzInfo?> _qrzData = new(StringComparer.OrdinalIgnoreCase);
 
     private IReadOnlyList<HeardStation> FilteredStations =>
         string.IsNullOrWhiteSpace(_searchText)
             ? _stations
             : _stations.Where(MatchesSearch).ToList();
+
+    private void RebuildSearchCache() =>
+        _cachedFilteredStations = FilteredStations;
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _searchText = e.Value?.ToString() ?? string.Empty;
+        if (string.IsNullOrEmpty(_searchText))
+        {
+            _searchDebounce?.Cancel();
+            RebuildSearchCache();
+            return;
+        }
+        _searchDebounce?.Cancel();
+        _searchDebounce = new CancellationTokenSource();
+        var token = _searchDebounce.Token;
+        try
+        {
+            await Task.Delay(250, token);
+            RebuildSearchCache();
+            StateHasChanged();
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    private void OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            _searchDebounce?.Cancel();
+            RebuildSearchCache();
+            StateHasChanged();
+        }
+    }
+
+    private void ClearSearch()
+    {
+        _searchDebounce?.Cancel();
+        _searchText = string.Empty;
+        RebuildSearchCache();
+    }
 
     private bool MatchesSearch(HeardStation s)
     {
@@ -328,6 +372,7 @@
         _myCallsign = SettingsOptions.Value.MyCallsign;
         _status     = UdpService.Status;
         _stations   = ChatService.MhList;
+        RebuildSearchCache();
         ChatService.OnChange      += OnChanged;
         UdpService.OnStatusChange += OnStatusChanged;
 
@@ -355,6 +400,7 @@
             {
                 if (_disposed) return;
                 _stations = newList;
+                RebuildSearchCache();
                 StateHasChanged();
             });
             if (await LoadQrzDataAsync(newList) && !_disposed)
@@ -419,6 +465,7 @@
 
     private void ClearList()
     {
+        _searchDebounce?.Cancel();
         _searchText = string.Empty;
         ChatService.ClearMhList();
     }

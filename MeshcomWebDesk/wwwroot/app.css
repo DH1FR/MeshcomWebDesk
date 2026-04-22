@@ -354,6 +354,15 @@ h1:focus {
     color: #fff;
 }
 
+/* Quick Text drag & drop */
+.quicktext-btn[draggable="true"] { cursor: grab; }
+.quicktext-btn.qt-dragging { opacity: 0.4; }
+.quicktext-btn.qt-drag-over {
+    outline: 2px solid #58a6ff;
+    outline-offset: -2px;
+    border-radius: 5px;
+}
+
 .quicktext-close {
     background: none;
     border: none;
@@ -1389,7 +1398,7 @@ h1:focus {
     }
 
     /* Smaller nav links on phones */
-    ::deep .app-nav-link {
+    .app-nav-link {
         padding: 5px 8px;
         font-size: 12px;
     }

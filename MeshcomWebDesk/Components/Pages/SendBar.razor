@@ -3,14 +3,18 @@
 @using MeshcomWebDesk.Services
 @inject IOptionsMonitor<MeshcomSettings> SettingsMonitor
 @inject MeshcomUdpService UdpService
+@inject SettingsService SettingsSvc
 
 <div class="send-bar-wrap">
     @if (_flyoutOpen && _quickTexts.Count > 0)
     {
-        <div class="quicktext-flyout">
-            @foreach (var qt in _quickTexts)
+        <div class="quicktext-flyout" id="qt-flyout">
+            @for (var i = 0; i < _quickTexts.Count; i++)
             {
-                <button class="quicktext-btn" @onclick="() => LoadQuickText(qt.Text)" title="@qt.Text">
+                var idx = i;
+                var qt = _quickTexts[i];
+                <button class="quicktext-btn" draggable="true" data-qt-idx="@idx"
+                        @onclick="() => LoadQuickText(qt.Text)" title="@qt.Text">
                     @qt.Label
                 </button>
             }
@@ -37,6 +41,7 @@
 </div>
 
 @implements IDisposable
+@inject IJSRuntime JS
 
 @code {
     [Parameter, EditorRequired] public EventCallback<string> OnSend { get; set; }
@@ -49,6 +54,7 @@
     private bool   _flyoutOpen;
     private List<QuickTextEntry> _quickTexts = [];
     private const int MaxLength = 149;
+    private DotNetObjectReference<SendBar>? _dotNetRef;
 
     private bool CanSend =>
         !string.IsNullOrWhiteSpace(_text) && _text.Length <= MaxLength;
@@ -67,13 +73,64 @@
         SettingsMonitor.OnChange(_ => { LoadQuickTextsFromSettings(); InvokeAsync(StateHasChanged); });
     }
 
-    public void Dispose() => Loc.OnChange -= StateHasChanged;
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_flyoutOpen && _quickTexts.Count > 0)
+        {
+            _dotNetRef ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("meshcomChat.initQuickTextDrag", _dotNetRef);
+        }
+    }
+
+    public void Dispose()
+    {
+        Loc.OnChange -= StateHasChanged;
+        _dotNetRef?.Dispose();
+    }
 
     private void LoadQuickTextsFromSettings()
     {
         _quickTexts = SettingsMonitor.CurrentValue.QuickTexts
             .Where(q => !string.IsNullOrWhiteSpace(q.Label) && !string.IsNullOrWhiteSpace(q.Text))
             .ToList();
+    }
+
+    [JSInvokable]
+    public async Task MoveQuickText(int fromIdx, int toIdx)
+    {
+        if (fromIdx < 0 || fromIdx >= _quickTexts.Count || toIdx < 0 || toIdx >= _quickTexts.Count || fromIdx == toIdx)
+            return;
+
+        // Reorder the in-memory list
+        var item = _quickTexts[fromIdx];
+        _quickTexts.RemoveAt(fromIdx);
+        _quickTexts.Insert(toIdx, item);
+
+        // Persist: replace the valid entries in the settings list with the new order
+        var fullList   = SettingsMonitor.CurrentValue.QuickTexts;
+        var validIdxs  = fullList
+            .Select((q, i) => new { q, i })
+            .Where(x => !string.IsNullOrWhiteSpace(x.q.Label) && !string.IsNullOrWhiteSpace(x.q.Text))
+            .Select(x => x.i)
+            .ToList();
+
+        if (fromIdx < validIdxs.Count && toIdx < validIdxs.Count)
+        {
+            // Build reordered list of valid entries
+            var validEntries = validIdxs.Select(i => fullList[i]).ToList();
+            var moved = validEntries[fromIdx];
+            validEntries.RemoveAt(fromIdx);
+            validEntries.Insert(toIdx, moved);
+
+            // Write back into the full list at the same slot positions
+            for (var i = 0; i < validIdxs.Count; i++)
+                fullList[validIdxs[i]] = validEntries[i];
+        }
+
+        // Save to appsettings.override.json
+        _ = SettingsSvc.SaveMeshcomSettingsAsync(SettingsMonitor.CurrentValue);
+
+        await InvokeAsync(StateHasChanged);
     }
 
     private void ToggleFlyout() => _flyoutOpen = !_flyoutOpen;
@@ -88,7 +145,9 @@
     private async Task SendAsync()
     {
         if (!CanSend) return;
-        var text = _text;
+        // Always expand variables before sending
+        var expanded = UdpService.ExpandVariables(_text, Callsign);
+        var text = expanded.Length > MaxLength ? expanded[..MaxLength] : expanded;
         _text = string.Empty;
         await OnSend.InvokeAsync(text);
     }
@@ -96,6 +155,17 @@
     private async Task OnKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter")
+        {
             await SendAsync();
+        }
+        else if (e.Key == "Tab")
+        {
+            // Tab: expand variables inline as a preview
+            if (_text.Contains('{'))
+            {
+                var expanded = UdpService.ExpandVariables(_text, Callsign);
+                _text = expanded.Length > MaxLength ? expanded[..MaxLength] : expanded;
+            }
+        }
     }
 }

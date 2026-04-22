@@ -115,9 +115,73 @@ window.meshcomChat = (function () {
         });
     }
 
+    function initQuickTextDrag(dotNetRef) {
+        var flyout = document.getElementById('qt-flyout');
+        if (!flyout) return;
+
+        // Re-init every time flyout opens (DOM is recreated by Blazor)
+        var dragIdx  = -1;
+        var hoverBtn = null;
+
+        flyout.addEventListener('dragstart', function (e) {
+            var btn = e.target.closest('[data-qt-idx]');
+            if (!btn) return;
+            dragIdx = parseInt(btn.dataset.qtIdx, 10);
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', '' + dragIdx);
+            btn.classList.add('qt-dragging');
+        });
+
+        flyout.addEventListener('dragover', function (e) {
+            var btn = e.target.closest('[data-qt-idx]');
+            if (!btn || dragIdx < 0) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            if (btn !== hoverBtn) {
+                if (hoverBtn) hoverBtn.classList.remove('qt-drag-over');
+                var idx = parseInt(btn.dataset.qtIdx, 10);
+                hoverBtn = idx !== dragIdx ? btn : null;
+                if (hoverBtn) hoverBtn.classList.add('qt-drag-over');
+            }
+        });
+
+        flyout.addEventListener('dragleave', function (e) {
+            var btn = e.target.closest('[data-qt-idx]');
+            if (btn && btn === hoverBtn) {
+                btn.classList.remove('qt-drag-over');
+                hoverBtn = null;
+            }
+        });
+
+        flyout.addEventListener('drop', function (e) {
+            e.preventDefault();
+            var btn = e.target.closest('[data-qt-idx]');
+            if (hoverBtn) { hoverBtn.classList.remove('qt-drag-over'); hoverBtn = null; }
+            flyout.querySelectorAll('[data-qt-idx].qt-dragging').forEach(function (b) {
+                b.classList.remove('qt-dragging');
+            });
+            if (!btn || dragIdx < 0) { dragIdx = -1; return; }
+            var toIdx   = parseInt(btn.dataset.qtIdx, 10);
+            var fromIdx = dragIdx;
+            dragIdx = -1;
+            if (fromIdx !== toIdx) {
+                dotNetRef.invokeMethodAsync('MoveQuickText', fromIdx, toIdx);
+            }
+        });
+
+        flyout.addEventListener('dragend', function () {
+            if (hoverBtn) { hoverBtn.classList.remove('qt-drag-over'); hoverBtn = null; }
+            flyout.querySelectorAll('[data-qt-idx].qt-dragging').forEach(function (b) {
+                b.classList.remove('qt-dragging');
+            });
+            dragIdx = -1;
+        });
+    }
+
     return {
         initResizer,
         initTabDrag,
+        initQuickTextDrag,
         getActiveTab:      () => localStorage.getItem('meshcom-active-tab') || '',
         setActiveTab:      (key) => {
             if (key) localStorage.setItem('meshcom-active-tab', key);
