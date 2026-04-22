@@ -1398,7 +1398,7 @@ h1:focus {
     }
 
     /* Smaller nav links on phones */
-    ::deep .app-nav-link {
+    .app-nav-link {
         padding: 5px 8px;
         font-size: 12px;
     }
