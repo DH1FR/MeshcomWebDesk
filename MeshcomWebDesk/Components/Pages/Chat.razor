@@ -711,11 +711,12 @@
         if (_activeTab == null) return;
         // Strip leading '#' for group tabs – the node uses the raw group number (e.g. "262"),
         // the '#' is an internal UI convention only.
-        // Pass the original tab key so the outgoing message is routed to the correct '#' tab.
-        var destination = _activeTab.Key == "*" || _activeTab.Key.TrimStart('#').Equals("alle", StringComparison.OrdinalIgnoreCase)
-            ? "*"
-            : _activeTab.Key.TrimStart('#');
-        await UdpService.SendMessageAsync(destination, text, _activeTab.Key);
+        // When destination is broadcast ("*"), also route the outgoing message to the "*" tab
+        // so it appears together with incoming broadcasts instead of creating a separate tab.
+        var isBroadcast = _activeTab.Key == "*" || _activeTab.Key.TrimStart('#').Equals("alle", StringComparison.OrdinalIgnoreCase);
+        var destination = isBroadcast ? "*" : _activeTab.Key.TrimStart('#');
+        var tabKey = isBroadcast ? "*" : _activeTab.Key;
+        await UdpService.SendMessageAsync(destination, text, tabKey);
     }
 
     private string QrzSuffix(string callsign)
