@@ -262,6 +262,18 @@ public partial class MeshcomUdpService : BackgroundService
         }
     }
 
+    /// <summary>
+    /// Resolves the wire-level destination for a group or callsign.
+    /// "#alle" (case-insensitive) and "alle" are mapped to "*" (broadcast)
+    /// because there is no real MeshCom group named "alle".
+    /// For all other groups the leading '#' is stripped as usual.
+    /// </summary>
+    private static string ResolveDestination(string group)
+    {
+        var stripped = group.TrimStart('#');
+        return stripped.Equals("alle", StringComparison.OrdinalIgnoreCase) ? "*" : stripped;
+    }
+
     private Task SendAutoReplyAsync(string callsign)
     {
         if (!_settings.AutoReplyEnabled || string.IsNullOrWhiteSpace(_settings.AutoReplyText))
@@ -441,7 +453,7 @@ public partial class MeshcomUdpService : BackgroundService
             if (DateTime.Now < nextDue)
                 continue;
 
-            var destination = s.BeaconGroup.TrimStart('#');
+            var destination = ResolveDestination(s.BeaconGroup);
             var beaconText  = ExpandVariables(s.BeaconText);
             var parts       = SplitMessage(beaconText);
             _logger.LogInformation("Sending beacon to {Group} ({Parts} part(s))", s.BeaconGroup, parts.Count);
@@ -552,7 +564,7 @@ public partial class MeshcomUdpService : BackgroundService
         if (string.IsNullOrWhiteSpace(s.BeaconText))
             throw new InvalidOperationException("Kein Bakentext konfiguriert.");
 
-        var destination = s.BeaconGroup.TrimStart('#');
+        var destination = ResolveDestination(s.BeaconGroup);
         var beaconText  = ExpandVariables(s.BeaconText);
         var parts       = SplitMessage(beaconText);
         _logger.LogInformation("Beacon test send to {Group} ({Parts} part(s)): {Text}", s.BeaconGroup, parts.Count, beaconText);

@@ -185,7 +185,8 @@ public class ChatService
     /// </summary>
     public void AddOutgoingMessage(MeshcomMessage message)
     {
-        // Determine tab key: for broadcast use "*", otherwise use the destination callsign
+        // Determine tab key: for broadcast ("*") use the "*" tab, otherwise use message.To directly.
+        // "#alle" is stored in message.To as-is (the tab key) – do NOT remap it to "*".
         var tabKey = message.IsBroadcast ? "*" : message.To;
         var tab = GetOrCreateTab(tabKey);
         lock (_lock)
