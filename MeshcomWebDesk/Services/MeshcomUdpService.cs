@@ -289,14 +289,22 @@ public partial class MeshcomUdpService : BackgroundService
         return ("#" + stripped).ToLowerInvariant();
     }
 
-    private Task SendAutoReplyAsync(string callsign)
+    private async Task SendAutoReplyAsync(string callsign)
     {
         if (!_settings.AutoReplyEnabled || string.IsNullOrWhiteSpace(_settings.AutoReplyText))
-            return Task.CompletedTask;
+            return;
+
+        // Ensure QRZ data is cached before expanding variables so that
+        // {dest-name} and {dest-loc} are available for brand-new contacts.
+        if (_settings.Qrz.Enabled)
+        {
+            try { await _qrzService.LookupAsync(callsign); }
+            catch (Exception ex) { _logger.LogDebug(ex, "QRZ pre-lookup for auto-reply failed for {Callsign}", callsign); }
+        }
 
         var text = ExpandVariables(_settings.AutoReplyText, callsign);
         _logger.LogInformation("Auto-reply to new contact {Callsign}", callsign);
-        return SendMessageAsync(callsign, text);
+        await SendMessageAsync(callsign, text);
     }
 
     private async Task HandleBotCommandAsync(MeshcomMessage message)
