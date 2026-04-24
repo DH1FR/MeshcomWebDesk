@@ -187,8 +187,9 @@
                                 }
                                 else if (!string.Equals(m.To, _myCallsign, StringComparison.OrdinalIgnoreCase))
                                 {
+                                    var grpLabel = m.To.StartsWith('#') ? ChatService.GetGroupLabel(m.To) : null;
                                     <span class="mon-call mon-call-link" @onclick="() => OpenTabFromMonitor(m.To)"
-                                          title="@(Loc.T($"Chat mit {m.To} öffnen", $"Open chat with {m.To}", $"Apri chat con {m.To}", $"Abrir chat con {m.To}") + QrzSuffix(m.To))">@m.To</span>
+                                          title="@(grpLabel is not null ? grpLabel.Label : Loc.T($"Chat mit {m.To} öffnen", $"Open chat with {m.To}", $"Apri chat con {m.To}", $"Abrir chat con {m.To}") + QrzSuffix(m.To))">@m.To@if (grpLabel is not null){<span class="qrz-badge"> · @grpLabel.ShortLabel</span>}</span>
                                 }
                                 else
                                 {
