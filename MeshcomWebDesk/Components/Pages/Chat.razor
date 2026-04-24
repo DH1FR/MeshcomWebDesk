@@ -25,12 +25,16 @@
                         draggable="true"
                         data-tab-key="@tab.Key"
                         @onclick="() => SelectTab(tab.Key)"
-                        title="@(tab.Key != "*" && !tab.Key.StartsWith('#') ? tab.Title + QrzSuffix(tab.Key) : null)">
+                        title="@(tab.Key != "*" && !tab.Key.StartsWith('#') ? tab.Title + QrzSuffix(tab.Key) : tab.Key.StartsWith('#') ? ChatService.GetGroupLabel(tab.Key)?.Label : null)">
                     <span class="tab-label-wrap">
                         <span>@(tab.Key == "*" ? Loc.T("Alle", "All", "Tutti", "Todos") : tab.Title)</span>
                         @if (tab.Key != "*" && !tab.Key.StartsWith('#') && QrzFirstName(tab.Key) is { } tabFn)
                         {
                             <span class="tab-qrz-name">@tabFn</span>
+                        }
+                        @if (tab.Key.StartsWith('#') && ChatService.GetGroupLabel(tab.Key) is { } grp)
+                        {
+                            <span class="tab-qrz-name" title="@grp.Label">@grp.ShortLabel</span>
                         }
                     </span>
                     @if (tab.UnreadCount > 0)

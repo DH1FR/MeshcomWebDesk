@@ -19,7 +19,7 @@ namespace MeshcomWebDesk.Services;
 ///   RX pos  : {"src_type":"node","type":"pos","src":"NOCALL-2","lat":50.8515,"lat_dir":"N","long":9.1075,"long_dir":"E","alt":827,...}
 ///   TX chat : {"type":"msg","dst":"NOCALL-1","msg":"Hello"}
 /// </summary>
-public partial class MeshcomUdpService : BackgroundService
+public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMeshcomVariableExpander
 {
     private readonly ILogger<MeshcomUdpService> _logger;
     private readonly ChatService _chatService;

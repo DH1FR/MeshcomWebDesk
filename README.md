@@ -64,6 +64,7 @@ and makes a full web client for MeshCom available via a simple URL
 - **Broadcast tab "All"** for `*` / `CQCQCQ` messages
 - **Direct messages** – each callsign gets its own tab automatically
 - **Group messages** – group destinations appear as `#<group>` tabs with optional whitelist filter
+- **Group Labels** – configurable display names for group numbers (e.g. `#262` → `DL`); short label in the tab, full name as tooltip; pre-filled with the official MeshCom GRC group list
 - Smart routing: broadcast replies from a known callsign appear in their direct tab
 - **Auto-scroll** to the latest message when a tab is opened or a new message arrives
 - **Unread badge** – inactive tabs show a yellow counter badge for new messages
@@ -250,6 +251,42 @@ and makes a full web client for MeshCom available via a simple URL
 - Configured in **Settings → 🔗 Webhook**; changes apply **live without restart**
 - Compatible with **Home Assistant** webhooks, Node-RED, n8n, IFTTT, custom endpoints
 
+### 📡 MQTT *(Beta)*
+- Optional connection to an external **MQTT broker** (e.g. Mosquitto, Home Assistant Mosquitto add-on, EMQX)
+- **Publisher** – forwards incoming MeshCom events to typed MQTT topics:
+
+  | Event | Topic |
+  |---|---|
+  | Broadcast chat | `{prefix}/broadcast` |
+  | Group chat | `{prefix}/group/{group}` e.g. `meshcom/group/262` |
+  | Direct message | `{prefix}/dm/{callsign}` e.g. `meshcom/dm/DH1FR-1` |
+  | Position beacon | `{prefix}/position/{callsign}` |
+  | Telemetry | `{prefix}/telemetry/{callsign}` |
+
+- **Subscriber** *(optional)* – subscribes to send-topics and forwards them as outgoing UDP messages to the MeshCom node:
+
+  | Topic | Action |
+  |---|---|
+  | `{prefix}/send/broadcast` | Send broadcast message |
+  | `{prefix}/send/group/{group}` | Send group message |
+  | `{prefix}/send/dm/{callsign}` | Send direct message |
+
+  Payload: JSON `{ "text": "message text" }` – all `{variable}` placeholders (`{mycall}`, `{callsign}`, `{date}`, `{time}`, …) are expanded before sending.
+
+- **MQTT payload** is identical to the Webhook JSON payload for consistency
+- Supports **authentication** (username / password stored encrypted), **TLS** and a configurable **topic prefix**
+- **Auto-reconnect** on connection loss
+- Configurable **per-event publish flags** (messages / positions / telemetry separately)
+- Configured in **Settings → 📡 MQTT (Beta)**; password is stored encrypted (ASP.NET Core Data Protection)
+
+### 🏷️ Group Labels
+- User-defined **display names for MeshCom group numbers** shown in the chat tab below the group number
+- The **short label** (e.g. `DL`, `DACH`, `OE1`) appears inside the tab; the **full name** (e.g. `DL – Deutschland`) appears as a **tooltip** on hover
+- Pre-filled with the **official MeshCom GRC group list** from [icssw.org/meshcom-grc-gruppen](https://icssw.org/meshcom-grc-gruppen/) covering all European and international groups (EU, DACH, country codes, Italian regions, German regional groups, …)
+- Fully **editable** in **Settings → 🏷️ Group Labels** – add, remove or rename entries
+- **Restore Defaults** button resets the list to the official MeshCom group table
+- Labels are saved in `appsettings.override.json` and apply without restart
+
 ### 📱 PWA – Progressive Web App
 - **Installable** on any device via the browser's "Add to Home Screen" / "Install" prompt
 - `manifest.webmanifest` with name, icon, `display: standalone`, shortcuts (Chat + Map)
@@ -423,6 +460,20 @@ All settings in `MeshcomWebDesk/appsettings.json`:
     "OnMessage":   true,               // fire on incoming chat messages
     "OnPosition":  false,              // fire on incoming position beacons
     "OnTelemetry": false               // fire on incoming telemetry
+  },
+  "Mqtt": {                            // optional MQTT broker integration (Beta)
+    "Enabled":          false,         // enable MQTT connection
+    "Host":             "localhost",   // MQTT broker hostname or IP
+    "Port":             1883,          // MQTT broker port (default 1883, TLS usually 8883)
+    "ClientId":         "meshcom-webdesk",
+    "Username":         "",            // optional MQTT username
+    "Password":         "",            // optional MQTT password (stored encrypted after first UI save)
+    "UseTls":           false,         // enable TLS/SSL
+    "TopicPrefix":      "meshcom",     // prefix for all topics
+    "PublishMessage":   true,          // publish incoming chat messages
+    "PublishPosition":  false,         // publish incoming position beacons
+    "PublishTelemetry": false,         // publish incoming telemetry packets
+    "SubscribeEnabled": false          // subscribe to send-topics and forward to mesh
   },
   "Qrz": {
     "Enabled":  false,                 // enable QRZ.com XML API callsign lookups
@@ -1019,6 +1070,12 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 ---
 
 ## 📋 Changelog
+
+### v1.7.7
+- **feat:** 📡 **MQTT integration (Beta)** – optional connection to an external MQTT broker; publishes incoming chat messages, position beacons and telemetry to typed topics (`{prefix}/broadcast`, `{prefix}/group/{group}`, `{prefix}/dm/{callsign}`, `{prefix}/position/{callsign}`, `{prefix}/telemetry/{callsign}`); optional subscriber forwards `{prefix}/send/#` topics as outgoing UDP messages; supports authentication, TLS and auto-reconnect; all `{variable}` placeholders expanded in subscriber payloads
+- **feat:** 🏷️ **Group Labels** – configurable short and full names for MeshCom group numbers; shown in chat tab (short label below group number, full name as tooltip); pre-filled with official MeshCom GRC group list (icssw.org); editable in Settings with restore-defaults button
+- **feat:** 🚀 **Automatic update check** – on startup the app queries the GitHub Releases API and shows a dismissible banner when a newer version is available
+- **fix:** 🌐 **Browser tab title** corrected to "MeshCom WebDesk"
 
 ### v1.7.6
 - **feat:** ⚡ **Quick Texts – drag & drop reorder** – buttons in the flyout can be reordered by drag & drop; new order saved immediately to `appsettings.override.json`

@@ -108,6 +108,21 @@ public class SettingsService
                     ["OnPosition"]  = s.Webhook.OnPosition,
                     ["OnTelemetry"] = s.Webhook.OnTelemetry
                 },
+                ["Mqtt"] = new JsonObject
+                {
+                    ["Enabled"]          = s.Mqtt.Enabled,
+                    ["Host"]             = s.Mqtt.Host,
+                    ["Port"]             = s.Mqtt.Port,
+                    ["ClientId"]         = s.Mqtt.ClientId,
+                    ["Username"]         = s.Mqtt.Username,
+                    ["Password"]         = Encrypt(s.Mqtt.Password),
+                    ["UseTls"]           = s.Mqtt.UseTls,
+                    ["TopicPrefix"]      = s.Mqtt.TopicPrefix,
+                    ["PublishMessage"]   = s.Mqtt.PublishMessage,
+                    ["PublishPosition"]  = s.Mqtt.PublishPosition,
+                    ["PublishTelemetry"] = s.Mqtt.PublishTelemetry,
+                    ["SubscribeEnabled"] = s.Mqtt.SubscribeEnabled
+                },
                 ["Qrz"] = new JsonObject
                 {
                     ["Enabled"]         = s.Qrz.Enabled,
@@ -120,6 +135,12 @@ public class SettingsService
                 {
                     ["Label"] = q.Label,
                     ["Text"]  = q.Text
+                }).ToArray()),
+                ["GroupLabels"] = new JsonArray(s.GroupLabels.Select(g => (JsonNode?)new JsonObject
+                {
+                    ["Group"]      = g.Group,
+                    ["ShortLabel"] = g.ShortLabel,
+                    ["Label"]      = g.Label
                 }).ToArray())
             }
         };
