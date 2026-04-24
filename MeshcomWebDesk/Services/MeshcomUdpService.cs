@@ -276,12 +276,13 @@ public partial class MeshcomUdpService : BackgroundService
 
     /// <summary>
     /// Returns the normalised chat-tab key for a group setting value.
-    /// Ensures the '#' prefix is present; does not change casing
-    /// (the tab dictionary uses OrdinalIgnoreCase matching).
-    /// e.g. "alle" → "#alle";  "#Alle" → "#Alle";  "262" → "#262".
+    /// Ensures the '#' prefix is present and lowercases the result for
+    /// consistent monitor display. The tab dictionary uses OrdinalIgnoreCase
+    /// so casing never affects lookup.
+    /// e.g. "alle" → "#alle";  "#Alle" → "#alle";  "#262" → "#262".
     /// </summary>
     private static string ResolveTabKey(string group)
-        => group.StartsWith('#') ? group : "#" + group;
+        => (group.StartsWith('#') ? group : "#" + group).ToLowerInvariant();
 
     private Task SendAutoReplyAsync(string callsign)
     {
