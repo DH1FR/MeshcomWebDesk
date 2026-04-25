@@ -184,7 +184,11 @@ public sealed class MqttService : IHostedService, IAsyncDisposable
         _logger.LogInformation("MQTT connected.");
 
         var cfg = _settings.CurrentValue.Mqtt;
-        if (!cfg.SubscribeEnabled) return;
+        if (!cfg.SubscribeEnabled)
+        {
+            _logger.LogInformation("MQTT Subscriber deaktiviert – keine Send-Topics abonniert.");
+            return;
+        }
 
         var prefix = cfg.TopicPrefix;
         var filters = new[]
@@ -220,6 +224,8 @@ public sealed class MqttService : IHostedService, IAsyncDisposable
         var topic = args.ApplicationMessage.Topic;
         var body  = args.ApplicationMessage.ConvertPayloadToString();
 
+        _logger.LogDebug("MQTT RX topic={Topic} body={Body}", topic, body);
+
         string? text = null;
         try
         {
@@ -233,7 +239,11 @@ public sealed class MqttService : IHostedService, IAsyncDisposable
             text = body;
         }
 
-        if (string.IsNullOrWhiteSpace(text)) return;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            _logger.LogWarning("MQTT RX: empty or missing 'text' field in payload on topic {Topic}", topic);
+            return;
+        }
 
         var prefix = cfg.TopicPrefix;
 
