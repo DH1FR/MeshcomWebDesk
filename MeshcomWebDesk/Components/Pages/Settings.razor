@@ -850,6 +850,26 @@
                     <span>@(_model.MqttLogRequests ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
                 </label>
             </div>
+
+            <div style="margin-top:1rem">
+                <button type="button" class="btn-send-now" @onclick="TestMqttConnectionAsync" disabled="@_mqttTesting">
+                    @if (_mqttTesting)
+                    {
+                        <span>⏳ @Loc.T("Teste…", "Testing…", "Test in corso…", "Probando…")</span>
+                    }
+                    else
+                    {
+                        <span>🔌 @Loc.T("Verbindung testen", "Test Connection", "Testa connessione", "Probar conexión")</span>
+                    }
+                </button>
+            </div>
+
+            @if (_mqttTestResult != null)
+            {
+                <div class="@(_mqttTestResult.StartsWith("✅") ? "settings-success" : "settings-error")" style="margin-top:0.5rem">
+                    @_mqttTestResult
+                </div>
+            }
         </div>
 
         <!-- QRZ.com -->
@@ -1082,6 +1102,9 @@
     private bool          _dbTesting;
     private bool          _dbSettingUp;
     private string?       _dbSetupError;
+
+    private bool    _mqttTesting;
+    private string? _mqttTestResult;
 
     private bool    _qrzTesting;
     private string? _qrzTestResult;
@@ -1344,6 +1367,40 @@
     {
         QrzService.ClearCache();
         _qrzTestResult = Loc.T("✅ Cache geleert.", "✅ Cache cleared.", "✅ Cache svuotata.", "✅ Caché vaciado.");
+    }
+
+    private async Task TestMqttConnectionAsync()
+    {
+        _mqttTestResult = null;
+        _mqttTesting    = true;
+        try
+        {
+            var cfg = _model.ToSettings().Mqtt;
+            using var client = new MQTTnet.MqttFactory().CreateMqttClient();
+            var optBuilder = new MQTTnet.Client.MqttClientOptionsBuilder()
+                .WithTcpServer(cfg.Host, cfg.Port)
+                .WithClientId(cfg.ClientId + "-test")
+                .WithCleanSession();
+
+            if (!string.IsNullOrEmpty(cfg.Username))
+                optBuilder = optBuilder.WithCredentials(cfg.Username, cfg.Password);
+
+            if (cfg.UseTls)
+                optBuilder = optBuilder.WithTlsOptions(o => o.UseTls());
+
+            using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(10));
+            await client.ConnectAsync(optBuilder.Build(), cts.Token);
+            await client.DisconnectAsync(new MQTTnet.Client.MqttClientDisconnectOptionsBuilder().Build());
+            _mqttTestResult = $"✅ {Loc.T("Verbindung erfolgreich.", "Connection successful.", "Connessione riuscita.", "Conexión exitosa.")})";
+        }
+        catch (Exception ex)
+        {
+            _mqttTestResult = $"❌ {Loc.T("Verbindung fehlgeschlagen:", "Connection failed:", "Connessione fallita:", "Conexión fallida:")} {ex.Message}";
+        }
+        finally
+        {
+            _mqttTesting = false;
+        }
     }
 
     private void ResetDbTestState()

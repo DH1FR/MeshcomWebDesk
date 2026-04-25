@@ -265,24 +265,26 @@ public class ChatService
     /// after an APRS ACK packet has been received.
     /// <para>
     /// If no message with that exact sequence number is found (because the node never
-    /// echoed back a <c>{NNN}</c> marker), falls back to matching the last unacknowledged
-    /// outgoing message addressed to <paramref name="ackSender"/>.
+    /// echoed back a <c>{NNN}</c> marker), falls back to matching the <em>oldest</em>
+    /// unacknowledged outgoing message addressed to <paramref name="ackSender"/>.
+    /// Uses FirstOrDefault (oldest first) so rapid multi-message sequences are matched
+    /// in the correct order.
     /// </para>
     /// </summary>
-    public void MarkMessageAcknowledged(string sequenceNumber, string? ackSender = null)
+    public void MarkMessageAcknowledged(string sequenceNumber, string? ackSender = null, bool isGateway = false)
     {
         lock (_lock)
         {
             // Primary match: exact sequence number
-            var msg = _allMessages.LastOrDefault(m =>
+            var msg = _allMessages.FirstOrDefault(m =>
                 m.IsOutgoing && m.SequenceNumber == sequenceNumber);
 
-            // Fallback: match last unacknowledged outgoing message to the ACK sender.
+            // Fallback: match oldest unacknowledged outgoing message to the ACK sender.
             // This covers the case where the node never sent a {NNN} echo so the
             // outgoing message still has SequenceNumber = "TX".
             if (msg == null && ackSender != null)
             {
-                msg = _allMessages.LastOrDefault(m =>
+                msg = _allMessages.FirstOrDefault(m =>
                     m.IsOutgoing &&
                     !m.IsAcknowledged &&
                     string.Equals(m.To, ackSender, StringComparison.OrdinalIgnoreCase));
@@ -290,8 +292,9 @@ public class ChatService
 
             if (msg != null)
             {
-                msg.SequenceNumber = sequenceNumber;   // assign real seq# if available
-                msg.IsAcknowledged = true;
+                msg.SequenceNumber    = sequenceNumber;   // assign real seq# if available
+                msg.IsAcknowledged    = true;
+                msg.IsGatewayDelivered = isGateway;
             }
         }
         NotifyChange();
@@ -305,7 +308,11 @@ public class ChatService
     public void AddAck(MeshcomMessage message)
     {
         if (message.SequenceNumber != null)
-            MarkMessageAcknowledged(message.SequenceNumber, message.From);
+        {
+            // src_type "udp" means the ACK arrived via the Internet Gateway, not direct LoRa
+            var isGateway = string.Equals(message.SrcType, "udp", StringComparison.OrdinalIgnoreCase);
+            MarkMessageAcknowledged(message.SequenceNumber, message.From, isGateway);
+        }
 
         // Update relay path / RSSI for this station so the map shows the connection
         UpdateMhList(message);

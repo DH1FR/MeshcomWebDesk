@@ -5,10 +5,13 @@
 @using Microsoft.Extensions.Options
 @using System.Text.RegularExpressions
 @rendermode InteractiveServer
+@using MeshcomWebDesk.Services.Database
 @inject ChatService ChatService
 @inject MeshcomUdpService UdpService
 @inject LanguageService Loc
 @inject QrzService QrzService
+@inject MqttService MqttService
+@inject MonitorSinkService MonitorSink
 @implements IDisposable
 
 <PageTitle>MeshCom Web Client</PageTitle>
@@ -287,55 +290,71 @@
         <button class="status-mute-btn @(_soundEnabled ? "" : "status-mute-off")"
                 @onclick="() => _soundEnabled = !_soundEnabled"
                 title="@(_soundEnabled ? Loc.T("Ton ausschalten", "Mute sound", "Disattiva audio", "Silenciar") : Loc.T("Ton einschalten", "Unmute sound", "Attiva audio", "Activar sonido"))">
-            @(_soundEnabled ? "🔔" : "🔕")
+            <span class="status-badge @(_soundEnabled ? "status-badge-neutral" : "status-badge-err")">@(_soundEnabled ? "🔔" : "🔕")</span>
         </button>
         <span class="status-sep">|</span>
-        <span class="status-item @UdpStatusCss">
-            @UdpStatusIcon <span class="status-label">UDP @UdpStatusLabel</span>
+        <span class="status-item" title="@UdpStatusTooltip">
+            <span class="status-badge @UdpStatusBadgeCss">@UdpStatusIcon UDP</span>
         </span>
         <span class="status-sep status-detail">|</span>
-        <span class="status-item status-detail">📡 @_settings.DeviceIp:@_settings.DevicePort</span>
+        <span class="status-item status-detail">
+            <span class="status-badge status-badge-neutral">📡 @_settings.DeviceIp:@_settings.DevicePort</span>
+        </span>
         <span class="status-sep">|</span>
-        <span class="status-item">🎙️ @_myCallsign</span>
+        <span class="status-item">
+            <span class="status-badge status-badge-neutral">🎙️ @_myCallsign</span>
+        </span>
         <span class="status-sep status-detail">|</span>
-        <span class="status-item status-detail">📨 RX @_status.RxCount / TX @_status.TxCount</span>
+        <span class="status-item status-detail">
+            <span class="status-badge status-badge-neutral">📨 RX @_status.RxCount / TX @_status.TxCount</span>
+        </span>
         @if (_status.BeaconActive)
         {
             <span class="status-sep status-detail">|</span>
             <span class="status-item status-detail" title="@Loc.T($"Bake aktiv · Gruppe {_settings.BeaconGroup} · alle {_settings.BeaconIntervalHours} h", $"Beacon active · Group {_settings.BeaconGroup} · every {_settings.BeaconIntervalHours} h", $"Beacon attivo · Gruppo {_settings.BeaconGroup} · ogni {_settings.BeaconIntervalHours} h", $"Baliza activa · Grupo {_settings.BeaconGroup} · cada {_settings.BeaconIntervalHours} h")">
-                <span class="beacon-dot">●</span> @Loc.T("Bake", "Beacon", "Beacon", "Baliza")
-                @if (_status.BeaconNextSend.HasValue)
-                {
-                    <span class="@BeaconTimeCss(_status.BeaconNextSend.Value)"> · @_status.BeaconNextSend.Value.ToString("HH:mm")</span>
-                }
+                <span class="status-badge status-badge-warn">●&nbsp;@Loc.T("Bake", "Beacon", "Beacon", "Baliza")@if (_status.BeaconNextSend.HasValue) {<text>&nbsp;·&nbsp;@_status.BeaconNextSend.Value.ToString("HH:mm")</text>}</span>
             </span>
         }
         @if (_status.LastRxTime.HasValue)
         {
             <span class="status-sep status-detail">|</span>
-            <span class="status-item status-detail">⏱️ @LT(_status.LastRxTime.Value).ToString("HH:mm:ss") @Loc.T("von", "from", "da", "de") @_status.LastRxFrom</span>
+            <span class="status-item status-detail">
+                <span class="status-badge status-badge-neutral">⏱️ @LT(_status.LastRxTime.Value).ToString("HH:mm:ss") @Loc.T("von", "from", "da", "de") @_status.LastRxFrom</span>
+            </span>
         }
         @if (_status.LastRssi.HasValue)
         {
             <span class="status-sep status-detail">|</span>
-            <span class="status-item status-detail @RssiCssClass(_status.LastRssi.Value)">
-                📶 RSSI @_status.LastRssi dBm&nbsp;&nbsp;SNR @_status.LastSnr?.ToString("F1") dB
+            <span class="status-item status-detail">
+                <span class="status-badge @RssiStatusBadgeCss(_status.LastRssi.Value)">📶 RSSI @_status.LastRssi dBm&nbsp;·&nbsp;SNR @_status.LastSnr?.ToString("F1") dB</span>
             </span>
         }
         @if (_status.LastTxTime.HasValue)
         {
             <span class="status-sep status-detail">|</span>
-            <span class="status-item status-detail">📤 @LT(_status.LastTxTime.Value).ToString("HH:mm:ss")</span>
+            <span class="status-item status-detail">
+                <span class="status-badge status-badge-neutral">📤 @LT(_status.LastTxTime.Value).ToString("HH:mm:ss")</span>
+            </span>
         }
         @if (_status.OwnLatitude.HasValue && _status.OwnLongitude.HasValue)
         {
             <span class="status-sep status-detail">|</span>
-            <span class="status-item status-detail status-ok">
-                📍 @GeoHelper.FormatCoord(_status.OwnLatitude, _status.OwnLongitude)
-                @if (_status.OwnAltitude.HasValue)
-                {
-                    <span class="status-pos-alt">&nbsp;·&nbsp;@_status.OwnAltitude&nbsp;m</span>
-                }
+            <span class="status-item status-detail">
+                <span class="status-badge status-badge-info">📍 @GeoHelper.FormatCoord(_status.OwnLatitude, _status.OwnLongitude)@if (_status.OwnAltitude.HasValue) {<text>&nbsp;·&nbsp;@_status.OwnAltitude&nbsp;m</text>}</span>
+            </span>
+        }
+        @if (MonitorSink.IsEnabled)
+        {
+            <span class="status-sep">|</span>
+            <span class="status-item" title="@DbStatusTooltip">
+                <span class="status-badge @DbStatusBadgeCss">@DbStatusIcon DB</span>
+            </span>
+        }
+        @if (MqttService.IsEnabled)
+        {
+            <span class="status-sep">|</span>
+            <span class="status-item" title="@MqttStatusTooltip">
+                <span class="status-badge @MqttStatusBadgeCss">@MqttStatusIcon MQTT</span>
             </span>
         }
     </div>
@@ -957,30 +976,41 @@
 
     private static string AckCssClass(MeshcomMessage m)
     {
-        if (m.IsAcknowledged)        return "msg-ack ack-ok";
-        if (m.SequenceNumber != null) return "msg-ack ack-sent";
+        if (m.IsAcknowledged && m.IsGatewayDelivered) return "msg-ack ack-cloud-ok";
+        if (m.IsAcknowledged)                         return "msg-ack ack-ok";
+        if (m.SequenceNumber != null)                 return "msg-ack ack-sent";
         return "msg-ack ack-pending";
     }
 
     private static string AckIcon(MeshcomMessage m)
     {
-        if (m.IsAcknowledged)        return "✓✓";
-        if (m.SequenceNumber != null) return "✓";
+        // Gruppe / Broadcast: kein ACK erwartet → sofort Wolke
+        var isGroupOrBcast = m.To == "*" || m.To.StartsWith('#');
+
+        if (m.IsAcknowledged && m.IsGatewayDelivered) return "☁️✓";
+        if (m.IsAcknowledged)                         return "✓✓";
+        if (isGroupOrBcast && m.SequenceNumber != null) return "☁️";
+        if (m.SequenceNumber != null)                 return "✓";
         return "⏳";
     }
 
     private static string AckTooltip(MeshcomMessage m)
     {
-        if (m.IsAcknowledged) return "Zugestellt";
+        var isGroupOrBcast = m.To == "*" || m.To.StartsWith('#');
+
+        if (m.IsAcknowledged && m.IsGatewayDelivered)
+            return "☁️✓ Über Gateway zugestellt";
+        if (m.IsAcknowledged)
+            return "✓✓ Zugestellt (LoRa ACK)";
+        if (isGroupOrBcast && m.SequenceNumber != null)
+            return "☁️ Gesendet – kein ACK für Gruppe/Broadcast erwartet";
         if (m.SequenceNumber != null)
         {
-            if (m.To == "*" || m.To.StartsWith('#'))
-                return "Gesendet (kein ACK für Gruppe/Broadcast)";
             if (m.SequenceNumber != "TX")
-                return $"Gesendet (Seq #{m.SequenceNumber}) · warte auf ACK…";
-            return "Gesendet · warte auf Bestätigung (ACK)…";
+                return $"✓ Gesendet (Seq #{m.SequenceNumber}) · warte auf ACK…";
+            return "✓ Gesendet · warte auf Bestätigung (ACK)…";
         }
-        return "Warte auf Node-Echo…";
+        return "⏳ Warte auf Node-Echo…";
     }
 
     private static string BeaconTimeCss(DateTime nextSend) =>
@@ -994,11 +1024,46 @@
         : _status.HasReceivedData ? "🟢"
         : "🟡";
 
+    private string UdpStatusBadgeCss => !_status.IsListening ? "status-badge-err"
+        : _status.HasReceivedData ? "status-badge-ok"
+        : "status-badge-warn";
+
     private string UdpStatusLabel => !_status.IsListening
         ? Loc.T("Kein Socket", "No socket", "Nessun socket", "Sin socket")
         : _status.HasReceivedData
             ? Loc.T("Empfang OK", "Receiving", "Ricezione OK", "Recibiendo")
             : Loc.T("Warte auf Signal", "Waiting for signal", "Attesa segnale", "Esperando señal");
+
+    private string UdpStatusTooltip => !_status.IsListening
+        ? Loc.T("UDP: Kein Socket – Port nicht geöffnet", "UDP: No socket – port not open", "UDP: Nessun socket – porta non aperta", "UDP: Sin socket – puerto no abierto")
+        : _status.HasReceivedData
+            ? Loc.T("UDP: Empfang OK", "UDP: Receiving OK", "UDP: Ricezione OK", "UDP: Recibiendo OK")
+            : Loc.T("UDP: Warte auf Signal", "UDP: Waiting for signal", "UDP: Attesa segnale", "UDP: Esperando señal");
+
+    private static string RssiStatusBadgeCss(int rssi) => rssi switch
+    {
+        > -70 => "status-badge-ok",
+        > -90 => "status-badge-warn",
+        _     => "status-badge-err"
+    };
+
+    private string DbStatusIcon       => MonitorSink.LastWriteOk == null ? "🟡"
+        : MonitorSink.LastWriteOk.Value ? "🟢" : "🔴";
+    private string DbStatusBadgeCss   => MonitorSink.LastWriteOk == null ? "status-badge-warn"
+        : MonitorSink.LastWriteOk.Value ? "status-badge-ok" : "status-badge-err";
+    private string DbStatusTooltip    => MonitorSink.LastWriteOk == null
+        ? Loc.T("Datenbank: noch kein Schreibvorgang", "Database: no write yet", "Database: nessuna scrittura", "Base de datos: sin escritura aún")
+        : MonitorSink.LastWriteOk.Value
+            ? Loc.T("Datenbank: letzter Schreibvorgang OK", "Database: last write OK", "Database: ultima scrittura OK", "Base de datos: última escritura OK")
+              + (MonitorSink.LastWriteAt.HasValue ? " · " + MonitorSink.LastWriteAt.Value.ToLocalTime().ToString("HH:mm:ss") : "")
+            : Loc.T("Datenbank: letzter Schreibvorgang fehlgeschlagen", "Database: last write failed", "Database: ultima scrittura fallita", "Base de datos: última escritura fallida")
+              + (MonitorSink.LastWriteAt.HasValue ? " · " + MonitorSink.LastWriteAt.Value.ToLocalTime().ToString("HH:mm:ss") : "");
+
+    private string MqttStatusIcon     => MqttService.IsConnected ? "🟢" : "🔴";
+    private string MqttStatusBadgeCss => MqttService.IsConnected ? "status-badge-ok" : "status-badge-err";
+    private string MqttStatusTooltip  => MqttService.IsConnected
+        ? Loc.T("MQTT: verbunden", "MQTT: connected", "MQTT: connesso", "MQTT: conectado")
+        : Loc.T("MQTT: nicht verbunden", "MQTT: not connected", "MQTT: non connesso", "MQTT: no conectado");
 
     private DateTime LT(DateTime dt) => dt.AddHours(SettingsOptions.Value.TimeOffsetHours);
 

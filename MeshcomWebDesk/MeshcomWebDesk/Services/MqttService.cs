@@ -34,6 +34,13 @@ public sealed class MqttService : IHostedService, IAsyncDisposable
     private IMqttClient?      _client;
     private CancellationTokenSource? _cts;
 
+    // -------------------------------------------------------------------------
+    // Status (readable by UI)
+    // -------------------------------------------------------------------------
+
+    public bool IsEnabled   => _settings.CurrentValue.Mqtt.Enabled;
+    public bool IsConnected => _client?.IsConnected ?? false;
+
     private static readonly JsonSerializerOptions _jsonOpts = new()
     {
         PropertyNamingPolicy   = JsonNamingPolicy.SnakeCaseLower,

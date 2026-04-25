@@ -73,6 +73,12 @@ public class MeshcomMessage
     public bool IsAcknowledged { get; set; }
 
     /// <summary>
+    /// True when the ACK was delivered via the MeshCom Gateway/Server (src_type "udp")
+    /// rather than directly over LoRa. Displayed as ☁️✓ instead of ✓✓.
+    /// </summary>
+    public bool IsGatewayDelivered { get; set; }
+
+    /// <summary>
     /// Full relay path from the "src" field (e.g. "OE1XAR-62,DB0TAW-13,DB0KH-11").
     /// Null when no relay occurred.
     /// </summary>

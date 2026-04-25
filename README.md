@@ -1071,6 +1071,11 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
 ## 📋 Changelog
 
+### v1.8.1
+- **feat:** 🟢 **MQTT/DB Verbindungsstatus in der Statusleiste** – MQTT- und Datenbankverbindung werden als farbige Status-Badges in der Statusleiste angezeigt; MQTT-Verbindung kann direkt in den Einstellungen über einen „Verbindung testen"-Button überprüft werden
+- **feat:** 🔔 **Statusleiste – einheitliche Badge-Darstellung** – alle Statusleisten-Elemente (UDP, Ton, MQTT, DB) werden einheitlich als farbige Badges dargestellt; Glocke-/Ton-aus-Button ebenfalls als Badge; UDP-Badge zeigt nur Icon+Label, vollständiger Text als Tooltip
+- **feat:** ☁️ **Gateway-ACK mit Wolken-Symbol** – ACK-Nachrichten vom Gateway werden mit einem Wolken-Symbol (☁️) dargestellt; ACK-Matching korrigiert (FirstOrDefault)
+
 ### v1.8.0
 - **feat:** 📡 **MQTT integration (Beta)** – optionale Verbindung zu einem externen MQTT-Broker; publiziert eingehende Chat-Nachrichten, Positions-Baken und Telemetrie auf typisierten Topics (`{prefix}/broadcast`, `{prefix}/group/{group}`, `{prefix}/dm/{callsign}`, `{prefix}/position/{callsign}`, `{prefix}/telemetry/{callsign}`); optionaler Subscriber leitet `{prefix}/send/#`-Topics als ausgehende UDP-Nachrichten weiter; unterstützt Authentifizierung, TLS und Auto-Reconnect; alle `{variable}`-Platzhalter werden in Subscriber-Payloads expandiert
 - **feat:** 📝 **MQTT Logging** – aktivierbares/deaktivierbares MQTT-Diagnose-Logging in den Einstellungen

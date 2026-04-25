@@ -14,6 +14,14 @@ public sealed class MonitorSinkService : IMonitorDataSink
     private readonly MySqlMonitorSink                 _mysql;
     private readonly InfluxDbMonitorSink              _influx;
 
+    // -------------------------------------------------------------------------
+    // Status (readable by UI)
+    // -------------------------------------------------------------------------
+
+    public bool      IsEnabled        => _settings.CurrentValue.Database.Provider != DatabaseSettings.ProviderNone;
+    public bool?     LastWriteOk      { get; private set; }
+    public DateTime? LastWriteAt      { get; private set; }
+
     public MonitorSinkService(
         IOptionsMonitor<MeshcomSettings> settings,
         MySqlMonitorSink                 mysql,
@@ -24,11 +32,24 @@ public sealed class MonitorSinkService : IMonitorDataSink
         _influx   = influx;
     }
 
-    public Task WriteAsync(MeshcomMessage message, CancellationToken ct = default) =>
-        _settings.CurrentValue.Database.Provider switch
+    public async Task WriteAsync(MeshcomMessage message, CancellationToken ct = default)
+    {
+        try
         {
-            DatabaseSettings.ProviderMySql    => _mysql.WriteAsync(message, ct),
-            DatabaseSettings.ProviderInfluxDb => _influx.WriteAsync(message, ct),
-            _                                  => Task.CompletedTask
-        };
+            await (_settings.CurrentValue.Database.Provider switch
+            {
+                DatabaseSettings.ProviderMySql    => _mysql.WriteAsync(message, ct),
+                DatabaseSettings.ProviderInfluxDb => _influx.WriteAsync(message, ct),
+                _                                  => Task.CompletedTask
+            });
+            LastWriteOk = true;
+            LastWriteAt = DateTime.UtcNow;
+        }
+        catch
+        {
+            LastWriteOk = false;
+            LastWriteAt = DateTime.UtcNow;
+            throw;
+        }
+    }
 }

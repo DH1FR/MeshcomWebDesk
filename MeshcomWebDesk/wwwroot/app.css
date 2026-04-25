@@ -313,9 +313,11 @@ h1:focus {
     display: inline-block;
     user-select: none;
 }
-.ack-pending { color: #6c757d; }
-.ack-sent    { color: #a0c4ff; }
-.ack-ok      { color: #3fb950; font-weight: 700; }
+.ack-pending   { color: #6c757d; }
+.ack-sent      { color: #a0c4ff; }
+.ack-ok        { color: #3fb950; font-weight: 700; }
+.ack-cloud     { color: #a0c4ff; }
+.ack-cloud-ok  { color: #3fb950; font-weight: 700; }
 
 /* ===== Send Bar Wrapper (Quick Texts) ===== */
 .send-bar-wrap {
@@ -1320,18 +1322,30 @@ h1:focus {
 .status-warn { color: #d29922; }
 .status-pos-alt { color: #6c757d; }
 
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.6;
+}
+.status-badge-ok      { background: #0f2d16; color: #3fb950; border: 1px solid #238636; }
+.status-badge-err     { background: #2d0f0f; color: #f85149; border: 1px solid #da3633; }
+.status-badge-warn    { background: #2d1f0a; color: #d29922; border: 1px solid #9e6a03; }
+.status-badge-neutral { background: #161b22; color: #8b949e; border: 1px solid #30363d; }
+.status-badge-info    { background: #0d1f38; color: #58a6ff; border: 1px solid #1f6feb; }
+
 .status-mute-btn {
     background: none;
     border: none;
     cursor: pointer;
     font-size: 14px;
-    padding: 0 2px;
+    padding: 0;
     line-height: 1;
-    opacity: 0.85;
-    transition: opacity 0.15s;
 }
-.status-mute-btn:hover { opacity: 1; }
-.status-mute-off { opacity: 0.4; }
 
 .rssi-good { color: #3fb950; }
 .rssi-fair { color: #d29922; }
