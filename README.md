@@ -1072,7 +1072,15 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 ## 📋 Changelog
 
 ### v1.8.0
-- **release:** 🚀 Version 1.8.0
+- **feat:** 📡 **MQTT integration (Beta)** – optionale Verbindung zu einem externen MQTT-Broker; publiziert eingehende Chat-Nachrichten, Positions-Baken und Telemetrie auf typisierten Topics (`{prefix}/broadcast`, `{prefix}/group/{group}`, `{prefix}/dm/{callsign}`, `{prefix}/position/{callsign}`, `{prefix}/telemetry/{callsign}`); optionaler Subscriber leitet `{prefix}/send/#`-Topics als ausgehende UDP-Nachrichten weiter; unterstützt Authentifizierung, TLS und Auto-Reconnect; alle `{variable}`-Platzhalter werden in Subscriber-Payloads expandiert
+- **feat:** 📝 **MQTT Logging** – aktivierbares/deaktivierbares MQTT-Diagnose-Logging in den Einstellungen
+- **feat:** 🏷️ **Group Labels** – konfigurierbare Kurz- und Vollnamen für MeshCom-Gruppennummern; Kurzname wird im Monitor-Tab neben der Gruppe angezeigt; Gruppen einheitlich mit `#` dargestellt; vorbelegt mit der offiziellen MeshCom-GRC-Gruppenliste (icssw.org); in den Einstellungen editierbar mit Zurücksetzen-Button
+- **feat:** 🚀 **Automatische Update-Prüfung** – beim Start wird die GitHub-Releases-API abgefragt; bei verfügbarer neuer Version erscheint ein wegklickbares Banner
+- **fix:** 💬 **QRZ-Vorabladen für Auto-Reply** – QRZ-Daten werden vor dem Senden der Auto-Reply vorgeladen, damit `{dest-name}` bei neuen Kontakten korrekt befüllt ist
+- **fix:** 📡 **Broadcast-Routing** – ausgehende Broadcast-Nachrichten und Baken werden korrekt im `*`-Tab angezeigt (nicht mehr in `#alle`)
+- **fix:** 🔤 **Tab-Key Normalisierung** – `ResolveTabKey` normalisiert Callsigns einheitlich, damit Baken-Nachrichten im richtigen Tab erscheinen
+- **fix:** 🌐 **Browser-Tab-Titel** korrigiert auf „MeshCom WebDesk"
+- **fix:** 🔧 **MQTT ClientId** – zufälliger Suffix verhindert Instanz-Konflikte beim Broker; Stack-Trace bei Connect-Fehler unterdrückt
 
 ### v1.7.7
 - **feat:** 📡 **MQTT integration (Beta)** – optional connection to an external MQTT broker; publishes incoming chat messages, position beacons and telemetry to typed topics (`{prefix}/broadcast`, `{prefix}/group/{group}`, `{prefix}/dm/{callsign}`, `{prefix}/position/{callsign}`, `{prefix}/telemetry/{callsign}`); optional subscriber forwards `{prefix}/send/#` topics as outgoing UDP messages; supports authentication, TLS and auto-reconnect; all `{variable}` placeholders expanded in subscriber payloads
