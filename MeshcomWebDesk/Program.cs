@@ -110,13 +110,23 @@ builder.Services.AddSingleton<IMonitorDataSink, MonitorSinkService>();
 builder.Services.AddSingleton<DatabaseSetupService>();
 builder.Services.AddSingleton<WebhookService>();
 builder.Services.AddSingleton<QrzService>();
+builder.Services.AddSingleton<MqttService>();
+builder.Services.AddSingleton<UpdateCheckService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<UpdateCheckService>());
+builder.Services.AddSingleton<IMeshcomSender>(sp => sp.GetRequiredService<MeshcomUdpService>());
+builder.Services.AddSingleton<IMeshcomVariableExpander>(sp => sp.GetRequiredService<MeshcomUdpService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<MeshcomUdpService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<DataPersistenceService>());
+builder.Services.AddHostedService(sp => sp.GetRequiredService<MqttService>());
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 var app = builder.Build();
+
+// Break circular dependency: ChatService ← MqttService ← IMeshcomSender ← MeshcomUdpService ← ChatService
+app.Services.GetRequiredService<ChatService>()
+   .SetMqttService(app.Services.GetRequiredService<MqttService>());
 
 if (!app.Environment.IsDevelopment())
 {

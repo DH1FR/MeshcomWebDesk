@@ -1,0 +1,37 @@
+@rendermode InteractiveServer
+@inject MeshcomWebDesk.Services.UpdateCheckService UpdateCheck
+@inject MeshcomWebDesk.Services.LanguageService Loc
+@implements IDisposable
+
+@if (!UpdateCheck.Dismissed && UpdateCheck.LatestVersion is not null)
+{
+    <div class="update-banner">
+        <span>🚀 @Loc.T(
+            $"Neue Version verfügbar: {UpdateCheck.LatestVersion}",
+            $"New version available: {UpdateCheck.LatestVersion}",
+            $"Nuova versione disponibile: {UpdateCheck.LatestVersion}",
+            $"Nueva versión disponible: {UpdateCheck.LatestVersion}")</span>
+        <a href="@UpdateCheck.ReleasePageUrl" target="_blank" rel="noopener" class="update-banner-link">
+            @Loc.T("Zum Release", "View Release", "Vedi Release", "Ver Release") ↗
+        </a>
+        <button class="update-banner-dismiss" @onclick="Dismiss" @onclick:stopPropagation="true"
+                title="@Loc.T("Schließen", "Dismiss", "Chiudi", "Cerrar")">✕</button>
+    </div>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        UpdateCheck.OnUpdateAvailable += OnUpdateFound;
+    }
+
+    private void OnUpdateFound() => InvokeAsync(StateHasChanged);
+
+    private void Dismiss()
+    {
+        UpdateCheck.Dismiss();
+        StateHasChanged();
+    }
+
+    public void Dispose() => UpdateCheck.OnUpdateAvailable -= OnUpdateFound;
+}

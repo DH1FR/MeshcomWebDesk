@@ -25,12 +25,16 @@
                         draggable="true"
                         data-tab-key="@tab.Key"
                         @onclick="() => SelectTab(tab.Key)"
-                        title="@(tab.Key != "*" && !tab.Key.StartsWith('#') ? tab.Title + QrzSuffix(tab.Key) : null)">
+                        title="@(tab.Key != "*" && !tab.Key.StartsWith('#') ? tab.Title + QrzSuffix(tab.Key) : tab.Key.StartsWith('#') ? ChatService.GetGroupLabel(tab.Key)?.Label : null)">
                     <span class="tab-label-wrap">
                         <span>@(tab.Key == "*" ? Loc.T("Alle", "All", "Tutti", "Todos") : tab.Title)</span>
                         @if (tab.Key != "*" && !tab.Key.StartsWith('#') && QrzFirstName(tab.Key) is { } tabFn)
                         {
                             <span class="tab-qrz-name">@tabFn</span>
+                        }
+                        @if (tab.Key.StartsWith('#') && ChatService.GetGroupLabel(tab.Key) is { } grp)
+                        {
+                            <span class="tab-qrz-name" title="@grp.Label">@grp.ShortLabel</span>
                         }
                     </span>
                     @if (tab.UnreadCount > 0)
@@ -183,8 +187,10 @@
                                 }
                                 else if (!string.Equals(m.To, _myCallsign, StringComparison.OrdinalIgnoreCase))
                                 {
+                                    var grpLabel = ChatService.GetGroupLabel(m.To);
+                                    var destDisplay = FormatDest(m.To);
                                     <span class="mon-call mon-call-link" @onclick="() => OpenTabFromMonitor(m.To)"
-                                          title="@(Loc.T($"Chat mit {m.To} öffnen", $"Open chat with {m.To}", $"Apri chat con {m.To}", $"Abrir chat con {m.To}") + QrzSuffix(m.To))">@m.To</span>
+                                          title="@(grpLabel is not null ? grpLabel.Label : Loc.T($"Chat mit {m.To} öffnen", $"Open chat with {m.To}", $"Apri chat con {m.To}", $"Abrir chat con {m.To}") + QrzSuffix(m.To))">@destDisplay@if (grpLabel is not null){<span class="qrz-badge"> · @grpLabel.ShortLabel</span>}</span>
                                 }
                                 else
                                 {
@@ -711,9 +717,23 @@
         if (_activeTab == null) return;
         // Strip leading '#' for group tabs – the node uses the raw group number (e.g. "262"),
         // the '#' is an internal UI convention only.
-        // Pass the original tab key so the outgoing message is routed to the correct '#' tab.
-        var destination = _activeTab.Key == "*" ? "*" : _activeTab.Key.TrimStart('#');
-        await UdpService.SendMessageAsync(destination, text, _activeTab.Key);
+        // When destination is broadcast ("*"), also route the outgoing message to the "*" tab
+        // so it appears together with incoming broadcasts instead of creating a separate tab.
+        var isBroadcast = _activeTab.Key == "*" || _activeTab.Key.TrimStart('#').Equals("alle", StringComparison.OrdinalIgnoreCase);
+        var destination = isBroadcast ? "*" : _activeTab.Key.TrimStart('#');
+        var tabKey = isBroadcast ? "*" : _activeTab.Key;
+        await UdpService.SendMessageAsync(destination, text, tabKey);
+    }
+
+    /// <summary>Formats a message destination for display in the monitor.
+    /// Pure numbers are treated as group numbers and get a '#' prefix.
+    /// Broadcast (*) and callsigns are returned as-is.</summary>
+    private static string FormatDest(string to)
+    {
+        if (string.IsNullOrEmpty(to) || to == "*") return to;
+        if (to.StartsWith('#')) return to;
+        if (to.All(char.IsDigit)) return "#" + to;
+        return to;
     }
 
     private string QrzSuffix(string callsign)

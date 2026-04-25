@@ -185,6 +185,16 @@ public class MeshcomSettings
     /// <summary>Optional webhook: HTTP POST on incoming messages, position beacons and/or telemetry.</summary>
     public WebhookSettings Webhook { get; set; } = new();
 
+    /// <summary>Optional MQTT integration: publish events to a broker and/or receive send-commands.</summary>
+    public MqttSettings Mqtt { get; set; } = new();
+
+    /// <summary>
+    /// User-defined group labels. Key = group number (e.g. "262"), Value = display name.
+    /// Used to show a human-readable name below the group tab title in the chat UI.
+    /// Pre-filled with the official MeshCom GRC group list (icssw.org/meshcom-grc-gruppen/).
+    /// </summary>
+    public List<GroupLabelEntry> GroupLabels { get; set; } = GroupLabelEntry.Defaults;
+
     /// <summary>Optional QRZ.com XML API integration for callsign lookups in the MH list.</summary>
     public QrzSettings Qrz { get; set; } = new();
 

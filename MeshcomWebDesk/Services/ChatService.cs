@@ -19,6 +19,7 @@ public class ChatService
     private readonly ILogger<ChatService> _logger;
     private readonly IMonitorDataSink _sink;
     private readonly WebhookService   _webhook;
+    private MqttService?      _mqtt;
 
     /// <summary>
     /// Rolling deduplication cache.
@@ -72,6 +73,9 @@ public class ChatService
         _webhook  = webhook;
         settings.OnChange(s => _settings = s);
     }
+
+    /// <summary>Injects MqttService after construction to break the circular dependency.</summary>
+    public void SetMqttService(MqttService mqtt) => _mqtt = mqtt;
 
     /// <summary>All open tabs.</summary>
     public IReadOnlyList<ChatTab> Tabs
@@ -171,6 +175,7 @@ public class ChatService
 
         NotifyChange();
         _ = _webhook.SendAsync(message, "message");
+        _ = _mqtt.PublishAsync(message, "message");
         CheckWatchlist(message);
 
         // Fire bot command event for direct messages
@@ -185,7 +190,8 @@ public class ChatService
     /// </summary>
     public void AddOutgoingMessage(MeshcomMessage message)
     {
-        // Determine tab key: for broadcast use "*", otherwise use the destination callsign
+        // Determine tab key: for broadcast ("*") use the "*" tab, otherwise use message.To directly.
+        // "#alle" is stored in message.To as-is (the tab key) – do NOT remap it to "*".
         var tabKey = message.IsBroadcast ? "*" : message.To;
         var tab = GetOrCreateTab(tabKey);
         lock (_lock)
@@ -396,6 +402,7 @@ public class ChatService
         lock (_lock) { AppendToMonitor(message); }
         NotifyChange();
         _ = _webhook.SendAsync(message, "position");
+        _ = _mqtt.PublishAsync(message, "position");
         CheckWatchlist(message);
     }
 
@@ -409,6 +416,7 @@ public class ChatService
         lock (_lock) { AppendToMonitor(message); }
         NotifyChange();
         _ = _webhook.SendAsync(message, "telemetry");
+        _ = _mqtt.PublishAsync(message, "telemetry");
         CheckWatchlist(message);
     }
 
@@ -417,6 +425,19 @@ public class ChatService
     {
         _tabs.TryGetValue(key, out var tab);
         return tab;
+    }
+
+    /// <summary>
+    /// Returns the group label entry for a group number or tab key.
+    /// Accepts both "#262" (tab key) and "262" (raw wire value) formats.
+    /// Returns null if no label is configured for that group.
+    /// </summary>
+    public GroupLabelEntry? GetGroupLabel(string tabKey)
+    {
+        var number = tabKey.TrimStart('#');
+        if (string.IsNullOrEmpty(number)) return null;
+        return _settings.GroupLabels.FirstOrDefault(g =>
+            string.Equals(g.Group, number, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>Get a thread-safe snapshot of a tab's messages.</summary>

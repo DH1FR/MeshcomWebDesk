@@ -768,6 +768,90 @@
             </div>
         </div>
 
+        <!-- MQTT -->
+        <div class="settings-section @(IsOpen("mqtt") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("mqtt")'>📡 MQTT <span style="font-size:11px;color:#8b949e;font-weight:normal">(Beta)</span> <span class="section-chevron">@(IsOpen("mqtt") ? "▲" : "▼")</span></h2>
+            <div class="settings-grid">
+                <label>@Loc.T("MQTT aktiv", "MQTT Active", "MQTT attivo", "MQTT activo")</label>
+                <label class="settings-toggle">
+                    <input type="checkbox" @bind="_model.MqttEnabled" />
+                    <span>@(_model.MqttEnabled ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                </label>
+
+                <label>@Loc.T("Broker Host", "Broker Host", "Broker Host", "Broker Host")</label>
+                <input type="text" @bind="_model.MqttHost" placeholder="localhost" />
+
+                <label>@Loc.T("Port", "Port", "Porta", "Puerto")</label>
+                <input type="number" min="1" max="65535" @bind="_model.MqttPort" />
+
+                <label>Client ID</label>
+                <input type="text" @bind="_model.MqttClientId" placeholder="meshcom-webdesk" />
+
+                <label>@Loc.T("Benutzername", "Username", "Nome utente", "Usuario")</label>
+                <input type="text" @bind="_model.MqttUsername" autocomplete="username" />
+
+                <label>@Loc.T("Passwort", "Password", "Password", "Contraseña")</label>
+                <input type="password" @bind="_model.MqttPassword" autocomplete="new-password" />
+
+                <label>TLS</label>
+                <label class="settings-toggle">
+                    <input type="checkbox" @bind="_model.MqttUseTls" />
+                    <span>@(_model.MqttUseTls ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                </label>
+
+                <label>
+                    @Loc.T("Topic-Präfix", "Topic Prefix", "Prefisso Topic", "Prefijo Topic")<br />
+                    <small>@Loc.T("Basis-Präfix für alle Topics, z.B. \"meshcom\"", "Base prefix for all topics, e.g. \"meshcom\"", "Prefisso base per tutti i topic, es. \"meshcom\"", "Prefijo base para todos los topics, p.ej. \"meshcom\"")</small>
+                </label>
+                <input type="text" @bind="_model.MqttTopicPrefix" placeholder="meshcom" />
+
+                <label>@Loc.T("Publisher – Auslöser", "Publisher – Triggers", "Publisher – Trigger", "Publisher – Disparadores")</label>
+                <div style="display:flex;flex-direction:column;gap:4px">
+                    <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
+                        <input type="checkbox" @bind="_model.MqttPublishMessage" />
+                        @Loc.T("Nachrichten (msg)", "Messages (msg)", "Messaggi (msg)", "Mensajes (msg)")
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
+                        <input type="checkbox" @bind="_model.MqttPublishPosition" />
+                        @Loc.T("Position (pos)", "Position (pos)", "Posizione (pos)", "Posición (pos)")
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
+                        <input type="checkbox" @bind="_model.MqttPublishTelemetry" />
+                        @Loc.T("Telemetrie (tele)", "Telemetry (tele)", "Telemetria (tele)", "Telemetría (tele)")
+                    </label>
+                </div>
+
+                <label>
+                    @Loc.T("Subscriber aktiv", "Subscriber Active", "Subscriber attivo", "Subscriber activo")<br />
+                    <small>@Loc.T("Empfängt Sende-Befehle vom Broker und leitet sie ans Mesh weiter.", "Receives send commands from the broker and forwards them to the mesh.", "Riceve comandi di invio dal broker e li inoltro alla rete mesh.", "Recibe comandos de envío del broker y los reenvía a la red mesh.")</small>
+                </label>
+                <label class="settings-toggle">
+                    <input type="checkbox" @bind="_model.MqttSubscribeEnabled" />
+                    <span>@(_model.MqttSubscribeEnabled ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                </label>
+
+                @if (_model.MqttSubscribeEnabled && IsOpen("mqtt"))
+                {
+                    <label>@Loc.T("Send-Topics", "Send Topics", "Send Topics", "Send Topics")</label>
+                    <div style="display:flex;flex-direction:column;gap:2px;font-size:0.78rem;color:#8ba3c4;font-family:monospace">
+                        <span>@(_model.MqttTopicPrefix)/send/broadcast</span>
+                        <span>@(_model.MqttTopicPrefix)/send/group/{"{"}group{"}"}</span>
+                        <span>@(_model.MqttTopicPrefix)/send/dm/{"{"}callsign{"}"}</span>
+                        <span style="font-family:sans-serif;font-size:0.75rem;color:#5a7a9a">@Loc.T("Payload: JSON { \"text\": \"…\" }", "Payload: JSON { \"text\": \"…\" }", "Payload: JSON { \"text\": \"…\" }", "Payload: JSON { \"text\": \"…\" }")</span>
+                    </div>
+                }
+
+                <label>
+                    @Loc.T("Aktivitäten loggen", "Log Activity", "Registra attività", "Registrar actividad")<br />
+                    <small>@Loc.T("Jedes Publish und eingehende Send-Topic wird in die Log-Datei geschrieben.", "Every publish and incoming send-topic is written to the log file.", "Ogni publish e send-topic in arrivo viene scritto nel log.", "Cada publish y send-topic entrante se escribe en el log.")</small>
+                </label>
+                <label class="settings-toggle">
+                    <input type="checkbox" @bind="_model.MqttLogRequests" />
+                    <span>@(_model.MqttLogRequests ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                </label>
+            </div>
+        </div>
+
         <!-- QRZ.com -->
         <div class="settings-section @(IsOpen("qrz") ? "" : "settings-section-collapsed")">
             <h2 class="settings-section-title" @onclick='() => Toggle("qrz")'>🔍 QRZ.com <span class="section-chevron">@(IsOpen("qrz") ? "▲" : "▼")</span></h2>
@@ -917,6 +1001,54 @@
                     </table>
                 </div>
             }
+            </div>
+        </div>
+
+        <!-- Gruppen-Labels -->
+        <div class="settings-section @(IsOpen("grouplabels") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("grouplabels")'>
+                🏷️ @Loc.T("Gruppen-Labels", "Group Labels", "Etichette Gruppo", "Etiquetas de Grupo")
+                <span class="section-chevron">@(IsOpen("grouplabels") ? "▲" : "▼")</span>
+            </h2>
+            <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
+                ℹ️ @Loc.T(
+                    "Gruppen-Nummern werden im Chat-Tab mit einem Kurznamen angezeigt. Der vollständige Name erscheint als Tooltip. Quelle: icssw.org/meshcom-grc-gruppen/",
+                    "Group numbers are shown with a short label in the chat tab. The full name appears as a tooltip. Source: icssw.org/meshcom-grc-gruppen/",
+                    "I numeri di gruppo vengono mostrati con un'etichetta breve nella scheda chat. Il nome completo appare come tooltip.",
+                    "Los números de grupo se muestran con una etiqueta corta en la pestaña de chat. El nombre completo aparece como tooltip.")
+            </div>
+            <div>
+                <table class="telemetry-mapping-table">
+                    <thead>
+                        <tr>
+                            <th>@Loc.T("Gruppe", "Group", "Gruppo", "Grupo")</th>
+                            <th>@Loc.T("Kurzname (Tab)", "Short Label (Tab)", "Nome breve (Tab)", "Nombre corto (Tab)")</th>
+                            <th>@Loc.T("Vollständiger Name", "Full Name", "Nome completo", "Nombre completo")</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var gl in _model.GroupLabels)
+                        {
+                            <tr>
+                                <td><input type="text" @bind="gl.Group" placeholder="262" style="width:90px" /></td>
+                                <td><input type="text" @bind="gl.ShortLabel" placeholder="DL" style="width:80px" /></td>
+                                <td><input type="text" @bind="gl.Label" placeholder="DL – Deutschland" style="width:100%" /></td>
+                                <td><button type="button" class="btn-remove" @onclick="() => _model.GroupLabels.Remove(gl)">✕</button></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                <div style="margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem">
+                    <button type="button" class="btn-add"
+                            @onclick="() => _model.GroupLabels.Add(new GroupLabelEntry())">
+                        + @Loc.T("Gruppe hinzufügen", "Add Group", "Aggiungi gruppo", "Añadir grupo")
+                    </button>
+                    <button type="button" class="btn-add" style="padding:2px 10px;font-size:12px"
+                            @onclick="() => _model.GroupLabels = GroupLabelEntry.Defaults.Select(g => new GroupLabelEntry { Group = g.Group, ShortLabel = g.ShortLabel, Label = g.Label }).ToList()">
+                        🔄 @Loc.T("Standard wiederherstellen", "Restore Defaults", "Ripristina predefiniti", "Restaurar predeterminados")
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -1319,6 +1451,19 @@
             WebhookOnMessage        = s.Webhook.OnMessage,
             WebhookOnPosition       = s.Webhook.OnPosition,
             WebhookOnTelemetry      = s.Webhook.OnTelemetry,
+            MqttEnabled             = s.Mqtt.Enabled,
+            MqttHost                = s.Mqtt.Host,
+            MqttPort                = s.Mqtt.Port,
+            MqttClientId            = s.Mqtt.ClientId,
+            MqttUsername            = s.Mqtt.Username,
+            MqttPassword            = s.Mqtt.Password,
+            MqttUseTls              = s.Mqtt.UseTls,
+            MqttTopicPrefix         = s.Mqtt.TopicPrefix,
+            MqttPublishMessage      = s.Mqtt.PublishMessage,
+            MqttPublishPosition     = s.Mqtt.PublishPosition,
+            MqttPublishTelemetry    = s.Mqtt.PublishTelemetry,
+            MqttSubscribeEnabled    = s.Mqtt.SubscribeEnabled,
+            MqttLogRequests         = s.Mqtt.LogRequests,
             QrzEnabled              = s.Qrz.Enabled,
             QrzUsername             = s.Qrz.Username,
             QrzPassword             = s.Qrz.Password,
@@ -1326,6 +1471,9 @@
             QrzCacheMaxAgeDays      = s.Qrz.CacheMaxAgeDays,
             QuickTexts              = s.QuickTexts
                 .Select(q => new QuickTextEntry { Label = q.Label, Text = q.Text })
+                .ToList(),
+            GroupLabels             = s.GroupLabels
+                .Select(g => new GroupLabelEntry { Group = g.Group, ShortLabel = g.ShortLabel, Label = g.Label })
                 .ToList()
         };
     }
@@ -1402,6 +1550,21 @@
         public bool   WebhookOnPosition  { get; set; }
         public bool   WebhookOnTelemetry { get; set; }
 
+        // MQTT
+        public bool   MqttEnabled          { get; set; }
+        public string MqttHost             { get; set; } = "localhost";
+        public int    MqttPort             { get; set; } = 1883;
+        public string MqttClientId         { get; set; } = "meshcom-webdesk";
+        public string MqttUsername         { get; set; } = string.Empty;
+        public string MqttPassword         { get; set; } = string.Empty;
+        public bool   MqttUseTls           { get; set; }
+        public string MqttTopicPrefix      { get; set; } = "meshcom";
+        public bool   MqttPublishMessage   { get; set; } = true;
+        public bool   MqttPublishPosition  { get; set; }
+        public bool   MqttPublishTelemetry { get; set; }
+        public bool   MqttSubscribeEnabled { get; set; }
+        public bool   MqttLogRequests       { get; set; }
+
         // QRZ.com
         public bool   QrzEnabled         { get; set; }
         public string QrzUsername        { get; set; } = string.Empty;
@@ -1411,6 +1574,9 @@
 
         // Quick Texts
         public List<QuickTextEntry> QuickTexts { get; set; } = [];
+
+        // Group Labels
+        public List<GroupLabelEntry> GroupLabels { get; set; } = GroupLabelEntry.Defaults.Select(g => new GroupLabelEntry { Group = g.Group, ShortLabel = g.ShortLabel, Label = g.Label }).ToList();
 
         public DatabaseSettings ToDbSettings() => new()
         {
@@ -1474,6 +1640,22 @@
                 OnPosition  = WebhookOnPosition,
                 OnTelemetry = WebhookOnTelemetry
             },
+            Mqtt = new MeshcomWebDesk.Models.MqttSettings
+            {
+                Enabled          = MqttEnabled,
+                Host             = MqttHost,
+                Port             = MqttPort,
+                ClientId         = MqttClientId,
+                Username         = MqttUsername,
+                Password         = MqttPassword,
+                UseTls           = MqttUseTls,
+                TopicPrefix      = MqttTopicPrefix,
+                PublishMessage   = MqttPublishMessage,
+                PublishPosition  = MqttPublishPosition,
+                PublishTelemetry = MqttPublishTelemetry,
+                SubscribeEnabled = MqttSubscribeEnabled,
+                LogRequests      = MqttLogRequests
+            },
             Qrz = new MeshcomWebDesk.Models.QrzSettings
             {
                 Enabled         = QrzEnabled,
@@ -1482,7 +1664,8 @@
                 LogRequests     = QrzLogRequests,
                 CacheMaxAgeDays = QrzCacheMaxAgeDays
             },
-            QuickTexts = QuickTexts
+            QuickTexts = QuickTexts,
+            GroupLabels = GroupLabels
         };
     }
 }

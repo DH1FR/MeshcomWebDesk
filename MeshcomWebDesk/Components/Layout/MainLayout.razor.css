@@ -9,6 +9,9 @@
     overflow: hidden;
 }
 
+/* update-banner styles are in app.css (global) because UpdateBanner is a child component */
+
+
 .app-header {
     display: flex;
     align-items: center;

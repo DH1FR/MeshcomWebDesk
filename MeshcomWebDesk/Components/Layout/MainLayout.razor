@@ -20,6 +20,9 @@
             </a>
         </nav>
     </header>
+
+    <UpdateBanner />
+
     <div class="app-body">
         @Body
     </div>
@@ -36,5 +39,6 @@
         System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? string.Empty;
 
     protected override void OnInitialized() => Loc.OnChange += StateHasChanged;
+
     public void Dispose() => Loc.OnChange -= StateHasChanged;
 }

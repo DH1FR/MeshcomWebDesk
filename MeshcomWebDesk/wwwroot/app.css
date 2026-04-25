@@ -2243,3 +2243,36 @@ h1:focus {
     color: #8b949e;
     white-space: nowrap;
 }
+/* ── Update-Banner ─────────────────────────────────────────── */
+.update-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 16px;
+    background: #1a3a1a;
+    border-bottom: 1px solid #2ea043;
+    font-size: 12px;
+    color: #7ee787;
+    flex-shrink: 0;
+}
+.update-banner-link {
+    color: #a5d6a7;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    font-weight: normal;
+    white-space: nowrap;
+}
+.update-banner-link:hover { color: #c8e6c9; }
+.update-banner-dismiss {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: #558855;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px 6px;
+    line-height: 1;
+    flex-shrink: 0;
+    opacity: 0.8;
+}
+.update-banner-dismiss:hover { color: #7ee787; opacity: 1; }
