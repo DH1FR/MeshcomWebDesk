@@ -1226,7 +1226,7 @@
         _qsoSummaryError   = null;
         StateHasChanged();
 
-        _qsoSummaryRecord = await QsoSummaryService.GenerateSummaryAsync(_qsoSummaryCallsign);
+        _qsoSummaryRecord = await QsoSummaryService.GenerateSummaryAsync(_qsoSummaryCallsign, _myCallsign);
         if (_qsoSummaryRecord is null)
             _qsoSummaryError = Loc.T(
                 "Zusammenfassung konnte nicht generiert werden. Bitte API-Key und DB-Konfiguration prüfen.",

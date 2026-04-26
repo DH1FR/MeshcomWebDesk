@@ -315,7 +315,7 @@ public sealed class QsoSummaryService
     /// Reads messages for <paramref name="callsignBase"/> from the monitor table,
     /// sends them to the OpenAI API and stores the result.
     /// </summary>
-    public async Task<QsoSummaryRecord?> GenerateSummaryAsync(string callsignBase, CancellationToken ct = default)
+    public async Task<QsoSummaryRecord?> GenerateSummaryAsync(string callsignBase, string myCallsign, CancellationToken ct = default)
     {
         if (!IsAvailable(out var db, out var ai)) return null;
 
@@ -325,8 +325,8 @@ public sealed class QsoSummaryService
             await conn.OpenAsync(ct);
             await EnsureSchemaAsync(conn, db, ct);
 
-            // Load messages for this callsign (both directions), filtered by SummaryDays
-            var messages = await LoadMessagesAsync(conn, db, callsignBase, ai, ct);
+            // Load only direct 1:1 messages between myCallsign and callsignBase
+            var messages = await LoadMessagesAsync(conn, db, callsignBase, myCallsign, ai, ct);
             if (messages.Count == 0)
             {
                 _logger.LogInformation("QsoSummaryService: no messages found for {Callsign} (SummaryDays={Days})",
@@ -853,31 +853,24 @@ public sealed class QsoSummaryService
     }
 
     private async Task<List<RawMessage>> LoadMessagesAsync(
-        MySqlConnection conn, DatabaseSettings db, string callsignBase, AiSettings ai, CancellationToken ct)
+        MySqlConnection conn, DatabaseSettings db, string callsignBase, string myCallsign, AiSettings ai, CancellationToken ct)
     {
-        // Build optional date filter based on SummaryDays (0 = no limit)
-        var dateFilter = ai.SummaryDays > 0
-            ? "AND timestamp >= @since"
-            : string.Empty;
+        // Use the same direct-conversation filter as History/Search tabs:
+        // only 1:1 messages between myCallsign ↔ callsignBase (no groups, no broadcast, no third parties)
+        var from = ai.SummaryDays > 0 ? DateTime.Now.AddDays(-ai.SummaryDays) : (DateTime?)null;
+        var where = BuildDirectConversationWhere(callsignBase, myCallsign, from, to: null, textFilter: null);
 
         await using var cmd = new MySqlCommand(
             $"""
             SELECT timestamp, from_call, to_call, text, is_outgoing
             FROM `{db.MySqlTableName}`
-            WHERE (from_call = @cs OR from_call LIKE @csLike
-                OR to_call   = @cs OR to_call   LIKE @csLike)
-              AND is_position_beacon = 0
-              AND is_telemetry       = 0
-              AND text IS NOT NULL AND text != ''
-              {dateFilter}
+            {where.Sql}
             ORDER BY timestamp DESC
             LIMIT @max
             """, conn);
-        cmd.Parameters.AddWithValue("@cs",     callsignBase);
-        cmd.Parameters.AddWithValue("@csLike", callsignBase + "-%");
-        cmd.Parameters.AddWithValue("@max",    ai.MaxMessages);
-        if (ai.SummaryDays > 0)
-            cmd.Parameters.AddWithValue("@since", DateTime.Now.AddDays(-ai.SummaryDays));
+        foreach (var p in where.Params)
+            cmd.Parameters.AddWithValue(p.Key, p.Value);
+        cmd.Parameters.AddWithValue("@max", ai.MaxMessages);
 
         var list = new List<RawMessage>();
         await using var reader = await cmd.ExecuteReaderAsync(ct);

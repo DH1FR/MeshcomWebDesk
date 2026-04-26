@@ -1605,7 +1605,7 @@
             {
                 try
                 {
-                    var summary = await QsoSummaryService.GenerateSummaryAsync(csBase);
+                    var summary = await QsoSummaryService.GenerateSummaryAsync(csBase, _model.MyCallsign);
                     apiLine = summary != null
                         ? Loc.T("✅ API: Verbindung erfolgreich, Zusammenfassung generiert.",
                                  "✅ API: Connection successful, summary generated.",
