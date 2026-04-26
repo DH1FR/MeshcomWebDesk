@@ -1161,6 +1161,72 @@
                         "Aviso de privacidad: al generar un resumen, los textos se envían a un servicio de IA externo.")
                 </div>
 
+                <!-- Token-Statistik -->
+                <div style="margin-top:0.75rem">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:0.4rem">
+                        <strong style="font-size:0.92rem">📊 @Loc.T("Token-Verbrauch (seit letztem Start)", "Token usage (since last start)", "Utilizzo token (dall'ultimo avvio)", "Uso de tokens (desde último inicio)")</strong>
+                        <button type="button" class="btn-add" style="padding:2px 8px;font-size:11px" @onclick="RefreshAiUsageStats">🔄</button>
+                    </div>
+                    @{
+                        var usage = _aiUsageStats ?? QsoSummaryService.GetUsageStats();
+                    }
+                    <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:0.87rem;color:#c9d1d9;max-width:340px">
+                        <span style="color:#8b949e">@Loc.T("Anfragen:", "Requests:", "Richieste:", "Solicitudes:")</span>
+                        <span>@usage.RequestCount</span>
+                        <span style="color:#8b949e">@Loc.T("Prompt-Token:", "Prompt tokens:", "Token prompt:", "Tokens de prompt:")</span>
+                        <span>@usage.PromptTokens.ToString("N0")</span>
+                        <span style="color:#8b949e">@Loc.T("Completion-Token:", "Completion tokens:", "Token completion:", "Tokens de completion:")</span>
+                        <span>@usage.CompletionTokens.ToString("N0")</span>
+                        <span style="color:#8b949e">@Loc.T("Gesamt-Token:", "Total tokens:", "Token totali:", "Tokens totales:")</span>
+                        <span><strong>@usage.TotalTokens.ToString("N0")</strong></span>
+                        @if (usage.LastRequestAt.HasValue)
+                        {
+                            <span style="color:#8b949e">@Loc.T("Letzte Anfrage:", "Last request:", "Ultima richiesta:", "Última solicitud:")</span>
+                            <span>@usage.LastRequestAt.Value.ToString("dd.MM.yyyy HH:mm")</span>
+                        }
+                    </div>
+                </div>
+
+                <!-- Guthaben-Abfrage (nur OpenAI) -->
+                @if (_model.AiProvider == "openai")
+                {
+                    <div style="margin-top:0.75rem;display:flex;flex-direction:column;gap:0.4rem">
+                        <div style="display:flex;gap:8px;align-items:center">
+                            <button type="button" class="btn-send-now" @onclick="CheckAiBalanceAsync" disabled="@_aiBalanceChecking">
+                                @if (_aiBalanceChecking)
+                                {
+                                    <span>⏳ @Loc.T("Prüfe…", "Checking…", "Verifica…", "Comprobando…")</span>
+                                }
+                                else
+                                {
+                                    <span>💰 @Loc.T("Guthaben prüfen", "Check balance", "Verifica credito", "Consultar saldo")</span>
+                                }
+                            </button>
+                            <small style="color:#8b949e">@Loc.T(
+                                "Verbrauch: Projekt-Key reicht. Limit/Restguthaben: User-Key (sk-…) erforderlich.",
+                                "Usage: Project Key sufficient. Limit/balance: User Key (sk-…) required.",
+                                "Utilizzo: Project Key sufficiente. Limite/saldo: User Key (sk-…) necessario.",
+                                "Uso: Project Key suficiente. Límite/saldo: User Key (sk-…) necesario.")</small>
+                        </div>
+                        @if (_aiBalanceResult != null)
+                        {
+                            <div class="@(_aiBalanceResult.StartsWith("✅") ? "settings-success" : _aiBalanceResult.StartsWith("❌") ? "settings-error" : "settings-notice")" style="margin-top:0">
+                                @if (_aiBalanceResult.Contains("https://"))
+                                {
+                                    var dashUrl = "https://platform.openai.com/settings/organization/billing/overview";
+                                    var txt = _aiBalanceResult[.._aiBalanceResult.IndexOf("https://")].TrimEnd();
+                                    <span>@txt </span>
+                                    <a href="@dashUrl" target="_blank" rel="noopener" style="color:#58a6ff">OpenAI Billing Dashboard →</a>
+                                }
+                                else
+                                {
+                                    @_aiBalanceResult
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+
                 <div style="margin-top:0.75rem;display:flex;flex-direction:column;gap:0.5rem">
                     <div style="display:flex;gap:8px;align-items:center">
                         <input type="text" @bind="_aiTestCallsign" placeholder="@Loc.T("Rufzeichen z.B. DL6WAB-1", "Callsign e.g. DL6WAB-1", "Nominativo es. DL6WAB-1", "Indicativo p.ej. DL6WAB-1")"
@@ -1226,6 +1292,9 @@
     private bool    _aiTesting;
     private string? _aiTestResult;
     private string  _aiTestCallsign = string.Empty;
+    private bool    _aiBalanceChecking;
+    private string? _aiBalanceResult;
+    private AiUsageStats? _aiUsageStats;
 
     private HashSet<string> _openSections = [];
     private bool IsOpen(string id) => _openSections.Contains(id);
@@ -1569,6 +1638,40 @@
         finally
         {
             _aiTesting = false;
+        }
+    }
+
+    private void RefreshAiUsageStats()
+    {
+        _aiUsageStats = QsoSummaryService.GetUsageStats();
+    }
+
+    private async Task CheckAiBalanceAsync()
+    {
+        _aiBalanceChecking = true;
+        _aiBalanceResult   = null;
+        try
+        {
+            var result = await QsoSummaryService.CheckBalanceAsync();
+            _aiBalanceResult = result switch
+            {
+                null                                    => Loc.T(
+                    "ℹ️ Nur für OpenAI verfügbar. Bitte Provider und API-Key prüfen.",
+                    "ℹ️ Only available for OpenAI. Please check provider and API key.",
+                    "ℹ️ Disponibile solo per OpenAI. Controlla provider e chiave API.",
+                    "ℹ️ Solo disponible para OpenAI. Comprueba proveedor y clave API."),
+                "⚠️ BILLING_API_RESTRICTED"             => Loc.T(
+                    "⚠️ OpenAI hat die Billing-API für diesen Key gesperrt. Guthaben direkt einsehen: https://platform.openai.com/settings/organization/billing/overview",
+                    "⚠️ OpenAI has restricted the Billing API for this key. Check balance directly: https://platform.openai.com/settings/organization/billing/overview",
+                    "⚠️ OpenAI ha limitato la Billing API per questa chiave. Verifica il saldo su: https://platform.openai.com/settings/organization/billing/overview",
+                    "⚠️ OpenAI ha restringido la Billing API para esta clave. Consulta el saldo en: https://platform.openai.com/settings/organization/billing/overview"),
+                string r when r.StartsWith("❌")        => r,
+                string r                                => $"✅ {r}"
+            };
+        }
+        finally
+        {
+            _aiBalanceChecking = false;
         }
     }
 

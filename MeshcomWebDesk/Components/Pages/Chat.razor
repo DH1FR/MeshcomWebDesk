@@ -8,6 +8,7 @@
 @using MeshcomWebDesk.Services.Database
 @inject ChatService ChatService
 @inject MeshcomUdpService UdpService
+@inject ILogger<Chat> Logger
 @inject LanguageService Loc
 @inject QrzService QrzService
 @inject MqttService MqttService
@@ -48,7 +49,7 @@
                     @if (tab.HasQsoSummary)
                     {
                         <span class="tab-ai-icon" title="@Loc.T("QSO-Zusammenfassung verfügbar", "QSO summary available", "Riepilogo QSO disponibile", "Resumen QSO disponible")"
-                              @onclick="() => OpenQsoSummary(tab)" @onclick:stopPropagation="true">🤖</span>
+                              @onclick="() => OpenQsoSummary(tab)" @onclick:stopPropagation="true">🧠</span>
                     }
                     <span class="tab-close" @onclick="() => ConfirmCloseTab(tab.Key)" @onclick:stopPropagation="true">&times;</span>
                 </button>
@@ -367,14 +368,20 @@
 </div>
 
 @* ===== QSO Summary Modal ===== *@
-@if (_qsoSummaryVisible && _qsoSummaryRecord != null)
+@if (_qsoSummaryVisible)
 {
     <div class="qso-summary-backdrop" @onclick="CloseQsoSummary">
         <div class="qso-summary-modal" @onclick:stopPropagation="true">
+
+            <!-- Header -->
             <div class="qso-summary-header">
-                <span>🤖 @Loc.T("QSO-Zusammenfassung", "QSO Summary", "Riepilogo QSO", "Resumen QSO") – @_qsoSummaryCallsign</span>
+                <span>🧠 @_qsoSummaryCallsign</span>
                 <button class="qso-summary-close" @onclick="CloseQsoSummary">&times;</button>
             </div>
+
+            <!-- Meta -->
+            @if (_qsoSummaryRecord != null)
+            {
             <div class="qso-summary-meta">
                 📅 @Loc.T("Letztes QSO:", "Last QSO:", "Ultimo QSO:", "Último QSO:")
                 <strong>@_qsoSummaryRecord.LastQsoAt.ToString("dd.MM.yyyy HH:mm")</strong>
@@ -385,45 +392,248 @@
                 {
                     <span>
                         &nbsp;|&nbsp;
-                        @Loc.T("Zusammenfassung erstellt:", "Summary generated:", "Riepilogo generato:", "Resumen generado:")
+                        @Loc.T("Zusammenfassung:", "Summary:", "Riepilogo:", "Resumen:")
                         <strong>@_qsoSummaryRecord.CreatedAt.ToString("dd.MM.yyyy HH:mm")</strong>
                     </span>
                 }
             </div>
-            <div class="qso-summary-body">
-                @if (string.IsNullOrEmpty(_qsoSummaryRecord.SummaryText))
+            }
+
+            <!-- Tab Navigation -->
+            <div class="qso-modal-tabs">
+                <button class="qso-modal-tab @(_qsoModalTab == 0 ? "active" : "")" @onclick='() => SwitchModalTab(0)'>
+                    📋 @Loc.T("Zusammenfassung", "Summary", "Riepilogo", "Resumen")
+                </button>
+                <button class="qso-modal-tab @(_qsoModalTab == 1 ? "active" : "")" @onclick='() => SwitchModalTab(1)'>
+                    📜 @Loc.T("Verlauf", "History", "Cronologia", "Historial")
+                </button>
+                <button class="qso-modal-tab @(_qsoModalTab == 2 ? "active" : "")" @onclick='() => SwitchModalTab(2)'>
+                    🔎 @Loc.T("Suche", "Search", "Cerca", "Buscar")
+                </button>
+                <button class="qso-modal-tab @(_qsoModalTab == 3 ? "active" : "")" @onclick='() => SwitchModalTab(3)'>
+                    🧠 @Loc.T("KI-Suche", "AI Search", "Ricerca IA", "Búsqueda IA")
+                </button>
+            </div>
+
+            <!-- Tab 0: Summary -->
+            @if (_qsoModalTab == 0)
+            {
+                @if (_qsoSummaryLoading)
                 {
-                    <div class="qso-summary-hint">
-                        ℹ️ @Loc.T(
-                            "Noch keine Zusammenfassung vorhanden. Klicke auf 'Generieren' um die QSO-Daten aus der Datenbank auszuwerten.",
-                            "No summary yet. Click 'Generate' to analyse the QSO data from the database.",
-                            "Nessun riepilogo ancora. Fai clic su 'Genera' per analizzare i dati QSO dal database.",
-                            "Aun no hay resumen. Haz clic en 'Generar' para analizar los datos QSO de la base de datos.")
-                    </div>
+                    <div class="qso-summary-body"><div class="qso-summary-hint">⏳ @Loc.T("Lade…", "Loading…", "Caricamento…", "Cargando…")</div></div>
+                }
+                else if (_qsoSummaryRecord == null)
+                {
+                    <div class="qso-summary-body"><div class="qso-summary-hint">⚠️ @Loc.T("Keine Daten verfügbar.", "No data available.", "Nessun dato disponibile.", "Sin datos disponibles.")</div></div>
                 }
                 else
                 {
-                    @_qsoSummaryRecord.SummaryText
-                }
-            </div>
-            <div class="qso-summary-footer">
-                <button class="btn-action" @onclick="RegenerateQsoSummaryAsync" disabled="@_qsoSummaryLoading">
-                    @if (_qsoSummaryLoading)
+                <div class="qso-summary-body">
+                    @if (string.IsNullOrEmpty(_qsoSummaryRecord.SummaryText))
                     {
-                        <span>⏳ @Loc.T("Wird generiert…", "Generating…", "Generazione…", "Generando…")</span>
-                    }
-                    else if (string.IsNullOrEmpty(_qsoSummaryRecord.SummaryText))
-                    {
-                        <span>✨ @Loc.T("Generieren", "Generate", "Genera", "Generar")</span>
+                        <div class="qso-summary-hint">
+                            ℹ️ @Loc.T(
+                                "Noch keine Zusammenfassung vorhanden. Klicke auf 'Generieren' um die QSO-Daten aus der Datenbank auszuwerten.",
+                                "No summary yet. Click 'Generate' to analyse the QSO data from the database.",
+                                "Nessun riepilogo ancora. Fai clic su 'Genera' per analizzare i dati QSO dal database.",
+                                "Aun no hay resumen. Haz clic en 'Generar' para analizar los datos QSO de la base de datos.")
+                        </div>
                     }
                     else
                     {
-                        <span>🔄 @Loc.T("Neu generieren", "Regenerate", "Rigenera", "Regenerar")</span>
+                        @_qsoSummaryRecord.SummaryText
                     }
-                </button>
-                <button class="btn-cancel" @onclick="CloseQsoSummary">@Loc.T("Schließen", "Close", "Chiudi", "Cerrar")</button>
-            </div>
-            @if (_qsoSummaryError != null)
+                </div>
+                <div class="qso-summary-footer">
+                    <button class="btn-action" @onclick="RegenerateQsoSummaryAsync" disabled="@_qsoSummaryLoading">
+                        @if (_qsoSummaryLoading)
+                        {
+                            <span>⏳ @Loc.T("Wird generiert…", "Generating…", "Generazione…", "Generando…")</span>
+                        }
+                        else if (string.IsNullOrEmpty(_qsoSummaryRecord?.SummaryText))
+                        {
+                            <span>✨ @Loc.T("Generieren", "Generate", "Genera", "Generar")</span>
+                        }
+                        else
+                        {
+                            <span>🔄 @Loc.T("Neu generieren", "Regenerate", "Rigenera", "Regenerar")</span>
+                        }
+                    </button>
+                    <button class="btn-cancel" @onclick="CloseQsoSummary">@Loc.T("Schließen", "Close", "Chiudi", "Cerrar")</button>
+                </div>
+                } @* end else (record != null) *@
+            }
+
+            <!-- Tab 1: History -->
+            @if (_qsoModalTab == 1)
+            {
+                <div class="qso-history-filter">
+                    <input type="date" @bind="_historyFrom" title="@Loc.T("Von", "From", "Da", "Desde")" />
+                    <span>–</span>
+                    <input type="date" @bind="_historyTo" title="@Loc.T("Bis", "To", "A", "Hasta")" />
+                    <input type="text" @bind="_historyTextFilter" @bind:event="oninput"
+                           placeholder="@Loc.T("Suchbegriff…", "Search term…", "Termine…", "Término…")" />
+                    <button class="btn-action" @onclick="LoadHistoryAsync">🔎</button>
+                    <button class="btn-cancel" @onclick="ResetHistoryFilter">✕</button>
+                </div>
+                <div class="qso-summary-body" style="padding:0">
+                    @if (_historyLoading)
+                    {
+                        <div class="qso-summary-hint">⏳ @Loc.T("Lade…", "Loading…", "Caricamento…", "Cargando…")</div>
+                    }
+                    else if (_historyMessages.Count == 0)
+                    {
+                        <div class="qso-summary-hint">ℹ️ @Loc.T("Keine Nachrichten gefunden.", "No messages found.", "Nessun messaggio trovato.", "No se encontraron mensajes.")</div>
+                    }
+                    else
+                    {
+                        <table class="qso-history-table">
+                            <thead>
+                                <tr>
+                                    <th>@Loc.T("Datum/Zeit", "Date/Time", "Data/Ora", "Fecha/Hora")</th>
+                                    <th>@Loc.T("Von", "From", "Da", "De")</th>
+                                    <th>@Loc.T("An", "To", "A", "Para")</th>
+                                    <th>@Loc.T("Nachricht", "Message", "Messaggio", "Mensaje")</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var m in _historyMessages)
+                                {
+                                    <tr class="@(m.IsOutgoing ? "hist-out" : "hist-in")">
+                                        <td class="hist-time">@m.Timestamp.ToString("dd.MM.yy HH:mm")</td>
+                                        <td class="hist-call">@m.From</td>
+                                        <td class="hist-call">@m.To</td>
+                                        <td class="hist-text">@HighlightText(m.Text, _historyTextFilter)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                        <div class="qso-history-pager">
+                            <button class="btn-action" @onclick="HistoryPrevPage" disabled="@(_historyPage <= 1)">◀</button>
+                            <span>@Loc.T("Seite", "Page", "Pagina", "Página") @_historyPage / @_historyTotalPages &nbsp;(@_historyTotal @Loc.T("gesamt", "total", "totale", "total"))</span>
+                            <button class="btn-action" @onclick="HistoryNextPage" disabled="@(_historyPage >= _historyTotalPages)">▶</button>
+                        </div>
+                    }
+                </div>
+                <div class="qso-summary-footer">
+                    <button class="btn-cancel" @onclick="CloseQsoSummary">@Loc.T("Schließen", "Close", "Chiudi", "Cerrar")</button>
+                </div>
+            }
+
+            <!-- Tab 2: Text Search -->
+            @if (_qsoModalTab == 2)
+            {
+                <div class="qso-history-filter">
+                    <input type="date" @bind="_textSearchFrom" title="@Loc.T("Von", "From", "Da", "Desde")" />
+                    <span>–</span>
+                    <input type="date" @bind="_textSearchTo" title="@Loc.T("Bis", "To", "A", "Hasta")" />
+                    <input type="text" @bind="_textSearchTerm" @bind:event="oninput"
+                           @onkeydown="OnTextSearchKeyDown"
+                           placeholder="@Loc.T("Suchbegriff eingeben und Enter", "Enter search term and press Enter", "Inserisci e premi Invio", "Introduce y pulsa Enter")" />
+                    <button class="btn-action" @onclick="RunTextSearchAsync" disabled="@(_textSearchLoading || string.IsNullOrWhiteSpace(_textSearchTerm))">🔎</button>
+                    <button class="btn-cancel" @onclick="ResetTextSearch">✕</button>
+                </div>
+                <div class="qso-summary-body" style="padding:0">
+                    @if (_textSearchLoading)
+                    {
+                        <div class="qso-summary-hint">⏳ @Loc.T("Suche…", "Searching…", "Ricerca…", "Buscando…")</div>
+                    }
+                    else if (_textSearchMessages.Count == 0 && _textSearchTerm != string.Empty)
+                    {
+                        <div class="qso-summary-hint">ℹ️ @Loc.T("Keine Treffer.", "No results.", "Nessun risultato.", "Sin resultados.")</div>
+                    }
+                    else if (_textSearchMessages.Count > 0)
+                    {
+                        <table class="qso-history-table">
+                            <thead>
+                                <tr>
+                                    <th>@Loc.T("Datum/Zeit", "Date/Time", "Data/Ora", "Fecha/Hora")</th>
+                                    <th>@Loc.T("Von", "From", "Da", "De")</th>
+                                    <th>@Loc.T("An", "To", "A", "Para")</th>
+                                    <th>@Loc.T("Nachricht", "Message", "Messaggio", "Mensaje")</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var m in _textSearchMessages)
+                                {
+                                    <tr class="@(m.IsOutgoing ? "hist-out" : "hist-in")">
+                                        <td class="hist-time">@m.Timestamp.ToString("dd.MM.yy HH:mm")</td>
+                                        <td class="hist-call">@m.From</td>
+                                        <td class="hist-call">@m.To</td>
+                                        <td class="hist-text">@HighlightText(m.Text, _textSearchTerm)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                        <div class="qso-history-pager">
+                            <button class="btn-action" @onclick="TextSearchPrevPage" disabled="@(_textSearchPage <= 1)">◀</button>
+                            <span>@Loc.T("Seite", "Page", "Pagina", "P\u00e1gina") @_textSearchPage / @_textSearchTotalPages &nbsp;(@_textSearchTotal @Loc.T("Treffer", "results", "risultati", "resultados"))</span>
+                            <button class="btn-action" @onclick="TextSearchNextPage" disabled="@(_textSearchPage >= _textSearchTotalPages)">▶</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="qso-summary-hint">💡 @Loc.T("Suchbegriff eingeben und auf 🔎 klicken oder Enter drücken.", "Enter a search term and click 🔎 or press Enter.", "Inserisci un termine e premi Invio.", "Introduce un término y pulsa Enter.")</div>
+                    }
+                </div>
+                <div class="qso-summary-footer">
+                    <button class="btn-cancel" @onclick="CloseQsoSummary">@Loc.T("Schließen", "Close", "Chiudi", "Cerrar")</button>
+                </div>
+            }
+
+            <!-- Tab 3: AI Search -->
+            @if (_qsoModalTab == 3)
+            {
+                <div class="qso-history-filter">
+                    <span style="color:#8b949e;font-size:11px">@Loc.T("Zeitraum (optional):", "Period (optional):", "Periodo (opz.):", "Período (opc.):")</span>
+                    <input type="date" @bind="_searchFrom" title="@Loc.T("Von", "From", "Da", "Desde")" />
+                    <span>–</span>
+                    <input type="date" @bind="_searchTo" title="@Loc.T("Bis", "To", "A", "Hasta")" />
+                    @if (_searchFrom.HasValue || _searchTo.HasValue)
+                    {
+                        <button class="btn-cancel" @onclick="() => { _searchFrom = null; _searchTo = null; }">✕</button>
+                    }
+                </div>
+                <div style="padding:8px 14px;display:flex;gap:8px">
+                    <input type="text" value="@_searchQuery"
+                           @oninput="e => _searchQuery = e.Value?.ToString() ?? string.Empty"
+                           @onkeydown="OnSearchKeyDown"
+                           placeholder="@Loc.T("Frage stellen z.B. 'Was hat mir Jürgen empfohlen?'", "Ask e.g. 'What did Jürgen recommend to me?'", "Domanda es. 'Cosa mi ha consigliato?'", "Pregunta p.ej. '¿Qué me recomendó?'")"
+                           style="flex:1" />
+                    <button class="btn-action" @onclick="RunAiSearchAsync" disabled="@(_aiSearchLoading || string.IsNullOrWhiteSpace(_searchQuery))">
+                        @if (_aiSearchLoading) { <span>⏳</span> } else { <span>🔍 @Loc.T("Suchen", "Search", "Cerca", "Buscar")</span> }
+                    </button>
+                </div>
+                <div class="qso-summary-body">
+                    @if (_aiSearchLoading)
+                    {
+                        <div class="qso-summary-hint">⏳ @Loc.T("KI durchsucht Nachrichten…", "AI is searching messages…", "IA sta cercando…", "IA buscando…")</div>
+                    }
+                    else if (_aiSearchResult != null)
+                    {
+                        @_aiSearchResult
+                    }
+                    else
+                    {
+                        <div class="qso-summary-hint">
+                            💡 @Loc.T(
+                                "Stelle eine Frage zum Gespraechsverlauf. Die KI durchsucht alle Nachrichten und nennt dir genaue Zeitstempel.",
+                                "Ask a question about the conversation. The AI searches all messages and cites exact timestamps.",
+                                "Fai una domanda sulla conversazione. L'IA cerca tutti i messaggi e cita i timestamp.",
+                                "Haz una pregunta sobre la conversacion. La IA busca todos los mensajes y cita las marcas de tiempo.")
+                        </div>
+                    }
+                    @if (_aiSearchError != null)
+                    {
+                        <div class="qso-summary-error">❌ @_aiSearchError</div>
+                    }
+                </div>
+                <div class="qso-summary-footer">
+                    <button class="btn-cancel" @onclick="CloseQsoSummary">@Loc.T("Schließen", "Close", "Chiudi", "Cerrar")</button>
+                </div>
+            }
+
+            @if (_qsoSummaryError != null && _qsoModalTab == 0)
             {
                 <div class="qso-summary-error">❌ @_qsoSummaryError</div>
             }
@@ -460,6 +670,36 @@
     private string?            _qsoSummaryError;
     private QsoSummaryRecord?  _qsoSummaryRecord;
     private ChatTab?           _qsoSummaryTab;
+    private int                _qsoModalTab;        // 0=Summary 1=History 2=TextSearch 3=AI Search
+
+    // History tab state
+    private List<QsoHistoryMessage> _historyMessages   = [];
+    private bool     _historyLoading;
+    private int      _historyPage       = 1;
+    private int      _historyTotal;
+    private int      _historyTotalPages = 1;
+    private const int HistoryPageSize   = 50;
+    private DateTime? _historyFrom;
+    private DateTime? _historyTo;
+    private string    _historyTextFilter = string.Empty;
+
+    // Text search tab state
+    private List<QsoHistoryMessage> _textSearchMessages   = [];
+    private bool     _textSearchLoading;
+    private int      _textSearchPage       = 1;
+    private int      _textSearchTotal;
+    private int      _textSearchTotalPages = 1;
+    private string   _textSearchTerm       = string.Empty;
+    private DateTime? _textSearchFrom;
+    private DateTime? _textSearchTo;
+
+    // AI Search tab state
+    private string?  _aiSearchResult;
+    private string?  _aiSearchError;
+    private bool     _aiSearchLoading;
+    private string   _searchQuery = string.Empty;
+    private DateTime? _searchFrom;
+    private DateTime? _searchTo;
 
     private bool _scrollMessages;
 
@@ -913,9 +1153,16 @@
 
     private void CloseQsoSummary()
     {
-        _qsoSummaryVisible = false;
-        _qsoSummaryRecord  = null;
-        _qsoSummaryError   = null;
+        _qsoSummaryVisible    = false;
+        _qsoSummaryRecord     = null;
+        _qsoSummaryError      = null;
+        _historyMessages      = [];
+        _textSearchMessages   = [];
+        _textSearchTerm       = string.Empty;
+        _aiSearchResult       = null;
+        _aiSearchError        = null;
+        _searchQuery          = string.Empty;
+        _qsoModalTab          = 0;
     }
 
     private async Task RegenerateQsoSummaryAsync()
@@ -933,12 +1180,166 @@
                 "Impossibile generare il riepilogo. Verificare la chiave API e la configurazione DB.",
                 "No se pudo generar el resumen. Comprueba la clave API y la configuración de DB.");
         else if (_qsoSummaryTab != null)
-        {
             _qsoSummaryTab.HasQsoSummary = true;
-        }
 
         _qsoSummaryLoading = false;
         StateHasChanged();
+    }
+
+    private async Task SwitchModalTab(int tab)
+    {
+        _qsoModalTab = tab;
+        if (tab == 1 && _historyMessages.Count == 0)
+            await LoadHistoryAsync();
+        StateHasChanged();
+    }
+
+    // ── History tab ───────────────────────────────────────────────────────
+
+    private async Task LoadHistoryAsync()
+    {
+        if (_qsoSummaryCallsign is null) return;
+        _historyLoading = true;
+        StateHasChanged();
+
+        var (msgs, total) = await QsoSummaryService.GetHistoryAsync(
+            _qsoSummaryCallsign,
+            myCallsign: _myCallsign,
+            from:       _historyFrom,
+            to:         _historyTo.HasValue ? _historyTo.Value.AddDays(1) : null,
+            textFilter: _historyTextFilter,
+            page:       _historyPage,
+            pageSize:   HistoryPageSize);
+
+        _historyMessages   = msgs;
+        _historyTotal      = total;
+        _historyTotalPages = Math.Max(1, (int)Math.Ceiling(total / (double)HistoryPageSize));
+        _historyLoading    = false;
+        StateHasChanged();
+    }
+
+    private async Task HistoryPrevPage()
+    {
+        if (_historyPage > 1) { _historyPage--; await LoadHistoryAsync(); }
+    }
+
+    private async Task HistoryNextPage()
+    {
+        if (_historyPage < _historyTotalPages) { _historyPage++; await LoadHistoryAsync(); }
+    }
+
+    private async Task ResetHistoryFilter()
+    {
+        _historyFrom       = null;
+        _historyTo         = null;
+        _historyTextFilter = string.Empty;
+        _historyPage       = 1;
+        await LoadHistoryAsync();
+    }
+
+    // ── Text Search tab ───────────────────────────────────────────────────
+
+    private async Task RunTextSearchAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_textSearchTerm) || _qsoSummaryCallsign is null) return;
+        _textSearchLoading = true;
+        _textSearchPage    = 1;
+        StateHasChanged();
+
+        var (msgs, total) = await QsoSummaryService.TextSearchAsync(
+            _qsoSummaryCallsign,
+            myCallsign: _myCallsign,
+            searchTerm: _textSearchTerm,
+            from:       _textSearchFrom,
+            to:         _textSearchTo.HasValue ? _textSearchTo.Value.AddDays(1) : null,
+            page:       _textSearchPage,
+            pageSize:   HistoryPageSize);
+
+        _textSearchMessages   = msgs;
+        _textSearchTotal      = total;
+        _textSearchTotalPages = Math.Max(1, (int)Math.Ceiling(total / (double)HistoryPageSize));
+        _textSearchLoading    = false;
+        StateHasChanged();
+    }
+
+    private async Task TextSearchPrevPage()
+    {
+        if (_textSearchPage > 1) { _textSearchPage--; await RunTextSearchAsync(); }
+    }
+
+    private async Task TextSearchNextPage()
+    {
+        if (_textSearchPage < _textSearchTotalPages) { _textSearchPage++; await RunTextSearchAsync(); }
+    }
+
+    private void ResetTextSearch()
+    {
+        _textSearchTerm       = string.Empty;
+        _textSearchMessages   = [];
+        _textSearchTotal      = 0;
+        _textSearchTotalPages = 1;
+        _textSearchPage       = 1;
+        _textSearchFrom       = null;
+        _textSearchTo         = null;
+        StateHasChanged();
+    }
+
+    private async Task OnTextSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await RunTextSearchAsync();
+    }
+
+    private MarkupString HighlightText(string text, string? filter)
+    {
+        if (string.IsNullOrWhiteSpace(filter)) return new MarkupString(System.Net.WebUtility.HtmlEncode(text));
+        var encoded = System.Net.WebUtility.HtmlEncode(text);
+        var encodedFilter = System.Net.WebUtility.HtmlEncode(filter);
+        var highlighted = System.Text.RegularExpressions.Regex.Replace(
+            encoded, System.Text.RegularExpressions.Regex.Escape(encodedFilter),
+            m => $"<mark class='hist-highlight'>{m.Value}</mark>",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        return new MarkupString(highlighted);
+    }
+
+    // ── AI Search tab ─────────────────────────────────────────────────────
+
+    private async Task RunAiSearchAsync()
+    {
+        Logger.LogInformation("Chat: RunAiSearchAsync called – query='{Q}', callsign='{C}'",
+            _searchQuery, _qsoSummaryCallsign);
+
+        if (string.IsNullOrWhiteSpace(_searchQuery) || _qsoSummaryCallsign is null)
+        {
+            Logger.LogWarning("Chat: RunAiSearchAsync aborted – query empty or callsign null");
+            return;
+        }
+        _aiSearchLoading = true;
+        _aiSearchResult  = null;
+        _aiSearchError   = null;
+        StateHasChanged();
+
+        var result = await QsoSummaryService.SearchAsync(
+            _qsoSummaryCallsign, _myCallsign, _searchQuery,
+            mhList: ChatService.MhList,
+            from:   _searchFrom,
+            to:     _searchTo.HasValue ? _searchTo.Value.AddDays(1) : null);
+
+        if (result is null)
+            _aiSearchError = Loc.T(
+                "Suche fehlgeschlagen. Bitte API-Key und Konfiguration prüfen.",
+                "Search failed. Please check API key and configuration.",
+                "Ricerca fallita. Verificare la chiave API.",
+                "Búsqueda fallida. Comprueba la clave API.");
+        else
+            _aiSearchResult = result;
+
+        _aiSearchLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await RunAiSearchAsync();
     }
 
     private void ApplyTabOrder()

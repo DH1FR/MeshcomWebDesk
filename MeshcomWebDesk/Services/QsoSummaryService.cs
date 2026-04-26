@@ -18,23 +18,168 @@ public sealed class QsoSummaryService
 
     private readonly IOptionsMonitor<MeshcomSettings> _settings;
     private readonly ILogger<QsoSummaryService>        _logger;
+    private readonly QrzService                        _qrz;
     private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(60) };
 
     // Schema migration: runs once per connection string
     private string _lastMigratedConnStr = string.Empty;
     private readonly SemaphoreSlim _migrateLock = new(1, 1);
 
-    public QsoSummaryService(IOptionsMonitor<MeshcomSettings> settings, ILogger<QsoSummaryService> logger)
+    // Token usage tracking (in-memory, resets on restart)
+    private long _promptTokens;
+    private long _completionTokens;
+    private long _requestCount;
+    private DateTime? _lastRequestAt;
+
+    public QsoSummaryService(IOptionsMonitor<MeshcomSettings> settings,
+                             ILogger<QsoSummaryService> logger,
+                             QrzService qrz)
     {
         _settings = settings;
         _logger   = logger;
+        _qrz      = qrz;
     }
 
     // ── Public API ────────────────────────────────────────────────────────
 
+    /// <summary>Returns the current in-memory token usage statistics.</summary>
+    public AiUsageStats GetUsageStats() => new(
+        PromptTokens:     _promptTokens,
+        CompletionTokens: _completionTokens,
+        TotalTokens:      _promptTokens + _completionTokens,
+        RequestCount:     _requestCount,
+        LastRequestAt:    _lastRequestAt);
+
     /// <summary>
-    /// Returns true when a summary exists for <paramref name="callsignBase"/> AND
-    /// the last QSO is older than <see cref="AiSettings.ThresholdDays"/>.
+    /// Tries to retrieve billing info (limit + current month usage) from the OpenAI billing API.
+    /// Returns null for non-OpenAI providers or if the request fails.
+    /// Returns an error string prefixed with "❌" if the API key is invalid or the endpoint is not accessible.
+    /// </summary>
+    public async Task<string?> CheckBalanceAsync(CancellationToken ct = default)
+    {
+        var s = _settings.CurrentValue.Ai;
+        if (s.Provider != AiSettings.ProviderOpenAi || string.IsNullOrWhiteSpace(s.ApiKey))
+            return null;
+
+        try
+        {
+            var now       = DateTime.UtcNow;
+            var startDate = new DateTime(now.Year, now.Month, 1).ToString("yyyy-MM-dd");
+            var endDate   = now.AddDays(1).ToString("yyyy-MM-dd");
+
+            // ── 1. Monthly usage (works with both User-Keys and Project-Keys) ──
+            double? usedUsd = null;
+            using var usageReq = new HttpRequestMessage(HttpMethod.Get,
+                $"https://api.openai.com/v1/dashboard/billing/usage?start_date={startDate}&end_date={endDate}");
+            usageReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", s.ApiKey);
+            using var usageResp = await _http.SendAsync(usageReq, ct);
+            if (usageResp.IsSuccessStatusCode)
+            {
+                var usageBody = await usageResp.Content.ReadAsStringAsync(ct);
+                using var usageDoc = JsonDocument.Parse(usageBody);
+                if (usageDoc.RootElement.TryGetProperty("total_usage", out var tu))
+                    usedUsd = tu.GetDouble() / 100.0;   // cents → USD
+            }
+            else
+            {
+                var usageBody = await usageResp.Content.ReadAsStringAsync(ct);
+                _logger.LogWarning("QsoSummaryService: CheckBalanceAsync – usage returned {Status}: {Body}",
+                    usageResp.StatusCode, usageBody);
+
+                // OpenAI restricts legacy billing endpoints for project-keys and newer accounts.
+                // Return a clear hint with the direct dashboard URL instead of a generic error.
+                if (usageResp.StatusCode == System.Net.HttpStatusCode.Forbidden ||
+                    usageResp.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    return "⚠️ BILLING_API_RESTRICTED";
+                }
+
+                try
+                {
+                    using var errDoc = JsonDocument.Parse(usageBody);
+                    if (errDoc.RootElement.TryGetProperty("error", out var err) &&
+                        err.TryGetProperty("message", out var msg))
+                        return $"❌ {msg.GetString()}";
+                }
+                catch { /* ignore */ }
+                return $"❌ HTTP {(int)usageResp.StatusCode}";
+            }
+
+            // ── 2. Subscription / hard limit (User-Keys only, optional) ──────
+            double? hardLimit = null;
+            bool    hasPm     = false;
+            string? planName  = null;
+
+            using var subReq = new HttpRequestMessage(HttpMethod.Get,
+                "https://api.openai.com/v1/dashboard/billing/subscription");
+            subReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", s.ApiKey);
+            using var subResp = await _http.SendAsync(subReq, ct);
+            if (subResp.IsSuccessStatusCode)
+            {
+                var subBody = await subResp.Content.ReadAsStringAsync(ct);
+                using var subDoc = JsonDocument.Parse(subBody);
+                var root = subDoc.RootElement;
+                hardLimit = root.TryGetProperty("hard_limit_usd", out var hl) ? hl.GetDouble() : null;
+                hasPm     = root.TryGetProperty("has_payment_method", out var pm) && pm.GetBoolean();
+                planName  = root.TryGetProperty("plan", out var plan) && plan.TryGetProperty("title", out var pt)
+                                ? pt.GetString() : null;
+            }
+            // 403/401 on subscription = Project-Key → silently skip, usage data is enough
+
+            // ── 3. Build result string ────────────────────────────────────────
+            var eurRate = await FetchUsdToEurRateAsync(ct);
+            var parts   = new List<string>();
+
+            if (planName != null) parts.Add(planName);
+
+            if (hardLimit.HasValue && usedUsd.HasValue)
+            {
+                var remaining = hardLimit.Value - usedUsd.Value;
+                parts.Add(eurRate.HasValue
+                    ? $"Restguthaben: ${remaining:F2} / {remaining * eurRate.Value:F2} €"
+                    : $"Restguthaben: ${remaining:F2}");
+                parts.Add($"{now:MMMM}: ${usedUsd.Value:F2} verbraucht | Limit: ${hardLimit.Value:F2}");
+            }
+            else if (usedUsd.HasValue)
+            {
+                parts.Add(eurRate.HasValue
+                    ? $"{now:MMMM}: ${usedUsd.Value:F2} / {usedUsd.Value * eurRate.Value:F2} € verbraucht"
+                    : $"{now:MMMM}: ${usedUsd.Value:F2} verbraucht");
+            }
+
+            if (hasPm) parts.Add("💳");
+
+            return parts.Count > 0 ? string.Join(" | ", parts) : "OK";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "QsoSummaryService: CheckBalanceAsync failed");
+            return $"❌ {ex.Message}";
+        }
+    }
+
+
+    /// <summary>
+    /// Fetches the current USD→EUR exchange rate from the free Frankfurter API.
+    /// Returns null on failure (no network, API down, etc.).
+    /// </summary>
+    private static async Task<double?> FetchUsdToEurRateAsync(CancellationToken ct)
+    {
+        try
+        {
+            using var req  = new HttpRequestMessage(HttpMethod.Get, "https://api.frankfurter.app/latest?from=USD&to=EUR");
+            using var resp = await _http.SendAsync(req, ct);
+            if (!resp.IsSuccessStatusCode) return null;
+            var body = await resp.Content.ReadAsStringAsync(ct);
+            using var doc  = JsonDocument.Parse(body);
+            if (doc.RootElement.TryGetProperty("rates", out var rates) &&
+                rates.TryGetProperty("EUR", out var eur))
+                return eur.GetDouble();
+            return null;
+        }
+        catch { return null; }
+    }
+
     /// <summary>
     /// Returns true when either:
     /// <list type="bullet">
@@ -259,6 +404,375 @@ public sealed class QsoSummaryService
     // ── Private helpers ───────────────────────────────────────────────────
 
     /// <summary>
+    /// Loads paginated message history for <paramref name="callsignBase"/> from the monitor table.
+    /// Only direct messages between MyCallsign and the remote callsign are returned –
+    /// no group messages, no broadcast, no ACKs, no messages to/from third parties.
+    /// </summary>
+    public async Task<(List<QsoHistoryMessage> Messages, int TotalCount)> GetHistoryAsync(
+        string callsignBase,
+        string myCallsign,
+        DateTime? from = null,
+        DateTime? to   = null,
+        string?   textFilter = null,
+        int       page       = 1,
+        int       pageSize   = 50,
+        CancellationToken ct = default)
+    {
+        if (!IsDbAvailable(out var db, out _))
+            return ([], 0);
+
+        try
+        {
+            await using var conn = new MySqlConnection(db.MySqlConnectionString);
+            await conn.OpenAsync(ct);
+
+            var where = BuildDirectConversationWhere(callsignBase, myCallsign, from, to, textFilter);
+
+            // Total count
+            await using var countCmd = new MySqlCommand(
+                $"SELECT COUNT(*) FROM `{db.MySqlTableName}` {where.Sql}", conn);
+            foreach (var p in where.Params)
+                countCmd.Parameters.AddWithValue(p.Key, p.Value);
+            var total = Convert.ToInt32(await countCmd.ExecuteScalarAsync(ct));
+
+            // Page
+            var offset = (page - 1) * pageSize;
+            await using var cmd = new MySqlCommand(
+                $"""
+                SELECT timestamp, from_call, to_call, text, is_outgoing
+                FROM `{db.MySqlTableName}`
+                {where.Sql}
+                ORDER BY timestamp DESC
+                LIMIT @limit OFFSET @offset
+                """, conn);
+            foreach (var p in where.Params)
+                cmd.Parameters.AddWithValue(p.Key, p.Value);
+            cmd.Parameters.AddWithValue("@limit",  pageSize);
+            cmd.Parameters.AddWithValue("@offset", offset);
+
+            var list = new List<QsoHistoryMessage>();
+            await using var reader = await cmd.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+                list.Add(new QsoHistoryMessage(
+                    reader.GetDateTime(0),
+                    reader.GetString(1),
+                    reader.GetString(2),
+                    reader.GetString(3),
+                    reader.GetBoolean(4)));
+
+            return (list, total);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "QsoSummaryService: GetHistoryAsync failed for {Callsign}", callsignBase);
+            return ([], 0);
+        }
+    }
+
+    /// <summary>
+    /// Simple full-text search without AI – returns matching messages from the direct
+    /// conversation between MyCallsign and the remote callsign.
+    /// </summary>
+    public async Task<(List<QsoHistoryMessage> Messages, int TotalCount)> TextSearchAsync(
+        string callsignBase,
+        string myCallsign,
+        string searchTerm,
+        DateTime? from = null,
+        DateTime? to   = null,
+        int       page     = 1,
+        int       pageSize = 50,
+        CancellationToken ct = default)
+    {
+        if (!IsDbAvailable(out var db, out _))
+            return ([], 0);
+
+        if (string.IsNullOrWhiteSpace(searchTerm))
+            return ([], 0);
+
+        try
+        {
+            await using var conn = new MySqlConnection(db.MySqlConnectionString);
+            await conn.OpenAsync(ct);
+
+            var where = BuildDirectConversationWhere(callsignBase, myCallsign, from, to, searchTerm);
+
+            await using var countCmd = new MySqlCommand(
+                $"SELECT COUNT(*) FROM `{db.MySqlTableName}` {where.Sql}", conn);
+            foreach (var p in where.Params)
+                countCmd.Parameters.AddWithValue(p.Key, p.Value);
+            var total = Convert.ToInt32(await countCmd.ExecuteScalarAsync(ct));
+
+            var offset = (page - 1) * pageSize;
+            await using var cmd = new MySqlCommand(
+                $"""
+                SELECT timestamp, from_call, to_call, text, is_outgoing
+                FROM `{db.MySqlTableName}`
+                {where.Sql}
+                ORDER BY timestamp DESC
+                LIMIT @limit OFFSET @offset
+                """, conn);
+            foreach (var p in where.Params)
+                cmd.Parameters.AddWithValue(p.Key, p.Value);
+            cmd.Parameters.AddWithValue("@limit",  pageSize);
+            cmd.Parameters.AddWithValue("@offset", offset);
+
+            var list = new List<QsoHistoryMessage>();
+            await using var reader = await cmd.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+                list.Add(new QsoHistoryMessage(
+                    reader.GetDateTime(0),
+                    reader.GetString(1),
+                    reader.GetString(2),
+                    reader.GetString(3),
+                    reader.GetBoolean(4)));
+
+            return (list, total);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "QsoSummaryService: TextSearchAsync failed for {Callsign}", callsignBase);
+            return ([], 0);
+        }
+    }
+
+    /// <summary>
+    /// Sends a natural-language search query to the AI together with relevant messages
+    /// and returns the AI answer with found passages and timestamps.
+    /// </summary>
+    public async Task<string?> SearchAsync(
+        string callsignBase,
+        string myCallsign,
+        string query,
+        IReadOnlyList<HeardStation>? mhList = null,
+        DateTime? from = null,
+        DateTime? to   = null,
+        CancellationToken ct = default)
+    {
+        if (!IsAvailable(out var db, out var ai))
+        {
+            var s = _settings.CurrentValue;
+            _logger.LogWarning("QsoSummaryService: SearchAsync({Callsign}) skipped – IsAvailable=false " +
+                "(AiEnabled={E}, HasKey={K}, Provider={P}, HasConn={C})",
+                callsignBase, s.Ai.Enabled, !string.IsNullOrWhiteSpace(s.Ai.ApiKey),
+                s.Database.Provider, !string.IsNullOrWhiteSpace(s.Database.MySqlConnectionString));
+            return null;
+        }
+
+        try
+        {
+            await using var conn = new MySqlConnection(db.MySqlConnectionString);
+            await conn.OpenAsync(ct);
+
+            // Load only the direct conversation between the two stations
+            var where = BuildDirectConversationWhere(callsignBase, myCallsign, from, to, null);
+            await using var cmd = new MySqlCommand(
+                $"""
+                SELECT timestamp, from_call, to_call, text, is_outgoing
+                FROM `{db.MySqlTableName}`
+                {where.Sql}
+                ORDER BY timestamp ASC
+                LIMIT {ai.MaxMessages}
+                """, conn);
+            foreach (var p in where.Params)
+                cmd.Parameters.AddWithValue(p.Key, p.Value);
+
+            var messages = new List<RawMessage>();
+            await using var reader = await cmd.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+                messages.Add(new RawMessage(
+                    reader.GetDateTime(0), reader.GetString(1),
+                    reader.GetString(2), reader.GetString(3), reader.GetBoolean(4)));
+
+            _logger.LogInformation("QsoSummaryService: SearchAsync({Callsign}) – {Count} messages loaded, query='{Query}'",
+                callsignBase, messages.Count, query);
+
+            // ── Station context from QRZ.com and MH list ──────────────────
+            var sbCtx = new StringBuilder();
+
+            // Remote station info
+            var remoteQrz = _qrz.GetCached(callsignBase);
+            var remoteMh  = mhList?.FirstOrDefault(s =>
+                s.Callsign.Equals(callsignBase, StringComparison.OrdinalIgnoreCase) ||
+                s.Callsign.StartsWith(callsignBase + "-", StringComparison.OrdinalIgnoreCase));
+
+            sbCtx.AppendLine($"Informationen zur Gegenstation {callsignBase}:");
+            if (remoteQrz?.FirstName != null)
+                sbCtx.AppendLine($"  Vorname: {remoteQrz.FirstName}");
+            if (remoteQrz?.Location != null)
+                sbCtx.AppendLine($"  Standort (QRZ.com): {remoteQrz.Location}");
+            if (remoteMh != null)
+            {
+                if (remoteMh.Latitude.HasValue && remoteMh.Longitude.HasValue)
+                {
+                    var grid = LatLonToMaidenhead(remoteMh.Latitude.Value, remoteMh.Longitude.Value);
+                    sbCtx.AppendLine($"  GPS-Position: {remoteMh.Latitude:F4}° N, {remoteMh.Longitude:F4}° E");
+                    sbCtx.AppendLine($"  QTH-Kenner (Maidenhead): {grid}");
+                }
+                if (remoteMh.Firmware != null)
+                    sbCtx.AppendLine($"  Firmware: {remoteMh.Firmware}");
+                sbCtx.AppendLine($"  Zuletzt gehört: {remoteMh.LastHeard:dd.MM.yyyy HH:mm}");
+            }
+
+            // Own station info
+            var ownQrz = _qrz.GetCached(myCallsign);
+            sbCtx.AppendLine($"\nInformationen zur eigenen Station {myCallsign}:");
+            if (ownQrz?.FirstName != null)
+                sbCtx.AppendLine($"  Vorname: {ownQrz.FirstName}");
+            if (ownQrz?.Location != null)
+                sbCtx.AppendLine($"  Standort (QRZ.com): {ownQrz.Location}");
+
+            // Check if we have ANY context to answer the question
+            bool hasStationContext = remoteQrz != null || remoteMh != null;
+            if (messages.Count == 0 && !hasStationContext)
+            {
+                _logger.LogWarning("QsoSummaryService: SearchAsync({Callsign}) – no messages and no station data found " +
+                    "(myCallsign={My})", callsignBase, myCallsign);
+                return null;
+            }
+
+            // Build conversation with clear I/You perspective
+            var sb = new StringBuilder();
+            foreach (var m in messages)
+            {
+                var speaker = m.IsOutgoing
+                    ? $"ICH ({m.From})"
+                    : $"{m.From}";
+                sb.AppendLine($"[{m.Timestamp:yyyy-MM-dd HH:mm}] {speaker} an {m.To}: {m.Text}");
+            }
+
+            var conversationSection = messages.Count > 0
+                ? $"\nNachrichtenverlauf ({messages.Count} Nachrichten):\n{sb}"
+                : "\n(Kein Nachrichtenverlauf vorhanden – beantworte die Frage ausschließlich anhand der Stationsdaten.)";
+
+            var prompt = $"""
+                Du hilfst bei Fragen zu einer Amateurfunk-Station und dem QSO-Verlauf.
+                Der Benutzer ist {myCallsign}. Zeilen mit 'ICH' sind vom Benutzer gesendete Nachrichten.
+
+                Bekannte Stationsdaten (nutze diese vorrangig für Fragen zu Person, Name, QTH, Locator, Standort):
+                {sbCtx}
+
+                Beantworte die folgende Frage anhand der Stationsdaten und/oder des Nachrichtenverlaufs.
+                Zitiere bei Fundstellen im Nachrichtenverlauf das genaue Datum, die Uhrzeit und den Originaltext.
+                Falls nichts Passendes gefunden wird, sage das klar.
+                Antworte in der gleichen Sprache wie die Frage.
+
+                Frage: {query}
+                {conversationSection}
+                """;
+
+            var requestBody = JsonSerializer.Serialize(new
+            {
+                model    = ai.Model,
+                messages = new[]
+                {
+                    new { role = "system", content = $"Du bist ein hilfreicher Assistent für Amateurfunk. Der Benutzer ist {myCallsign}. Beantworte Fragen zu Stationen anhand der bereitgestellten Stationsdaten (QRZ.com, GPS, Locator) und dem Nachrichtenverlauf. Nachrichten mit 'ICH' wurden vom Benutzer gesendet." },
+                    new { role = "user", content = prompt }
+                },
+                max_tokens  = 800,
+                temperature = 0.3
+            });
+
+            if (ai.LogRequests)
+                _logger.LogInformation("QsoSummaryService: Search request for {Callsign}: {Query}", callsignBase, query);
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, ai.GetApiUrl());
+            if (ai.Provider == AiSettings.ProviderAzureOpenAi)
+                request.Headers.Add("api-key", ai.ApiKey);
+            else
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ai.ApiKey);
+            request.Content = new StringContent(requestBody, Encoding.UTF8, "application/json");
+
+            using var response = await _http.SendAsync(request, ct);
+            var responseBody = await response.Content.ReadAsStringAsync(ct);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("QsoSummaryService: Search {Provider} returned {Status}: {Body}",
+                    ai.Provider, response.StatusCode, responseBody);
+                return null;
+            }
+
+            using var doc = JsonDocument.Parse(responseBody);
+            AccumulateUsage(doc.RootElement);
+            return doc.RootElement
+                .GetProperty("choices")[0]
+                .GetProperty("message")
+                .GetProperty("content")
+                .GetString();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "QsoSummaryService: SearchAsync failed for {Callsign}", callsignBase);
+            return null;
+        }
+    }
+
+    // ── Maidenhead grid locator helper ────────────────────────────────────
+
+    private static string LatLonToMaidenhead(double lat, double lon)
+    {
+        lon += 180; lat += 90;
+        var field1 = (char)('A' + (int)(lon / 20));
+        var field2 = (char)('A' + (int)(lat / 10));
+        var sq1    = (char)('0' + (int)(lon % 20 / 2));
+        var sq2    = (char)('0' + (int)(lat % 10));
+        var sub1   = (char)('A' + (int)(lon % 2 * 12));
+        var sub2   = (char)('A' + (int)(lat % 1 * 24));
+        return $"{field1}{field2}{sq1}{sq2}{sub1}{sub2}";
+    }
+
+    // ── WHERE builder ─────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Builds a WHERE clause that returns only direct messages between MyCallsign
+    /// and the remote callsign (both directions), excluding ACKs, groups and third-party messages.
+    /// MyCallsign SSID is stripped for matching so all own SSIDs are covered.
+    /// </summary>
+    private static (string Sql, Dictionary<string, object> Params) BuildDirectConversationWhere(
+        string callsignBase, string myCallsign, DateTime? from, DateTime? to, string? textFilter)
+    {
+        // Strip own SSID for flexible matching
+        var myBase = myCallsign.Contains('-')
+            ? myCallsign[..myCallsign.IndexOf('-')]
+            : myCallsign;
+
+        // Direct conversation: (remote→me) OR (me→remote)
+        // Excludes messages to/from third parties and ACK-only messages
+        var conditions = new List<string>
+        {
+            """
+            (
+                (from_call LIKE @csLike  AND (to_call = @myCall OR to_call LIKE @myLike))
+             OR (to_call   LIKE @csLike  AND (from_call = @myCall OR from_call LIKE @myLike))
+            )
+            """,
+            "is_position_beacon = 0",
+            "is_telemetry = 0",
+            "is_outgoing IS NOT NULL",
+            "text IS NOT NULL AND text != ''",
+            // Exclude all ACK messages: pattern is "CALLSIGN :ackNNN" or "CALLSIGN-N :ackNNN"
+            "text NOT LIKE '%:ack%'"
+        };
+
+        var parms = new Dictionary<string, object>
+        {
+            ["@csLike"] = callsignBase + "%",   // covers DL6WAB, DL6WAB-1, DL6WAB-11
+            ["@myCall"] = myCallsign,
+            ["@myLike"] = myBase + "%"
+        };
+
+        if (from.HasValue) { conditions.Add("timestamp >= @from"); parms["@from"] = from.Value; }
+        if (to.HasValue)   { conditions.Add("timestamp <= @to");   parms["@to"]   = to.Value; }
+        if (!string.IsNullOrWhiteSpace(textFilter))
+        {
+            conditions.Add("text LIKE @txt");
+            parms["@txt"] = $"%{textFilter}%";
+        }
+
+        return ($"WHERE {string.Join(" AND ", conditions)}", parms);
+    }
+
+    /// <summary>
     /// Full availability check: AI enabled + API key set + MySQL configured.
     /// Used before calling the AI API (Generate).
     /// </summary>
@@ -428,6 +942,7 @@ public sealed class QsoSummaryService
             _logger.LogInformation("QsoSummaryService: {Provider} response:\n{Body}", ai.Provider, responseBody);
 
         using var doc = JsonDocument.Parse(responseBody);
+        AccumulateUsage(doc.RootElement);
         return doc.RootElement
             .GetProperty("choices")[0]
             .GetProperty("message")
@@ -474,6 +989,15 @@ public sealed class QsoSummaryService
 
     // ── Internal record types ─────────────────────────────────────────────
 
+    private void AccumulateUsage(JsonElement root)
+    {
+        if (!root.TryGetProperty("usage", out var usage)) return;
+        if (usage.TryGetProperty("prompt_tokens",     out var p)) Interlocked.Add(ref _promptTokens,     p.GetInt64());
+        if (usage.TryGetProperty("completion_tokens", out var c)) Interlocked.Add(ref _completionTokens, c.GetInt64());
+        Interlocked.Increment(ref _requestCount);
+        _lastRequestAt = DateTime.Now;
+    }
+
     private sealed record RawMessage(DateTime Timestamp, string From, string To, string Text, bool IsOutgoing);
 }
 
@@ -484,4 +1008,22 @@ public sealed record QsoSummaryRecord(
     DateTime LastQsoAt,
     int      MessageCount,
     DateTime CreatedAt
+);
+
+/// <summary>A single message from the QSO history.</summary>
+public sealed record QsoHistoryMessage(
+    DateTime Timestamp,
+    string   From,
+    string   To,
+    string   Text,
+    bool     IsOutgoing
+);
+
+/// <summary>In-memory KI/AI token usage statistics (resets on application restart).</summary>
+public sealed record AiUsageStats(
+    long      PromptTokens,
+    long      CompletionTokens,
+    long      TotalTokens,
+    long      RequestCount,
+    DateTime? LastRequestAt
 );
