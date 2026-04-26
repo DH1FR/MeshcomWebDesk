@@ -11,10 +11,14 @@ namespace MeshcomWebDesk.Services;
 public sealed class ElevationService
 {
     private const string ApiBase       = "https://api.opentopodata.org/v1/srtm90m";
-    private const int    RadialCount   = 36;    // every 10° → 36 directions
-    private const int    ProfileSteps  = 16;    // sample points per radial
-    private const double MaxRangeKm    = 250.0; // upper bound; earth curvature limits flat terrain naturally
-    private const double AtmRefraction = 1.33;  // k-factor for standard atmosphere
+    private const int    RadialCount   = 36;     // every 10° → 36 directions
+    private const double NearRangeKm   = 50.0;   // near field: high density sampling
+    private const int    NearSteps     = 20;     // every 2.5 km up to 50 km
+    private const double FarRangeKm    = 300.0;  // far field: coarser sampling
+    private const int    FarSteps      = 10;     // every 25 km from 50–300 km
+    private const double MinBlockDistKm = 5.0;   // ignore terrain obstructions closer than this
+    private const double AtmRefraction = 1.33;   // k-factor standard atmosphere
+    private const double FreqMHz       = 433.0;  // LoRa 433 MHz for Fresnel zone
     private const double EarthRadiusKm = 6371.0;
 
     private readonly HttpClient              _http;
@@ -51,78 +55,93 @@ public sealed class ElevationService
             _logger.LogInformation("ElevationService: own elevation={E} m, antenna AGL={A} m → total={T} m",
                 ownElevation.Value, antennaHeightM, ownTotalM);
 
-            // Build all sample points for all radials
+            // Build sample points: dense near field (every 2.5 km up to 50 km)
+            // + coarse far field (every 25 km from 50–300 km)
             var allPoints = new List<(int radial, int step, double lat, double lon, double distKm)>(
-                RadialCount * ProfileSteps);
+                RadialCount * (NearSteps + FarSteps));
 
             for (var r = 0; r < RadialCount; r++)
             {
                 var bearing = r * (360.0 / RadialCount);
-                for (var s = 1; s <= ProfileSteps; s++)
+                // Near field
+                for (var s = 1; s <= NearSteps; s++)
                 {
-                    var distKm = MaxRangeKm * s / ProfileSteps;
+                    var distKm     = NearRangeKm * s / NearSteps;
                     var (lat, lon) = DestinationPoint(ownLat, ownLon, bearing, distKm);
-                    allPoints.Add((r, s, lat, lon, distKm));
+                    allPoints.Add((r, s - 1, lat, lon, distKm));
+                }
+                // Far field
+                for (var s = 1; s <= FarSteps; s++)
+                {
+                    var distKm     = NearRangeKm + (FarRangeKm - NearRangeKm) * s / FarSteps;
+                    var (lat, lon) = DestinationPoint(ownLat, ownLon, bearing, distKm);
+                    allPoints.Add((r, NearSteps + s - 1, lat, lon, distKm));
                 }
             }
 
             // Fetch elevations in batches of 100 (API limit)
             var elevations = await FetchElevationsBatchedAsync(allPoints, ct);
 
-            // Per radial: walk outward using the "highest horizon angle" method.
-            // maxAngleDeg tracks the steepest upward angle seen so far from the antenna.
-            // As long as the next terrain point is BELOW this angle, LOS is still clear.
-            // The moment a terrain point rises ABOVE maxAngleDeg, it blocks the view
-            // → that is the LOS limit for this radial.
-            //
-            // On flat terrain the earth-bulge formula naturally limits the range because
-            // the effective terrain height drops below the radio horizon angle.
-            var polygon = new List<double[]>(RadialCount);
+            // ── LOS scan per radial ───────────────────────────────────────
+            // Correct algorithm:
+            //   - maxAngleDeg is initialised from the FIRST sample point (the baseline)
+            //   - Each subsequent point is only a blocker if it rises ABOVE that baseline
+            //   - On flat terrain the earth-bulge formula makes angles drop with distance
+            //     → radio horizon is reached naturally without any artificial km cap
+            var stepsPerRadial = NearSteps + FarSteps;
+            var polygon        = new List<double[]>(RadialCount);
 
             for (var r = 0; r < RadialCount; r++)
             {
-                var bearing     = r * (360.0 / RadialCount);
-                // Start with a very negative angle so the first terrain point
-                // can only block if it is truly upward from the antenna.
-                // Using the initial downward look-angle to the horizon.
-                var maxAngleDeg = -90.0;  // running horizon angle (degrees above horizontal)
-                var losReachKm  = MaxRangeKm;  // default = radio horizon if never blocked
+                var bearing      = r * (360.0 / RadialCount);
+                var maxHorizon   = double.NegativeInfinity;
+                var losReachKm   = FarRangeKm;
+                var blocked      = false;
 
-                for (var s = 0; s < ProfileSteps; s++)
+                for (var s = 0; s < stepsPerRadial; s++)
                 {
-                    var idx = r * ProfileSteps + s;
+                    var idx = r * stepsPerRadial + s;
                     if (idx >= elevations.Count) break;
 
-                    var distKm   = allPoints[idx].distKm;
-                    var elevM    = elevations[idx] ?? 0.0;
+                    var distKm    = allPoints[idx].distKm;
+                    var elevM     = elevations[idx] ?? 0.0;
+                    var Re        = EarthRadiusKm * AtmRefraction;
+                    var bulgeM    = (distKm * distKm * 1_000_000.0) / (2.0 * Re * 1000.0);
+                    var effElevM  = elevM - bulgeM;
+                    var fresnelM  = 17.3 * Math.Sqrt(distKm / FreqMHz);
+                    var obstacleM = effElevM + 0.6 * fresnelM;
+                    var angleDeg  = Math.Atan2(obstacleM - ownTotalM, distKm * 1000.0) * 180.0 / Math.PI;
 
-                    // Effective earth radius with atmospheric refraction (k-factor)
-                    var Re       = EarthRadiusKm * AtmRefraction;
-
-                    // Earth-bulge: how far the terrain sinks below the straight LOS line
-                    var bulgeM   = (distKm * distKm * 1_000_000.0) / (2.0 * Re * 1000.0);
-                    var effElevM = elevM - bulgeM;
-
-                    // Elevation angle from antenna tip to this terrain point
-                    var angleDeg = Math.Atan2(effElevM - ownTotalM, distKm * 1000.0) * 180.0 / Math.PI;
-
-                    if (angleDeg > maxAngleDeg)
+                    if (angleDeg > maxHorizon)
                     {
-                        // Terrain rises above running horizon → LOS blocked at this distance
-                        maxAngleDeg = angleDeg;
-                        losReachKm  = distKm;
-                        // Do NOT break here – a closer obstruction earlier in the scan
-                        // may have been missed; we take the NEAREST blocking point.
-                        // Actually we scan outward so once blocked we stop.
+                        // This point raises the horizon
+                        maxHorizon = angleDeg;
+
+                        // Only count as real blockage if beyond MinBlockDistKm.
+                        // Nearby terrain (< 5 km) is tracked for horizon angle
+                        // but doesn't block: LoRa 433 MHz diffracts over small
+                        // nearby hills thanks to long wavelength (~0.7 m).
+                        if (!blocked && distKm >= MinBlockDistKm)
+                        {
+                            losReachKm = distKm;
+                            blocked    = true;
+                        }
+                    }
+                    else if (blocked)
+                    {
+                        // Behind a real blocker and terrain doesn't rise further
                         break;
                     }
-                    // Terrain below horizon → LOS clear, advance outward
+
+                    // If not yet blocked, this point is reachable
+                    if (!blocked)
+                        losReachKm = distKm;
                 }
 
                 var (pLat, pLon) = DestinationPoint(ownLat, ownLon, bearing, losReachKm);
                 polygon.Add([pLat, pLon]);
-
-                _logger.LogDebug("ElevationService: bearing={B}° → reach={R:F1} km", bearing, losReachKm);
+                _logger.LogDebug("ElevationService: {B}° → {R:F1} km (blocked={Bl})",
+                    bearing, losReachKm, blocked);
             }
 
             _logger.LogInformation("ElevationService: polygon with {N} vertices computed", polygon.Count);

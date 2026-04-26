@@ -97,6 +97,7 @@
                         <th class="col-center">🔋</th>
                         <th class="col-center">RSSI</th>
                         <th class="col-center">SNR</th>
+                        <th class="col-center" title="Hops (0=direkt)">🔁</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -266,8 +267,22 @@
                             <td class="col-center @RssiClass(s.LastRssi)">
                                 @(s.LastSnr.HasValue ? $"{s.LastSnr:F1} dB" : "–")
                             </td>
+                            <td class="col-center">
+                                @if (s.HopCount == 0 && s.LastSrcType == "lora")
+                                {
+                                    <span class="mh-hop-direct" title="Direkt LoRa">📡</span>
+                                }
+                                else if (s.HopCount == 0 && s.LastSrcType == "udp")
+                                {
+                                    <span class="mh-hop-gateway" title="Gateway (UDP)">🌐</span>
+                                }
+                                else
+                                {
+                                    <span class="mh-hop-relay" title="@(s.HopCount) Hop(s): @(s.LastRelayPath ?? string.Empty)">🔁@s.HopCount</span>
+                                }
+                            </td>
                             <td>
-                                <button class="mh-chat-btn" @onclick="() => OpenChat(s.Callsign)"
+                                <button class="mh-chat-btn"
                                         title="@Loc.T($"Chat mit {s.Callsign} öffnen", $"Open chat with {s.Callsign}", $"Apri chat con {s.Callsign}", $"Abrir chat con {s.Callsign}")">&#x1f4ac;</button>
                                 <button class="mh-remove-btn" @onclick="() => RemoveStation(s.Callsign)"
                                         title="@Loc.T($"{s.Callsign} aus Liste entfernen", $"Remove {s.Callsign} from list", $"Rimuovi {s.Callsign} dalla lista", $"Eliminar {s.Callsign} de la lista")">✕</button>
