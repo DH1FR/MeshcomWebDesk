@@ -42,6 +42,9 @@ public sealed class QsoSummaryService
 
     // ── Public API ────────────────────────────────────────────────────────
 
+    /// <summary>Returns true when the DB is available (AI enabled + MySQL configured).</summary>
+    public bool IsDbReady => IsDbAvailable(out _, out _);
+
     /// <summary>Returns the current in-memory token usage statistics.</summary>
     public AiUsageStats GetUsageStats() => new(
         PromptTokens:     _promptTokens,
@@ -411,6 +414,68 @@ public sealed class QsoSummaryService
         {
             _logger.LogWarning(ex, "QsoSummaryService: GetLastQsoTimeAsync failed for {Callsign}", callsignBase);
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Returns the last <paramref name="limit"/> distinct direct QSO partners for
+    /// <paramref name="myCallsign"/>, ordered by most recent contact first.
+    /// Only direct 1:1 chat messages are considered (no groups, no broadcast, no ACKs).
+    /// Returns an empty list when the DB is not available.
+    /// </summary>
+    public async Task<List<RecentPartner>> GetRecentPartnersAsync(
+        string myCallsign, int limit = 20, CancellationToken ct = default)
+    {
+        if (!IsDbAvailable(out var db, out _)) return [];
+
+        var myBase = myCallsign.Contains('-')
+            ? myCallsign[..myCallsign.IndexOf('-')]
+            : myCallsign;
+
+        try
+        {
+            await using var conn = new MySqlConnection(db.MySqlConnectionString);
+            await conn.OpenAsync(ct);
+
+            await using var cmd = new MySqlCommand(
+                $"""
+                SELECT
+                    CASE WHEN is_outgoing = 1 THEN to_call ELSE from_call END AS partner,
+                    MAX(timestamp) AS last_contact
+                FROM `{db.MySqlTableName}`
+                WHERE is_position_beacon = 0
+                  AND is_telemetry       = 0
+                  AND text IS NOT NULL AND text != ''
+                  AND text NOT LIKE '%:ack%'
+                  AND (
+                      from_call = @my OR from_call LIKE @myLike
+                   OR to_call   = @my OR to_call   LIKE @myLike
+                  )
+                  AND (CASE WHEN is_outgoing = 1 THEN to_call ELSE from_call END) NOT LIKE '#%'
+                  AND (CASE WHEN is_outgoing = 1 THEN to_call ELSE from_call END) != '*'
+                  AND (CASE WHEN is_outgoing = 1 THEN to_call ELSE from_call END) NOT REGEXP '^[0-9]+$'
+                  AND (CASE WHEN is_outgoing = 1 THEN to_call ELSE from_call END) != @my
+                  AND (CASE WHEN is_outgoing = 1 THEN to_call ELSE from_call END) NOT LIKE @myLike
+                GROUP BY partner
+                ORDER BY last_contact DESC
+                LIMIT @limit
+                """, conn);
+            cmd.Parameters.AddWithValue("@my",     myCallsign);
+            cmd.Parameters.AddWithValue("@myLike", myBase + "-%");
+            cmd.Parameters.AddWithValue("@limit",  limit);
+
+            var list = new List<RecentPartner>();
+            await using var reader = await cmd.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+                list.Add(new RecentPartner(
+                    reader.GetString(0),
+                    reader.GetDateTime(1)));
+            return list;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "QsoSummaryService: GetRecentPartnersAsync failed for {Callsign}", myCallsign);
+            return [];
         }
     }
 
@@ -1037,3 +1102,6 @@ public sealed record AiUsageStats(
     long      RequestCount,
     DateTime? LastRequestAt
 );
+
+/// <summary>A recent direct QSO partner with timestamp of last contact.</summary>
+public sealed record RecentPartner(string Callsign, DateTime LastContact);

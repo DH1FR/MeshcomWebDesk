@@ -57,6 +57,7 @@ h1:focus {
     -webkit-overflow-scrolling: touch;
     max-width: 100%;
     box-sizing: border-box;
+    position: relative;
 }
 
 .tab-button {
@@ -178,6 +179,97 @@ h1:focus {
     color: #8b949e;
     font-style: italic;
     font-weight: 400;
+}
+
+/* ===== Tab-new wrap + Recent-Partners button ===== */
+.tab-new-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-shrink: 0;
+}
+
+.tab-recent-btn {
+    font-size: 13px;
+    padding: 4px 8px;
+}
+
+/* ===== Recent QSO Partners Flyout ===== */
+.recent-partners-flyout {
+    position: absolute;
+    top: calc(100% - 2px);
+    left: 0;
+    right: 0;
+    z-index: 200;
+    background: #16213e;
+    border: 1px solid #0f3460;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    max-height: 320px;
+    overflow-y: auto;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+}
+
+.recent-partners-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #79c0ff;
+    background: #0f3460;
+    position: sticky;
+    top: 0;
+}
+
+.recent-partners-close {
+    background: none;
+    border: none;
+    color: #8b949e;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0 2px;
+    line-height: 1;
+}
+.recent-partners-close:hover { color: #e0e0e0; }
+
+.recent-partners-empty {
+    padding: 12px;
+    font-size: 12px;
+    color: #8b949e;
+    text-align: center;
+}
+
+.recent-partner-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 7px 12px;
+    background: none;
+    border: none;
+    border-bottom: 1px solid #1e2d45;
+    color: #e0e0e0;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.12s;
+    gap: 8px;
+}
+.recent-partner-row:last-child { border-bottom: none; }
+.recent-partner-row:hover { background: #1a2f50; }
+
+.recent-partner-call {
+    font-weight: 600;
+    font-size: 13px;
+    color: #a0c4ff;
+}
+
+.recent-partner-time {
+    font-size: 11px;
+    color: #6c757d;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 /* ===== New Tab Dialog ===== */

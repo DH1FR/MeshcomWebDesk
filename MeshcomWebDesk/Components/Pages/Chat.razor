@@ -58,7 +58,15 @@
                     <span class="tab-close" @onclick="() => ConfirmCloseTab(tab.Key)" @onclick:stopPropagation="true">&times;</span>
                 </button>
             }
-            <button class="tab-button tab-new" @onclick="ShowNewTabDialog" title="@Loc.T("Neuen Tab öffnen", "Open new tab", "Apri nuova scheda", "Abrir nueva pestaña")">+</button>
+            <div class="tab-new-wrap">
+                <button class="tab-button tab-new" @onclick="ShowNewTabDialog" title="@Loc.T("Neuen Tab öffnen", "Open new tab", "Apri nuova scheda", "Abrir nueva pestaña")">+</button>
+                @if (QsoSummaryService.IsDbReady)
+                {
+                    <button class="tab-button tab-new tab-recent-btn @(_showRecentPartners ? "active" : "")"
+                            @onclick="ToggleRecentPartnersAsync"
+                            title="@Loc.T("Letzte QSO-Partner", "Recent QSO partners", "Partner QSO recenti", "Socios QSO recientes")">📋</button>
+                }
+            </div>
         </div>
 
         @if (_showNewTabInput)
@@ -69,6 +77,31 @@
                        @onkeydown="OnNewTabKeyDown" />
                 <button class="btn-action" @onclick="CreateNewTab">@Loc.T("\u00d6ffnen", "Open", "Apri", "Abrir")</button>
                 <button class="btn-cancel" @onclick="() => _showNewTabInput = false">@Loc.T("Abbrechen", "Cancel", "Annulla", "Cancelar")</button>
+            </div>
+        }
+
+        @if (_showRecentPartners)
+        {
+            <div class="recent-partners-flyout">
+                <div class="recent-partners-header">
+                    📡 @Loc.T("Letzte QSO-Partner", "Recent QSO partners", "Partner QSO recenti", "Socios QSO recientes")
+                    <button class="recent-partners-close" @onclick="() => _showRecentPartners = false">✕</button>
+                </div>
+                @if (_recentPartners.Count == 0)
+                {
+                    <div class="recent-partners-empty">@Loc.T("Keine Daten gefunden.", "No data found.", "Nessun dato trovato.", "Sin datos encontrados.")</div>
+                }
+                else
+                {
+                    @foreach (var p in _recentPartners)
+                    {
+                        var fn = QrzFirstName(p.Callsign);
+                        <button class="recent-partner-row" @onclick="() => OpenRecentPartner(p.Callsign)">
+                            <span class="recent-partner-call">@p.Callsign@if (fn is not null){<span class="qrz-badge"> · @fn</span>}</span>
+                            <span class="recent-partner-time">@FormatRecentTime(p.LastContact)</span>
+                        </button>
+                    }
+                }
             </div>
         }
 
@@ -716,6 +749,11 @@
     private bool _voiceEnabled = false;
     private bool _playSound;
     private string? _pendingSpeechText;
+
+    // Recent partners flyout
+    private bool _showRecentPartners;
+    private List<RecentPartner> _recentPartners = [];
+    private bool _recentPartnersLoaded;
     private bool _isInitialized;
     private DateTime _lastNotificationTime = DateTime.MinValue;
     private string _monitorFilter = string.Empty;
@@ -1077,8 +1115,31 @@
 
     private void ShowNewTabDialog()
     {
-        _showNewTabInput = true;
-        _newTabCallsign = string.Empty;
+        _showNewTabInput      = true;
+        _showRecentPartners   = false;
+        _newTabCallsign       = string.Empty;
+    }
+
+    private async Task ToggleRecentPartnersAsync()
+    {
+        if (_showRecentPartners)
+        {
+            _showRecentPartners = false;
+            return;
+        }
+        _showRecentPartners = true;
+        _showNewTabInput    = false;
+        if (!_recentPartnersLoaded)
+        {
+            _recentPartners       = await QsoSummaryService.GetRecentPartnersAsync(_myCallsign);
+            _recentPartnersLoaded = true;
+        }
+    }
+
+    private void OpenRecentPartner(string callsign)
+    {
+        _showRecentPartners = false;
+        OpenTabFromMonitor(callsign);
     }
 
     private void CreateNewTab()
@@ -1461,6 +1522,19 @@
                 });
         }
         catch (Exception) { }
+    }
+
+    private string FormatRecentTime(DateTime t)
+    {
+        var local = LT(t);
+        var diff  = DateTime.Now - local;
+        if (diff.TotalMinutes < 60)
+            return Loc.T($"vor {(int)diff.TotalMinutes} min", $"{(int)diff.TotalMinutes} min ago", $"{(int)diff.TotalMinutes} min fa", $"hace {(int)diff.TotalMinutes} min");
+        if (diff.TotalHours < 24)
+            return Loc.T($"vor {(int)diff.TotalHours} h", $"{(int)diff.TotalHours} h ago", $"{(int)diff.TotalHours} h fa", $"hace {(int)diff.TotalHours} h");
+        if (diff.TotalDays < 7)
+            return Loc.T($"vor {(int)diff.TotalDays} d", $"{(int)diff.TotalDays} d ago", $"{(int)diff.TotalDays} g fa", $"hace {(int)diff.TotalDays} d");
+        return local.ToString("dd.MM.yy");
     }
 
     private string FormatAlertAge(DateTime t)
