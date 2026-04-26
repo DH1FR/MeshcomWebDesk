@@ -856,7 +856,7 @@ public sealed class QsoSummaryService
               AND is_telemetry       = 0
               AND text IS NOT NULL AND text != ''
               {dateFilter}
-            ORDER BY timestamp ASC
+            ORDER BY timestamp DESC
             LIMIT @max
             """, conn);
         cmd.Parameters.AddWithValue("@cs",     callsignBase);
