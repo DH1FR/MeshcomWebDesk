@@ -594,31 +594,48 @@
             status.OwnLongitude.Value);
 
         // Topo prediction (async, may take several seconds due to API rate limit)
+        // Run in background task to avoid blocking the Blazor circuit
         _coverageLoading = true;
         StateHasChanged();
-        try
-        {
-            var topoPolygon = await ElevationService.GetCoveragePolygonAsync(
-                status.OwnLatitude.Value,
-                status.OwnLongitude.Value);
 
-            if (!_disposed && _showCoverage)
+        _ = Task.Run(async () =>
+        {
+            try
             {
-                await JS.InvokeVoidAsync("meshcomMap.setCoverage",
-                    measuredPoints,
-                    topoPolygon.Count > 0 ? topoPolygon.Select(p => p).ToArray() : null,
+                var topoPolygon = await ElevationService.GetCoveragePolygonAsync(
                     status.OwnLatitude.Value,
                     status.OwnLongitude.Value);
+
+                Logger.LogInformation("Map: topo polygon returned {N} points", topoPolygon.Count);
+
+                if (!_disposed && _showCoverage)
+                {
+                    // Convert List<double[]> to double[][] for correct JS serialization
+                    var topoArr = topoPolygon.Count > 0
+                        ? topoPolygon.ToArray()
+                        : null;
+
+                    await InvokeAsync(async () =>
+                    {
+                        await JS.InvokeVoidAsync("meshcomMap.setCoverage",
+                            measuredPoints,
+                            topoArr,
+                            status.OwnLatitude.Value,
+                            status.OwnLongitude.Value);
+                        _coverageLoading = false;
+                        StateHasChanged();
+                    });
+                }
+                else
+                {
+                    await InvokeAsync(() => { _coverageLoading = false; StateHasChanged(); return Task.CompletedTask; });
+                }
             }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogWarning(ex, "Map: topo coverage failed");
-        }
-        finally
-        {
-            _coverageLoading = false;
-            StateHasChanged();
-        }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Map: topo coverage background task failed");
+                await InvokeAsync(() => { _coverageLoading = false; StateHasChanged(); return Task.CompletedTask; });
+            }
+        });
     }
 }
