@@ -131,6 +131,8 @@ h1:focus {
     font-weight: bold;
     font-size: 13px;
     padding: 6px 14px;
+    align-self: stretch;
+    height: auto;
 }
 
 .tab-new:hover {
@@ -140,6 +142,16 @@ h1:focus {
 .tab-recent-btn {
     font-size: 13px;
 }
+
+.tab-new-wrap {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    flex-shrink: 0;
+    align-self: stretch;
+}
+
+/* QRZ name below callsign in tab button */
 .tab-label-wrap {
     display: flex;
     flex-direction: column;
@@ -182,14 +194,6 @@ h1:focus {
     color: #8b949e;
     font-style: italic;
     font-weight: 400;
-}
-
-/* ===== Tab-new wrap + Recent-Partners button ===== */
-.tab-new-wrap {
-    display: flex;
-    align-items: center;
-    gap: 0;
-    flex-shrink: 0;
 }
 
 /* ===== Recent QSO Partners Flyout ===== */
