@@ -168,6 +168,10 @@ h1:focus {
     color: #b0bec5;
 }
 
+@media (max-width: 600px) {
+    .tab-msg-count { display: none; }
+}
+
 /* Inline QRZ firstname badge (monitor / chat – touch-visible) */
 .qrz-badge {
     font-size: 10px;

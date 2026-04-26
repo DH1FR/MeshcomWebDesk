@@ -43,7 +43,7 @@
                         }
                         @if (tab.Messages.Count > 0)
                         {
-                            <span class="tab-msg-count" title="@Loc.T($"{tab.Messages.Count} Nachrichten", $"{tab.Messages.Count} messages", $"{tab.Messages.Count} messaggi", $"{tab.Messages.Count} mensajes")">@tab.Messages.Count</span>
+                            <span class="tab-msg-count" title="@Loc.T($"{tab.Messages.Count} Nachrichten", $"{tab.Messages.Count} messages", $"{tab.Messages.Count} messaggi", $"{tab.Messages.Count} mensajes")">Msg.:&nbsp;@tab.Messages.Count</span>
                         }
                     </span>
                     @if (tab.UnreadCount > 0)
