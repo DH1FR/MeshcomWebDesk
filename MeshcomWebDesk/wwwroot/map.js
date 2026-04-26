@@ -354,38 +354,12 @@ window.meshcomMap = (function () {
                 'topo='     + (topoPoints     ? topoPoints.length     : 'null'),
                 'own='      + ownLat + ',' + ownLon);
 
-            if (!measuredPoints && !topoPoints) {
+            if (!measuredPoints) {
                 if (_map.hasLayer(_coverageLayer)) _map.removeLayer(_coverageLayer);
                 return;
             }
 
-            // ── Topo prediction polygon (yellow, drawn first = below) ──
-            if (topoPoints && topoPoints.length >= 3) {
-                console.log('[Coverage] Drawing topo polygon with', topoPoints.length, 'points, first=', topoPoints[0]);
-                var topoLatLngs = topoPoints.map(function(p) { return [p[0], p[1]]; });
-                // fill – high opacity for debugging visibility
-                L.polygon(topoLatLngs, {
-                    color:       '#ffcc00',
-                    weight:      0,
-                    fillColor:   '#ffcc00',
-                    fillOpacity: 0.25,
-                    interactive: false
-                }).addTo(_coverageLayer);
-                // border
-                L.polygon(topoLatLngs, {
-                    color:       '#ffcc00',
-                    weight:      2.5,
-                    opacity:     0.85,
-                    fill:        false,
-                    dashArray:   '4,5',
-                    interactive: false
-                }).bindTooltip('📶 Topografie-Prognose (LOS)', { sticky: true, className: 'relay-tooltip' })
-                  .addTo(_coverageLayer);
-            } else {
-                console.log('[Coverage] Topo polygon skipped – topoPoints:', topoPoints);
-            }
-
-            // ── Measured hull (blue, drawn on top) ────────────────────
+            // ── Measured hull (blue) ──────────────────────────────────
             var pts = (measuredPoints || []).slice();
             if (ownLat != null && ownLon != null) pts.push([ownLat, ownLon]);
 
@@ -397,14 +371,14 @@ window.meshcomMap = (function () {
                     color:       '#4dabf7',
                     weight:      0,
                     fillColor:   '#4dabf7',
-                    fillOpacity: 0.12,
+                    fillOpacity: 0.35,
                     interactive: false
                 }).addTo(_coverageLayer);
                 // border
                 L.polygon(latlngs, {
                     color:       '#4dabf7',
-                    weight:      2,
-                    opacity:     0.65,
+                    weight:      3,
+                    opacity:     0.95,
                     fill:        false,
                     dashArray:   '6,4',
                     interactive: false

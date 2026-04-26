@@ -42,16 +42,8 @@
         </button>
         <button class="map-ctrl-btn @(_showCoverage ? "map-ctrl-active" : "")"
                 @onclick="ToggleCoverageAsync"
-                disabled="@_coverageLoading"
                 title="@Loc.T("Reichweiten-Wolke ein/ausblenden", "Toggle coverage cloud", "Mostra/nascondi copertura", "Mostrar/ocultar cobertura")">
-            @if (_coverageLoading)
-            {
-                <span>⏳</span>
-            }
-            else
-            {
-                <span>📶</span>
-            }
+            <span>📶</span>
             @Loc.T("Reichweite", "Coverage", "Copertura", "Cobertura")
         </button>
         <span class="map-ctrl-sep"></span>
@@ -119,17 +111,7 @@
                             <span class="leg-coverage leg-coverage-measured"></span>
                             <span>📡 @Loc.T("Gemessen (Convex Hull)", "Measured (convex hull)", "Misurata (hull)", "Medida (hull)")</span>
                         </div>
-                        <div class="map-legend-row">
-                            <span class="leg-coverage leg-coverage-topo"></span>
-                            @if (_coverageLoading)
-                            {
-                                <span>⏳ @Loc.T("Topo-Prognose lädt…", "Topo prediction loading…", "Prognosi topo in corso…", "Pronóstico topo cargando…")</span>
-                            }
-                            else
-                            {
-                                <span>🏔️ @Loc.T("Topo-Prognose (LOS)", "Topo prediction (LOS)", "Prognosi topo (LOS)", "Pronóstico topo (LOS)")</span>
-                            }
-                        </div>
+
                     }
                     @if (_showRelayLines)
                     {
@@ -192,7 +174,6 @@
     private bool _showRelayLines   = true;
     private bool _showLegend       = true;
     private bool _showCoverage;
-    private bool _coverageLoading;
     private string       _searchCallsign    = "";
     private bool         _searchNotFound;
     private List<string> _searchResults     = [];
@@ -586,64 +567,10 @@
             .Select(s => new[] { s.Latitude!.Value, s.Longitude!.Value })
             .ToArray();
 
-        // Show measured layer immediately, start topo calculation in background
         await JS.InvokeVoidAsync("meshcomMap.setCoverage",
             measuredPoints,
-            null,   // topo not ready yet
+            null,
             status.OwnLatitude.Value,
             status.OwnLongitude.Value);
-
-        // Topo prediction (async, may take several seconds due to API rate limit)
-        // Run in background task to avoid blocking the Blazor circuit
-        _coverageLoading = true;
-        StateHasChanged();
-
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                using var cts     = new System.Threading.CancellationTokenSource(TimeSpan.FromMinutes(3));
-                var topoPolygon   = await ElevationService.GetCoveragePolygonAsync(
-                    status.OwnLatitude.Value,
-                    status.OwnLongitude.Value,
-                    ct: cts.Token);
-
-                Logger.LogInformation("Map: topo polygon returned {N} points", topoPolygon.Count);
-
-                if (_disposed || !_showCoverage) return;
-
-                var topoArr = topoPolygon.Count >= 3 ? topoPolygon.ToArray() : null;
-
-                await InvokeAsync(async () =>
-                {
-                    if (_disposed) return;
-                    try
-                    {
-                        await JS.InvokeVoidAsync("meshcomMap.setCoverage",
-                            measuredPoints,
-                            topoArr,
-                            status.OwnLatitude.Value,
-                            status.OwnLongitude.Value);
-                    }
-                    catch (Exception jsEx)
-                    {
-                        Logger.LogWarning(jsEx, "Map: JS setCoverage call failed");
-                    }
-                    _coverageLoading = false;
-                    StateHasChanged();
-                });
-            }
-            catch (Exception ex)
-            {
-                Logger.LogWarning(ex, "Map: topo coverage background task failed");
-                if (!_disposed)
-                    await InvokeAsync(() =>
-                    {
-                        _coverageLoading = false;
-                        StateHasChanged();
-                        return Task.CompletedTask;
-                    });
-            }
-        });
     }
 }
