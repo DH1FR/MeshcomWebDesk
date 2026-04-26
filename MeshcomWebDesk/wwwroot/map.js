@@ -348,6 +348,12 @@ window.meshcomMap = (function () {
             if (!_map) return;
             _coverageLayer.clearLayers();
 
+            // Debug: log exactly what we received
+            console.log('[Coverage] setCoverage called:',
+                'measured=' + (measuredPoints ? measuredPoints.length : 'null'),
+                'topo='     + (topoPoints     ? topoPoints.length     : 'null'),
+                'own='      + ownLat + ',' + ownLon);
+
             if (!measuredPoints && !topoPoints) {
                 if (_map.hasLayer(_coverageLayer)) _map.removeLayer(_coverageLayer);
                 return;
@@ -355,25 +361,28 @@ window.meshcomMap = (function () {
 
             // ── Topo prediction polygon (yellow, drawn first = below) ──
             if (topoPoints && topoPoints.length >= 3) {
+                console.log('[Coverage] Drawing topo polygon with', topoPoints.length, 'points, first=', topoPoints[0]);
                 var topoLatLngs = topoPoints.map(function(p) { return [p[0], p[1]]; });
-                // fill
+                // fill – high opacity for debugging visibility
                 L.polygon(topoLatLngs, {
-                    color:       '#f0c060',
+                    color:       '#ffcc00',
                     weight:      0,
-                    fillColor:   '#f0c060',
-                    fillOpacity: 0.10,
+                    fillColor:   '#ffcc00',
+                    fillOpacity: 0.25,
                     interactive: false
                 }).addTo(_coverageLayer);
                 // border
                 L.polygon(topoLatLngs, {
-                    color:       '#f0c060',
-                    weight:      1.5,
-                    opacity:     0.55,
+                    color:       '#ffcc00',
+                    weight:      2.5,
+                    opacity:     0.85,
                     fill:        false,
                     dashArray:   '4,5',
                     interactive: false
                 }).bindTooltip('📶 Topografie-Prognose (LOS)', { sticky: true, className: 'relay-tooltip' })
                   .addTo(_coverageLayer);
+            } else {
+                console.log('[Coverage] Topo polygon skipped – topoPoints:', topoPoints);
             }
 
             // ── Measured hull (blue, drawn on top) ────────────────────

@@ -602,39 +602,47 @@
         {
             try
             {
-                var topoPolygon = await ElevationService.GetCoveragePolygonAsync(
+                using var cts     = new System.Threading.CancellationTokenSource(TimeSpan.FromMinutes(3));
+                var topoPolygon   = await ElevationService.GetCoveragePolygonAsync(
                     status.OwnLatitude.Value,
-                    status.OwnLongitude.Value);
+                    status.OwnLongitude.Value,
+                    ct: cts.Token);
 
                 Logger.LogInformation("Map: topo polygon returned {N} points", topoPolygon.Count);
 
-                if (!_disposed && _showCoverage)
-                {
-                    // Convert List<double[]> to double[][] for correct JS serialization
-                    var topoArr = topoPolygon.Count > 0
-                        ? topoPolygon.ToArray()
-                        : null;
+                if (_disposed || !_showCoverage) return;
 
-                    await InvokeAsync(async () =>
+                var topoArr = topoPolygon.Count >= 3 ? topoPolygon.ToArray() : null;
+
+                await InvokeAsync(async () =>
+                {
+                    if (_disposed) return;
+                    try
                     {
                         await JS.InvokeVoidAsync("meshcomMap.setCoverage",
                             measuredPoints,
                             topoArr,
                             status.OwnLatitude.Value,
                             status.OwnLongitude.Value);
-                        _coverageLoading = false;
-                        StateHasChanged();
-                    });
-                }
-                else
-                {
-                    await InvokeAsync(() => { _coverageLoading = false; StateHasChanged(); return Task.CompletedTask; });
-                }
+                    }
+                    catch (Exception jsEx)
+                    {
+                        Logger.LogWarning(jsEx, "Map: JS setCoverage call failed");
+                    }
+                    _coverageLoading = false;
+                    StateHasChanged();
+                });
             }
             catch (Exception ex)
             {
                 Logger.LogWarning(ex, "Map: topo coverage background task failed");
-                await InvokeAsync(() => { _coverageLoading = false; StateHasChanged(); return Task.CompletedTask; });
+                if (!_disposed)
+                    await InvokeAsync(() =>
+                    {
+                        _coverageLoading = false;
+                        StateHasChanged();
+                        return Task.CompletedTask;
+                    });
             }
         });
     }
