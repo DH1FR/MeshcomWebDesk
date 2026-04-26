@@ -160,12 +160,12 @@ h1:focus {
 .tab-msg-count {
     font-size: 9px;
     font-weight: 400;
-    color: #484f58;
+    color: #8b949e;
     white-space: nowrap;
 }
 
 .tab-button.active .tab-msg-count {
-    color: #6e7681;
+    color: #b0bec5;
 }
 
 /* Inline QRZ firstname badge (monitor / chat – touch-visible) */
