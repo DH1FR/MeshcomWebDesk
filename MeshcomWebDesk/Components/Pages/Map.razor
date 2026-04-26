@@ -580,9 +580,12 @@
             return;
         }
 
-        // Measured hull – nur direkt empfangene Stationen (HopCount == 0), keine Relay-Hops
+        // Measured hull – nur direkt empfangene Stationen, keine reinen Relay-Hops
+        // HopCount==0: letztes Paket direkt empfangen
+        // DirectLinkConfirmed: mind. eine direkte Chat-Nachricht/ACK empfangen
         var measuredPoints = ChatService.MhList
-            .Where(s => s.Latitude.HasValue && s.Longitude.HasValue && s.HopCount == 0)
+            .Where(s => s.Latitude.HasValue && s.Longitude.HasValue
+                     && (s.HopCount == 0 || s.DirectLinkConfirmed))
             .Select(s => new[] { s.Latitude!.Value, s.Longitude!.Value })
             .ToArray();
 

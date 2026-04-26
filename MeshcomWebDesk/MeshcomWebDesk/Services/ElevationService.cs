@@ -81,9 +81,12 @@ public sealed class ElevationService
 
             for (var r = 0; r < RadialCount; r++)
             {
-                var bearing      = r * (360.0 / RadialCount);
-                var maxAngleDeg  = double.MinValue;  // running horizon
-                var losReachKm   = MaxRangeKm;       // default = max (free horizon)
+                var bearing     = r * (360.0 / RadialCount);
+                // Start with a very negative angle so the first terrain point
+                // can only block if it is truly upward from the antenna.
+                // Using the initial downward look-angle to the horizon.
+                var maxAngleDeg = -90.0;  // running horizon angle (degrees above horizontal)
+                var losReachKm  = MaxRangeKm;  // default = radio horizon if never blocked
 
                 for (var s = 0; s < ProfileSteps; s++)
                 {
@@ -96,24 +99,24 @@ public sealed class ElevationService
                     // Effective earth radius with atmospheric refraction (k-factor)
                     var Re       = EarthRadiusKm * AtmRefraction;
 
-                    // Earth-bulge correction: how much the terrain drops below the
-                    // straight line between antenna and observation point (in metres)
+                    // Earth-bulge: how far the terrain sinks below the straight LOS line
                     var bulgeM   = (distKm * distKm * 1_000_000.0) / (2.0 * Re * 1000.0);
                     var effElevM = elevM - bulgeM;
 
-                    // Angle from antenna tip to this corrected terrain point
+                    // Elevation angle from antenna tip to this terrain point
                     var angleDeg = Math.Atan2(effElevM - ownTotalM, distKm * 1000.0) * 180.0 / Math.PI;
 
                     if (angleDeg > maxAngleDeg)
                     {
-                        // This terrain point raises the horizon → blocks everything beyond
+                        // Terrain rises above running horizon → LOS blocked at this distance
                         maxAngleDeg = angleDeg;
                         losReachKm  = distKm;
-                        // Continue scan: a taller ridge further out would be behind this
-                        // blockage, so we keep the first (nearest) obstruction as the limit.
+                        // Do NOT break here – a closer obstruction earlier in the scan
+                        // may have been missed; we take the NEAREST blocking point.
+                        // Actually we scan outward so once blocked we stop.
                         break;
                     }
-                    // else: terrain is below current horizon → LOS still clear, continue
+                    // Terrain below horizon → LOS clear, advance outward
                 }
 
                 var (pLat, pLon) = DestinationPoint(ownLat, ownLon, bearing, losReachKm);
