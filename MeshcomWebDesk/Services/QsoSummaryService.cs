@@ -42,8 +42,16 @@ public sealed class QsoSummaryService
 
     // ── Public API ────────────────────────────────────────────────────────
 
-    /// <summary>Returns true when the DB is available (AI enabled + MySQL configured).</summary>
-    public bool IsDbReady => IsDbAvailable(out _, out _);
+    /// <summary>Returns true when MySQL is configured, regardless of AI settings.</summary>
+    public bool IsDbReady
+    {
+        get
+        {
+            var db = _settings.CurrentValue.Database;
+            return db.Provider == DatabaseSettings.ProviderMySql
+                && !string.IsNullOrWhiteSpace(db.MySqlConnectionString);
+        }
+    }
 
     /// <summary>Returns the current in-memory token usage statistics.</summary>
     public AiUsageStats GetUsageStats() => new(
@@ -426,7 +434,10 @@ public sealed class QsoSummaryService
     public async Task<List<RecentPartner>> GetRecentPartnersAsync(
         string myCallsign, int limit = 20, CancellationToken ct = default)
     {
-        if (!IsDbAvailable(out var db, out _)) return [];
+        // Only MySQL required – no AI key needed
+        var db = _settings.CurrentValue.Database;
+        if (db.Provider != DatabaseSettings.ProviderMySql
+            || string.IsNullOrWhiteSpace(db.MySqlConnectionString)) return [];
 
         var myBase = myCallsign.Contains('-')
             ? myCallsign[..myCallsign.IndexOf('-')]
