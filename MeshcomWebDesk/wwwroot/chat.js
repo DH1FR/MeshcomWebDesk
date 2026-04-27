@@ -206,7 +206,42 @@ window.meshcomChat = (function () {
         setTabOrder: (keys) =>
             localStorage.setItem('meshcom-tab-order', JSON.stringify(keys || [])),
         getSettingsSections: () => localStorage.getItem('meshcom-settings-sections'),
-        setSettingsSections: (csv) => localStorage.setItem('meshcom-settings-sections', csv ?? '')
+        setSettingsSections: (csv) => localStorage.setItem('meshcom-settings-sections', csv ?? ''),
+
+        // ── SendBar: liest den aktuellen Wert des Eingabefelds ──
+        getSendBarValue: (id) => {
+            var el = document.getElementById(id);
+            return el ? el.value : '';
+        },
+
+        // ── SendBar: setzt den Wert (z.B. nach Senden leeren oder QuickText laden) ──
+        setSendBarValue: (id, value) => {
+            var el = document.getElementById(id);
+            if (!el) return;
+            el.value = value;
+            // Counter manuell aktualisieren
+            var counter = el.closest('.send-bar') && el.closest('.send-bar').querySelector('.char-counter');
+            if (counter) {
+                var len = value.length;
+                counter.textContent = len + '/149';
+                counter.className = 'char-counter' + (len >= 145 ? ' char-danger' : len >= 130 ? ' char-warn' : '');
+            }
+        },
+
+        // ── SendBar: registriert oninput-Handler für Live-Counter ohne Blazor-Binding ──
+        initSendBarCounter: (id) => {
+            var el = document.getElementById(id);
+            if (!el || el.dataset.counterInit) return;
+            el.dataset.counterInit = '1';
+            el.addEventListener('input', function () {
+                var bar     = el.closest('.send-bar');
+                var counter = bar && bar.querySelector('.char-counter');
+                if (!counter) return;
+                var len = el.value.length;
+                counter.textContent = len + '/149';
+                counter.className = 'char-counter' + (len >= 145 ? ' char-danger' : len >= 130 ? ' char-warn' : '');
+            });
+        }
     };
 }());
 

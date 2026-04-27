@@ -28,7 +28,7 @@
                     @onclick="ToggleFlyout"
                     title="@Loc.T("Schnelltexte", "Quick Texts", "Testi rapidi", "Textos rápidos")">⚡</button>
         }
-        <textarea @bind="_text" @bind:event="oninput"
+        <textarea id="send-bar-input"
                   placeholder="@Loc.T("Nachricht eingeben...", "Enter message...", "Inserisci messaggio...", "Escribe un mensaje...")"
                   maxlength="149"
                   spellcheck="true"
@@ -36,9 +36,8 @@
                   lang="de"
                   rows="1"
                   @onkeydown="OnKeyDown"></textarea>
-        <span class="char-counter @CounterCss">@_text.Length/149</span>
-        <button class="btn-send" @onclick="SendAsync"
-                disabled="@(!CanSend)">
+        <span class="char-counter">0/149</span>
+        <button class="btn-send" @onclick="SendAsync">
             @Loc.T("Senden", "Send", "Invia", "Enviar")
         </button>
     </div>
@@ -60,15 +59,7 @@
     private const int MaxLength = 149;
     private DotNetObjectReference<SendBar>? _dotNetRef;
 
-    private bool CanSend =>
-        !string.IsNullOrWhiteSpace(_text) && _text.Length <= MaxLength;
-
-    private string CounterCss => _text.Length switch
-    {
-        >= 145 => "char-danger",
-        >= 130 => "char-warn",
-        _      => string.Empty
-    };
+    private bool CanSend => true; // Validierung erfolgt beim Senden via JS
 
     protected override void OnInitialized()
     {
@@ -79,6 +70,9 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+            await JS.InvokeVoidAsync("meshcomChat.initSendBarCounter", "send-bar-input");
+
         if (_flyoutOpen && _quickTexts.Count > 0)
         {
             _dotNetRef ??= DotNetObjectReference.Create(this);
@@ -139,20 +133,22 @@
 
     private void ToggleFlyout() => _flyoutOpen = !_flyoutOpen;
 
-    private void LoadQuickText(string text)
+    private async Task LoadQuickText(string text)
     {
         var expanded = UdpService.ExpandVariables(text, Callsign);
         _text       = expanded.Length > MaxLength ? expanded[..MaxLength] : expanded;
         _flyoutOpen = false;
+        await JS.InvokeVoidAsync("meshcomChat.setSendBarValue", "send-bar-input", _text);
     }
 
     private async Task SendAsync()
     {
-        if (!CanSend) return;
-        // Always expand variables before sending
+        _text = await JS.InvokeAsync<string>("meshcomChat.getSendBarValue", "send-bar-input");
+        if (string.IsNullOrWhiteSpace(_text) || _text.Length > MaxLength) return;
         var expanded = UdpService.ExpandVariables(_text, Callsign);
         var text = expanded.Length > MaxLength ? expanded[..MaxLength] : expanded;
         _text = string.Empty;
+        await JS.InvokeVoidAsync("meshcomChat.setSendBarValue", "send-bar-input", string.Empty);
         await OnSend.InvokeAsync(text);
     }
 
@@ -164,11 +160,12 @@
         }
         else if (e.Key == "Tab")
         {
-            // Tab: expand variables inline as a preview
+            _text = await JS.InvokeAsync<string>("meshcomChat.getSendBarValue", "send-bar-input");
             if (_text.Contains('{'))
             {
                 var expanded = UdpService.ExpandVariables(_text, Callsign);
                 _text = expanded.Length > MaxLength ? expanded[..MaxLength] : expanded;
+                await JS.InvokeVoidAsync("meshcomChat.setSendBarValue", "send-bar-input", _text);
             }
         }
     }
