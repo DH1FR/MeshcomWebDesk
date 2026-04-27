@@ -4,7 +4,11 @@ namespace MeshcomWebDesk.Services.Bot;
 public class VersionCommand : IBotCommand
 {
     private static readonly string AppVersion =
-        System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "?";
+        System.Reflection.Assembly.GetExecutingAssembly()
+            .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+            is [System.Reflection.AssemblyInformationalVersionAttribute attr, ..]
+                ? attr.InformationalVersion
+                : System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "?";
 
     public string Name        => "version";
     public string Description => "MeshComWebDesk Version";

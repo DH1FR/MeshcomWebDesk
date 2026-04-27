@@ -184,7 +184,7 @@ public class ChatService
 
         NotifyChange();
         _ = _webhook.SendAsync(message, "message");
-        _ = _mqtt.PublishAsync(message, "message");
+        _ = _mqtt?.PublishAsync(message, "message");
         CheckWatchlist(message);
 
         // Fire bot command event for direct messages
@@ -458,7 +458,7 @@ public class ChatService
         lock (_lock) { AppendToMonitor(message); }
         NotifyChange();
         _ = _webhook.SendAsync(message, "position");
-        _ = _mqtt.PublishAsync(message, "position");
+        _ = _mqtt?.PublishAsync(message, "position");
         CheckWatchlist(message);
     }
 
@@ -472,7 +472,7 @@ public class ChatService
         lock (_lock) { AppendToMonitor(message); }
         NotifyChange();
         _ = _webhook.SendAsync(message, "telemetry");
-        _ = _mqtt.PublishAsync(message, "telemetry");
+        _ = _mqtt?.PublishAsync(message, "telemetry");
         CheckWatchlist(message);
     }
 
