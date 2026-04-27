@@ -130,9 +130,12 @@ public class ChatService
         string tabKey;
         if (message.IsBroadcast)
         {
-            // If an open direct tab with this sender already exists, prefer it.
-            // Handles the MeshCom case where a station replies via broadcast.
-            tabKey = !string.IsNullOrEmpty(message.From) && _tabs.ContainsKey(message.From)
+            // Only route to the sender's DM tab when the message is actually addressed to us.
+            // MeshCom propagates direct messages as broadcasts over the mesh, but message.To
+            // still contains the intended recipient. Messages from A to C must NOT appear in
+            // the DM tab with A – they belong in the broadcast ("*") tab.
+            bool addressedToUs = string.Equals(message.To, _settings.MyCallsign, StringComparison.OrdinalIgnoreCase);
+            tabKey = addressedToUs && !string.IsNullOrEmpty(message.From) && _tabs.ContainsKey(message.From)
                 ? message.From
                 : "*";
         }
