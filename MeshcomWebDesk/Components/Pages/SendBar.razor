@@ -62,9 +62,17 @@
 
     protected override void OnInitialized()
     {
-        Loc.OnChange += StateHasChanged;
+        Loc.OnChange += ForceRerender;
         LoadQuickTextsFromSettings();
-        SettingsMonitor.OnChange(_ => { LoadQuickTextsFromSettings(); InvokeAsync(StateHasChanged); });
+        SettingsMonitor.OnChange(_ => { LoadQuickTextsFromSettings(); InvokeAsync(ForceRerender); });
+    }
+
+    private bool _rendered;
+
+    protected override bool ShouldRender()
+    {
+        if (!_rendered) { _rendered = true; return true; }
+        return false;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -84,7 +92,7 @@
 
     public void Dispose()
     {
-        Loc.OnChange -= StateHasChanged;
+        Loc.OnChange -= ForceRerender;
         _dotNetRef?.Dispose();
     }
 
@@ -130,16 +138,20 @@
         // Save to appsettings.override.json
         _ = SettingsSvc.SaveMeshcomSettingsAsync(SettingsMonitor.CurrentValue);
 
+        _rendered = false;
         await InvokeAsync(StateHasChanged);
     }
 
-    private void ToggleFlyout() => _flyoutOpen = !_flyoutOpen;
+    private void ForceRerender() { _rendered = false; StateHasChanged(); }
+
+    private void ToggleFlyout() { _flyoutOpen = !_flyoutOpen; ForceRerender(); }
 
     private async Task LoadQuickText(string text)
     {
         var expanded = UdpService.ExpandVariables(text, Callsign);
         _text       = expanded.Length > MaxLength ? expanded[..MaxLength] : expanded;
         _flyoutOpen = false;
+        _rendered   = false;
         await JS.InvokeVoidAsync("meshcomChat.setSendBarValue", "send-bar-input", _text);
     }
 
