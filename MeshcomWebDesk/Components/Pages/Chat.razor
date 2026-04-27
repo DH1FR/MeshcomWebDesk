@@ -1601,12 +1601,14 @@
         "mon-row-sys";
 
     private static readonly Regex UrlRegex = new(
-        @"https?://[^\s<>""'\]\)\[]{1,2000}",
+        @"(?:https?://[^\s<>""'\]\)\[]{1,2000}|mailto:[^\s<>""'\]\)\[]+)",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     private MarkupString FormatMessageWithLinks(string text)
     {
-        if (string.IsNullOrEmpty(text) || !text.Contains("://"))
+        bool hasUrl    = text.Contains("://");
+        bool hasMailto = text.Contains("mailto:", StringComparison.OrdinalIgnoreCase);
+        if (string.IsNullOrEmpty(text) || (!hasUrl && !hasMailto))
             return new MarkupString(System.Net.WebUtility.HtmlEncode(text));
 
         var confirmMsg = System.Net.WebUtility.HtmlEncode(Loc.T(
@@ -1623,7 +1625,11 @@
             var href    = System.Net.WebUtility.HtmlEncode(match.Value);
             var display = System.Net.WebUtility.HtmlEncode(
                 match.Value.Length > 55 ? match.Value[..55] + "\u2026" : match.Value);
-            sb.Append($"<a class=\"msg-url\" href=\"{href}\" data-ext-url=\"{href}\" data-ext-msg=\"{confirmMsg}\" target=\"_blank\" rel=\"noopener noreferrer\">{display}</a>");
+            bool isMailto = match.Value.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase);
+            if (isMailto)
+                sb.Append($"<a class=\"msg-url\" href=\"{href}\">{display}</a>");
+            else
+                sb.Append($"<a class=\"msg-url\" href=\"{href}\" data-ext-url=\"{href}\" data-ext-msg=\"{confirmMsg}\" target=\"_blank\" rel=\"noopener noreferrer\">{display}</a>");
             lastIndex = match.Index + match.Length;
         }
         sb.Append(System.Net.WebUtility.HtmlEncode(text[lastIndex..]));
