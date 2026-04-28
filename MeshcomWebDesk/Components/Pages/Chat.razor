@@ -338,10 +338,11 @@
                 title="@(_soundEnabled ? Loc.T("Ton ausschalten", "Mute sound", "Disattiva audio", "Silenciar") : Loc.T("Ton einschalten", "Unmute sound", "Attiva audio", "Activar sonido"))">
             <span class="status-badge @(_soundEnabled ? "status-badge-neutral" : "status-badge-err")">@(_soundEnabled ? "🔔" : "🔕")</span>
         </button>
-        <button class="status-mute-btn @(_voiceEnabled ? "" : "status-mute-off")"
+        <button class="status-mute-btn @(_voiceEnabled == true ? "" : "status-mute-off")"
                 @onclick="ToggleVoiceAsync"
-                title="@(_voiceEnabled ? Loc.T("Sprachansagen ausschalten", "Disable voice announcements", "Disattiva annunci vocali", "Desactivar anuncios de voz") : Loc.T("Sprachansagen einschalten", "Enable voice announcements", "Attiva annunci vocali", "Activar anuncios de voz"))">
-            <span class="status-badge @(_voiceEnabled ? "status-badge-neutral" : "status-badge-err")">@(_voiceEnabled ? "🔊" : "🔇")</span>
+                style="@(_voiceEnabled is null ? "visibility:hidden" : "")"
+                title="@(_voiceEnabled == true ? Loc.T("Sprachansagen ausschalten", "Disable voice announcements", "Disattiva annunci vocali", "Desactivar anuncios de voz") : Loc.T("Sprachansagen einschalten", "Enable voice announcements", "Attiva annunci vocali", "Activar anuncios de voz"))">
+            <span class="status-badge @(_voiceEnabled == true ? "status-badge-neutral" : "status-badge-err")">@(_voiceEnabled == true ? "🔊" : "🔇")</span>
         </button>
         <span class="status-sep">|</span>
         <span class="status-item" title="@UdpStatusTooltip">
@@ -754,7 +755,7 @@
     private bool _scrollMessages;
 
     private bool _soundEnabled = true;
-    private bool _voiceEnabled = false;
+    private bool? _voiceEnabled;   // null = not yet loaded from localStorage
     private bool _playSound;
     private string? _pendingSpeechText;
 
@@ -881,13 +882,10 @@
             try
             {
                 var voiceOn = await JS.InvokeAsync<bool?>("meshcomChat.getVoiceEnabled");
-                if (voiceOn.HasValue && voiceOn.Value != _voiceEnabled)
-                {
-                    _voiceEnabled = voiceOn.Value;
-                    needsRender = true;
-                }
+                _voiceEnabled = voiceOn ?? false;
+                needsRender = true;
             }
-            catch (JSException) { }
+            catch (JSException) { _voiceEnabled = false; needsRender = true; }
 
             // Fallback restore for hard browser reload: ChatService.ActiveTabKey is empty in that case.
             // On normal navigation (Map → Chat) this is a no-op because OnInitialized already
@@ -1058,14 +1056,14 @@
 
     private async Task ToggleVoiceAsync()
     {
-        _voiceEnabled = !_voiceEnabled;
+        _voiceEnabled = _voiceEnabled != true;
         try { await JS.InvokeVoidAsync("meshcomChat.setVoiceEnabled", _voiceEnabled); }
         catch (JSException) { }
     }
 
     private void HandleNewDirectTab(string callsign)
     {
-        if (!_voiceEnabled) return;
+        if (_voiceEnabled != true) return;
         var phonetic  = PhoneticAlphabetHelper.Spell(callsign, Loc.Current);
         var firstName = QrzFirstName(callsign);
         var text = Loc.T(
@@ -1527,7 +1525,7 @@
                 _watchlistAlerts.Insert(0, new WatchlistAlert(callsign, eventType, DateTime.Now));
                 if (_soundEnabled)
                     _playWatchlistSound = true;
-                if (_voiceEnabled)
+                if (_voiceEnabled == true)
                 {
                     var phonetic = PhoneticAlphabetHelper.Spell(callsign, Loc.Current);
                     _pendingSpeechText = Loc.T(
