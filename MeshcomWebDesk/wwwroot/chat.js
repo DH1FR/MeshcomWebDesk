@@ -291,6 +291,37 @@ window.meshcomChat = (function () {
             reader.onload  = e  => { input.value = ''; resolve(e.target.result); };
             reader.onerror = () => { input.value = ''; reject(new Error('File read error')); };
             reader.readAsText(file, 'UTF-8');
+        }),
+
+        // ── Import/Export: Binärdaten (Uint8Array) als Datei herunterladen ──────
+        downloadBinary: (filename, bytes) => {
+            var blob = new Blob([new Uint8Array(bytes)], { type: 'application/octet-stream' });
+            var url  = URL.createObjectURL(blob);
+            var a    = document.createElement('a');
+            a.href     = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        },
+
+        // ── Import/Export: Binärdatei lesen und als Byte-Array zurückgeben ──────
+        readBinaryFile: (inputId) => new Promise((resolve, reject) => {
+            var input = document.getElementById(inputId);
+            if (!input || !input.files || input.files.length === 0) {
+                resolve(null);
+                return;
+            }
+            var file   = input.files[0];
+            var reader = new FileReader();
+            reader.onload  = e => {
+                input.value = '';
+                var buf   = e.target.result;
+                resolve(Array.from(new Uint8Array(buf)));
+            };
+            reader.onerror = () => { input.value = ''; reject(new Error('File read error')); };
+            reader.readAsArrayBuffer(file);
         })
     };
 }());

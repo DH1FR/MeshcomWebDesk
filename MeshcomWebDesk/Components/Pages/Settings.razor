@@ -1290,6 +1290,74 @@
             }
         </div>
 
+        <!-- Datensicherung / Backup & Restore -->
+        <div class="settings-section @(IsOpen("backup") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("backup")'>
+                🔐 @Loc.T("Datensicherung", "Backup & Restore", "Backup e ripristino", "Copia de seguridad")
+                <span class="section-chevron">@(IsOpen("backup") ? "▲" : "▼")</span>
+            </h2>
+            <div class="settings-notice" style="margin-bottom:0.75rem">
+                🔒 @Loc.T(
+                    "Alle Einstellungen inkl. Passwörter und API-Keys werden AES-256 verschlüsselt gespeichert. Das Passwort wird nirgendwo gespeichert – bei Verlust ist die Datei nicht wiederherstellbar.",
+                    "All settings including passwords and API keys are saved AES-256 encrypted. The password is not stored anywhere – if lost, the file cannot be recovered.",
+                    "Tutte le impostazioni incluse password e chiavi API vengono salvate con crittografia AES-256. La password non viene memorizzata – se persa, il file non è recuperabile.",
+                    "Todos los ajustes incluyendo contraseñas y claves API se guardan cifrados con AES-256. La contraseña no se almacena en ningún lugar – si se pierde, el archivo no se puede recuperar.")
+            </div>
+
+            @* Export *@
+            <div style="margin-bottom:1rem">
+                <h3 style="font-size:0.9rem;margin:0 0 0.5rem;color:#a0c4ff">
+                    📤 @Loc.T("Exportieren", "Export", "Esporta", "Exportar")
+                </h3>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                    <input type="password" @bind="_backupPassword" autocomplete="new-password"
+                           placeholder="@Loc.T("Passwort für Verschlüsselung", "Encryption password", "Password di cifratura", "Contraseña de cifrado")"
+                           style="flex:1;min-width:180px" />
+                    <button class="btn-action" @onclick="ExportSettingsAsync"
+                            disabled="@string.IsNullOrWhiteSpace(_backupPassword)"
+                            title="@Loc.T("Als MeshComWebDesk-settings.enc herunterladen", "Download as MeshComWebDesk-settings.enc", "Scarica come MeshComWebDesk-settings.enc", "Descargar como MeshComWebDesk-settings.enc")">
+                        📤 @Loc.T("Backup erstellen", "Create Backup", "Crea backup", "Crear copia de seguridad")
+                    </button>
+                </div>
+            </div>
+
+            @* Import *@
+            <div>
+                <h3 style="font-size:0.9rem;margin:0 0 0.5rem;color:#a0c4ff">
+                    📥 @Loc.T("Importieren", "Import", "Importa", "Importar")
+                </h3>
+                <div class="settings-notice" style="margin-bottom:0.5rem;background:#2b0d0d;border-color:#6e2020;color:#f0a0a0">
+                    ⚠️ @Loc.T(
+                        "Alle aktuellen Einstellungen werden durch die Backup-Datei ersetzt.",
+                        "All current settings will be replaced by the backup file.",
+                        "Tutte le impostazioni correnti verranno sostituite dal file di backup.",
+                        "Todos los ajustes actuales serán reemplazados por el archivo de copia de seguridad.")
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                    <input type="password" @bind="_restorePassword" autocomplete="new-password"
+                           placeholder="@Loc.T("Passwort der Backup-Datei", "Backup file password", "Password del file di backup", "Contraseña del archivo de copia")"
+                           style="flex:1;min-width:180px" />
+                    <label class="btn-action" style="cursor:pointer"
+                           title="@Loc.T("MeshComWebDesk-settings.enc öffnen", "Open MeshComWebDesk-settings.enc", "Apri MeshComWebDesk-settings.enc", "Abrir MeshComWebDesk-settings.enc")">
+                        📥 @Loc.T("Backup wiederherstellen", "Restore Backup", "Ripristina backup", "Restaurar copia de seguridad")
+                        <input type="file" id="import-settings" accept=".enc" style="display:none"
+                               @onchange="ImportSettingsAsync" />
+                    </label>
+                </div>
+            </div>
+
+            @if (_backupError != null)
+            {
+                <div class="settings-error" style="margin-top:0.5rem">❌ @_backupError</div>
+            }
+            @if (_backupSuccess)
+            {
+                <div class="settings-success" style="margin-top:0.5rem">
+                    ✅ @Loc.T("Erfolgreich.", "Success.", "Operazione riuscita.", "Correcto.")
+                </div>
+            }
+        </div>
+
         <div class="settings-actions">
             @if (_saved)
             {
@@ -2089,6 +2157,281 @@
                 $"Importación fallida: error JSON – {ex.Message}");
         }
         catch (Exception ex) { _importError = $"Import: {ex.Message}"; }
+    }
+
+    // ── Full Settings Backup / Restore (AES-256-CBC + PBKDF2) ─────────────
+
+    private string _backupPassword  = string.Empty;
+    private string _restorePassword = string.Empty;
+    private string? _backupError;
+    private bool    _backupSuccess;
+
+    // Magic header to identify MeshComWebDesk backup files: ASCII "MCWD"
+    private static readonly byte[] BackupMagic = [0x4D, 0x43, 0x57, 0x44];
+
+    private async Task ExportSettingsAsync()
+    {
+        _backupError   = null;
+        _backupSuccess = false;
+
+        if (string.IsNullOrWhiteSpace(_backupPassword))
+        {
+            _backupError = Loc.T(
+                "Bitte ein Passwort eingeben.",
+                "Please enter a password.",
+                "Inserire una password.",
+                "Por favor, introduce una contraseña.");
+            return;
+        }
+
+        try
+        {
+            // Serialize current settings to JSON (all fields incl. sensitive ones)
+            var settings = _model.ToSettings();
+            var json     = System.Text.Json.JsonSerializer.Serialize(
+                settings,
+                new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            var plaintext = System.Text.Encoding.UTF8.GetBytes(json);
+
+            // Derive key with PBKDF2 (100 000 iterations, SHA-256, 32-byte key)
+            var salt = System.Security.Cryptography.RandomNumberGenerator.GetBytes(16);
+            using var kdf  = new System.Security.Cryptography.Rfc2898DeriveBytes(
+                _backupPassword, salt, 100_000,
+                System.Security.Cryptography.HashAlgorithmName.SHA256);
+            var key = kdf.GetBytes(32);
+
+            // Encrypt with AES-256-CBC
+            using var aes = System.Security.Cryptography.Aes.Create();
+            aes.KeySize = 256;
+            aes.Mode    = System.Security.Cryptography.CipherMode.CBC;
+            aes.Key     = key;
+            aes.GenerateIV();
+            var iv = aes.IV;
+
+            using var ms        = new System.IO.MemoryStream();
+            using var encryptor = aes.CreateEncryptor();
+            using var cs        = new System.Security.Cryptography.CryptoStream(
+                ms, encryptor, System.Security.Cryptography.CryptoStreamMode.Write);
+            await cs.WriteAsync(plaintext);
+            await cs.FlushFinalBlockAsync();
+            var ciphertext = ms.ToArray();
+
+            // Build file: [magic(4)] [salt(16)] [iv(16)] [ciphertext]
+            var file = new byte[BackupMagic.Length + salt.Length + iv.Length + ciphertext.Length];
+            var pos  = 0;
+            BackupMagic.CopyTo(file, pos); pos += BackupMagic.Length;
+            salt.CopyTo(file, pos);        pos += salt.Length;
+            iv.CopyTo(file, pos);          pos += iv.Length;
+            ciphertext.CopyTo(file, pos);
+
+            await JS.InvokeVoidAsync("meshcomChat.downloadBinary",
+                "MeshComWebDesk-settings.enc", file);
+
+            _backupSuccess  = true;
+            _backupPassword = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            _backupError = $"Export: {ex.Message}";
+        }
+    }
+
+    private async Task ImportSettingsAsync()
+    {
+        _backupError   = null;
+        _backupSuccess = false;
+
+        if (string.IsNullOrWhiteSpace(_restorePassword))
+        {
+            _backupError = Loc.T(
+                "Bitte das Passwort der Backup-Datei eingeben.",
+                "Please enter the backup file password.",
+                "Inserire la password del file di backup.",
+                "Por favor, introduce la contraseña del archivo de copia de seguridad.");
+            return;
+        }
+
+        try
+        {
+            var bytes = await JS.InvokeAsync<int[]?>("meshcomChat.readBinaryFile", "import-settings");
+            if (bytes is null || bytes.Length == 0) return;
+
+            var file = bytes.Select(b => (byte)b).ToArray();
+
+            // Validate magic header
+            if (file.Length < BackupMagic.Length + 16 + 16 + 1 ||
+                !file.Take(BackupMagic.Length).SequenceEqual(BackupMagic))
+            {
+                _backupError = Loc.T(
+                    "Ungültige Backup-Datei (kein MeshComWebDesk-Format).",
+                    "Invalid backup file (not a MeshComWebDesk format).",
+                    "File di backup non valido (formato non MeshComWebDesk).",
+                    "Archivo de copia de seguridad no válido (no es formato MeshComWebDesk).");
+                return;
+            }
+
+            var pos  = BackupMagic.Length;
+            var salt = file[pos..(pos + 16)]; pos += 16;
+            var iv   = file[pos..(pos + 16)]; pos += 16;
+            var ciphertext = file[pos..];
+
+            // Derive key
+            using var kdf = new System.Security.Cryptography.Rfc2898DeriveBytes(
+                _restorePassword, salt, 100_000,
+                System.Security.Cryptography.HashAlgorithmName.SHA256);
+            var key = kdf.GetBytes(32);
+
+            // Decrypt
+            using var aes = System.Security.Cryptography.Aes.Create();
+            aes.KeySize = 256;
+            aes.Mode    = System.Security.Cryptography.CipherMode.CBC;
+            aes.Key     = key;
+            aes.IV      = iv;
+
+            byte[] plaintext;
+            try
+            {
+                using var ms        = new System.IO.MemoryStream();
+                using var decryptor = aes.CreateDecryptor();
+                using var cs        = new System.Security.Cryptography.CryptoStream(
+                    ms, decryptor, System.Security.Cryptography.CryptoStreamMode.Write);
+                await cs.WriteAsync(ciphertext);
+                await cs.FlushFinalBlockAsync();
+                plaintext = ms.ToArray();
+            }
+            catch (System.Security.Cryptography.CryptographicException)
+            {
+                _backupError = Loc.T(
+                    "Entschlüsselung fehlgeschlagen – falsches Passwort oder beschädigte Datei.",
+                    "Decryption failed – wrong password or corrupted file.",
+                    "Decrittazione fallita – password errata o file danneggiato.",
+                    "Descifrado fallido – contraseña incorrecta o archivo dañado.");
+                return;
+            }
+
+            var json = System.Text.Encoding.UTF8.GetString(plaintext);
+
+            MeshcomSettings? imported;
+            try
+            {
+                imported = System.Text.Json.JsonSerializer.Deserialize<MeshcomSettings>(json,
+                    new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch (System.Text.Json.JsonException ex)
+            {
+                _backupError = Loc.T(
+                    $"Import fehlgeschlagen: JSON-Fehler – {ex.Message}",
+                    $"Import failed: JSON error – {ex.Message}",
+                    $"Importazione fallita: errore JSON – {ex.Message}",
+                    $"Importación fallida: error JSON – {ex.Message}");
+                return;
+            }
+
+            if (imported is null)
+            {
+                _backupError = Loc.T(
+                    "Import fehlgeschlagen: Ungültiges Format.",
+                    "Import failed: invalid format.",
+                    "Importazione fallita: formato non valido.",
+                    "Importación fallida: formato no válido.");
+                return;
+            }
+
+            // Load imported settings into form model (same mapping as OnInitialized)
+            var s = imported;
+            _model = new FormModel
+            {
+                ListenIp            = s.ListenIp,
+                ListenPort          = s.ListenPort,
+                DeviceIp            = s.DeviceIp,
+                DevicePort          = s.DevicePort,
+                MyCallsign          = s.MyCallsign,
+                LogPath             = s.LogPath,
+                LogRetainDays       = s.LogRetainDays,
+                LogUdpTraffic       = s.LogUdpTraffic,
+                MonitorMaxMessages  = s.MonitorMaxMessages,
+                GroupFilterEnabled  = s.GroupFilterEnabled,
+                GroupsText          = string.Join("\n", s.Groups),
+                WatchCallsignsText  = string.Join("\n", s.WatchCallsigns),
+                WatchOnMessage      = s.WatchOnMessage,
+                WatchOnPosition     = s.WatchOnPosition,
+                WatchOnTelemetry    = s.WatchOnTelemetry,
+                WatchOnAck          = s.WatchOnAck,
+                WatchAlertMinutes   = s.WatchAlertMinutes,
+                DataPath            = s.DataPath,
+                TimeOffsetHours     = s.TimeOffsetHours,
+                AutoReplyEnabled    = s.AutoReplyEnabled,
+                AutoReplyText       = s.AutoReplyText,
+                BotEnabled          = s.BotEnabled,
+                BotCommands         = s.BotCommands
+                    .Select(c => new BotCommandEntry { Name = c.Name, Response = c.Response, Description = c.Description })
+                    .ToList(),
+                BeaconEnabled       = s.BeaconEnabled,
+                BeaconGroup         = s.BeaconGroup,
+                BeaconText          = s.BeaconText,
+                BeaconIntervalHours = s.BeaconIntervalHours,
+                TelemetryEnabled       = s.TelemetryEnabled,
+                TelemetryFilePath      = s.TelemetryFilePath,
+                TelemetryGroup         = s.TelemetryGroup,
+                TelemetryScheduleHours = s.TelemetryScheduleHours,
+                TelemetryMapping       = s.TelemetryMapping
+                    .Select(m => new TelemetryMappingEntry { JsonKey = m.JsonKey, Label = m.Label, Unit = m.Unit, Decimals = m.Decimals, WeatherRole = m.WeatherRole })
+                    .ToList(),
+                TelemetryApiEnabled = s.TelemetryApiEnabled,
+                TelemetryApiKey     = s.TelemetryApiKey,
+                Language            = s.Language,
+                DbProvider              = s.Database.Provider,
+                DbMySqlConnectionString = s.Database.MySqlConnectionString,
+                DbMySqlTableName        = s.Database.MySqlTableName,
+                DbInfluxUrl             = s.Database.InfluxUrl,
+                DbInfluxToken           = s.Database.InfluxToken,
+                DbInfluxOrg             = s.Database.InfluxOrg,
+                DbInfluxBucket          = s.Database.InfluxBucket,
+                DbLogInserts            = s.Database.LogInserts,
+                WebhookEnabled    = s.Webhook.Enabled,
+                WebhookUrl        = s.Webhook.Url,
+                WebhookOnMessage  = s.Webhook.OnMessage,
+                WebhookOnPosition = s.Webhook.OnPosition,
+                WebhookOnTelemetry= s.Webhook.OnTelemetry,
+                MqttEnabled             = s.Mqtt.Enabled,
+                MqttHost                = s.Mqtt.Host,
+                MqttPort                = s.Mqtt.Port,
+                MqttClientId            = s.Mqtt.ClientId,
+                MqttUsername            = s.Mqtt.Username,
+                MqttPassword            = s.Mqtt.Password,
+                MqttUseTls              = s.Mqtt.UseTls,
+                MqttTopicPrefix         = s.Mqtt.TopicPrefix,
+                MqttPublishMessage      = s.Mqtt.PublishMessage,
+                MqttPublishPosition     = s.Mqtt.PublishPosition,
+                MqttPublishTelemetry    = s.Mqtt.PublishTelemetry,
+                MqttSubscribeEnabled    = s.Mqtt.SubscribeEnabled,
+                MqttLogRequests         = s.Mqtt.LogRequests,
+                QrzEnabled         = s.Qrz.Enabled,
+                QrzUsername        = s.Qrz.Username,
+                QrzPassword        = s.Qrz.Password,
+                QrzLogRequests     = s.Qrz.LogRequests,
+                QrzCacheMaxAgeDays = s.Qrz.CacheMaxAgeDays,
+                AiEnabled          = s.Ai.Enabled,
+                AiProvider         = s.Ai.Provider,
+                AiApiKey           = s.Ai.ApiKey,
+                AiModel            = s.Ai.Model,
+                AiAzureEndpoint    = s.Ai.AzureEndpoint,
+                AiAzureApiVersion  = s.Ai.AzureApiVersion,
+                AiThresholdDays    = s.Ai.ThresholdDays,
+                AiSummaryDays      = s.Ai.SummaryDays,
+                AiMaxMessages      = s.Ai.MaxMessages,
+                AiLogRequests      = s.Ai.LogRequests,
+                QuickTexts  = s.QuickTexts.Select(q => new QuickTextEntry { Label = q.Label, Text = q.Text }).ToList(),
+                GroupLabels = s.GroupLabels.Select(g => new GroupLabelEntry { Group = g.Group, ShortLabel = g.ShortLabel, Label = g.Label }).ToList()
+            };
+            await SaveAsync();
+            _backupSuccess  = true;
+            _restorePassword = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            _backupError = $"Import: {ex.Message}";
+        }
     }
 
     private sealed class FormModel
