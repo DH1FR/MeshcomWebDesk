@@ -24,6 +24,14 @@
     @* ===== UPPER AREA: Tabs with conversations ===== *@
     <div class="upper-pane">
         <div class="tab-bar">
+            <div class="tab-new-wrap">
+                @if (QsoSummaryService.IsDbReady)
+                {
+                    <button class="tab-button tab-new tab-recent-btn @(_showRecentPartners ? "active" : "")"
+                            @onclick="ToggleRecentPartnersAsync"
+                            title="@Loc.T("Letzte QSO-Partner", "Recent QSO partners", "Partner QSO recenti", "Socios QSO recientes")">📋</button>
+                }
+            </div>
             @foreach (var tab in _tabs)
             {
                 <button class="tab-button @(tab.Key == _activeTabKey ? "active" : "")"
@@ -60,12 +68,6 @@
             }
             <div class="tab-new-wrap">
                 <button class="tab-button tab-new" @onclick="ShowNewTabDialog" title="@Loc.T("Neuen Tab öffnen", "Open new tab", "Apri nuova scheda", "Abrir nueva pestaña")">+</button>
-                @if (QsoSummaryService.IsDbReady)
-                {
-                    <button class="tab-button tab-new tab-recent-btn @(_showRecentPartners ? "active" : "")"
-                            @onclick="ToggleRecentPartnersAsync"
-                            title="@Loc.T("Letzte QSO-Partner", "Recent QSO partners", "Partner QSO recenti", "Socios QSO recientes")">📋</button>
-                }
             </div>
         </div>
 
