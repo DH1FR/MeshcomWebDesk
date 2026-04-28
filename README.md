@@ -1163,7 +1163,7 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
 ## 📋 Changelog
 
-### v1.8.3
+### v1.9.0
 - **feat:** 🔎 **QSO dialog – History & Search without AI** – the 🔎 icon on direct-chat tabs is now always shown when MySQL is active (not only when an AI summary exists); the modal opens a four-tab dialog: *KI-Zusammenfassung*, *Verlauf*, *Suche*, *KI-Suche*; History and Text Search work with MySQL only (no AI API key required); AI tabs are disabled and greyed out when AI is not configured
 - **feat:** 🤖 **KI-Zusammenfassung / KI-Suche locked when AI inactive** – Summary and AI Search tabs are `disabled` with tooltip hint when `Ai.Enabled = false` or no API key is set; guard added in `SwitchModalTab` and template to prevent bypassing; reopens on the History tab when AI is off
 - **feat:** 📋 **Recent QSO partners** – 📋 button next to the + tab button opens a flyout with the most recently contacted callsigns; populated from MySQL; clicking a row opens the chat tab directly
