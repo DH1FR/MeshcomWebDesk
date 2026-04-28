@@ -999,8 +999,18 @@
             if (needsRender)
                 StateHasChanged();
 
-            // Check if welcome dialog should be shown (fire-and-forget with delay)
-            _ = CheckWelcomeDialogAsync();
+            // Check if welcome dialog should be shown
+            try
+            {
+                var welcomed = await JS.InvokeAsync<string>("meshcomChat.getWelcomedVersion");
+                if (welcomed != _appVersion)
+                    _ = Task.Run(async () =>
+                    {
+                        await Task.Delay(3000);
+                        await InvokeAsync(() => { _showWelcomeDialog = true; StateHasChanged(); });
+                    });
+            }
+            catch { }
         }
 
         if (_scrollMessages)
