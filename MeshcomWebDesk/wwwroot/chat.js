@@ -207,6 +207,8 @@ window.meshcomChat = (function () {
             localStorage.setItem('meshcom-tab-order', JSON.stringify(keys || [])),
         getSettingsSections: () => localStorage.getItem('meshcom-settings-sections'),
         setSettingsSections: (csv) => localStorage.setItem('meshcom-settings-sections', csv ?? ''),
+        getWelcomedVersion:  () => localStorage.getItem('meshcom-welcomed-version') || '',
+        setWelcomedVersion:  (v) => localStorage.setItem('meshcom-welcomed-version', v || ''),
 
         // ── SendBar: liest den aktuellen Wert des Eingabefelds ──
         getSendBarValue: (id) => {

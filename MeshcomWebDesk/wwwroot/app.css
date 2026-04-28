@@ -2325,6 +2325,97 @@ h1:focus {
     flex-shrink: 0;
     white-space: nowrap;
     overflow: hidden;
+
+/* ── Welcome / Coffee dialog ─────────────────────────────────────────── */
+.welcome-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.welcome-modal {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    width: min(420px, 94vw);
+    padding: 2rem 1.75rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.7);
+    text-align: center;
+}
+
+.welcome-icon {
+    font-size: 3rem;
+    line-height: 1;
+}
+
+.welcome-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #c9d1d9;
+    margin: 0;
+}
+
+.welcome-text {
+    font-size: 0.95rem;
+    color: #a0c4ff;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.welcome-author {
+    font-size: 0.8rem;
+    color: #8b949e;
+    margin: 0;
+}
+
+.welcome-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+    margin-top: 0.5rem;
+}
+
+.welcome-btn-coffee {
+    background: #c8a84b;
+    color: #0d1117;
+    border: none;
+    border-radius: 8px;
+    padding: 0.65rem 1rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.welcome-btn-coffee:hover {
+    background: #e0be60;
+}
+
+.welcome-btn-dismiss {
+    background: #21262d;
+    color: #8b949e;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 0.55rem 1rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.welcome-btn-dismiss:hover {
+    background: #2d333b;
+    color: #c9d1d9;
+}
+
 }
 
 .map-info-sep { color: #3a3a5e; }

@@ -699,6 +699,32 @@
     </ErrorContent>
 </ErrorBoundary>
 
+@if (_showWelcomeDialog)
+{
+    <div class="welcome-overlay" @onclick="WelcomeDismissAsync">
+        <div class="welcome-modal" @onclick:stopPropagation="true">
+            <div class="welcome-icon">☕</div>
+            <h2 class="welcome-title">MeshCom WebDesk v@_appVersion</h2>
+            <p class="welcome-text">
+                @Loc.T(
+                    "Gefällt dir die neue Version? Dann spendier mir einen Kaffee! 😊",
+                    "Do you like the new version? Then buy me a coffee! 😊",
+                    "Ti piace la nuova versione? Offrimi un caffè! 😊",
+                    "¿Te gusta la nueva versión? ¡Invítame un café! 😊")
+            </p>
+            <p class="welcome-author">© Ralf Altenbrand (DH1FR) &nbsp;·&nbsp; <a href="mailto:dh1fr@darc.de" style="color:#a0c4ff">dh1fr@darc.de</a></p>
+            <div class="welcome-buttons">
+                <button class="welcome-btn-coffee" @onclick="WelcomeCoffeeAsync">
+                    ☕ @Loc.T("Ja, gerne!", "Yes, with pleasure!", "Sì, volentieri!", "¡Sí, con gusto!")
+                </button>
+                <button class="welcome-btn-dismiss" @onclick="WelcomeDismissAsync">
+                    😐 @Loc.T("Nein, so gut ist es auch nicht", "No, it's not that good", "No, non è così buono", "No, no es tan bueno")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private List<ChatTab> _tabs = [];
     private IReadOnlyList<MeshcomMessage> _allMessages = [];
@@ -836,6 +862,48 @@
     private List<WatchlistAlert> _watchlistAlerts = [];
     private bool _playWatchlistSound;
 
+    // ── Welcome dialog ────────────────────────────────────────────────────
+    private static readonly string _appVersion =
+        typeof(Chat).Assembly.GetName().Version is { } v
+            ? $"{v.Major}.{v.Minor}.{v.Build}" : "?";
+    private bool _showWelcomeDialog;
+
+    private async Task CheckWelcomeDialogAsync()
+    {
+        try
+        {
+            var welcomed = await JS.InvokeAsync<string>("meshcomChat.getWelcomedVersion");
+            if (welcomed != _appVersion)
+            {
+                await Task.Delay(3000);
+                if (!_disposed)
+                {
+                    _showWelcomeDialog = true;
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
+        }
+        catch (JSException) { }
+    }
+
+    private async Task WelcomeCoffeeAsync()
+    {
+        _showWelcomeDialog = false;
+        try
+        {
+            await JS.InvokeVoidAsync("meshcomChat.setWelcomedVersion", _appVersion);
+            await JS.InvokeVoidAsync("open", "https://paypal.me/DH1FR", "_blank");
+        }
+        catch (JSException) { }
+    }
+
+    private async Task WelcomeDismissAsync()
+    {
+        _showWelcomeDialog = false;
+        try { await JS.InvokeVoidAsync("meshcomChat.setWelcomedVersion", _appVersion); }
+        catch (JSException) { }
+    }
+
     [Inject] private IConfiguration Configuration { get; set; } = default!;
     [Inject] private IOptionsMonitor<MeshcomSettings> SettingsOptions { get; set; } = default!;
     [Inject] private IJSRuntime JS { get; set; } = default!;
@@ -931,6 +999,9 @@
 
             if (needsRender)
                 StateHasChanged();
+
+            // Check if welcome dialog should be shown (fire-and-forget with delay)
+            _ = CheckWelcomeDialogAsync();
         }
 
         if (_scrollMessages)
