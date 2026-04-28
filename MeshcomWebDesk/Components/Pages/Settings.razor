@@ -260,7 +260,7 @@
                                         }
                                     </tbody>
                                 </table>
-                                <div style="margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem">
+                                <div style="margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
                                     <button type="button" class="btn-add"
                                             @onclick="() => _model.BotCommands.Add(new BotCommandEntry())">
                                         + @Loc.T("Befehl hinzufügen", "Add Command", "Aggiungi comando", "Añadir comando")
@@ -271,7 +271,21 @@
                                             ? Loc.T("Variablen ausblenden", "Hide Variables", "Nascondi variabili", "Ocultar variables")
                                             : Loc.T("Variablen anzeigen", "Show Variables", "Mostra variabili", "Mostrar variables"))
                                     </button>
+                                    <button type="button" class="btn-add" style="padding:2px 10px;font-size:12px" @onclick="ExportBotCommandsAsync"
+                                            title="@Loc.T("Als MeshComWebDesk-bot-commands.json herunterladen", "Download as MeshComWebDesk-bot-commands.json", "Scarica come MeshComWebDesk-bot-commands.json", "Descargar como MeshComWebDesk-bot-commands.json")">
+                                        📤 @Loc.T("Exportieren", "Export", "Esporta", "Exportar")
+                                    </button>
+                                    <label class="btn-add" style="padding:2px 10px;font-size:12px;cursor:pointer"
+                                           title="@Loc.T("JSON-Datei importieren (ersetzt vorhandene Einträge)", "Import JSON file (replaces existing entries)", "Importa file JSON (sostituisce le voci esistenti)", "Importar archivo JSON (reemplaza entradas existentes)")">
+                                        📥 @Loc.T("Importieren", "Import", "Importa", "Importar")
+                                        <input type="file" id="import-bot" accept=".json" style="display:none"
+                                               @onchange="ImportBotCommandsAsync" />
+                                    </label>
                                 </div>
+                                @if (_importError != null)
+                                {
+                                    <div class="settings-error" style="margin-top:0.4rem">❌ @_importError</div>
+                                }
                                 @if (_showBotVars)
                                 {
                                     var ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "?";
@@ -975,7 +989,7 @@
                         }
                     </tbody>
                 </table>
-            <div style="margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem">
+            <div style="margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
                 <button type="button" class="btn-add"
                         @onclick="() => _model.QuickTexts.Add(new QuickTextEntry())">
                     + @Loc.T("Schnelltext hinzufügen", "Add Quick Text", "Aggiungi testo rapido", "Añadir texto rápido")
@@ -986,7 +1000,21 @@
                         ? Loc.T("Variablen ausblenden", "Hide Variables", "Nascondi variabili", "Ocultar variables")
                         : Loc.T("Verfügbare Variablen", "Available Variables", "Variabili disponibili", "Variables disponibles"))
                 </button>
+                <button type="button" class="btn-add" style="padding:2px 10px;font-size:12px" @onclick="ExportQuickTextsAsync"
+                        title="@Loc.T("Als MeshComWebDesk-quick-texts.json herunterladen", "Download as MeshComWebDesk-quick-texts.json", "Scarica come MeshComWebDesk-quick-texts.json", "Descargar como MeshComWebDesk-quick-texts.json")">
+                    📤 @Loc.T("Exportieren", "Export", "Esporta", "Exportar")
+                </button>
+                <label class="btn-add" style="padding:2px 10px;font-size:12px;cursor:pointer"
+                       title="@Loc.T("JSON-Datei importieren (ersetzt vorhandene Einträge)", "Import JSON file (replaces existing entries)", "Importa file JSON (sostituisce le voci esistenti)", "Importar archivo JSON (reemplaza entradas existentes)")">
+                    📥 @Loc.T("Importieren", "Import", "Importa", "Importar")
+                    <input type="file" id="import-quicktexts" accept=".json" style="display:none"
+                           @onchange="ImportQuickTextsAsync" />
+                </label>
             </div>
+            @if (_importError != null)
+            {
+                <div class="settings-error" style="margin-top:0.4rem">❌ @_importError</div>
+            }
             @if (_showQuickTextVars)
             {
                 var now = DateTime.Now;
@@ -1056,7 +1084,7 @@
                         }
                     </tbody>
                 </table>
-                <div style="margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem">
+                <div style="margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
                     <button type="button" class="btn-add"
                             @onclick="() => _model.GroupLabels.Add(new GroupLabelEntry())">
                         + @Loc.T("Gruppe hinzufügen", "Add Group", "Aggiungi gruppo", "Añadir grupo")
@@ -1065,7 +1093,21 @@
                             @onclick="() => _model.GroupLabels = GroupLabelEntry.Defaults.Select(g => new GroupLabelEntry { Group = g.Group, ShortLabel = g.ShortLabel, Label = g.Label }).ToList()">
                         🔄 @Loc.T("Standard wiederherstellen", "Restore Defaults", "Ripristina predefiniti", "Restaurar predeterminados")
                     </button>
+                    <button type="button" class="btn-add" style="padding:2px 10px;font-size:12px" @onclick="ExportGroupLabelsAsync"
+                            title="@Loc.T("Als MeshComWebDesk-group-labels.json herunterladen", "Download as MeshComWebDesk-group-labels.json", "Scarica come MeshComWebDesk-group-labels.json", "Descargar como MeshComWebDesk-group-labels.json")">
+                        📤 @Loc.T("Exportieren", "Export", "Esporta", "Exportar")
+                    </button>
+                    <label class="btn-add" style="padding:2px 10px;font-size:12px;cursor:pointer"
+                           title="@Loc.T("JSON-Datei importieren (ersetzt vorhandene Einträge)", "Import JSON file (replaces existing entries)", "Importa file JSON (sostituisce le voci esistenti)", "Importar archivo JSON (reemplaza entradas existentes)")">
+                        📥 @Loc.T("Importieren", "Import", "Importa", "Importar")
+                        <input type="file" id="import-groups" accept=".json" style="display:none"
+                               @onchange="ImportGroupLabelsAsync" />
+                    </label>
                 </div>
+                @if (_importError != null)
+                {
+                    <div class="settings-error" style="margin-top:0.4rem">❌ @_importError</div>
+                }
             </div>
         </div>
 
@@ -1866,6 +1908,187 @@
         {
             _errorMessage = ex.Message;
         }
+    }
+
+    // ── Import / Export ───────────────────────────────────────────────────
+
+    private string? _importError;
+
+    // ── Bot Commands ──────────────────────────────────────────────────────
+
+    private async Task ExportBotCommandsAsync()
+    {
+        try
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(
+                _model.BotCommands,
+                new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            await JS.InvokeVoidAsync("meshcomChat.downloadJson", "MeshComWebDesk-bot-commands.json", json);
+        }
+        catch (Exception ex) { _importError = $"Export: {ex.Message}"; }
+    }
+
+    private async Task ImportBotCommandsAsync()
+    {
+        _importError = null;
+        try
+        {
+            var json = await JS.InvokeAsync<string?>("meshcomChat.readJsonFile", "import-bot");
+            if (string.IsNullOrWhiteSpace(json)) return;
+
+            var entries = System.Text.Json.JsonSerializer.Deserialize<List<BotCommandEntry>>(json,
+                new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (entries is null)
+            {
+                _importError = Loc.T("Import fehlgeschlagen: Ungültiges JSON-Format.",
+                    "Import failed: invalid JSON format.",
+                    "Importazione fallita: formato JSON non valido.",
+                    "Importación fallida: formato JSON no válido.");
+                return;
+            }
+
+            var invalid = entries.Where(e => string.IsNullOrWhiteSpace(e.Name)).ToList();
+            if (invalid.Count > 0)
+            {
+                _importError = Loc.T(
+                    $"Import fehlgeschlagen: {invalid.Count} Einträge ohne Name gefunden.",
+                    $"Import failed: {invalid.Count} entries without a name.",
+                    $"Importazione fallita: {invalid.Count} voci senza nome.",
+                    $"Importación fallida: {invalid.Count} entradas sin nombre.");
+                return;
+            }
+
+            _model.BotCommands = entries;
+            await SaveAsync();
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            _importError = Loc.T(
+                $"Import fehlgeschlagen: JSON-Fehler – {ex.Message}",
+                $"Import failed: JSON error – {ex.Message}",
+                $"Importazione fallita: errore JSON – {ex.Message}",
+                $"Importación fallida: error JSON – {ex.Message}");
+        }
+        catch (Exception ex) { _importError = $"Import: {ex.Message}"; }
+    }
+
+    // ── Group Labels ──────────────────────────────────────────────────────
+
+    private async Task ExportGroupLabelsAsync()
+    {
+        try
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(
+                _model.GroupLabels,
+                new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            await JS.InvokeVoidAsync("meshcomChat.downloadJson", "MeshComWebDesk-group-labels.json", json);
+        }
+        catch (Exception ex) { _importError = $"Export: {ex.Message}"; }
+    }
+
+    private async Task ImportGroupLabelsAsync()
+    {
+        _importError = null;
+        try
+        {
+            var json = await JS.InvokeAsync<string?>("meshcomChat.readJsonFile", "import-groups");
+            if (string.IsNullOrWhiteSpace(json)) return;
+
+            var entries = System.Text.Json.JsonSerializer.Deserialize<List<GroupLabelEntry>>(json,
+                new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (entries is null)
+            {
+                _importError = Loc.T("Import fehlgeschlagen: Ungültiges JSON-Format.",
+                    "Import failed: invalid JSON format.",
+                    "Importazione fallita: formato JSON non valido.",
+                    "Importación fallida: formato JSON no válido.");
+                return;
+            }
+
+            var invalid = entries.Where(e => string.IsNullOrWhiteSpace(e.Group)).ToList();
+            if (invalid.Count > 0)
+            {
+                _importError = Loc.T(
+                    $"Import fehlgeschlagen: {invalid.Count} Einträge ohne Gruppen-Nummer gefunden.",
+                    $"Import failed: {invalid.Count} entries without a group number.",
+                    $"Importazione fallita: {invalid.Count} voci senza numero gruppo.",
+                    $"Importación fallida: {invalid.Count} entradas sin número de grupo.");
+                return;
+            }
+
+            _model.GroupLabels = entries;
+            await SaveAsync();
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            _importError = Loc.T(
+                $"Import fehlgeschlagen: JSON-Fehler – {ex.Message}",
+                $"Import failed: JSON error – {ex.Message}",
+                $"Importazione fallita: errore JSON – {ex.Message}",
+                $"Importación fallida: error JSON – {ex.Message}");
+        }
+        catch (Exception ex) { _importError = $"Import: {ex.Message}"; }
+    }
+
+    // ── Quick Texts ───────────────────────────────────────────────────────
+
+    private async Task ExportQuickTextsAsync()
+    {
+        try
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(
+                _model.QuickTexts,
+                new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            await JS.InvokeVoidAsync("meshcomChat.downloadJson", "MeshComWebDesk-quick-texts.json", json);
+        }
+        catch (Exception ex) { _importError = $"Export: {ex.Message}"; }
+    }
+
+    private async Task ImportQuickTextsAsync()
+    {
+        _importError = null;
+        try
+        {
+            var json = await JS.InvokeAsync<string?>("meshcomChat.readJsonFile", "import-quicktexts");
+            if (string.IsNullOrWhiteSpace(json)) return;
+
+            var entries = System.Text.Json.JsonSerializer.Deserialize<List<QuickTextEntry>>(json,
+                new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (entries is null)
+            {
+                _importError = Loc.T("Import fehlgeschlagen: Ungültiges JSON-Format.",
+                    "Import failed: invalid JSON format.",
+                    "Importazione fallita: formato JSON non valido.",
+                    "Importación fallida: formato JSON no válido.");
+                return;
+            }
+
+            var invalid = entries.Where(e => string.IsNullOrWhiteSpace(e.Text)).ToList();
+            if (invalid.Count > 0)
+            {
+                _importError = Loc.T(
+                    $"Import fehlgeschlagen: {invalid.Count} Einträge ohne Text gefunden.",
+                    $"Import failed: {invalid.Count} entries without text.",
+                    $"Importazione fallita: {invalid.Count} voci senza testo.",
+                    $"Importación fallida: {invalid.Count} entradas sin texto.");
+                return;
+            }
+
+            _model.QuickTexts = entries;
+            await SaveAsync();
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            _importError = Loc.T(
+                $"Import fehlgeschlagen: JSON-Fehler – {ex.Message}",
+                $"Import failed: JSON error – {ex.Message}",
+                $"Importazione fallita: errore JSON – {ex.Message}",
+                $"Importación fallida: error JSON – {ex.Message}");
+        }
+        catch (Exception ex) { _importError = $"Import: {ex.Message}"; }
     }
 
     private sealed class FormModel

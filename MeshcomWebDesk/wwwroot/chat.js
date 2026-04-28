@@ -229,8 +229,7 @@ window.meshcomChat = (function () {
         },
 
         // ── SendBar: registriert oninput-Handler für Live-Counter ohne Blazor-Binding ──
-        initSendBarCounter: (id, dotNetRef) => {
-            var el = document.getElementById(id);
+        initSendBarCounter: (id, dotNetRef) => {            var el = document.getElementById(id);
             if (!el || el.dataset.counterInit) return;
             el.dataset.counterInit = '1';
 
@@ -265,7 +264,34 @@ window.meshcomChat = (function () {
                     }
                 }
             });
-        }
+        },
+
+        // ── Import/Export: JSON-Datei herunterladen ──────────────────────────────────
+        downloadJson: (filename, json) => {
+            var blob = new Blob([json], { type: 'application/json' });
+            var url  = URL.createObjectURL(blob);
+            var a    = document.createElement('a');
+            a.href     = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        },
+
+        // ── Import/Export: JSON-Datei vom User einlesen und als String zurückgeben ──
+        readJsonFile: (inputId) => new Promise((resolve, reject) => {
+            var input = document.getElementById(inputId);
+            if (!input || !input.files || input.files.length === 0) {
+                resolve(null);
+                return;
+            }
+            var file   = input.files[0];
+            var reader = new FileReader();
+            reader.onload  = e  => { input.value = ''; resolve(e.target.result); };
+            reader.onerror = () => { input.value = ''; reject(new Error('File read error')); };
+            reader.readAsText(file, 'UTF-8');
+        })
     };
 }());
 
