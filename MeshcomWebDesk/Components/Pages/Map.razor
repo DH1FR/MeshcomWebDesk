@@ -537,7 +537,7 @@
         {
             Logger.LogWarning(ex, "Map: OnAiPopupRequestAsync failed for {Callsign}", callsign);
             await JS.InvokeVoidAsync("meshcomMap.updatePopupAiContent", callsign,
-                "<span style='color:#f85149'>Fehler: " +
+                "<span style='color:#f85149'>Error: " +
                 System.Net.WebUtility.HtmlEncode(ex.Message) + "</span>");
         }
     }
