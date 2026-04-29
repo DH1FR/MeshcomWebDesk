@@ -1002,11 +1002,11 @@
             {
                 var welcomed = await JS.InvokeAsync<string>("meshcomChat.getWelcomedVersion");
                 if (welcomed != _appVersion)
-                    _ = Task.Run(async () =>
-                    {
-                        await Task.Delay(3000);
-                        await InvokeAsync(() => { _showWelcomeDialog = true; StateHasChanged(); });
-                    });
+                {
+                    await Task.Delay(3000);
+                    _showWelcomeDialog = true;
+                    StateHasChanged();
+                }
             }
             catch { }
         }
