@@ -42,6 +42,13 @@ public class ChatService
     public event Action<string>? OnNewDirectTab;
 
     /// <summary>
+    /// Raised for every incoming direct message addressed to our own callsign,
+    /// regardless of whether the tab already exists. Used for voice announcements.
+    /// Arguments: sender callsign, the message.
+    /// </summary>
+    public event Action<string, MeshcomMessage>? OnDirectMessage;
+
+    /// <summary>
     /// Raised whenever a brand-new direct (1:1) tab is created, both by incoming messages
     /// and by manual tab opening. Not raised for broadcast (*) or group (#) tabs.
     /// </summary>
@@ -177,6 +184,14 @@ public class ChatService
         // (AddOutgoingMessage) appears after it in the conversation, not before.
         if (wasNewDirect)
             OnNewDirectTab?.Invoke(message.From);
+
+        // Fire OnDirectMessage for every direct MSG to own callsign (tab new or existing).
+        // This allows voice announcements even for follow-up messages.
+        bool isDirectToUs = !message.IsBroadcast &&
+            !message.IsAck && !message.IsPositionBeacon && !message.IsTelemetry &&
+            string.Equals(message.To, _settings.MyCallsign, StringComparison.OrdinalIgnoreCase);
+        if (isDirectToUs && !wasNewDirect)
+            OnDirectMessage?.Invoke(message.From, message);
 
         // Check QSO summary for new direct tabs created by incoming messages
         if (wasNewDirect && tab != null)

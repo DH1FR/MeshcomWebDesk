@@ -856,6 +856,7 @@
         UdpService.OnStatusChange += OnStatusChanged;
         ChatService.OnWatchlistHit += HandleWatchlistHit;
         ChatService.OnNewDirectTab += HandleNewDirectTab;
+        ChatService.OnDirectMessage += HandleDirectMessage;
         // Restore active tab from service memory so the first render already shows the correct tab
         _activeTabKey = ChatService.ActiveTabKey;
         RefreshData();
@@ -1103,6 +1104,25 @@
         InvokeAsync(StateHasChanged);
     }
 
+    // Folgenachrichten ans eigene Rufzeichen (Tab bereits offen): ebenfalls TTS mit Priorität
+    private void HandleDirectMessage(string callsign, MeshcomMessage message)
+    {
+        if (_voiceEnabled != true) return;
+        var phonetic  = PhoneticAlphabetHelper.Spell(callsign, Loc.Current);
+        var firstName = QrzFirstName(callsign);
+        var text = Loc.T(
+            $"Nachricht von {phonetic}{(firstName != null ? ". " + firstName : "")}",
+            $"Message from {phonetic}{(firstName != null ? ". " + firstName : "")}",
+            $"Messaggio da {phonetic}{(firstName != null ? ". " + firstName : "")}",
+            $"Mensaje de {phonetic}{(firstName != null ? ". " + firstName : "")}");
+        // Direct message has highest priority – prepend before any watchlist entries
+        var existing = _pendingSpeech.ToArray();
+        _pendingSpeech.Clear();
+        _pendingSpeech.Enqueue(text);
+        foreach (var e in existing) _pendingSpeech.Enqueue(e);
+        InvokeAsync(StateHasChanged);
+    }
+
     private void SelectTab(string key)
     {
         _activeTabKey = key;
@@ -1281,6 +1301,7 @@
         UdpService.OnStatusChange -= OnStatusChanged;
         ChatService.OnWatchlistHit -= HandleWatchlistHit;
         ChatService.OnNewDirectTab -= HandleNewDirectTab;
+        ChatService.OnDirectMessage -= HandleDirectMessage;
     }
 
     // ── QSO Summary ───────────────────────────────────────────────────────
@@ -1555,12 +1576,20 @@
                     _playWatchlistSound = true;
                 if (_voiceEnabled == true)
                 {
-                    var phonetic = PhoneticAlphabetHelper.Spell(callsign, Loc.Current);
-                    _pendingSpeech.Enqueue(Loc.T(
-                        $"{phonetic} ist aktiv",
-                        $"{phonetic} heard",
-                        $"{phonetic} ascoltato",
-                        $"{phonetic} escuchado"));
+                    // Wenn die Nachricht eine direkte MSG ans eigene Rufzeichen ist, hat die
+                    // "Neue Nachricht von …"-Ansage (HandleNewDirectTab / HandleDirectMessage) Vorrang.
+                    // Die Watchlist-TTS wird in diesem Fall unterdrückt.
+                    bool isDirectMsg = !message.IsPositionBeacon && !message.IsTelemetry && !message.IsAck
+                        && string.Equals(message.To, _myCallsign, StringComparison.OrdinalIgnoreCase);
+                    if (!isDirectMsg)
+                    {
+                        var phonetic = PhoneticAlphabetHelper.Spell(callsign, Loc.Current);
+                        _pendingSpeech.Enqueue(Loc.T(
+                            $"{phonetic} ist aktiv",
+                            $"{phonetic} heard",
+                            $"{phonetic} ascoltato",
+                            $"{phonetic} escuchado"));
+                    }
                 }
                 StateHasChanged();
             });
