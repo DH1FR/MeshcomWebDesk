@@ -221,11 +221,11 @@ and makes a full web client for MeshCom available via a simple URL
 - Rolling daily log files with configurable retention
 - Optional UDP traffic log (`LogUdpTraffic`) for offline analysis
 
-### 🗄️ Database integration (Beta)
+### 🗄️ Database integration
 - Optional persistent storage of all monitor data to an external database
 - **MySQL / MariaDB**: writes each monitor entry as a row via parametrised `INSERT` (uses `MySqlConnector`)
 - **InfluxDB 2**: writes each monitor entry as a point via HTTP Line Protocol (`/api/v2/write`)
-- Provider selection in **Settings → 🗄️ Datenbank (Beta)**: `none` / `mysql` / `influxdb2`
+- Provider selection in **Settings → 🗄️ Datenbank**:
 - **"Test connection"** button: detects missing database, table or bucket and offers **automatic creation** with a single click
 - **Optional insert logging** – every successful write is logged at `Information` level; privacy notice shown in Settings
 - Provider and connection settings change **live without restart**
@@ -332,7 +332,7 @@ Clicking it opens a modal dialog with **four tabs**:
 - Configured in **Settings → 🔗 Webhook**; changes apply **live without restart**
 - Compatible with **Home Assistant** webhooks, Node-RED, n8n, IFTTT, custom endpoints
 
-### 📡 MQTT *(Beta)*
+### 📡 MQTT
 - Optional connection to an external **MQTT broker** (e.g. Mosquitto, Home Assistant Mosquitto add-on, EMQX)
 - **Publisher** – forwards incoming MeshCom events to typed MQTT topics:
 
@@ -358,7 +358,7 @@ Clicking it opens a modal dialog with **four tabs**:
 - Supports **authentication** (username / password stored encrypted), **TLS** and a configurable **topic prefix**
 - **Auto-reconnect** on connection loss
 - Configurable **per-event publish flags** (messages / positions / telemetry separately)
-- Configured in **Settings → 📡 MQTT (Beta)**; password is stored encrypted (ASP.NET Core Data Protection)
+- Configured in **Settings → 📡 MQTT**; password is stored encrypted
 
 ### 🏷️ Group Labels
 - User-defined **display names for MeshCom group numbers** shown in the chat tab below the group number
@@ -538,7 +538,7 @@ All settings in `MeshcomWebDesk/appsettings.json`:
   "TelemetryApiEnabled":   false,        // enable POST /api/telemetry HTTP endpoint
   "TelemetryApiKey":       "",           // optional X-Api-Key for the endpoint (empty = no auth)
   "Language":              "de",         // UI language: "de" (German) or "en" (English)
-  "Database": {                          // optional database sink (Beta)
+  "Database": {                          // optional database sink
     "Provider":              "none",     // "none" | "mysql" | "influxdb2"
     "MySqlConnectionString": "",         // e.g. "Server=localhost;Database=meshcom;User=mc;Password=secret;"
     "MySqlTableName":        "meshcom_monitor", // created automatically via Settings → Anlegen
@@ -555,7 +555,7 @@ All settings in `MeshcomWebDesk/appsettings.json`:
     "OnPosition":  false,              // fire on incoming position beacons
     "OnTelemetry": false               // fire on incoming telemetry
   },
-  "Mqtt": {                            // optional MQTT broker integration (Beta)
+  "Mqtt": {                            // optional MQTT broker integration
     "Enabled":          false,         // enable MQTT connection
     "Host":             "localhost",   // MQTT broker hostname or IP
     "Port":             1883,          // MQTT broker port (default 1883, TLS usually 8883)
@@ -1204,7 +1204,7 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 - **release:** 🚀 Version 1.8.0
 
 ### v1.7.7
-- **feat:** 📡 **MQTT integration (Beta)** – optional connection to an external MQTT broker; publishes incoming chat messages, position beacons and telemetry to typed topics (`{prefix}/broadcast`, `{prefix}/group/{group}`, `{prefix}/dm/{callsign}`, `{prefix}/position/{callsign}`, `{prefix}/telemetry/{callsign}`); optional subscriber forwards `{prefix}/send/#` topics as outgoing UDP messages; supports authentication, TLS and auto-reconnect; all `{variable}` placeholders expanded in subscriber payloads
+- **feat:** 📡 **MQTT integration** – optional connection to an external MQTT broker;
 - **feat:** 🏷️ **Group Labels** – configurable short and full names for MeshCom group numbers; shown in chat tab (short label below group number, full name as tooltip); pre-filled with official MeshCom GRC group list (icssw.org); editable in Settings with restore-defaults button
 - **feat:** 🚀 **Automatic update check** – on startup the app queries the GitHub Releases API and shows a dismissible banner when a newer version is available
 - **fix:** 🌐 **Browser tab title** corrected to "MeshCom WebDesk"
@@ -1357,8 +1357,8 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 - **docs:** Architecture, Configuration and Changelog updated
 
 ### v1.5.0
-- **feat:** 🗄️ **Database integration (Beta)** – optional MySQL/MariaDB or InfluxDB 2 sink writes every monitor entry to an external database
-- **feat:** **Settings → Datenbank (Beta)** – provider dropdown, connection fields, "Test connection" button with automatic DB/table/bucket creation
+- **feat:** 🗄️ **Database integration** – optional MySQL/MariaDB or InfluxDB 2 sink writes every monitor entry to an external database
+- **feat:** **Settings → Datenbank** – provider dropdown, connection fields, "Test connection" button with automatic DB/table/bucket creation
 - **feat:** **Optional insert logging** (`LogInserts`) – logs the full SQL `INSERT` at Information level; privacy notice shown in Settings UI
 - **feat:** **Message length guard** – character counter `X/149` in the chat input, `maxlength="149"` enforced in the browser and server-side warning log when limit is exceeded
 - **docs:** 🔒 **Privacy / Datenschutz** section added to README – covers log files, database storage, DB insert log and persistence; includes recommendations for GDPR-compliant operation

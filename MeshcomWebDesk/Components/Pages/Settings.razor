@@ -610,9 +610,9 @@
             </div>
         </div>
 
-        <!-- Datenbank / Database (Beta) -->
+        <!-- Datenbank / Database -->
         <div class="settings-section @(IsOpen("db") ? "" : "settings-section-collapsed")">
-            <h2 class="settings-section-title" @onclick='() => Toggle("db")'>🗄️ @Loc.T("Datenbank (Beta)", "Database (Beta)", "Database (Beta)", "Base de datos (Beta)") <span class="section-chevron">@(IsOpen("db") ? "▲" : "▼")</span></h2>
+            <h2 class="settings-section-title" @onclick='() => Toggle("db")'>🗄️ @Loc.T("Datenbank", "Database", "Database", "Base de datos") <span class="section-chevron">@(IsOpen("db") ? "▲" : "▼")</span></h2>
             <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
                 🔒 @Loc.T(
                     "Alle Monitor-Einträge (Rufzeichen, Nachrichtentexte, GPS, RSSI) werden in die externe Datenbank geschrieben. Nur im eigenen, abgesicherten Netz betreiben. Datenschutz beachten.",
@@ -781,7 +781,7 @@
 
         <!-- MQTT -->
         <div class="settings-section @(IsOpen("mqtt") ? "" : "settings-section-collapsed")">
-            <h2 class="settings-section-title" @onclick='() => Toggle("mqtt")'>📡 MQTT <span style="font-size:11px;color:#8b949e;font-weight:normal">(Beta)</span> <span class="section-chevron">@(IsOpen("mqtt") ? "▲" : "▼")</span></h2>
+            <h2 class="settings-section-title" @onclick='() => Toggle("mqtt")'>📡 MQTT <span class="section-chevron">@(IsOpen("mqtt") ? "▲" : "▼")</span></h2>
             <div class="settings-grid">
                 <label>@Loc.T("MQTT aktiv", "MQTT Active", "MQTT attivo", "MQTT activo")</label>
                 <label class="settings-toggle">
