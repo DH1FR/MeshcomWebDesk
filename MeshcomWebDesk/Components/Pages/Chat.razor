@@ -1001,16 +1001,22 @@
             try
             {
                 var welcomed = await JS.InvokeAsync<string>("meshcomChat.getWelcomedVersion");
+                await JS.InvokeVoidAsync("console.log", $"[Welcome] welcomed='{welcomed}' appVersion='{_appVersion}' show={welcomed != _appVersion}");
                 if (welcomed != _appVersion)
                 {
                     var timer = new System.Threading.Timer(_ =>
                     {
                         if (!_disposed)
-                            InvokeAsync(() => { _showWelcomeDialog = true; StateHasChanged(); });
+                            InvokeAsync(async () =>
+                            {
+                                await JS.InvokeVoidAsync("console.log", "[Welcome] Timer fired, setting dialog");
+                                _showWelcomeDialog = true;
+                                StateHasChanged();
+                            });
                     }, null, 3000, System.Threading.Timeout.Infinite);
                 }
             }
-            catch { }
+            catch (Exception ex) { await JS.InvokeVoidAsync("console.log", $"[Welcome] Exception: {ex.Message}"); }
         }
 
         if (_scrollMessages)
