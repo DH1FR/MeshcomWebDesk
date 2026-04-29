@@ -701,7 +701,7 @@
 
 @if (_showWelcomeDialog)
 {
-    <div class="welcome-overlay" @onclick="WelcomeDismissAsync">
+    <div id="welcome-dialog" class="welcome-overlay" @onclick="WelcomeDismissAsync">
         <div class="welcome-modal" @onclick:stopPropagation="true">
             <div class="welcome-icon">☕</div>
             <h2 class="welcome-title">MeshCom WebDesk v@_appVersion</h2>
@@ -1001,7 +1001,6 @@
             try
             {
                 var welcomed = await JS.InvokeAsync<string>("meshcomChat.getWelcomedVersion");
-                await JS.InvokeVoidAsync("console.log", $"[Welcome] welcomed='{welcomed}' appVersion='{_appVersion}' show={welcomed != _appVersion}");
                 if (welcomed != _appVersion)
                 {
                     var timer = new System.Threading.Timer(_ =>
@@ -1009,14 +1008,15 @@
                         if (!_disposed)
                             InvokeAsync(async () =>
                             {
-                                await JS.InvokeVoidAsync("console.log", "[Welcome] Timer fired, setting dialog");
                                 _showWelcomeDialog = true;
                                 StateHasChanged();
+                                await Task.Yield();
+                                await JS.InvokeVoidAsync("meshcomChat.showWelcomeDialog");
                             });
                     }, null, 3000, System.Threading.Timeout.Infinite);
                 }
             }
-            catch (Exception ex) { await JS.InvokeVoidAsync("console.log", $"[Welcome] Exception: {ex.Message}"); }
+            catch { }
         }
 
         if (_scrollMessages)

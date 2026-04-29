@@ -209,6 +209,10 @@ window.meshcomChat = (function () {
         setSettingsSections: (csv) => localStorage.setItem('meshcom-settings-sections', csv ?? ''),
         getWelcomedVersion:  () => localStorage.getItem('meshcom-welcomed-version') || '',
         setWelcomedVersion:  (v) => localStorage.setItem('meshcom-welcomed-version', v || ''),
+        showWelcomeDialog:   () => {
+            var el = document.getElementById('welcome-dialog');
+            if (el) el.style.display = 'flex';
+        },
 
         // ── SendBar: liest den aktuellen Wert des Eingabefelds ──
         getSendBarValue: (id) => {
