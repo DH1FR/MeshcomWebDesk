@@ -701,23 +701,23 @@
 
 @if (_showWelcomeDialog)
 {
-    <div class="welcome-overlay" @onclick="WelcomeDismissAsync">
-        <div class="welcome-modal" @onclick:stopPropagation="true">
-            <div class="welcome-icon">☕</div>
-            <h2 class="welcome-title">MeshCom WebDesk v@_appVersion</h2>
-            <p class="welcome-text">
-                @Loc.T(
-                    "Gefällt dir die neue Version? Dann spendier mir einen Kaffee! 😊",
-                    "Do you like the new version? Then buy me a coffee! 😊",
-                    "Ti piace la nuova versione? Offrimi un caffè! 😊",
-                    "¿Te gusta la nueva versión? ¡Invítame un café! 😊")
-            </p>
-            <p class="welcome-author">© Ralf Altenbrand (DH1FR) &nbsp;·&nbsp; <a href="mailto:dh1fr@darc.de" style="color:#a0c4ff">dh1fr@darc.de</a></p>
-            <div class="welcome-buttons">
-                <button class="welcome-btn-coffee" @onclick="WelcomeCoffeeAsync">
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center">
+        <div style="background:#161b22;border:2px solid #58a6ff;border-radius:12px;padding:2rem;max-width:400px;text-align:center;color:#c9d1d9">
+            <div style="font-size:3rem">☕</div>
+            <h2 style="color:#a0c4ff">MeshCom WebDesk v@_appVersion</h2>
+            <p>@Loc.T(
+                "Gefällt dir die neue Version? Dann spendier mir einen Kaffee! 😊",
+                "Do you like the new version? Then buy me a coffee! 😊",
+                "Ti piace la nuova versione? Offrimi un caffè! 😊",
+                "¿Te gusta la nueva versión? ¡Invítame un café! 😊")</p>
+            <p style="font-size:0.8rem;color:#8b949e">© Ralf Altenbrand (DH1FR) · <a href="mailto:dh1fr@darc.de" style="color:#a0c4ff">dh1fr@darc.de</a></p>
+            <div style="display:flex;flex-direction:column;gap:0.5rem;margin-top:1rem">
+                <button style="background:#c8a84b;color:#0d1117;border:none;border-radius:8px;padding:0.65rem;font-weight:700;cursor:pointer;font-size:1rem"
+                        @onclick="WelcomeCoffeeAsync">
                     ☕ @Loc.T("Ja, gerne!", "Yes, with pleasure!", "Sì, volentieri!", "¡Sí, con gusto!")
                 </button>
-                <button class="welcome-btn-dismiss" @onclick="WelcomeDismissAsync">
+                <button style="background:#21262d;color:#8b949e;border:1px solid #30363d;border-radius:8px;padding:0.55rem;cursor:pointer"
+                        @onclick="WelcomeDismissAsync">
                     😐 @Loc.T("Nein, so gut ist es auch nicht", "No, it's not that good", "No, non è così buono", "No, no es tan bueno")
                 </button>
             </div>
@@ -866,7 +866,7 @@
     private static readonly string _appVersion =
         typeof(Chat).Assembly.GetName().Version is { } v
             ? $"{v.Major}.{v.Minor}.{v.Build}" : "?";
-    private bool _showWelcomeDialog;
+    private bool _showWelcomeDialog = true;
 
     private async Task CheckWelcomeDialogAsync()
     {
