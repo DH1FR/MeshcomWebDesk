@@ -392,16 +392,13 @@
         {
             if (status.OwnLatitude.HasValue && status.OwnLongitude.HasValue)
             {
-                var directPts = mhList
-                    .Where(s => s.Latitude.HasValue && s.Longitude.HasValue && s.HopCount == 0)
+                var covPoints = mhList
+                    .Where(s => s.Latitude.HasValue && s.Longitude.HasValue
+                        && GeoHelper.CalculateDistanceKm(
+                            status.OwnLatitude.Value, status.OwnLongitude.Value,
+                            s.Latitude!.Value, s.Longitude!.Value) <= 500)
                     .Select(s => new[] { s.Latitude!.Value, s.Longitude!.Value })
                     .ToArray();
-                var covPoints = directPts.Length >= 3
-                    ? directPts
-                    : mhList
-                        .Where(s => s.Latitude.HasValue && s.Longitude.HasValue)
-                        .Select(s => new[] { s.Latitude!.Value, s.Longitude!.Value })
-                        .ToArray();
                 await JS.InvokeVoidAsync("meshcomMap.setCoverage",
                     covPoints,
                     null,
@@ -599,18 +596,14 @@
             return;
         }
 
-        // Measured hull – bevorzugt direkt empfangene Stationen (HopCount == 0)
-        // Fallback auf alle GPS-Stationen wenn weniger als 3 direkte vorhanden
-        var directPoints = ChatService.MhList
-            .Where(s => s.Latitude.HasValue && s.Longitude.HasValue && s.HopCount == 0)
+        // Reichweiten-Hull: alle GPS-Stationen bis max. 500 km Entfernung
+        var measuredPoints = ChatService.MhList
+            .Where(s => s.Latitude.HasValue && s.Longitude.HasValue
+                && GeoHelper.CalculateDistanceKm(
+                    status.OwnLatitude.Value, status.OwnLongitude.Value,
+                    s.Latitude!.Value, s.Longitude!.Value) <= 500)
             .Select(s => new[] { s.Latitude!.Value, s.Longitude!.Value })
             .ToArray();
-        var measuredPoints = directPoints.Length >= 3
-            ? directPoints
-            : ChatService.MhList
-                .Where(s => s.Latitude.HasValue && s.Longitude.HasValue)
-                .Select(s => new[] { s.Latitude!.Value, s.Longitude!.Value })
-                .ToArray();
 
         await JS.InvokeVoidAsync("meshcomMap.setCoverage",
             measuredPoints,
