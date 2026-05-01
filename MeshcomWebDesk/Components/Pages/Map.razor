@@ -387,6 +387,28 @@
             relayLines,
             _showRelayLines,
             ownInfo);
+
+        // Wenn Coverage aktiv ist, nach jedem Marker-Update neu berechnen
+        if (_showCoverage)
+        {
+            if (status.OwnLatitude.HasValue && status.OwnLongitude.HasValue)
+            {
+                var measuredPoints = mhList
+                    .Where(s => s.Latitude.HasValue && s.Longitude.HasValue && s.HopCount == 0)
+                    .Select(s => new[] { s.Latitude!.Value, s.Longitude!.Value })
+                    .ToArray();
+                await JS.InvokeVoidAsync("meshcomMap.setCoverage",
+                    measuredPoints,
+                    null,
+                    status.OwnLatitude.Value,
+                    status.OwnLongitude.Value);
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("meshcomMap.setCoverage", null, null, null, null);
+                _showCoverage = false;
+            }
+        }
     }
 
     private async Task ToggleRelayLines()
