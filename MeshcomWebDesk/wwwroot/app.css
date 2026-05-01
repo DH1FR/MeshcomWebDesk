@@ -2216,17 +2216,20 @@ h1:focus {
 .leg-coverage {
     display: inline-block;
     width: 28px;
-    height: 12px;
+    height: 14px;
+    min-width: 28px;
+    min-height: 14px;
     border-radius: 3px;
     flex-shrink: 0;
+    vertical-align: middle;
 }
 .leg-coverage-measured {
-    background: rgba(77, 171, 247, 0.18);
-    border: 2px dashed rgba(77, 171, 247, 0.7);
+    background: rgba(77, 171, 247, 0.35);
+    border: 2px dashed rgba(77, 171, 247, 0.95);
 }
 .leg-coverage-topo {
-    background: rgba(240, 192, 96, 0.15);
-    border: 2px dashed rgba(240, 192, 96, 0.65);
+    background: rgba(240, 192, 96, 0.30);
+    border: 2px dashed rgba(240, 192, 96, 0.90);
 }
 
 /* Leaflet APRS-style markers */
