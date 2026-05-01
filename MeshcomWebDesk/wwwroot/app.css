@@ -1445,18 +1445,18 @@ h1:focus {
     color: #8b949e;
     min-height: 28px;
     flex-shrink: 0;
-    overflow: hidden;
+    overflow: visible;
     container-type: inline-size;
     container-name: statusbar;
 }
 
-/* Wenn die Statusleiste selbst schmaler als 900px ist: DeviceIP ausblenden */
-@container statusbar (max-width: 900px) {
+/* Wenn die Statusleiste schmaler als 1300px: DeviceIP ausblenden */
+@container statusbar (max-width: 1300px) {
     .status-compact { display: none !important; }
 }
 
-/* Wenn die Statusleiste selbst schmaler als 600px ist: alle Detail-Infos ausblenden */
-@container statusbar (max-width: 600px) {
+/* Wenn die Statusleiste schmaler als 900px: alle Detail-Infos ausblenden */
+@container statusbar (max-width: 900px) {
     .status-detail { display: none !important; }
 }
 
