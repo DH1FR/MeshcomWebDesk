@@ -392,12 +392,18 @@
         {
             if (status.OwnLatitude.HasValue && status.OwnLongitude.HasValue)
             {
-                var measuredPoints = mhList
+                var directPts = mhList
                     .Where(s => s.Latitude.HasValue && s.Longitude.HasValue && s.HopCount == 0)
                     .Select(s => new[] { s.Latitude!.Value, s.Longitude!.Value })
                     .ToArray();
+                var covPoints = directPts.Length >= 3
+                    ? directPts
+                    : mhList
+                        .Where(s => s.Latitude.HasValue && s.Longitude.HasValue)
+                        .Select(s => new[] { s.Latitude!.Value, s.Longitude!.Value })
+                        .ToArray();
                 await JS.InvokeVoidAsync("meshcomMap.setCoverage",
-                    measuredPoints,
+                    covPoints,
                     null,
                     status.OwnLatitude.Value,
                     status.OwnLongitude.Value);
@@ -593,11 +599,18 @@
             return;
         }
 
-        // Measured hull – nur aktuell direkt empfangene Stationen (HopCount == 0, kein Relay)
-        var measuredPoints = ChatService.MhList
+        // Measured hull – bevorzugt direkt empfangene Stationen (HopCount == 0)
+        // Fallback auf alle GPS-Stationen wenn weniger als 3 direkte vorhanden
+        var directPoints = ChatService.MhList
             .Where(s => s.Latitude.HasValue && s.Longitude.HasValue && s.HopCount == 0)
             .Select(s => new[] { s.Latitude!.Value, s.Longitude!.Value })
             .ToArray();
+        var measuredPoints = directPoints.Length >= 3
+            ? directPoints
+            : ChatService.MhList
+                .Where(s => s.Latitude.HasValue && s.Longitude.HasValue)
+                .Select(s => new[] { s.Latitude!.Value, s.Longitude!.Value })
+                .ToArray();
 
         await JS.InvokeVoidAsync("meshcomMap.setCoverage",
             measuredPoints,
