@@ -1181,6 +1181,9 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
 ## 📋 Changelog
 
+### v1.9.2
+- **feat:** 🗺️ **MH-Liste – Automatisches Löschen alter Einträge** – neue Einstellung „MH-Liste: Max. Alter (Tage)" im Abschnitt *Chat & Monitor*; Einträge, deren `LastHeard`-Zeitstempel älter als die konfigurierte Anzahl Tage ist, werden stündlich automatisch entfernt; beim Programmstart werden veraltete Einträge ebenfalls direkt bereinigt; `0` deaktiviert das Feature (Rückwärtskompatibel); Karte zeigt damit nur noch aktuelle Stationen
+
 ### v1.9.1
 - **feat:** Bug fixes and optimizations.
 
