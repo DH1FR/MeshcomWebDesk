@@ -873,6 +873,9 @@
             try { await JS.InvokeVoidAsync("meshcomChat.initResizer"); }
             catch (JSException) { }
 
+            try { await JS.InvokeVoidAsync("meshcomChat.initStatusBar"); }
+            catch (JSException) { }
+
             var needsRender = false;
 
             // Restore monitor visibility: null = never saved → default visible

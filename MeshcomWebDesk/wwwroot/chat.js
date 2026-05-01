@@ -351,7 +351,46 @@ window.meshcomChat = (function () {
             };
             reader.onerror = () => { input.value = ''; reject(new Error('File read error')); };
             reader.readAsArrayBuffer(file);
-        })
+        }),
+
+        // ── Statusleiste: blendet Elemente dynamisch aus, sobald der Inhalt überläuft ──
+        // Stufe 1 (.hide-compact): .status-compact ausblenden wenn scrollWidth > clientWidth
+        // Stufe 2 (.hide-detail):  .status-detail  ausblenden wenn immer noch Überlauf
+        // Der MutationObserver reagiert auf Datenänderungen (Texte/Badges) nachdem die
+        // Seite initial gerendert wurde aber die Nutzdaten noch nicht vorlagen.
+        initStatusBar: () => {
+            var bar = document.querySelector('.status-bar');
+            if (!bar || bar.dataset.statusBarInit) return;
+            bar.dataset.statusBarInit = '1';
+
+            var rafId = 0;
+            function update() {
+                // Klassen entfernen → ehrliche scrollWidth messen
+                bar.classList.remove('hide-compact', 'hide-detail');
+
+                if (bar.scrollWidth > bar.clientWidth) {
+                    bar.classList.add('hide-compact');
+                }
+                if (bar.scrollWidth > bar.clientWidth) {
+                    bar.classList.add('hide-detail');
+                }
+            }
+
+            function scheduleUpdate() {
+                if (rafId) return;
+                rafId = requestAnimationFrame(function () { rafId = 0; update(); });
+            }
+
+            // Reagiert auf Größenänderung des Containers (z.B. Fenster-Resize)
+            new ResizeObserver(scheduleUpdate).observe(bar);
+
+            // Reagiert auf Textänderungen innerhalb der Statusleiste (Daten kommen nach)
+            new MutationObserver(scheduleUpdate).observe(bar, {
+                subtree: true, childList: true, characterData: true, attributes: true
+            });
+
+            scheduleUpdate();
+        }
     };
 }());
 

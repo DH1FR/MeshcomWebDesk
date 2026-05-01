@@ -1445,20 +1445,14 @@ h1:focus {
     color: #8b949e;
     min-height: 28px;
     flex-shrink: 0;
-    overflow: visible;
-    container-type: inline-size;
-    container-name: statusbar;
+    overflow: hidden;
 }
 
-/* Wenn die Statusleiste schmaler als 1300px: DeviceIP ausblenden */
-@container statusbar (max-width: 1300px) {
-    .status-compact { display: none !important; }
-}
-
-/* Wenn die Statusleiste schmaler als 900px: alle Detail-Infos ausblenden */
-@container statusbar (max-width: 900px) {
-    .status-detail { display: none !important; }
-}
+/* Dynamisch per ResizeObserver gesetzt (chat.js initStatusBar):
+   .status-bar.hide-compact  → .status-compact ausblenden
+   .status-bar.hide-detail   → .status-detail  ausblenden          */
+.status-bar.hide-compact .status-compact { display: none !important; }
+.status-bar.hide-detail  .status-detail  { display: none !important; }
 
 .status-item {
     white-space: nowrap;
