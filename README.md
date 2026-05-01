@@ -39,9 +39,9 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 MeshCom always reminds me a little of the good old **Packet Radio** days – digital text communication over radio, simple and direct.
 
-That is why I created this **MeshCom WebDesk**.
+However, I could not find any suitable software that provides a **web server** interface for MeshCom accessible from any device (PC, tablet, smartphone) within the local network. That is why I created this **MeshCom WebDesk**.
 
-and makes a full web client for MeshCom available via a simple URL
+The application runs on **Windows** or **Linux** and makes a full web client for MeshCom available via a simple URL – no installation required on the end device, everything runs directly in the browser.
 
 ---
 
