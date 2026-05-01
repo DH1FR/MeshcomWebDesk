@@ -209,7 +209,7 @@ window.meshcomChat = (function () {
         setSettingsSections: (csv) => localStorage.setItem('meshcom-settings-sections', csv ?? ''),
         getWelcomedVersion:  () => localStorage.getItem('meshcom-welcomed-version') || '',
         setWelcomedVersion:  (v) => localStorage.setItem('meshcom-welcomed-version', v || ''),
-        showWelcomeDialog:   (version, txtQuestion, txtYes, txtNo, author) => {
+        showWelcomeDialog:   (version, storageKey, txtQuestion, txtYes, txtNo, author) => {
             if (document.getElementById('welcome-dialog-overlay')) return;
             var overlay = document.createElement('div');
             overlay.id = 'welcome-dialog-overlay';
@@ -226,7 +226,7 @@ window.meshcomChat = (function () {
                 '</div></div>';
             document.body.appendChild(overlay);
             function dismiss() {
-                localStorage.setItem('meshcom-welcomed-version', version);
+                localStorage.setItem('meshcom-welcomed-version', storageKey);
                 overlay.remove();
             }
             overlay.querySelector('#welcome-btn-yes').addEventListener('click', function() {

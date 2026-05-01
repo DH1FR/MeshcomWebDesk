@@ -942,11 +942,18 @@
             if (needsRender)
                 StateHasChanged();
 
-            // Check if welcome dialog should be shown
+            // Check if welcome dialog should be shown.
+            // The dialog is triggered only on a new Major version (e.g. 1.x → 2.x).
+            // The storage key contains only the Major part so patch and minor updates
+            // do NOT re-trigger the dialog.
             try
             {
+                var majorKey = typeof(Chat).Assembly.GetName().Version is { } ver
+                    ? ver.Major.ToString()
+                    : _appVersion;
+
                 var welcomed = await JS.InvokeAsync<string>("meshcomChat.getWelcomedVersion");
-                if (welcomed != _appVersion)
+                if (welcomed != majorKey)
                 {
                     await Task.Delay(3000);
                     var txtQuestion = Loc.T(
@@ -957,7 +964,7 @@
                     var txtYes = Loc.T("Ja, gerne!", "Yes, with pleasure!", "Sì, volentieri!", "¡Sí, con gusto!");
                     var txtNo = Loc.T("Nein, so gut ist es auch nicht", "No, it's not that good", "No, non è così buono", "No, no es tan bueno");
                     var author = "© Ralf Altenbrand (DH1FR) · dh1fr@darc.de";
-                    await JS.InvokeVoidAsync("meshcomChat.showWelcomeDialog", _appVersion, txtQuestion, txtYes, txtNo, author);
+                    await JS.InvokeVoidAsync("meshcomChat.showWelcomeDialog", _appVersion, majorKey, txtQuestion, txtYes, txtNo, author);
                 }
             }
             catch { }
