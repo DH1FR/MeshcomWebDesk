@@ -812,6 +812,7 @@ h1:focus {
 .mon-dist    { color: #8b949e; }
 .mon-sys     { color: #6e7681; font-size: 11px; }
 .mon-hops    { color: #6e7681; font-size: 10px; margin: 0 2px; cursor: help; }
+.mon-seq     { color: #6e7681; font-size: 11px; margin-left: 4px; }
 
 /* Signal */
 .mon-signal {

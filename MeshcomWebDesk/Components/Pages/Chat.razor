@@ -296,6 +296,13 @@
                         <span class="mon-content mon-sys">@MonTruncate(m.RawData, 80)</span>
                     }
 
+                    @* Sequence number for outgoing MSG (appears once node echo assigns it) *@
+                    @if (m.IsOutgoing && !m.IsAck && !m.IsPositionBeacon && !m.IsTelemetry &&
+                         m.SequenceNumber != null && m.SequenceNumber != "TX")
+                    {
+                        <span class="mon-seq" title="@Loc.T("Sequenznummer", "Sequence number", "Numero di sequenza", "Número de secuencia")">{@m.SequenceNumber}</span>
+                    }
+
                     @* Signal *@
                     @if (m.Rssi.HasValue)
                     {
