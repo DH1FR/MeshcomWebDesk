@@ -368,10 +368,10 @@ window.meshcomChat = (function () {
                 // Klassen entfernen → ehrliche scrollWidth messen
                 bar.classList.remove('hide-compact', 'hide-detail');
 
-                // Kleiner Toleranzpuffer (8px) verhindert unnötiges Ausblenden
-                // auf iPads/Tablets wo scrollWidth durch safe-area o.ä. leicht
+                // Toleranzpuffer verhindert unnötiges Ausblenden auf iPads/Tablets,
+                // wo scrollWidth durch safe-area oder Subpixel-Rounding leicht
                 // größer als clientWidth gemeldet wird.
-                var tolerance = 8;
+                var tolerance = 16;
 
                 // Stufe 1: status-compact ausblenden
                 if (bar.scrollWidth > bar.clientWidth + tolerance) {
@@ -397,7 +397,9 @@ window.meshcomChat = (function () {
                 subtree: true, childList: true, characterData: true, attributes: true
             });
 
-            scheduleUpdate();
+            // Erste Messung leicht verzögert: auf dem iPad/Safari ist das Flexbox-Layout
+            // beim ersten Render noch nicht vollständig stabilisiert (Fonts, safe-area).
+            setTimeout(scheduleUpdate, 120);
         }
     };
 }());
