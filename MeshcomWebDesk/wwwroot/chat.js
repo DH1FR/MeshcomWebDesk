@@ -365,27 +365,21 @@ window.meshcomChat = (function () {
 
             var rafId = 0;
             var timerId = 0;
+            var observer;
 
-            // Prüft ob der Inhalt der Statusleiste den Container überläuft.
-            // Verwendet getBoundingClientRect statt scrollWidth – auf Safari/iPad
-            // ist scrollWidth nach DOM-Mutationen oft unzuverlässig (meldet Überlauf
-            // obwohl kein echter Überlauf vorliegt).
+            // Prüft Überlauf zuverlässig auf Safari/iPad:
+            // Overflow kurz auf visible setzen → scrollWidth zeigt echte Inhaltsbreite.
             function isOverflowing() {
-                var barRect = bar.getBoundingClientRect();
-                var tolerance = 4;
-                var children = bar.children;
-                for (var i = 0; i < children.length; i++) {
-                    var child = children[i];
-                    // Unsichtbare Elemente ignorieren
-                    if (child.offsetParent === null && child.offsetWidth === 0) continue;
-                    var childRect = child.getBoundingClientRect();
-                    if (childRect.right > barRect.right + tolerance) return true;
-                }
-                return false;
+                bar.style.overflow = 'visible';
+                var overflowing = bar.scrollWidth > bar.offsetWidth + 4;
+                bar.style.overflow = '';
+                return overflowing;
             }
 
             function update() {
-                // Klassen entfernen → Layout ohne Einschränkungen messen
+                // Observer trennen damit Klassenänderungen keinen Loop auslösen
+                observer.disconnect();
+
                 bar.classList.remove('hide-compact', 'hide-detail');
 
                 // Stufe 1: status-compact ausblenden
@@ -393,11 +387,43 @@ window.meshcomChat = (function () {
                     bar.classList.add('hide-compact');
                 }
 
-                // Stufe 2: erst nach Stufe 1 erneut messen, dann status-detail ausblenden
+                // Stufe 2: status-detail ausblenden
                 if (isOverflowing()) {
                     bar.classList.add('hide-detail');
                 }
+
+                // Observer wieder aktivieren
+                observer.observe(bar, {
+                    subtree: true, childList: true, characterData: true, attributes: true
+                });
             }
+
+            function scheduleUpdate() {
+                if (rafId) return;
+                rafId = requestAnimationFrame(function () { rafId = 0; update(); });
+            }
+
+            function scheduleUpdateDelayed() {
+                if (timerId) clearTimeout(timerId);
+                timerId = setTimeout(function () {
+                    timerId = 0;
+                    if (rafId) cancelAnimationFrame(rafId);
+                    rafId = requestAnimationFrame(function () { rafId = 0; update(); });
+                }, 150);
+            }
+
+            observer = new MutationObserver(scheduleUpdateDelayed);
+
+            // Reagiert auf Größenänderung des Containers (z.B. Fenster-Resize)
+            new ResizeObserver(scheduleUpdate).observe(bar);
+
+            // Reagiert auf Textänderungen innerhalb der Statusleiste
+            observer.observe(bar, {
+                subtree: true, childList: true, characterData: true, attributes: true
+            });
+
+            // Erste Messung verzögert
+            setTimeout(scheduleUpdate, 150);
 
             // RAF-basiertes Update für ResizeObserver (Layout bereits stabil)
             function scheduleUpdate() {
