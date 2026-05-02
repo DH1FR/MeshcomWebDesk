@@ -40,6 +40,7 @@
         // ── Notification sound via Web Audio API (no audio file required) ──────
         (function () {
             var _audioCtx = null;
+            var _audioUnlocked = false;
 
             function getAudioContext() {
                 if (!_audioCtx) {
@@ -48,11 +49,23 @@
                 return _audioCtx;
             }
 
-            // Unlock AudioContext on first user interaction (browser autoplay policy)
-            document.addEventListener('click', function () {
-                var ctx = getAudioContext();
-                if (ctx.state === 'suspended') ctx.resume();
-            }, { passive: true });
+            // iOS requires AudioContext.resume() to be called synchronously inside
+            // a user-gesture handler (touchstart fires before click on iOS).
+            // We also create the context here so it is ready when the first beep arrives.
+            function unlockAudio() {
+                if (_audioUnlocked) return;
+                try {
+                    var ctx = getAudioContext();
+                    if (ctx.state === 'suspended') {
+                        ctx.resume().then(function () { _audioUnlocked = true; });
+                    } else {
+                        _audioUnlocked = true;
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
+            document.addEventListener('touchstart', unlockAudio, { passive: true, once: true });
+            document.addEventListener('click',      unlockAudio, { passive: true, once: true });
 
             function playBeep(ctx) {
                 var now = ctx.currentTime;
