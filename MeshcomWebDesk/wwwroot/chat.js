@@ -368,10 +368,18 @@ window.meshcomChat = (function () {
                 // Klassen entfernen → ehrliche scrollWidth messen
                 bar.classList.remove('hide-compact', 'hide-detail');
 
-                if (bar.scrollWidth > bar.clientWidth) {
+                // Kleiner Toleranzpuffer (8px) verhindert unnötiges Ausblenden
+                // auf iPads/Tablets wo scrollWidth durch safe-area o.ä. leicht
+                // größer als clientWidth gemeldet wird.
+                var tolerance = 8;
+
+                // Stufe 1: status-compact ausblenden
+                if (bar.scrollWidth > bar.clientWidth + tolerance) {
                     bar.classList.add('hide-compact');
                 }
-                if (bar.scrollWidth > bar.clientWidth) {
+
+                // Stufe 2: erst nach Stufe 1 erneut messen, dann status-detail ausblenden
+                if (bar.scrollWidth > bar.clientWidth + tolerance) {
                     bar.classList.add('hide-detail');
                 }
             }

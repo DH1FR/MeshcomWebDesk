@@ -1446,6 +1446,9 @@ h1:focus {
     min-height: 28px;
     flex-shrink: 0;
     overflow: hidden;
+    /* Volle Breite des Elternelements nutzen */
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* Dynamisch per ResizeObserver gesetzt (chat.js initStatusBar):
