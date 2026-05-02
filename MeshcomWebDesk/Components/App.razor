@@ -117,19 +117,51 @@
         })();
 
         // ── Text-to-Speech via Web Speech API ────────────────────────────────
+        // iOS/Safari requires:
+        //   1. speechSynthesis to be "unlocked" via a silent utterance on first user touch
+        //   2. cancel() must not be called immediately before speak() (WebKit queue bug)
+        //      → use a short setTimeout instead
+        var _speechUnlocked = false;
+
+        function unlockSpeech() {
+            if (_speechUnlocked || !window.speechSynthesis) return;
+            _speechUnlocked = true;
+            // Speak a silent utterance to warm up the iOS speech engine
+            var silent = new SpeechSynthesisUtterance('');
+            silent.volume = 0;
+            window.speechSynthesis.speak(silent);
+        }
+
+        // Unlock on first touch/click (iOS autoplay policy for speech)
+        document.addEventListener('touchstart', unlockSpeech, { passive: true, once: true });
+        document.addEventListener('click',      unlockSpeech, { passive: true, once: true });
+
         window.speakText = function (text, lang) {
             try {
                 if (!window.speechSynthesis) return;
-                // Cancel any currently running utterance so new one starts immediately
-                window.speechSynthesis.cancel();
-                var utter = new SpeechSynthesisUtterance(text);
-                // Map our lang codes to BCP-47 locale codes
                 var localeMap = { 'de': 'de-DE', 'en': 'en-US', 'it': 'it-IT', 'es': 'es-ES' };
-                utter.lang = localeMap[lang] || 'de-DE';
-                utter.rate = 0.95;   // slightly slower for clarity
-                utter.pitch = 1.0;
-                utter.volume = 1.0;
-                window.speechSynthesis.speak(utter);
+                var locale = localeMap[lang] || 'de-DE';
+
+                // On iOS, calling cancel() immediately before speak() can silence the
+                // entire queue. Use setTimeout to let the engine settle first.
+                var isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                function doSpeak() {
+                    var utter = new SpeechSynthesisUtterance(text);
+                    utter.lang   = locale;
+                    utter.rate   = 0.95;
+                    utter.pitch  = 1.0;
+                    utter.volume = 1.0;
+                    window.speechSynthesis.speak(utter);
+                }
+
+                if (isIos) {
+                    // iOS: cancel first, then wait a tick before speaking
+                    window.speechSynthesis.cancel();
+                    setTimeout(doSpeak, 50);
+                } else {
+                    window.speechSynthesis.cancel();
+                    doSpeak();
+                }
             } catch (e) {
                 console.warn('speakText failed:', e);
             }
