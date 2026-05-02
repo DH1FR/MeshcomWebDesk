@@ -364,6 +364,7 @@ window.meshcomChat = (function () {
             bar.dataset.statusBarInit = '1';
 
             var rafId = 0;
+            var timerId = 0;
             function update() {
                 // Klassen entfernen → ehrliche scrollWidth messen
                 bar.classList.remove('hide-compact', 'hide-detail');
@@ -384,21 +385,32 @@ window.meshcomChat = (function () {
                 }
             }
 
+            // RAF-basiertes Update für ResizeObserver (Layout bereits stabil)
             function scheduleUpdate() {
                 if (rafId) return;
                 rafId = requestAnimationFrame(function () { rafId = 0; update(); });
+            }
+
+            // Verzögertes Update für DOM-Mutationen: auf iPad/Safari ist das Layout
+            // nach einer Mutation im RAF noch nicht fertig berechnet.
+            function scheduleUpdateDelayed() {
+                if (timerId) clearTimeout(timerId);
+                timerId = setTimeout(function () {
+                    timerId = 0;
+                    if (rafId) cancelAnimationFrame(rafId);
+                    rafId = requestAnimationFrame(function () { rafId = 0; update(); });
+                }, 120);
             }
 
             // Reagiert auf Größenänderung des Containers (z.B. Fenster-Resize)
             new ResizeObserver(scheduleUpdate).observe(bar);
 
             // Reagiert auf Textänderungen innerhalb der Statusleiste (Daten kommen nach)
-            new MutationObserver(scheduleUpdate).observe(bar, {
+            new MutationObserver(scheduleUpdateDelayed).observe(bar, {
                 subtree: true, childList: true, characterData: true, attributes: true
             });
 
-            // Erste Messung leicht verzögert: auf dem iPad/Safari ist das Flexbox-Layout
-            // beim ersten Render noch nicht vollständig stabilisiert (Fonts, safe-area).
+            // Erste Messung ebenfalls verzögert
             setTimeout(scheduleUpdate, 120);
         }
     };
