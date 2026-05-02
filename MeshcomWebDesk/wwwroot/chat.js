@@ -365,22 +365,36 @@ window.meshcomChat = (function () {
 
             var rafId = 0;
             var timerId = 0;
+
+            // Prüft ob der Inhalt der Statusleiste den Container überläuft.
+            // Verwendet getBoundingClientRect statt scrollWidth – auf Safari/iPad
+            // ist scrollWidth nach DOM-Mutationen oft unzuverlässig (meldet Überlauf
+            // obwohl kein echter Überlauf vorliegt).
+            function isOverflowing() {
+                var barRect = bar.getBoundingClientRect();
+                var tolerance = 4;
+                var children = bar.children;
+                for (var i = 0; i < children.length; i++) {
+                    var child = children[i];
+                    // Unsichtbare Elemente ignorieren
+                    if (child.offsetParent === null && child.offsetWidth === 0) continue;
+                    var childRect = child.getBoundingClientRect();
+                    if (childRect.right > barRect.right + tolerance) return true;
+                }
+                return false;
+            }
+
             function update() {
-                // Klassen entfernen → ehrliche scrollWidth messen
+                // Klassen entfernen → Layout ohne Einschränkungen messen
                 bar.classList.remove('hide-compact', 'hide-detail');
 
-                // Toleranzpuffer verhindert unnötiges Ausblenden auf iPads/Tablets,
-                // wo scrollWidth durch safe-area oder Subpixel-Rounding leicht
-                // größer als clientWidth gemeldet wird.
-                var tolerance = 16;
-
                 // Stufe 1: status-compact ausblenden
-                if (bar.scrollWidth > bar.clientWidth + tolerance) {
+                if (isOverflowing()) {
                     bar.classList.add('hide-compact');
                 }
 
                 // Stufe 2: erst nach Stufe 1 erneut messen, dann status-detail ausblenden
-                if (bar.scrollWidth > bar.clientWidth + tolerance) {
+                if (isOverflowing()) {
                     bar.classList.add('hide-detail');
                 }
             }
