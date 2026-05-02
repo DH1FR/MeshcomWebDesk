@@ -1181,7 +1181,7 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
  ## 📋 Changelog
 
-### dev (unreleased)
+### v1.9.3
 - **feat:** ⚙️ **Node-Firmware & Hardware in Statusleiste** – Firmware-Version und Hardware-Name des eigenen Nodes werden automatisch aus eingehenden `src_type:"node"`-Paketen gelesen und in der Statusleiste angezeigt (⚙️ 4.35 · T-BEAM); Wert erscheint sobald das erste Node-Paket empfangen wird
 - **feat:** 🔧 **Neue Variablen `{node-firmware}` und `{node-hw}`** – Firmware-Version und Hardware-Name des eigenen Nodes stehen in Auto-Reply, Bot-Befehlen, Bake-Text und Quick Texts als Platzhalter zur Verfügung; ergänzt in der Variablen-Referenztabelle in den Einstellungen
 - **feat:** 💬 **Sequenznummer im Monitor** – sobald der Node die Sequenznummer per Echo zurückmeldet, wird sie nachträglich neben der gesendeten Nachricht im Monitor angezeigt (`{411}`); erleichtert die Zuordnung von ACK zu TX
