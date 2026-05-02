@@ -380,14 +380,19 @@ window.meshcomChat = (function () {
                 // Observer trennen damit Klassenänderungen keinen Loop auslösen
                 observer.disconnect();
 
-                bar.classList.remove('hide-compact', 'hide-detail');
+                bar.classList.remove('hide-compact', 'hide-medium', 'hide-detail');
 
-                // Stufe 1: status-compact ausblenden
+                // Stufe 1: status-compact ausblenden (IP:Port)
                 if (isOverflowing()) {
                     bar.classList.add('hide-compact');
                 }
 
-                // Stufe 2: status-detail ausblenden
+                // Stufe 2: status-medium ausblenden (node-hw, GPS)
+                if (isOverflowing()) {
+                    bar.classList.add('hide-medium');
+                }
+
+                // Stufe 3: status-detail ausblenden (RX/TX, RSSI, Zeiten …)
                 if (isOverflowing()) {
                     bar.classList.add('hide-detail');
                 }

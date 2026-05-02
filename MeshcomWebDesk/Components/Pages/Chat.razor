@@ -379,15 +379,15 @@
         </span>
         @if (!string.IsNullOrEmpty(MeshcomLookup.HwName(_status.NodeHwId)))
         {
-            <span class="status-sep">|</span>
-            <span class="status-item" title="@Loc.T($"Node Hardware · Firmware: {_status.NodeFirmware}", $"Node hardware · Firmware: {_status.NodeFirmware}", $"Hardware node · Firmware: {_status.NodeFirmware}", $"Hardware del nodo · Firmware: {_status.NodeFirmware}")">
+            <span class="status-sep status-medium">|</span>
+            <span class="status-item status-medium" title="@Loc.T($"Node Hardware · Firmware: {_status.NodeFirmware}", $"Node hardware · Firmware: {_status.NodeFirmware}", $"Hardware node · Firmware: {_status.NodeFirmware}", $"Hardware del nodo · Firmware: {_status.NodeFirmware}")">
                 <span class="status-badge status-badge-info">⚙️ @MeshcomLookup.HwName(_status.NodeHwId)@if (!string.IsNullOrEmpty(_status.NodeFirmware)) {<text>&nbsp;·&nbsp;@_status.NodeFirmware</text>}</span>
             </span>
         }
         @if (_status.OwnLatitude.HasValue && _status.OwnLongitude.HasValue)
         {
-            <span class="status-sep">|</span>
-            <span class="status-item">
+            <span class="status-sep status-medium">|</span>
+            <span class="status-item status-medium">
                 <span class="status-badge status-badge-info">📍 @GeoHelper.FormatCoord(_status.OwnLatitude, _status.OwnLongitude)@if (_status.OwnAltitude.HasValue) {<text>&nbsp;·&nbsp;@_status.OwnAltitude&nbsp;m</text>}</span>
             </span>
         }

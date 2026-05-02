@@ -1453,9 +1453,11 @@ h1:focus {
 }
 
 /* Dynamisch per ResizeObserver gesetzt (chat.js initStatusBar):
-   .status-bar.hide-compact  → .status-compact ausblenden
-   .status-bar.hide-detail   → .status-detail  ausblenden          */
+   .status-bar.hide-compact  → .status-compact ausblenden  (Stufe 1: IP:Port)
+   .status-bar.hide-medium   → .status-medium  ausblenden  (Stufe 2: node-hw, GPS)
+   .status-bar.hide-detail   → .status-detail  ausblenden  (Stufe 3: RX/TX, RSSI …) */
 .status-bar.hide-compact .status-compact { display: none !important; }
+.status-bar.hide-medium  .status-medium  { display: none !important; }
 .status-bar.hide-detail  .status-detail  { display: none !important; }
 
 .status-item {
