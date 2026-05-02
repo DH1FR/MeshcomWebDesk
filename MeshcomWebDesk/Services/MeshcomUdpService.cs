@@ -160,6 +160,8 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                                 Status.NodeHwId = message.HwId;
                                 metaChanged = true;
                             }
+                            _logger.LogDebug("Node echo meta: firmware={Fw} hw_id={HwId} NodeFirmware={NodeFw} NodeHwId={NodeHwId}",
+                                message.Firmware, message.HwId, Status.NodeFirmware, Status.NodeHwId);
                             if (metaChanged) NotifyStatusChange();
                             _logger.LogDebug("Skipping node echo from {From}", message.From);
                             // Do not add node echoes to the monitor – the TX entry is already shown there.
@@ -944,8 +946,14 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             string? msgId = root.TryGetProperty("msg_id", out var msgIdProp) ? msgIdProp.GetString() : null;
 
             // ── Hardware, firmware, battery ──────────────────────────────────
-            int? hwId = root.TryGetProperty("hw_id", out var hwProp) && hwProp.ValueKind == JsonValueKind.Number
-                ? hwProp.GetInt32() : null;
+            int? hwId = null;
+            if (root.TryGetProperty("hw_id", out var hwProp))
+            {
+                if (hwProp.ValueKind == JsonValueKind.Number)
+                    hwId = hwProp.GetInt32();
+                else if (hwProp.ValueKind == JsonValueKind.String && int.TryParse(hwProp.GetString(), out var hwIdParsed))
+                    hwId = hwIdParsed;
+            }
 
             int? battery = root.TryGetProperty("batt", out var battProp) && battProp.ValueKind == JsonValueKind.Number
                 ? battProp.GetInt32() : null;
