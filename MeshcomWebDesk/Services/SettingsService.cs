@@ -162,7 +162,8 @@ public class SettingsService
                 ["CableLengthM"]   = s.CableLengthM,
                 ["AntennaGainDbi"] = s.AntennaGainDbi,
                 ["AntennaHeightM"] = s.AntennaHeightM,
-                ["FrequencyMhz"]   = s.FrequencyMhz
+                ["FrequencyMhz"]   = s.FrequencyMhz,
+                ["SystemMarginDb"] = s.SystemMarginDb
             }
         };
 

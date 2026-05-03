@@ -82,6 +82,8 @@
             var lossPerM     = cableLossMap.TryGetValue(_model.CableType, out var lpm) ? lpm / 10.0 : 0.0;
             var cableLossDb  = lossPerM * _model.CableLengthM;
             var eirp         = _model.TxPowerDbm - cableLossDb + _model.AntennaGainDbi;
+            var linkBudget   = eirp - (-120) - _model.SystemMarginDb;
+            var fsplKm       = Math.Pow(10, (linkBudget - 20 * Math.Log10(_model.FrequencyMhz) - 32.44) / 20);
             <div class="settings-grid">
                 <label>@Loc.T("TX-Leistung", "TX Power", "Potenza TX", "Potencia TX") (dBm)</label>
                 <div style="display:flex;align-items:center;gap:8px">
@@ -114,10 +116,17 @@
 
                 <label>@Loc.T("Frequenz", "Frequency", "Frequenza", "Frecuencia") (MHz)</label>
                 <input type="number" min="300" max="1000" step="0.025" @bind="_model.FrequencyMhz" style="width:100px" />
+
+                <label>@Loc.T("Systemreserve", "System Margin", "Margine di sistema", "Margen de sistema") (dB)</label>
+                <div style="display:flex;align-items:center;gap:8px">
+                    <input type="number" min="0" max="60" step="1" @bind="_model.SystemMarginDb" style="width:80px" />
+                    <small style="color:#8b949e">@Loc.T("Geländeverluste etc. (Standard: 30 dB → realistischere Reichweite)", "Terrain loss etc. (default: 30 dB → more realistic range)", "Perdite terreno ecc. (default: 30 dB)", "Pérdidas terreno etc. (defecto: 30 dB)")</small>
+                </div>
             </div>
             <div style="margin-top:0.75rem;padding:0.5rem 0.75rem;background:#161b22;border:1px solid #30363d;border-radius:6px;display:flex;gap:1.5rem;flex-wrap:wrap">
                 <span>⚡ EIRP: <strong style="color:@(eirp >= 20 ? "#3fb950" : eirp >= 10 ? "#e3b341" : "#f85149")">@eirp.ToString("F2") dBm</strong> (@(Math.Round(Math.Pow(10, eirp / 10.0), 0).ToString("F0")) mW)</span>
-                <small style="color:#8b949e;align-self:center">= TX @_model.TxPowerDbm dBm − Kabel @cableLossDb.ToString("F2") dB + Antenne @_model.AntennaGainDbi dBi</small>
+                <span>📻 @Loc.T("Reichweite (theor.):", "Range (theor.):", "Portata (teor.):", "Alcance (teor.):"): <strong style="color:#e3b341">@(fsplKm >= 1 ? fsplKm.ToString("F0") + " km" : (fsplKm * 1000).ToString("F0") + " m")</strong></span>
+                <small style="color:#8b949e;align-self:center">= TX @_model.TxPowerDbm dBm − Kabel @cableLossDb.ToString("F2") dB + Antenne @_model.AntennaGainDbi dBi − Reserve @_model.SystemMarginDb dB</small>
             </div>
             <div style="margin-top:0.4rem">
                 <small style="color:#8b949e">💡 @Loc.T(
@@ -2078,6 +2087,7 @@
             AntennaGainDbi          = s.AntennaGainDbi,
             AntennaHeightM          = s.AntennaHeightM,
             FrequencyMhz            = s.FrequencyMhz,
+            SystemMarginDb          = s.SystemMarginDb,
             QuickTexts              = s.QuickTexts
                 .Select(q => new QuickTextEntry { Label = q.Label, Text = q.Text })
                 .ToList(),
@@ -2606,6 +2616,7 @@
                 AntennaGainDbi = s.AntennaGainDbi,
                 AntennaHeightM = s.AntennaHeightM,
                 FrequencyMhz   = s.FrequencyMhz,
+                SystemMarginDb = s.SystemMarginDb,
                 QuickTexts  = s.QuickTexts.Select(q => new QuickTextEntry { Label = q.Label, Text = q.Text }).ToList(),
                 GroupLabels = s.GroupLabels.Select(g => new GroupLabelEntry { Group = g.Group, ShortLabel = g.ShortLabel, Label = g.Label }).ToList()
             };
@@ -2718,6 +2729,7 @@
         public double AntennaGainDbi { get; set; } = 2.15;
         public double AntennaHeightM { get; set; } = 5.0;
         public double FrequencyMhz   { get; set; } = 433.175;
+        public double SystemMarginDb  { get; set; } = 30.0;
 
         // Quick Texts
         public List<QuickTextEntry> QuickTexts { get; set; } = [];
@@ -2831,6 +2843,7 @@
             AntennaGainDbi = AntennaGainDbi,
             AntennaHeightM = AntennaHeightM,
             FrequencyMhz   = FrequencyMhz,
+            SystemMarginDb = SystemMarginDb,
             QuickTexts = QuickTexts,
             GroupLabels = GroupLabels
         };

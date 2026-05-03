@@ -419,7 +419,8 @@
                     eirp2,
                     cfg2.FrequencyMhz,
                     cfg2.AntennaHeightM,
-                    -120);
+                    -120,
+                    cfg2.SystemMarginDb);
             }
             else
             {
@@ -642,7 +643,8 @@
             eirp,
             cfg.FrequencyMhz,
             cfg.AntennaHeightM,
-            -120);
+            -120,
+            cfg.SystemMarginDb);
     }
 
     private static double CableLossPerM(string cableType) => cableType switch

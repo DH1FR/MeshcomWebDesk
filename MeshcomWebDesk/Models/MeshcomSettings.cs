@@ -246,4 +246,11 @@ public class MeshcomSettings
 
     /// <summary>Operating frequency in MHz. Default: 433.175 MHz.</summary>
     public double FrequencyMhz { get; set; } = 433.175;
+
+    /// <summary>
+    /// System margin in dB subtracted from the link budget before FSPL radius calculation.
+    /// Accounts for terrain, ground effects, polarisation loss etc.
+    /// Typical value: 30 dB. Higher = smaller (more realistic) circle.
+    /// </summary>
+    public double SystemMarginDb { get; set; } = 30.0;
 }

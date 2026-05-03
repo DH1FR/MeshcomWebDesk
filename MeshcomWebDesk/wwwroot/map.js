@@ -396,28 +396,30 @@ window.meshcomMap = (function () {
         // freqMhz      : Sendefrequenz in MHz
         // antennaHeightM: Antennenhöhe in m (wird für Tooltip angezeigt)
         // rxSensDbm    : Empfänger-Empfindlichkeit in dBm (typisch –120 für MeshCom)
-        setFsplCircle: function (lat, lon, eirpDbm, freqMhz, antennaHeightM, rxSensDbm) {
+        setFsplCircle: function (lat, lon, eirpDbm, freqMhz, antennaHeightM, rxSensDbm, systemMarginDb) {
             if (!_map) return;
             if (_fsplLayer) { _map.removeLayer(_fsplLayer); _fsplLayer = null; }
             if (lat == null || lon == null) return;
 
-            rxSensDbm = rxSensDbm != null ? rxSensDbm : -120;
+            rxSensDbm    = rxSensDbm    != null ? rxSensDbm    : -120;
+            systemMarginDb = systemMarginDb != null ? systemMarginDb : 30;
 
-            // d_km = 10 ^ ((linkBudget - 20*log10(fMHz) - 32.44) / 20)
-            var linkBudget = eirpDbm - rxSensDbm;
+            var linkBudget = eirpDbm - rxSensDbm - systemMarginDb;
             var d_km       = Math.pow(10, (linkBudget - 20 * Math.log10(freqMhz) - 32.44) / 20);
             var d_m        = d_km * 1000;
 
             console.log('[FSPL] lat=' + lat + ' lon=' + lon +
                 ' eirp=' + eirpDbm.toFixed(2) + ' dBm' +
+                ' margin=' + systemMarginDb + ' dB' +
                 ' freq=' + freqMhz + ' MHz' +
-                ' d=' + d_km.toFixed(1) + ' km (' + Math.round(d_m) + ' m)');
+                ' d=' + d_km.toFixed(1) + ' km');
 
             _fsplLayer = L.layerGroup();
 
             var tooltipHtml =
                 '📻 <b>FSPL-Reichweite: ' + (d_km >= 1 ? d_km.toFixed(1) + ' km' : Math.round(d_m) + ' m') + '</b>' +
                 '<br>EIRP: ' + eirpDbm.toFixed(1) + ' dBm' +
+                '<br>Systemreserve: ' + systemMarginDb + ' dB' +
                 '<br>Antennenhöhe: ' + antennaHeightM + ' m' +
                 '<br>Frequenz: ' + freqMhz + ' MHz' +
                 '<br><small style="color:#8b949e">Freiraumdämpfung, ohne Geländeberücksichtigung</small>';
