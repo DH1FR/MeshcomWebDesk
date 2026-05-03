@@ -917,6 +917,7 @@
     private record WatchlistAlert(string Callsign, string EventType, DateTime Time);
     private List<WatchlistAlert> _watchlistAlerts = [];
     private bool _playWatchlistSound;
+    private Dictionary<string, DateTime> _watchlistLastTts = new(StringComparer.OrdinalIgnoreCase);
 
     private record CqAlert(string Callsign, string Group, DateTime Time);
     private List<CqAlert> _cqAlerts = [];
@@ -1726,8 +1727,12 @@
                     // Die Watchlist-TTS wird in diesem Fall unterdrückt.
                     bool isDirectMsg = !message.IsPositionBeacon && !message.IsTelemetry && !message.IsAck
                         && string.Equals(message.To, _myCallsign, StringComparison.OrdinalIgnoreCase);
-                    if (!isDirectMsg)
+                    // TTS nur wiederholen wenn letzte Ansage für dieses Rufzeichen mind. 5 Min. her ist
+                    bool ttsAllowed = !_watchlistLastTts.TryGetValue(callsign, out var lastTts)
+                        || (DateTime.Now - lastTts).TotalMinutes >= 5;
+                    if (!isDirectMsg && ttsAllowed)
                     {
+                        _watchlistLastTts[callsign] = DateTime.Now;
                         var phonetic = PhoneticAlphabetHelper.Spell(callsign, Loc.Current);
                         _pendingSpeech.Enqueue(Loc.T(
                             $"{phonetic} ist aktiv",
