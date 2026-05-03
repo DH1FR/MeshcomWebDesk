@@ -433,6 +433,28 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             ? Helpers.GeoHelper.ToMaidenhead(Status.OwnLatitude.Value, Status.OwnLongitude.Value)
             : string.Empty;
 
+        var cableLossPerM = _settings.CableType switch
+        {
+            "rg174"    => 5.00 / 10.0,
+            "rg58"     => 2.50 / 10.0,
+            "rg8x"     => 3.00 / 10.0,
+            "rg8"      => 1.80 / 10.0,
+            "rg213"    => 1.20 / 10.0,
+            "h155"     => 0.80 / 10.0,
+            "lmr200"   => 1.00 / 10.0,
+            "lmr240"   => 0.75 / 10.0,
+            "aircell7" => 0.60 / 10.0,
+            "lmr400"   => 0.40 / 10.0,
+            "cfd400"   => 0.45 / 10.0,
+            "ecoflex10"=> 0.55 / 10.0,
+            "ecoflex15"=> 0.37 / 10.0,
+            "h2000flex"=> 0.33 / 10.0,
+            "lmr600"   => 0.25 / 10.0,
+            "custom"   => _settings.CustomCableLossDbPer10m / 10.0,
+            _          => 0.0,
+        };
+        var myEirp = _settings.TxPowerDbm - cableLossPerM * _settings.CableLengthM + _settings.AntennaGainDbi;
+
         var telemetry = template.Contains("{telemetry}", StringComparison.OrdinalIgnoreCase)
             ? BuildTelemetryString(_settings, out _, out _, out _) ?? string.Empty
             : string.Empty;
@@ -455,8 +477,13 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             .Replace("{hops}",          station?.HopCount.ToString()       ?? string.Empty, StringComparison.OrdinalIgnoreCase)
             .Replace("{srctype-label}", srcLabel,                                           StringComparison.OrdinalIgnoreCase)
             .Replace("{srctype}",       srcType,                                            StringComparison.OrdinalIgnoreCase)
-            .Replace("{date}",          now.ToString("dd.MM.yyyy"),                         StringComparison.OrdinalIgnoreCase)
-            .Replace("{time}",          now.ToString("HH:mm"),                              StringComparison.OrdinalIgnoreCase);
+            .Replace("{date}",             now.ToString("dd.MM.yyyy"),                         StringComparison.OrdinalIgnoreCase)
+            .Replace("{time}",             now.ToString("HH:mm"),                              StringComparison.OrdinalIgnoreCase)
+            .Replace("{my-tx-power}",      $"{_settings.TxPowerDbm} dBm",                     StringComparison.OrdinalIgnoreCase)
+            .Replace("{my-eirp}",          $"{myEirp:F2} dBm",                                StringComparison.OrdinalIgnoreCase)
+            .Replace("{my-antenna}",       $"{_settings.AntennaGainDbi} dBi",                 StringComparison.OrdinalIgnoreCase)
+            .Replace("{my-antenna-height}",$"{_settings.AntennaHeightM} m",                   StringComparison.OrdinalIgnoreCase)
+            .Replace("{my-freq}",          $"{_settings.FrequencyMhz} MHz",                   StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>

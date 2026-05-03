@@ -230,10 +230,18 @@ public class MeshcomSettings
 
     /// <summary>
     /// Coaxial cable type key used to look up loss per 10 m at the configured frequency.
-    /// Supported values: "none", "rg174", "rg58", "rg213", "h155", "aircell7", "lmr400".
+    /// Supported values: "none", "rg174", "rg58", "rg213", "h155", "aircell7", "lmr400",
+    /// "lmr200", "lmr240", "lmr600", "ecoflex10", "ecoflex15", "h2000flex", "cfd400",
+    /// "rg8x", "rg8", "custom".
     /// Default: "rg213".
     /// </summary>
     public string CableType { get; set; } = "rg213";
+
+    /// <summary>
+    /// Manual cable loss in dB per 10 m, used when CableType == "custom".
+    /// Default: 1.0 dB/10m.
+    /// </summary>
+    public double CustomCableLossDbPer10m { get; set; } = 1.0;
 
     /// <summary>Total coaxial cable length in metres. Default: 5 m.</summary>
     public double CableLengthM { get; set; } = 5.0;

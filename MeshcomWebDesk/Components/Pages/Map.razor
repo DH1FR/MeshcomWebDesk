@@ -411,7 +411,10 @@
                     status.OwnLongitude.Value);
 
                 var cfg2          = SettingsMonitor.CurrentValue;
-                var cableLoss2    = CableLossPerM(cfg2.CableType) * cfg2.CableLengthM;
+                var cableLossPerM2 = cfg2.CableType == "custom"
+                    ? cfg2.CustomCableLossDbPer10m / 10.0
+                    : CableLossPerM(cfg2.CableType);
+                var cableLoss2    = cableLossPerM2 * cfg2.CableLengthM;
                 var eirp2         = cfg2.TxPowerDbm - cableLoss2 + cfg2.AntennaGainDbi;
                 await JS.InvokeVoidAsync("meshcomMap.setFsplCircle",
                     status.OwnLatitude.Value,
@@ -634,7 +637,9 @@
 
         // FSPL-Kreis aus Station-Einstellungen
         var cfg    = SettingsMonitor.CurrentValue;
-        var cableLossPerM = CableLossPerM(cfg.CableType);
+        var cableLossPerM = cfg.CableType == "custom"
+            ? cfg.CustomCableLossDbPer10m / 10.0
+            : CableLossPerM(cfg.CableType);
         var cableLoss     = cableLossPerM * cfg.CableLengthM;
         var eirp          = cfg.TxPowerDbm - cableLoss + cfg.AntennaGainDbi;
         await JS.InvokeVoidAsync("meshcomMap.setFsplCircle",
@@ -649,12 +654,21 @@
 
     private static double CableLossPerM(string cableType) => cableType switch
     {
-        "rg174"    => 5.0  / 10.0,
-        "rg58"     => 2.5  / 10.0,
-        "rg213"    => 1.2  / 10.0,
-        "h155"     => 0.8  / 10.0,
-        "aircell7" => 0.6  / 10.0,
-        "lmr400"   => 0.4  / 10.0,
+        "rg174"    => 5.00 / 10.0,
+        "rg58"     => 2.50 / 10.0,
+        "rg8x"     => 3.00 / 10.0,
+        "rg8"      => 1.80 / 10.0,
+        "rg213"    => 1.20 / 10.0,
+        "h155"     => 0.80 / 10.0,
+        "lmr200"   => 1.00 / 10.0,
+        "lmr240"   => 0.75 / 10.0,
+        "aircell7" => 0.60 / 10.0,
+        "lmr400"   => 0.40 / 10.0,
+        "cfd400"   => 0.45 / 10.0,
+        "ecoflex10"=> 0.55 / 10.0,
+        "ecoflex15"=> 0.37 / 10.0,
+        "h2000flex"=> 0.33 / 10.0,
+        "lmr600"   => 0.25 / 10.0,
         _          => 0.0,
     };
 }
