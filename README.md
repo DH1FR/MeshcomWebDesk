@@ -1186,6 +1186,11 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
  ## 📋 Changelog
 
 ### v1.9.3
+- **feat:** 🔧 **Variable {telemetry}** – Telemetrie-String aus der JSON-Datei steht überall als {telemetry}-Platzhalter zur Verfügung (Auto-Reply, Bot, Bake-Text, Quick Texts, Nachrichteneingabe); JSON wird bei jedem Abruf neu eingelesen; dokumentiert in der Variablen-Referenztabelle in den Einstellungen und im README
+- **feat:** 🗺️ **Locator-Format korrigiert** – Maidenhead-Locator wird jetzt überall korrekt dargestellt (letzte zwei Buchstaben kleingeschrieben, z. B. JO40nu statt JO40NU); zentral in GeoHelper.ToMaidenhead() geändert
+- **feat:** @**-Mention-Button** – neben jedem fremden Rufzeichen in der Nachrichtenliste (Gruppen/Alle) und im Monitor erscheint beim Hover ein kleiner @-Button; Klick fügt @RUFZEICHEN an der aktuellen Cursorposition im Nachrichteneingabefeld ein, ohne den bestehenden Chat-Tab-Klick zu beeinflussen
+- **feat:** 🔍 **Globaler Such-Button in der Tab-Leiste** – neuer 🔍-Button neben 📋 öffnet den QSO-Dialog im globalen Modus: Text-Suche und KI-Suche durchsuchen **alle Direkt-QSOs** gleichzeitig; Checkbox „Alle Direkt-QSOs durchsuchen" ist automatisch aktiviert und gesperrt; Tabs KI-Zusammenfassung und Verlauf sind im globalen Modus ausgeblendet
+- **feat:** 🔍 **KI-Suche über alle Direkt-QSOs** – in der KI-Suche des QSO-Dialogs ist optional das Durchsuchen aller 1:1-QSOs möglich (Checkbox „Alle Direkt-QSOs durchsuchen"); Gruppen- und Broadcast-Nachrichten werden dabei ausgeschlossen
 - **feat:** ⚙️ **Node-Firmware & Hardware in Statusleiste** – Firmware-Version und Hardware-Name des eigenen Nodes werden automatisch aus eingehenden `src_type:"node"`-Paketen gelesen und in der Statusleiste angezeigt (⚙️ 4.35 · T-BEAM); Wert erscheint sobald das erste Node-Paket empfangen wird
 - **feat:** 🔧 **Neue Variablen `{node-firmware}` und `{node-hw}`** – Firmware-Version und Hardware-Name des eigenen Nodes stehen in Auto-Reply, Bot-Befehlen, Bake-Text und Quick Texts als Platzhalter zur Verfügung; ergänzt in der Variablen-Referenztabelle in den Einstellungen
 - **feat:** 💬 **Sequenznummer im Monitor** – sobald der Node die Sequenznummer per Echo zurückmeldet, wird sie nachträglich neben der gesendeten Nachricht im Monitor angezeigt (`{411}`); erleichtert die Zuordnung von ACK zu TX
