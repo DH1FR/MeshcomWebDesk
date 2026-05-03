@@ -156,7 +156,16 @@ public class SettingsService
                     ["ShortLabel"] = g.ShortLabel,
                     ["Label"]      = g.Label
                 }).ToArray()),
-                ["MhMaxAgeHours"] = s.MhMaxAgeHours
+                ["MhMaxAgeHours"]  = s.MhMaxAgeHours,
+                ["TxPowerDbm"]              = s.TxPowerDbm,
+                ["CableType"]               = s.CableType,
+                ["CableLengthM"]            = s.CableLengthM,
+                ["CustomCableLossDbPer10m"] = s.CustomCableLossDbPer10m,
+                ["AntennaGainDbi"]          = s.AntennaGainDbi,
+                ["AntennaType"]             = s.AntennaType,
+                ["AntennaHeightM"]          = s.AntennaHeightM,
+                ["FrequencyMhz"]   = s.FrequencyMhz,
+                ["SystemMarginDb"] = s.SystemMarginDb
             }
         };
 

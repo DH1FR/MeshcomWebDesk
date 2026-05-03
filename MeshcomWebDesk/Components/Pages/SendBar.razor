@@ -150,7 +150,7 @@
 
     private async Task LoadQuickText(string text)
     {
-        var expanded = UdpService.ExpandVariables(text, Callsign);
+        var expanded = await UdpService.ExpandVariablesAsync(text, Callsign);
         _text       = expanded.Length > MaxLength ? expanded[..MaxLength] : expanded;
         _flyoutOpen = false;
         _rendered   = false;
@@ -162,7 +162,7 @@
     {
         _text = await JS.InvokeAsync<string>("meshcomChat.getSendBarValue", "send-bar-input");
         if (string.IsNullOrWhiteSpace(_text) || _text.Length > MaxLength) return;
-        var expanded = UdpService.ExpandVariables(_text, Callsign);
+        var expanded = await UdpService.ExpandVariablesAsync(_text, Callsign);
         var text = expanded.Length > MaxLength ? expanded[..MaxLength] : expanded;
         _text = string.Empty;
         await JS.InvokeVoidAsync("meshcomChat.setSendBarValue", "send-bar-input", string.Empty);
@@ -172,7 +172,7 @@
     [JSInvokable]
     public async Task<string> JsExpandVariables(string text)
     {
-        var expanded = UdpService.ExpandVariables(text, Callsign);
+        var expanded = await UdpService.ExpandVariablesAsync(text, Callsign);
         return expanded.Length > MaxLength ? expanded[..MaxLength] : expanded;
     }
 

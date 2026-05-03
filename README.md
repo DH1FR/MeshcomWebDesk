@@ -89,6 +89,8 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 - **🔎 QSO dialog** – every direct-chat tab shows a 🔎 button once the MySQL database is active; opens a four-tab modal with **KI-Zusammenfassung** (AI summary), **Verlauf** (history), **Suche** (text search) and **KI-Suche** (AI search); History and Search work without an AI API key – MySQL only required; **KI-Suche** supports an optional „Search all direct QSOs" mode to search across all 1:1 conversations at once
 - **📋 Recent QSO partners** – a 📋 button next to the **+** tab button opens a flyout listing the most recently contacted callsigns (sorted by last contact time); clicking a row opens the chat tab directly; populated from the MySQL database
 - **📤 Export / 📥 Import of Quick Texts** – export the quick-text list as `MeshComWebDesk-quick-texts.json`; import to replace the list; filename editable before export; share presets with other operators
+- **📋 Copy message to clipboard** – hovering over a message in a direct chat tab reveals a 📋 button; clicking it copies the message text to the clipboard (JS Clipboard API)
+- **{last-qso} variable** – expands to the date and time of the last direct QSO with the current callsign (database-first with in-memory fallback); available in Auto-Reply, Bot commands, Beacon and Quick Texts
 
 ### 📻 MH – Most Recently Heard
 - Live table of all heard stations with last message, timestamp and message count
@@ -171,7 +173,7 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 ### ↩️ Auto-Reply
 - Sends a configurable reply text automatically when a **brand-new direct chat tab** is opened by an incoming message (first contact from a callsign)
 - Enabled / disabled via `AutoReplyEnabled` – applies **live** without restart
-- **Supported placeholders** in `AutoReplyText`: `{mycall}`, `{mylocator}`, `{callsign}`, `{locator}`, `{dest-name}`, `{dest-loc}`, `{rssi}`, `{snr}`, `{hw}`, `{route}`, `{hops}`, `{srctype}`, `{srctype-label}`, `{date}`, `{time}`, `{version}`, `{telemetry}`  
+- **Supported placeholders** in AutoReplyText: {mycall}, {mylocator}, {callsign}, {locator}, {dest-name}, {dest-loc}, {rssi}, {snr}, {hw}, {route}, {hops}, {srctype}, {srctype-label}, {date}, {time}, {version}, {telemetry}, {last-qso}, {my-tx-power}, {my-eirp}, {my-antenna}, {my-antenna-type}, {my-antenna-height}, {my-freq}  
   Example: `MeshCom WebDesk V{version} – QTH: {mylocator}` → `MeshCom WebDesk V1.8.0 – QTH: JN48qn`
 - **Test button** in Settings – send the auto-reply text immediately to any callsign without waiting for an incoming message
 
@@ -192,7 +194,7 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 - **Bare `ping` keyword**: a direct message containing only `ping` (case-insensitive, with optional surrounding whitespace) is treated identically to `--ping`
 - **User-defined commands** fully configurable in **Settings → 🤖 Bot** – no code changes required:
   - `Name` – command name without `--` (e.g. `info`)
-  - `Response` – reply text; supports all `{variable}` placeholders (`{mycall}`, `{mylocator}`, `{callsign}`, `{locator}`, `{version}`, `{rssi}`, `{snr}`, `{hw}`, `{route}`, `{hops}`, `{srctype}`, `{srctype-label}`, `{date}`, `{time}`, `{telemetry}`)
+  - Response – reply text; supports all {variable} placeholders ({mycall}, {mylocator}, {callsign}, {locator}, {version}, {rssi}, {snr}, {hw}, {route}, {hops}, {srctype}, {srctype-label}, {date}, {time}, {telemetry}, {last-qso}, {my-tx-power}, {my-eirp}, {my-antenna}, {my-antenna-type}, {my-antenna-height}, {my-freq})
   - `Description` – optional short text shown in `--help` output
 - **Test button** in Settings – enter any command (e.g. `--ping`) and an optional sender callsign; the bot executes the command locally (dry-run, no UDP send) and shows the exact reply including all expanded `{variable}` placeholders
 - **📤 Export / 📥 Import** – export all user-defined bot commands as `MeshComWebDesk-bot-commands.json` (browser download); import a previously exported or hand-edited file to replace the current list; filename editable before export
@@ -208,6 +210,32 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 - **Per-type filter** – independently enable/disable alerts for: chat messages (MSG), position beacons (POS), telemetry (TEL, default **off** to avoid noise from periodic data), and ACKs (ACK, default off)
 - Respects the global 🔕 mute toggle in the status bar – no sound when muted
 - Configured in **Settings → 📻 Watchlist**; changes apply **live without restart**
+
+### 📢 CQ Detection
+- Incoming **group messages** are scanned for CQ calls (case-insensitive regex; no false positives on words like "FREQUENCY")
+- Own callsign is suppressed; only groups matching the active group filter are evaluated
+- **Toast notification** (yellow, top-right) showing callsign, group and relative age; auto-dismissed after 60 seconds; manual close ✕
+- **CQ Beep** – Morse pattern **CQ CQ** in CW style (700 Hz, 80 ms unit, correct dit/dah timing with inter-element and inter-character pauses, word pause between the two CQ sequences); only when sound is enabled
+- **Voice announcement** – e.g. *“C Q C Q from Delta Hotel One Foxtrot Romeo in group 2 6 2“* – only when TTS is active; follows the app language (DE/EN)
+- Watchlist and CQ toasts are stacked vertically in a shared container so both are visible simultaneously
+
+### 📡 Station / HF Parameters
+- Configurable in **Settings → 📡 Station / HF** (new section)
+- **TX power** (dBm), **cable type** (15 preset 50-Ω types in three attenuation groups), **cable length**, **antenna gain** (dBi), **antenna type** (free text, e.g. `Dipol`, `Yagi 3-El.`), **antenna height**, **operating frequency** and **system margin** (dB)
+- **Manual attenuation input** – selecting "Manuell eingeben …" reveals an extra input field for custom cable loss in dB/10 m
+- Live display of calculated **EIRP** (`P_TX − cable loss + antenna gain`) and **theoretical free-space range** (using configured system margin, default 30 dB)
+- All parameters are included in the settings backup and are backwards compatible
+- **FSPL coverage circle** on the map – when the coverage overlay is active a yellow circle shows the theoretical free-space range derived from EIRP, frequency and system margin; legend distinguishes "Gemessen (Convex Hull)" and "FSPL-Reichweite (theor.)"
+- **Station template variables** – available in Auto-Reply, Bot commands, Beacon and Quick Texts:
+
+  | Variable | Example |
+  |---|---|
+  | `{my-tx-power}` | `22 dBm` |
+  | `{my-eirp}` | `23.50 dBm` |
+  | `{my-antenna}` | `2.5 dBi` |
+  | `{my-antenna-type}` | `Dipol` |
+  | `{my-antenna-height}` | `10 m` |
+  | `{my-freq}` | `433.175 MHz` |
 
 ### 📊 Telemetry (Telemetrie-Sender)
 - **Periodic telemetry messages**
@@ -261,6 +289,7 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 - **Fill opacity 35 %**, solid border (weight 3, opacity 95 %) for good contrast against the map tiles
 - Tooltip: `📡 Gemessene Reichweite`
 - Coverage is recalculated every time the button is toggled; no background polling
+- **FSPL radius** (yellow circle) – shown alongside the convex hull when station/HF parameters are configured; represents the theoretical free-space range based on EIRP, frequency and system margin; legend shows both layers
 
 ### 🤖 KI / AI – QSO Summary, History & Search
 
@@ -1185,6 +1214,19 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
  ## 📋 Changelog
 
+### v1.9.4
+- **feat:** 📻 **Station / HF-Parameter** – neue Einstellungssektion mit TX-Leistung (dBm), Kabeltyp (15 vordefinierte 50-Ω-Typen), Kabeldämpfung (manuell eingebbar), Antennengewinn (dBi), Antennentyp (Freitext), Antennengehöhe (m) und Frequenz (MHz); EIRP und theoretische Freiraumreichweite werden live berechnet und angezeigt
+- **feat:** 🗺️ **FSPL-Reichweiten-Kreis auf der Karte** – beim Aktivieren der Reichweitenanzeige wird neben der Convex-Hull-Wolke ein gelber Kreis mit der theoretischen Freiraumreichweite (EIRP + Frequenz + Systemreserve) eingeblendet; Legende unterscheidet „Gemessen (Convex Hull)“ und „FSPL-Reichweite (theor.)“
+- **feat:** 📡 **Stationsvariablen** – `{my-tx-power}`, `{my-eirp}`, `{my-antenna}`, `{my-antenna-type}`, `{my-antenna-height}`, `{my-freq}` stehen in Auto-Reply, Bot-Befehlen, Bake-Text und Quick Texts als Platzhalter zur Verfügung
+- **feat:** 🕔 **Neue Variable `{last-qso}`** – Zeitstempel des letzten direkten QSOs mit dem aktuellen Rufzeichen (Format `dd.MM.yyyy HH:mm`); DB-first + In-Memory-Fallback; verfügbar in Auto-Reply, Bot-Befehlen, Beacon und Quick Texts
+- **feat:** 📋 **Nachricht in Zwischenablage kopieren** – beim Hovern über eine Nachricht im Direkt-Tab erscheint ein 📋-Button zum Kopieren des Nachrichtentexts (JS Clipboard API)
+- **feat:** 📢 **CQ-Erkennung** – eingehende Gruppen-Nachrichten werden automatisch auf CQ-Rufe geprüft (case-insensitiver Regex, kein False-Positive bei Wörtern wie „FREQUENCY“); eigenes Rufzeichen wird unterdrückt; nur Gruppen aus dem aktiven Gruppenfilter
+- **feat:** 📢 **CQ-Toast** – Toast-Anzeige (gelb) mit Rufzeichen, Gruppe und Alter; automatisches Verschwinden nach 60 Sekunden; Watchlist- und CQ-Toast werden vertikal gestapelt, sodass beide gleichzeitig sichtbar sind
+- **feat:** 📢 **CQ-Beep** – Morse-Muster **CQ CQ** in CW-Stil (700 Hz, 80 ms Einheit, korrektes dit/dah/Wortpausen-Timing); nur wenn Ton aktiv
+- **feat:** 📢 **CQ-TTS-Ansage** – z. B. „C Q C Q von Delta Hotel Eins Foxtrot Romeo in Gruppe 2 6 2“; nur wenn Sprachansagen aktiv; folgt der App-Sprache (DE/EN)
+- **fix:** 🤖 **OpenAI Guthaben-Link** – migriert von veralteten Dashboard-Endpunkten auf `/v1/organization/costs`; zusätzlicher Link zu `https://platform.openai.com/usage` ergänzt
+- **fix:** 📢 **CQ-Beep Timing** – korrektes Morse-Timing (Inter-Element 1u, Inter-Zeichen 3u, Wortpause 7u) ohne doppelte Lücken
+
 ### v1.9.3
 - **feat:** 🔧 **Variable {telemetry}** – Telemetrie-String aus der JSON-Datei steht überall als {telemetry}-Platzhalter zur Verfügung (Auto-Reply, Bot, Bake-Text, Quick Texts, Nachrichteneingabe); JSON wird bei jedem Abruf neu eingelesen; dokumentiert in der Variablen-Referenztabelle in den Einstellungen und im README
 - **feat:** 🗺️ **Locator-Format korrigiert** – Maidenhead-Locator wird jetzt überall korrekt dargestellt (letzte zwei Buchstaben kleingeschrieben, z. B. JO40nu statt JO40NU); zentral in GeoHelper.ToMaidenhead() geändert
@@ -1201,12 +1243,12 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 - **fix:** 🔊 **iOS/iPad – Sprachausgabe** – `speechSynthesis` aus Hintergrund-Callbacks ist auf iOS durch Apple blockiert; TTS wird auf iOS/iPadOS übersprungen; Beep-Töne werden als Benachrichtigung verwendet
 
 ### v1.9.2
-- **feat:** 🗺️ **MH-Liste – Automatisches Löschen alter Einträge** – neue Einstellung „MH-Liste: Max. Alter (Stunden)" im Abschnitt *Chat & Monitor*; Einträge, deren `LastHeard`-Zeitstempel älter als die konfigurierte Anzahl Stunden ist, werden stündlich automatisch entfernt; beim Programmstart und beim Speichern der Einstellungen werden veraltete Einträge ebenfalls sofort bereinigt; `0` deaktiviert das Feature (rückwärtskompatibel); Karte zeigt damit nur noch aktuelle Stationen; bestehende Werte (Tage) werden automatisch in Stunden migriert
-- **perf:** ⚙️ **Einstellungen – Lazy Rendering** – Section-Inhalte werden erst beim Öffnen gerendert; beim ersten Laden der Seite werden nur die 18 Section-Header gerendert statt aller ~149 Bindings → deutlich schnelleres Öffnen der Einstellungsseite
-- **perf:** 📻 **MH-Liste & Karte** – neues `OnMhChange`-Event; MH-Liste und Karte reagieren nur noch auf MH-relevante Updates; Karte mit 400 ms Debounce; QRZ-Abfragen nur für neue, unbekannte Rufzeichen
+- **feat:** 🗺️ **MH-Liste – Automatisches Löschen alter Einträge** – neue Einstellung „MH-Liste: Max. Alter (Stunden)“; Einträge älter als die konfigurierte Anzahl Stunden werden automatisch gelöscht; bestehende Werte (Tage) werden in Stunden migriert
+- **perf:** ⚙️ **Einstellungen – Lazy Rendering** – Section-Inhalte werden erst beim Öffnen gerendert; deutlich schnelleres Laden der Einstellungsseite
+- **perf:** 📻 **MH-Liste & Karte** – neues `OnMhChange`-Event; nur noch MH-relevante Updates; Karte 400 ms Debounce; QRZ-Abfragen nur für neue Rufzeichen
 - **feat:** 📊 **Statusleiste responsive** – passt sich dynamisch der verfügbaren Breite an; Elemente werden stufenweise ausgeblendet wenn der Platz nicht ausreicht (`ResizeObserver` + `MutationObserver`)
-- **fix:** ⚙️ **MH Max. Alter – Persistenz** – `MhMaxAgeHours` wurde nach einem Seitenwechsel auf 0 zurückgesetzt; Fehler in `SettingsService` behoben
-- **fix:** 🗺️ **Karte – Reichweiten-Wolke** – die Reichweiten-Wolke (Convex Hull) wurde nach einem MH-Update oder MH-Purge nicht neu berechnet und blieb leer; `UpdateMarkersAsync()` ruft jetzt `setCoverage` automatisch neu auf wenn die Anzeige aktiv ist
+- **fix:** ⚙️ **MH Max. Alter – Persistenz** – `MhMaxAgeHours` wurde nach Seitenwechsel auf 0 zurückgesetzt; Fehler in `SettingsService` behoben
+- **fix:** 🗺️ **Karte – Reichweiten-Wolke** – Convex Hull wurde nach MH-Update oder MH-Purge nicht neu berechnet; `UpdateMarkersAsync()` ruft jetzt `setCoverage` automatisch neu auf wenn die Anzeige aktiv ist
 
 ### v1.9.1
 - **feat:** Bug fixes and optimizations.

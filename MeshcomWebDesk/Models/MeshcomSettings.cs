@@ -222,4 +222,46 @@ public class MeshcomSettings
     /// Clicking a button loads the text into the input field for review before sending.
     /// </summary>
     public List<QuickTextEntry> QuickTexts { get; set; } = [];
+
+    // ── Station / RF parameters ──────────────────────────────────────────
+
+    /// <summary>Transmitter output power in dBm (e.g. 20 = 100 mW). Default: 20 dBm.</summary>
+    public int TxPowerDbm { get; set; } = 20;
+
+    /// <summary>
+    /// Coaxial cable type key used to look up loss per 10 m at the configured frequency.
+    /// Supported values: "none", "rg174", "rg58", "rg213", "h155", "aircell7", "lmr400",
+    /// "lmr200", "lmr240", "lmr600", "ecoflex10", "ecoflex15", "h2000flex", "cfd400",
+    /// "rg8x", "rg8", "custom".
+    /// Default: "rg213".
+    /// </summary>
+    public string CableType { get; set; } = "rg213";
+
+    /// <summary>
+    /// Manual cable loss in dB per 10 m, used when CableType == "custom".
+    /// Default: 1.0 dB/10m.
+    /// </summary>
+    public double CustomCableLossDbPer10m { get; set; } = 1.0;
+
+    /// <summary>Total coaxial cable length in metres. Default: 5 m.</summary>
+    public double CableLengthM { get; set; } = 5.0;
+
+    /// <summary>Antenna gain in dBi. Default: 2.15 dBi (half-wave dipole).</summary>
+    public double AntennaGainDbi { get; set; } = 2.15;
+
+    /// <summary>Free-text antenna type description, e.g. "Dipol", "Yagi 3-El.", "Groundplane". Default: empty.</summary>
+    public string AntennaType { get; set; } = string.Empty;
+
+    /// <summary>Antenna height above ground level in metres. Default: 5 m.</summary>
+    public double AntennaHeightM { get; set; } = 5.0;
+
+    /// <summary>Operating frequency in MHz. Default: 433.175 MHz.</summary>
+    public double FrequencyMhz { get; set; } = 433.175;
+
+    /// <summary>
+    /// System margin in dB subtracted from the link budget before FSPL radius calculation.
+    /// Accounts for terrain, ground effects, polarisation loss etc.
+    /// Typical value: 30 dB. Higher = smaller (more realistic) circle.
+    /// </summary>
+    public double SystemMarginDb { get; set; } = 30.0;
 }
