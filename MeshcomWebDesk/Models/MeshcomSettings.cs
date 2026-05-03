@@ -249,6 +249,9 @@ public class MeshcomSettings
     /// <summary>Antenna gain in dBi. Default: 2.15 dBi (half-wave dipole).</summary>
     public double AntennaGainDbi { get; set; } = 2.15;
 
+    /// <summary>Free-text antenna type description, e.g. "Dipol", "Yagi 3-El.", "Groundplane". Default: empty.</summary>
+    public string AntennaType { get; set; } = string.Empty;
+
     /// <summary>Antenna height above ground level in metres. Default: 5 m.</summary>
     public double AntennaHeightM { get; set; } = 5.0;
 

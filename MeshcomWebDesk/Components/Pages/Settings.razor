@@ -136,6 +136,9 @@
                 <label>@Loc.T("Antennengewinn", "Antenna Gain", "Guadagno antenna", "Ganancia antena") (dBi)</label>
                 <input type="number" min="-5" max="30" step="0.1" @bind="_model.AntennaGainDbi" style="width:80px" />
 
+                <label>@Loc.T("Antennentyp", "Antenna Type", "Tipo antenna", "Tipo de antena")</label>
+                <input type="text" maxlength="80" placeholder="@Loc.T("z.B. Dipol, Yagi 3-El., Groundplane …", "e.g. Dipole, 3-el. Yagi, Ground plane …", "es. Dipolo, Yagi 3 el., Piano di terra …", "p.ej. Dipolo, Yagi 3-el., Plano de tierra …")" @bind="_model.AntennaType" style="max-width:300px" />
+
                 <label>@Loc.T("Antennenhöhe (ü. Boden)", "Antenna Height (AGL)", "Altezza antenna (AGL)", "Altura antena (AGL)") (m)</label>
                 <input type="number" min="0" max="500" step="0.5" @bind="_model.AntennaHeightM" style="width:80px" />
 
@@ -290,6 +293,7 @@
                                 <tr><td><code>{my-tx-power}</code></td><td>@Loc.T("Sendeleistung der eigenen Station","Own station TX power","Potenza TX stazione","Potencia TX propia estación")</td><td style="font-family:monospace">22 dBm</td></tr>
                                 <tr><td><code>{my-eirp}</code></td>    <td>@Loc.T("Effektive Strahlungsleistung (EIRP)","Effective isotropic radiated power (EIRP)","EIRP stazione","EIRP estación")</td><td style="font-family:monospace">23.50 dBm</td></tr>
                                 <tr><td><code>{my-antenna}</code></td> <td>@Loc.T("Antennengewinn der eigenen Station","Own station antenna gain","Guadagno antenna stazione","Ganancia antena propia")</td><td style="font-family:monospace">2.5 dBi</td></tr>
+                                <tr><td><code>{my-antenna-type}</code></td><td>@Loc.T("Antennentyp der eigenen Station","Own station antenna type","Tipo antenna stazione","Tipo antena propia")</td><td style="font-family:monospace">Dipol</td></tr>
                                 <tr><td><code>{my-antenna-height}</code></td><td>@Loc.T("Antennenhöhe der eigenen Station","Own station antenna height","Altezza antenna stazione","Altura antena propia")</td><td style="font-family:monospace">10 m</td></tr>
                                 <tr><td><code>{my-freq}</code></td>    <td>@Loc.T("Sendefrequenz der eigenen Station","Own station frequency","Frequenza stazione","Frecuencia propia estación")</td><td style="font-family:monospace">433.175 MHz</td></tr>
                             </tbody>
@@ -438,6 +442,7 @@
                                             <tr><td><code>{my-tx-power}</code></td><td>@Loc.T("Sendeleistung der eigenen Station","Own station TX power","Potenza TX stazione","Potencia TX propia estación")</td><td style="font-family:monospace">22 dBm</td></tr>
                                             <tr><td><code>{my-eirp}</code></td>    <td>@Loc.T("Effektive Strahlungsleistung (EIRP)","Effective isotropic radiated power (EIRP)","EIRP stazione","EIRP estación")</td><td style="font-family:monospace">23.50 dBm</td></tr>
                                             <tr><td><code>{my-antenna}</code></td> <td>@Loc.T("Antennengewinn der eigenen Station","Own station antenna gain","Guadagno antenna stazione","Ganancia antena propia")</td><td style="font-family:monospace">2.5 dBi</td></tr>
+                                            <tr><td><code>{my-antenna-type}</code></td><td>@Loc.T("Antennentyp der eigenen Station","Own station antenna type","Tipo antenna stazione","Tipo antena propia")</td><td style="font-family:monospace">Dipol</td></tr>
                                             <tr><td><code>{my-antenna-height}</code></td><td>@Loc.T("Antennenhöhe der eigenen Station","Own station antenna height","Altezza antenna stazione","Altura antena propia")</td><td style="font-family:monospace">10 m</td></tr>
                                             <tr><td><code>{my-freq}</code></td>    <td>@Loc.T("Sendefrequenz der eigenen Station","Own station frequency","Frequenza stazione","Frecuencia propia estación")</td><td style="font-family:monospace">433.175 MHz</td></tr>
                                         </tbody>
@@ -1193,6 +1198,7 @@
                             <tr><td><code>{my-tx-power}</code></td><td>@Loc.T("Sendeleistung der eigenen Station","Own station TX power","Potenza TX stazione","Potencia TX propia estación")</td><td style="font-family:monospace">22 dBm</td></tr>
                             <tr><td><code>{my-eirp}</code></td>    <td>@Loc.T("Effektive Strahlungsleistung (EIRP)","Effective isotropic radiated power (EIRP)","EIRP stazione","EIRP estación")</td><td style="font-family:monospace">23.50 dBm</td></tr>
                             <tr><td><code>{my-antenna}</code></td> <td>@Loc.T("Antennengewinn der eigenen Station","Own station antenna gain","Guadagno antenna stazione","Ganancia antena propia")</td><td style="font-family:monospace">2.5 dBi</td></tr>
+                            <tr><td><code>{my-antenna-type}</code></td><td>@Loc.T("Antennentyp der eigenen Station","Own station antenna type","Tipo antenna stazione","Tipo antena propia")</td><td style="font-family:monospace">Dipol</td></tr>
                             <tr><td><code>{my-antenna-height}</code></td><td>@Loc.T("Antennenhöhe der eigenen Station","Own station antenna height","Altezza antenna stazione","Altura antena propia")</td><td style="font-family:monospace">10 m</td></tr>
                             <tr><td><code>{my-freq}</code></td>    <td>@Loc.T("Sendefrequenz der eigenen Station","Own station frequency","Frequenza stazione","Frecuencia propia estación")</td><td style="font-family:monospace">433.175 MHz</td></tr>
                         </tbody>
@@ -2126,6 +2132,7 @@
             CableLengthM            = s.CableLengthM,
             CustomCableLossDbPer10m = s.CustomCableLossDbPer10m,
             AntennaGainDbi          = s.AntennaGainDbi,
+            AntennaType             = s.AntennaType,
             AntennaHeightM          = s.AntennaHeightM,
             FrequencyMhz            = s.FrequencyMhz,
             SystemMarginDb          = s.SystemMarginDb,
@@ -2656,10 +2663,8 @@
                 CableLengthM            = s.CableLengthM,
                 CustomCableLossDbPer10m = s.CustomCableLossDbPer10m,
                 AntennaGainDbi          = s.AntennaGainDbi,
-                AntennaHeightM = s.AntennaHeightM,
-                FrequencyMhz   = s.FrequencyMhz,
-                SystemMarginDb = s.SystemMarginDb,
-                QuickTexts  = s.QuickTexts.Select(q => new QuickTextEntry { Label = q.Label, Text = q.Text }).ToList(),
+                AntennaType             = s.AntennaType,
+                AntennaHeightM          = s.AntennaHeightM,
                 GroupLabels = s.GroupLabels.Select(g => new GroupLabelEntry { Group = g.Group, ShortLabel = g.ShortLabel, Label = g.Label }).ToList()
             };
             await SettingsService.SaveMeshcomSettingsAsync(_model.ToSettings());
@@ -2770,6 +2775,7 @@
         public double CableLengthM            { get; set; } = 5.0;
         public double CustomCableLossDbPer10m { get; set; } = 1.0;
         public double AntennaGainDbi          { get; set; } = 2.15;
+        public string AntennaType             { get; set; } = string.Empty;
         public double AntennaHeightM          { get; set; } = 5.0;
         public double FrequencyMhz            { get; set; } = 433.175;
         public double SystemMarginDb          { get; set; } = 30.0;
@@ -2885,7 +2891,8 @@
             CableLengthM            = CableLengthM,
             CustomCableLossDbPer10m = CustomCableLossDbPer10m,
             AntennaGainDbi          = AntennaGainDbi,
-            AntennaHeightM = AntennaHeightM,
+            AntennaType             = AntennaType,
+            AntennaHeightM          = AntennaHeightM,
             FrequencyMhz   = FrequencyMhz,
             SystemMarginDb = SystemMarginDb,
             QuickTexts = QuickTexts,

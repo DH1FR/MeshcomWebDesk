@@ -482,6 +482,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             .Replace("{my-tx-power}",      $"{_settings.TxPowerDbm} dBm",                     StringComparison.OrdinalIgnoreCase)
             .Replace("{my-eirp}",          $"{myEirp:F2} dBm",                                StringComparison.OrdinalIgnoreCase)
             .Replace("{my-antenna}",       $"{_settings.AntennaGainDbi} dBi",                 StringComparison.OrdinalIgnoreCase)
+            .Replace("{my-antenna-type}",  _settings.AntennaType,                             StringComparison.OrdinalIgnoreCase)
             .Replace("{my-antenna-height}",$"{_settings.AntennaHeightM} m",                   StringComparison.OrdinalIgnoreCase)
             .Replace("{my-freq}",          $"{_settings.FrequencyMhz} MHz",                   StringComparison.OrdinalIgnoreCase);
     }
