@@ -403,43 +403,46 @@ window.meshcomMap = (function () {
 
             rxSensDbm = rxSensDbm != null ? rxSensDbm : -120;
 
-            // FSPL: d = (10 ^ ((EIRP – rxSens – 20*log10(f) – 20*log10(4π/c)) / 20)) in m
-            // Simplified: d_km = 10 ^ ((EIRP – rxSens – 20*log10(fMHz) – 32.44) / 20)
+            // d_km = 10 ^ ((linkBudget - 20*log10(fMHz) - 32.44) / 20)
             var linkBudget = eirpDbm - rxSensDbm;
-            var fspl_max   = linkBudget;  // dB
-            var d_km       = Math.pow(10, (fspl_max - 20 * Math.log10(freqMhz) - 32.44) / 20);
+            var d_km       = Math.pow(10, (linkBudget - 20 * Math.log10(freqMhz) - 32.44) / 20);
             var d_m        = d_km * 1000;
+
+            console.log('[FSPL] lat=' + lat + ' lon=' + lon +
+                ' eirp=' + eirpDbm.toFixed(2) + ' dBm' +
+                ' freq=' + freqMhz + ' MHz' +
+                ' d=' + d_km.toFixed(1) + ' km (' + Math.round(d_m) + ' m)');
 
             _fsplLayer = L.layerGroup();
 
-            // Outer dashed circle (max range)
-            L.circle([lat, lon], {
-                radius:      d_m,
-                color:       '#e3b341',
-                weight:      2,
-                opacity:     0.85,
-                fillColor:   '#e3b341',
-                fillOpacity: 0.06,
-                dashArray:   '8,5',
-                interactive: false
-            }).bindTooltip(
-                '📻 FSPL-Reichweite: ' + (d_km >= 1 ? d_km.toFixed(1) + ' km' : Math.round(d_m) + ' m') +
+            var tooltipHtml =
+                '📻 <b>FSPL-Reichweite: ' + (d_km >= 1 ? d_km.toFixed(1) + ' km' : Math.round(d_m) + ' m') + '</b>' +
                 '<br>EIRP: ' + eirpDbm.toFixed(1) + ' dBm' +
                 '<br>Antennenhöhe: ' + antennaHeightM + ' m' +
                 '<br>Frequenz: ' + freqMhz + ' MHz' +
-                '<br><small style="color:#8b949e">Freiraumdämpfung, ohne Geländeberücksichtigung</small>',
-                { sticky: true, className: 'relay-tooltip' }
-            ).addTo(_fsplLayer);
+                '<br><small style="color:#8b949e">Freiraumdämpfung, ohne Geländeberücksichtigung</small>';
 
-            // Inner rings at 25% / 50% / 75% of max range
+            // Äußerer Kreis (max. Reichweite) – gelb, gut sichtbar
+            L.circle([lat, lon], {
+                radius:      d_m,
+                color:       '#f0c040',
+                weight:      3,
+                opacity:     1.0,
+                fillColor:   '#f0c040',
+                fillOpacity: 0.07,
+                interactive: true
+            }).bindTooltip(tooltipHtml, { sticky: true, className: 'relay-tooltip' })
+              .addTo(_fsplLayer);
+
+            // Innere Ringe bei 25 / 50 / 75 %
             [0.75, 0.5, 0.25].forEach(function(frac) {
                 L.circle([lat, lon], {
                     radius:      d_m * frac,
-                    color:       '#e3b341',
+                    color:       '#f0c040',
                     weight:      1,
-                    opacity:     0.3,
-                    fill:        false,
-                    dashArray:   '4,6',
+                    opacity:     0.5,
+                    fillColor:   '#f0c040',
+                    fillOpacity: 0.03,
                     interactive: false
                 }).addTo(_fsplLayer);
             });
