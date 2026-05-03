@@ -409,10 +409,22 @@
                     null,
                     status.OwnLatitude.Value,
                     status.OwnLongitude.Value);
+
+                var cfg2          = SettingsMonitor.CurrentValue;
+                var cableLoss2    = CableLossPerM(cfg2.CableType) * cfg2.CableLengthM;
+                var eirp2         = cfg2.TxPowerDbm - cableLoss2 + cfg2.AntennaGainDbi;
+                await JS.InvokeVoidAsync("meshcomMap.setFsplCircle",
+                    status.OwnLatitude.Value,
+                    status.OwnLongitude.Value,
+                    eirp2,
+                    cfg2.FrequencyMhz,
+                    cfg2.AntennaHeightM,
+                    -120);
             }
             else
             {
                 await JS.InvokeVoidAsync("meshcomMap.setCoverage", null, null, null, null);
+                await JS.InvokeVoidAsync("meshcomMap.removeFsplCircle");
                 _showCoverage = false;
             }
         }
