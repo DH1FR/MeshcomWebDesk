@@ -98,33 +98,27 @@
                 }
             };
 
-            // CQ beep: Morse CQ in CW style (700 Hz)
-            // Timing: dit=1u dah=3u, inter-element gap=1u, inter-character gap=3u. Unit = 80 ms.
+            // CQ beep: Morse CQ CQ in CW style (700 Hz)
+            // Timing: dit=1u dah=3u, inter-element=1u, inter-char=3u, inter-word=7u. Unit = 80 ms.
             // C = dah dit dah dit   (- . - .)
             // Q = dah dah dit dah   (- - . -)
             window.playCqBeep = function () {
                 try {
                     var ctx = getAudioContext();
                     function doCq() {
-                        var u   = 0.08;  // unit in seconds
+                        var u   = 0.08;
                         var hz  = 700;
                         var vol = 0.30;
                         var t   = ctx.currentTime + 0.05;
 
-                        // elements: positive = tone length in units; after each tone, 1u gap is added.
-                        // A special inter-character gap of 3u is inserted between C and Q.
-                        // C: dah(3) dit(1) dah(3) dit(1)
-                        // Q: dah(3) dah(3) dit(1) dah(3)
-                        var cq = [3, 1, 3, 1,  null,  3, 3, 1, 3];
-                        // null = inter-character pause (3u) instead of normal 1u inter-element
+                        // null  = inter-character pause (+2u, total 3u with the trailing 1u)
+                        // false = inter-word pause     (+6u, total 7u with the trailing 1u)
+                        // CQ CQ
+                        var cq = [3,1,3,1, null, 3,3,1,3,  false,  3,1,3,1, null, 3,3,1,3];
 
                         cq.forEach(function (len) {
-                            if (len === null) {
-                                // inter-character: 3u total. 1u was already added after last element,
-                                // so add 2u more.
-                                t += 2 * u;
-                                return;
-                            }
+                            if (len === null)  { t += 2 * u; return; }  // inter-char
+                            if (len === false)  { t += 6 * u; return; }  // inter-word
                             var osc  = ctx.createOscillator();
                             var gain = ctx.createGain();
                             osc.connect(gain);
@@ -137,7 +131,7 @@
                             gain.gain.linearRampToValueAtTime(0.0, t + len * u);
                             osc.start(t);
                             osc.stop(t + len * u + 0.01);
-                            t += len * u + u; // tone + inter-element gap (1u)
+                            t += len * u + u; // tone + inter-element gap
                         });
                     }
                     if (ctx.state === 'suspended') { ctx.resume().then(doCq); } else { doCq(); }

@@ -2529,13 +2529,20 @@ h1:focus {
 .rssi-weak    { color: #f85149; }
 
 /* ===== Watchlist Toast ===== */
-.watchlist-toast {
+.alert-toast-stack {
     position: fixed;
     top: 1rem;
     right: 1rem;
     z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-end;
+}
+
+.watchlist-toast {
     background: #16213e;
-    border: 1px solid #e3b341;
+    border: 1px solid #3a86e0;
     border-radius: 8px;
     min-width: 210px;
     max-width: 300px;

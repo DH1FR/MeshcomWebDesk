@@ -329,39 +329,42 @@
         </div>
     </div>
 
-    @* ===== WATCHLIST TOAST ===== *@
-    @if (_watchlistAlerts.Count > 0)
+    @* ===== ALERT TOASTS (Watchlist + CQ) ===== *@
+    @if (_watchlistAlerts.Count > 0 || _cqAlerts.Count > 0)
     {
-        <div class="watchlist-toast">
-            <div class="watchlist-toast-header">
-                <span>📻 @Loc.T("Rufzeichen gehört", "Callsign heard", "Nominativo sentito", "Indicativo escuchado")</span>
-                <button class="watchlist-toast-close" @onclick="() => _watchlistAlerts.Clear()">✕</button>
-            </div>
-            @foreach (var alert in _watchlistAlerts)
+        <div class="alert-toast-stack">
+            @if (_watchlistAlerts.Count > 0)
             {
-                <div class="watchlist-toast-row">
-                    <span class="watchlist-callsign">@alert.Callsign</span>
-                    <span class="watchlist-badge">@alert.EventType</span>
-                    <span class="watchlist-age">@FormatAlertAge(alert.Time)</span>
+                <div class="watchlist-toast">
+                    <div class="watchlist-toast-header">
+                        <span>📻 @Loc.T("Rufzeichen gehört", "Callsign heard", "Nominativo sentito", "Indicativo escuchado")</span>
+                        <button class="watchlist-toast-close" @onclick="() => _watchlistAlerts.Clear()">✕</button>
+                    </div>
+                    @foreach (var alert in _watchlistAlerts)
+                    {
+                        <div class="watchlist-toast-row">
+                            <span class="watchlist-callsign">@alert.Callsign</span>
+                            <span class="watchlist-badge">@alert.EventType</span>
+                            <span class="watchlist-age">@FormatAlertAge(alert.Time)</span>
+                        </div>
+                    }
                 </div>
             }
-        </div>
-    }
-
-    @* ===== CQ TOAST ===== *@
-    @if (_cqAlerts.Count > 0)
-    {
-        <div class="watchlist-toast" style="border-color:#e3b341">
-            <div class="watchlist-toast-header">
-                <span>📡 @Loc.T("CQ gehört", "CQ heard", "CQ sentito", "CQ escuchado")</span>
-                <button class="watchlist-toast-close" @onclick="() => _cqAlerts.Clear()">✕</button>
-            </div>
-            @foreach (var cq in _cqAlerts)
+            @if (_cqAlerts.Count > 0)
             {
-                <div class="watchlist-toast-row">
-                    <span class="watchlist-callsign">@cq.Callsign</span>
-                    <span class="watchlist-badge" style="background:#e3b341;color:#000">CQ #@cq.Group</span>
-                    <span class="watchlist-age">@FormatAlertAge(cq.Time)</span>
+                <div class="watchlist-toast" style="border-color:#e3b341">
+                    <div class="watchlist-toast-header" style="background:#2a1e00;color:#e3b341">
+                        <span>📡 @Loc.T("CQ gehört", "CQ heard", "CQ sentito", "CQ escuchado")</span>
+                        <button class="watchlist-toast-close" @onclick="() => _cqAlerts.Clear()">✕</button>
+                    </div>
+                    @foreach (var cq in _cqAlerts)
+                    {
+                        <div class="watchlist-toast-row">
+                            <span class="watchlist-callsign">@cq.Callsign</span>
+                            <span class="watchlist-badge" style="background:#e3b341;color:#000">CQ #@cq.Group</span>
+                            <span class="watchlist-age">@FormatAlertAge(cq.Time)</span>
+                        </div>
+                    }
                 </div>
             }
         </div>
