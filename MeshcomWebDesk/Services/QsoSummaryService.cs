@@ -62,7 +62,7 @@ public sealed class QsoSummaryService
         LastRequestAt:    _lastRequestAt);
 
     /// <summary>
-    /// Tries to retrieve billing info (limit + current month usage) from the OpenAI billing API.
+    /// Tries to retrieve billing info (current month usage) from the OpenAI Organization Costs API.
     /// Returns null for non-OpenAI providers or if the request fails.
     /// Returns an error string prefixed with "❌" if the API key is invalid or the endpoint is not accessible.
     /// </summary>
@@ -74,91 +74,72 @@ public sealed class QsoSummaryService
 
         try
         {
-            var now       = DateTime.UtcNow;
-            var startDate = new DateTime(now.Year, now.Month, 1).ToString("yyyy-MM-dd");
-            var endDate   = now.AddDays(1).ToString("yyyy-MM-dd");
+            var now        = DateTime.UtcNow;
+            var startOfMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var startTime  = (long)(startOfMonth - DateTime.UnixEpoch).TotalSeconds;
+            var endTime    = (long)(now           - DateTime.UnixEpoch).TotalSeconds;
 
-            // ── 1. Monthly usage (works with both User-Keys and Project-Keys) ──
+            // ── Organization Costs API (requires API key with usage.read permission) ──
             double? usedUsd = null;
-            using var usageReq = new HttpRequestMessage(HttpMethod.Get,
-                $"https://api.openai.com/v1/dashboard/billing/usage?start_date={startDate}&end_date={endDate}");
-            usageReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", s.ApiKey);
-            using var usageResp = await _http.SendAsync(usageReq, ct);
-            if (usageResp.IsSuccessStatusCode)
+            using var costsReq = new HttpRequestMessage(HttpMethod.Get,
+                $"https://api.openai.com/v1/organization/costs?start_time={startTime}&end_time={endTime}&bucket_width=1d&limit=31");
+            costsReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", s.ApiKey);
+            using var costsResp = await _http.SendAsync(costsReq, ct);
+
+            if (costsResp.IsSuccessStatusCode)
             {
-                var usageBody = await usageResp.Content.ReadAsStringAsync(ct);
-                using var usageDoc = JsonDocument.Parse(usageBody);
-                if (usageDoc.RootElement.TryGetProperty("total_usage", out var tu))
-                    usedUsd = tu.GetDouble() / 100.0;   // cents → USD
+                var body = await costsResp.Content.ReadAsStringAsync(ct);
+                using var doc = JsonDocument.Parse(body);
+                double total = 0.0;
+                if (doc.RootElement.TryGetProperty("data", out var data))
+                {
+                    foreach (var bucket in data.EnumerateArray())
+                    {
+                        if (!bucket.TryGetProperty("results", out var results)) continue;
+                        foreach (var result in results.EnumerateArray())
+                        {
+                            if (result.TryGetProperty("amount", out var amount) &&
+                                amount.TryGetProperty("value", out var val))
+                                total += val.GetDouble();
+                        }
+                    }
+                }
+                usedUsd = total;
             }
             else
             {
-                var usageBody = await usageResp.Content.ReadAsStringAsync(ct);
-                _logger.LogWarning("QsoSummaryService: CheckBalanceAsync – usage returned {Status}: {Body}",
-                    usageResp.StatusCode, usageBody);
+                var body = await costsResp.Content.ReadAsStringAsync(ct);
+                _logger.LogWarning("QsoSummaryService: CheckBalanceAsync – costs returned {Status}: {Body}",
+                    costsResp.StatusCode, body);
 
-                // OpenAI restricts legacy billing endpoints for project-keys and newer accounts.
-                // Return a clear hint with the direct dashboard URL instead of a generic error.
-                if (usageResp.StatusCode == System.Net.HttpStatusCode.Forbidden ||
-                    usageResp.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                if (costsResp.StatusCode == System.Net.HttpStatusCode.Forbidden ||
+                    costsResp.StatusCode == System.Net.HttpStatusCode.Unauthorized ||
+                    costsResp.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
                     return "⚠️ BILLING_API_RESTRICTED";
                 }
 
                 try
                 {
-                    using var errDoc = JsonDocument.Parse(usageBody);
+                    using var errDoc = JsonDocument.Parse(body);
                     if (errDoc.RootElement.TryGetProperty("error", out var err) &&
                         err.TryGetProperty("message", out var msg))
                         return $"❌ {msg.GetString()}";
                 }
                 catch { /* ignore */ }
-                return $"❌ HTTP {(int)usageResp.StatusCode}";
+                return $"❌ HTTP {(int)costsResp.StatusCode}";
             }
 
-            // ── 2. Subscription / hard limit (User-Keys only, optional) ──────
-            double? hardLimit = null;
-            bool    hasPm     = false;
-            string? planName  = null;
-
-            using var subReq = new HttpRequestMessage(HttpMethod.Get,
-                "https://api.openai.com/v1/dashboard/billing/subscription");
-            subReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", s.ApiKey);
-            using var subResp = await _http.SendAsync(subReq, ct);
-            if (subResp.IsSuccessStatusCode)
-            {
-                var subBody = await subResp.Content.ReadAsStringAsync(ct);
-                using var subDoc = JsonDocument.Parse(subBody);
-                var root = subDoc.RootElement;
-                hardLimit = root.TryGetProperty("hard_limit_usd", out var hl) ? hl.GetDouble() : null;
-                hasPm     = root.TryGetProperty("has_payment_method", out var pm) && pm.GetBoolean();
-                planName  = root.TryGetProperty("plan", out var plan) && plan.TryGetProperty("title", out var pt)
-                                ? pt.GetString() : null;
-            }
-            // 403/401 on subscription = Project-Key → silently skip, usage data is enough
-
-            // ── 3. Build result string ────────────────────────────────────────
+            // ── Build result string ───────────────────────────────────────────
             var eurRate = await FetchUsdToEurRateAsync(ct);
             var parts   = new List<string>();
 
-            if (planName != null) parts.Add(planName);
-
-            if (hardLimit.HasValue && usedUsd.HasValue)
-            {
-                var remaining = hardLimit.Value - usedUsd.Value;
-                parts.Add(eurRate.HasValue
-                    ? $"Restguthaben: ${remaining:F2} / {remaining * eurRate.Value:F2} €"
-                    : $"Restguthaben: ${remaining:F2}");
-                parts.Add($"{now:MMMM}: ${usedUsd.Value:F2} verbraucht | Limit: ${hardLimit.Value:F2}");
-            }
-            else if (usedUsd.HasValue)
+            if (usedUsd.HasValue)
             {
                 parts.Add(eurRate.HasValue
-                    ? $"{now:MMMM}: ${usedUsd.Value:F2} / {usedUsd.Value * eurRate.Value:F2} € verbraucht"
-                    : $"{now:MMMM}: ${usedUsd.Value:F2} verbraucht");
+                    ? $"{now:MMMM}: ${usedUsd.Value:F4} / {usedUsd.Value * eurRate.Value:F4} € verbraucht"
+                    : $"{now:MMMM}: ${usedUsd.Value:F4} verbraucht");
             }
-
-            if (hasPm) parts.Add("💳");
 
             return parts.Count > 0 ? string.Join(" | ", parts) : "OK";
         }
