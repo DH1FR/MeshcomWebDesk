@@ -126,9 +126,12 @@
                             else
                             {
                                 var msgFn = QrzFirstName(msg.From);
-                                <span class="msg-call msg-call-link"
-                                      @onclick="() => OpenTabFromMonitor(msg.From)"
-                                      title="@(Loc.T($"Chat mit {msg.From} öffnen", $"Open chat with {msg.From}", $"Apri chat con {msg.From}", $"Abrir chat con {msg.From}") + QrzSuffix(msg.From))">@msg.From@if (msgFn is not null){<span class="qrz-badge"> · @msgFn</span>}:</span>
+                                <span class="msg-call-group">
+                                    <span class="msg-call msg-call-link"
+                                          @onclick="() => OpenTabFromMonitor(msg.From)"
+                                          title="@(Loc.T($"Chat mit {msg.From} öffnen", $"Open chat with {msg.From}", $"Apri chat con {msg.From}", $"Abrir chat con {msg.From}") + QrzSuffix(msg.From))">@msg.From@if (msgFn is not null){<span class="qrz-badge"> · @msgFn</span>}:</span>
+                                    <button class="btn-mention" @onclick="() => InsertMentionAsync(msg.From)" title="@MentionTitle(msg.From)">&#64;</button>
+                                </span>
                             }
                             <span class="msg-text">@FormatMessageWithLinks(msg.Text)</span>
                             @if (msg.IsOutgoing)
@@ -139,7 +142,7 @@
                     }
                 </div>
 
-                <SendBar OnSend="HandleSendMessage" Callsign="@_activeTab.Key" />
+                <SendBar @ref="_sendBar" OnSend="HandleSendMessage" Callsign="@_activeTab.Key" />
             }
             else
             {
@@ -211,8 +214,11 @@
                             @if (!string.Equals(m.From, _myCallsign, StringComparison.OrdinalIgnoreCase))
                             {
                                 var monFn = QrzFirstName(m.From);
-                                <span class="mon-call mon-call-link" @onclick="() => OpenTabFromMonitor(m.From)"
-                                      title="@(Loc.T($"Chat mit {m.From} öffnen", $"Open chat with {m.From}", $"Apri chat con {m.From}", $"Abrir chat con {m.From}") + QrzSuffix(m.From))">@m.From@if (monFn is not null){<span class="qrz-badge"> · @monFn</span>}</span>
+                                <span class="mon-call-group">
+                                    <span class="mon-call mon-call-link" @onclick="() => OpenTabFromMonitor(m.From)"
+                                          title="@(Loc.T($"Chat mit {m.From} öffnen", $"Open chat with {m.From}", $"Apri chat con {m.From}", $"Abrir chat con {m.From}") + QrzSuffix(m.From))">@m.From@if (monFn is not null){<span class="qrz-badge"> · @monFn</span>}</span>
+                                    <button class="btn-mention" @onclick="() => InsertMentionAsync(m.From)" title="@MentionTitle(m.From)">&#64;</button>
+                                </span>
                             }
                             else
                             {
@@ -747,6 +753,7 @@
     private ConnectionStatus _status = new();
     private MeshcomSettings _settings = new();
     private bool _showMonitor = false;
+    private SendBar? _sendBar;
 
     // QSO Summary modal state
     private bool               _qsoSummaryVisible;
@@ -1248,6 +1255,15 @@
         _showRecentPartners = false;
         OpenTabFromMonitor(callsign);
     }
+
+    private async Task InsertMentionAsync(string callsign)
+    {
+        if (_sendBar is not null)
+            await _sendBar.InsertMentionAsync(callsign);
+    }
+
+    private string MentionTitle(string callsign) =>
+        "@" + callsign + Loc.T(" in Nachricht einfügen", " insert into message", " inserisci nel messaggio", " insertar en mensaje");
 
     private void CreateNewTab()
     {

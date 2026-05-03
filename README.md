@@ -74,7 +74,8 @@ The application runs on **Windows** or **Linux** and makes a full web client for
   - `✓✓` green – recipient confirmed delivery (LoRa ACK received)
   - `☁️` – sent to group or broadcast (no ACK expected)
   - `☁️✓` – delivered via gateway (Gateway ACK received)
-- **Clickable callsigns in the monitor** – click any sender or recipient to open a chat tab instantly
+- **Clickable callsigns in the monitor** – click any sender or recipient to open a chat tab instantly; hover over a callsign to reveal a small **`@`** button – clicking it inserts `@CALLSIGN` at the current cursor position in the message input field (useful for addressing someone in a group or broadcast message without switching tabs)
+- **`@`-Mention in chat messages** – the same `@` button appears next to every incoming callsign in the group/broadcast message list; clicking it inserts `@CALLSIGN` at the cursor position in the send bar
 - **QRZ.com tooltips** – when enabled, hovering over any callsign (tab buttons, chat messages, monitor From/To) shows the operator's first name and home QTH (e.g. `Chat mit DH1FR-2 öffnen · Max, Berlin`)
 - **Audio notification** 🔔 when a new direct message to your own callsign arrives (Web Audio API, no audio file required); mute toggle in the status bar
 - **🔊 Voice announcements** – incoming direct messages are read aloud using the browser's built-in **Web Speech API** (no plugin or audio file required); toggle with the 🔊/🔇 button in the status bar; state is saved in `localStorage` and restored on reload; language passed to the speech synthesiser matches the current UI language

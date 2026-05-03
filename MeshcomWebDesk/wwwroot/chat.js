@@ -237,6 +237,27 @@ window.meshcomChat = (function () {
             overlay.addEventListener('click', function(e) { if (e.target === overlay) dismiss(); });
         },
 
+        // ── SendBar: fügt Text an der aktuellen Cursorposition ein ──
+        insertAtCursor: (id, text) => {
+            var el = document.getElementById(id);
+            if (!el) return;
+            var start = el.selectionStart;
+            var end   = el.selectionEnd;
+            var val   = el.value;
+            el.value  = val.substring(0, start) + text + val.substring(end);
+            var pos   = start + text.length;
+            el.setSelectionRange(pos, pos);
+            el.focus();
+            // Counter aktualisieren
+            var bar     = el.closest('.send-bar');
+            var counter = bar && bar.querySelector('.char-counter');
+            if (counter) {
+                var len = el.value.length;
+                counter.textContent = len + '/149';
+                counter.className = 'char-counter' + (len >= 145 ? ' char-danger' : len >= 130 ? ' char-warn' : '');
+            }
+        },
+
         // ── SendBar: liest den aktuellen Wert des Eingabefelds ──
         getSendBarValue: (id) => {
             var el = document.getElementById(id);

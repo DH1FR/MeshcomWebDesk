@@ -407,6 +407,39 @@ h1:focus {
 }
 .msg-call-link:hover { color: #79c0ff; text-decoration: underline solid; }
 
+/* Wrapper für Rufzeichen + @-Button */
+.msg-call-group,
+.mon-call-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+/* @-Button zum Einfügen des Rufzeichens in den Nachrichtentext */
+.btn-mention {
+    display: inline-block;
+    opacity: 0;
+    font-size: 10px;
+    padding: 0 3px;
+    line-height: 1.3;
+    background: #21262d;
+    color: #79c0ff;
+    border: 1px solid #30363d;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    vertical-align: middle;
+    user-select: none;
+}
+.message:hover .btn-mention,
+.mon-row:hover .btn-mention {
+    opacity: 1;
+}
+.btn-mention:hover {
+    background: #0f3460;
+    color: #a0c4ff;
+}
+
 .msg-text {
     color: #e0e0e0;
 }

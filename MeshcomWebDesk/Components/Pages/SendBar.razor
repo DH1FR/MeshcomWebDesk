@@ -180,4 +180,11 @@
     {
         await JsSendAsync();
     }
+
+    /// <summary>Fügt @CALLSIGN an der aktuellen Cursorposition im Eingabefeld ein.</summary>
+    public async Task InsertMentionAsync(string callsign)
+    {
+        var mention = "@" + callsign;
+        await JS.InvokeVoidAsync("meshcomChat.insertAtCursor", "send-bar-input", mention);
+    }
 }
