@@ -1185,6 +1185,10 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
  ## 📋 Changelog
 
+### v1.9.4
+- **feat:** 🕐 **Neue Variable `{last-qso}`** – Zeitstempel des letzten direkten QSOs mit dem aktuellen Rufzeichen; Format `dd.MM.yyyy HH:mm`; verfügbar in Auto-Reply, Bot-Befehlen und Quick Texts; Datenbank (MySQL) wird als primäre Quelle verwendet, Fallback auf den letzten In-Memory-Nachrichteintrag wenn keine DB konfiguriert ist; dokumentiert in den Variablen-Referenztabellen in den Einstellungen
+
+
 ### v1.9.3
 - **feat:** 🔧 **Variable {telemetry}** – Telemetrie-String aus der JSON-Datei steht überall als {telemetry}-Platzhalter zur Verfügung (Auto-Reply, Bot, Bake-Text, Quick Texts, Nachrichteneingabe); JSON wird bei jedem Abruf neu eingelesen; dokumentiert in der Variablen-Referenztabelle in den Einstellungen und im README
 - **feat:** 🗺️ **Locator-Format korrigiert** – Maidenhead-Locator wird jetzt überall korrekt dargestellt (letzte zwei Buchstaben kleingeschrieben, z. B. JO40nu statt JO40NU); zentral in GeoHelper.ToMaidenhead() geändert

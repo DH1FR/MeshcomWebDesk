@@ -25,6 +25,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     private readonly ChatService _chatService;
     private readonly QrzService  _qrzService;
     private readonly BotCommandService _botCommandService;
+    private readonly QsoSummaryService _qsoSummaryService;
     private MeshcomSettings _settings;
     private UdpClient? _udpClient;
 
@@ -63,13 +64,15 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         IOptionsMonitor<MeshcomSettings> settings,
         ChatService chatService,
         QrzService qrzService,
-        BotCommandService botCommandService)
+        BotCommandService botCommandService,
+        QsoSummaryService qsoSummaryService)
     {
-        _logger             = logger;
-        _chatService        = chatService;
-        _qrzService         = qrzService;
-        _botCommandService  = botCommandService;
-        _settings           = settings.CurrentValue;
+        _logger              = logger;
+        _chatService         = chatService;
+        _qrzService          = qrzService;
+        _botCommandService   = botCommandService;
+        _qsoSummaryService   = qsoSummaryService;
+        _settings            = settings.CurrentValue;
         settings.OnChange(s =>
         {
             _settings = s;
@@ -317,7 +320,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             catch (Exception ex) { _logger.LogDebug(ex, "QRZ pre-lookup for auto-reply failed for {Callsign}", callsign); }
         }
 
-        var text = ExpandVariables(_settings.AutoReplyText, callsign);
+        var text = await ExpandVariablesAsync(_settings.AutoReplyText, callsign);
         _logger.LogInformation("Auto-reply to new contact {Callsign}", callsign);
         await SendMessageAsync(callsign, text);
     }
@@ -334,7 +337,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             }
 
             var reply = await _botCommandService.ExecuteAsync(message.Text!, message.From, message);
-            reply = ExpandVariables(reply, message.From);
+            reply = await ExpandVariablesAsync(reply, message.From);
 
             var parts = SplitMessage(reply);
             _logger.LogInformation("Bot reply to {From} ({Parts} part(s)): {Preview}",
@@ -454,6 +457,45 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             .Replace("{srctype}",       srcType,                                            StringComparison.OrdinalIgnoreCase)
             .Replace("{date}",          now.ToString("dd.MM.yyyy"),                         StringComparison.OrdinalIgnoreCase)
             .Replace("{time}",          now.ToString("HH:mm"),                              StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Async variant of <see cref="ExpandVariables"/> that additionally resolves <c>{last-qso}</c>
+    /// by querying the MySQL database for the last direct message timestamp with <paramref name="callsign"/>.
+    /// Falls back to in-memory messages when the DB is not available.
+    /// </summary>
+    public async Task<string> ExpandVariablesAsync(string template, string? callsign = null, CancellationToken ct = default)
+    {
+        // First apply all synchronous variables
+        var result = ExpandVariables(template, callsign);
+
+        // Resolve {last-qso} only when needed
+        if (!result.Contains("{last-qso}", StringComparison.OrdinalIgnoreCase))
+            return result;
+
+        string lastQsoStr = string.Empty;
+
+        if (callsign != null)
+        {
+            // 1. Try MySQL DB (full history)
+            var callsignBase = callsign.Contains('-') ? callsign[..callsign.IndexOf('-')] : callsign;
+            var dbTime = await _qsoSummaryService.GetLastQsoTimeDbOnlyAsync(callsignBase, ct);
+            if (dbTime.HasValue)
+            {
+                lastQsoStr = dbTime.Value.ToString("dd.MM.yyyy HH:mm");
+            }
+            else
+            {
+                // 2. Fallback: most recent in-memory message for this tab
+                var lastMsg = _chatService.GetTabMessages(callsign)
+                    .OrderByDescending(m => m.Timestamp)
+                    .FirstOrDefault();
+                if (lastMsg != null)
+                    lastQsoStr = lastMsg.Timestamp.ToString("dd.MM.yyyy HH:mm");
+            }
+        }
+
+        return result.Replace("{last-qso}", lastQsoStr, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>

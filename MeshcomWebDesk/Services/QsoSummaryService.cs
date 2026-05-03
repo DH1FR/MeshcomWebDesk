@@ -426,6 +426,40 @@ public sealed class QsoSummaryService
     }
 
     /// <summary>
+    /// Returns the timestamp of the last direct message with <paramref name="callsignBase"/> from the DB.
+    /// Only requires MySQL (no AI key needed) – suitable for variable expansion.
+    /// </summary>
+    public async Task<DateTime?> GetLastQsoTimeDbOnlyAsync(string callsignBase, CancellationToken ct = default)
+    {
+        if (!IsDbOnlyAvailable(out var db)) return null;
+
+        try
+        {
+            await using var conn = new MySqlConnection(db.MySqlConnectionString);
+            await conn.OpenAsync(ct);
+
+            await using var cmd = new MySqlCommand(
+                $"""
+                SELECT MAX(timestamp) FROM `{db.MySqlTableName}`
+                WHERE (from_call = @cs OR from_call LIKE @csLike
+                    OR to_call  = @cs OR to_call  LIKE @csLike)
+                  AND is_position_beacon = 0
+                  AND is_telemetry       = 0
+                """, conn);
+            cmd.Parameters.AddWithValue("@cs",     callsignBase);
+            cmd.Parameters.AddWithValue("@csLike", callsignBase + "-%");
+
+            var result = await cmd.ExecuteScalarAsync(ct);
+            return result is null or DBNull ? null : Convert.ToDateTime(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "QsoSummaryService: GetLastQsoTimeDbOnlyAsync failed for {Callsign}", callsignBase);
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Returns the last <paramref name="limit"/> distinct direct QSO partners for
     /// <paramref name="myCallsign"/>, ordered by most recent contact first.
     /// Only direct 1:1 chat messages are considered (no groups, no broadcast, no ACKs).

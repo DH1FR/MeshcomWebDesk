@@ -197,6 +197,7 @@
                                 <tr><td><code>{date}</code></td>     <td>@Loc.T("Aktuelles Datum",      "Current date",          "Data corrente",          "Fecha actual")</td>         <td style="font-family:monospace">@now.ToString("dd.MM.yyyy")</td></tr>
                                 <tr><td><code>{time}</code></td>     <td>@Loc.T("Aktuelle Uhrzeit",     "Current time",          "Ora corrente",           "Hora actual")</td>          <td style="font-family:monospace">@now.ToString("HH:mm")</td></tr>
                                 <tr><td><code>{telemetry}</code></td><td>@Loc.T("Telemetrie-String (aus JSON-Datei)", "Telemetry string (from JSON file)", "Stringa telemetria (da file JSON)", "Cadena telemetría (desde archivo JSON)")</td><td style="font-family:monospace">Temp=22.5°C Hum=60%</td></tr>
+                                <tr><td><code>{last-qso}</code></td> <td>@Loc.T("Letztes QSO mit diesem Rufzeichen (Datum+Uhrzeit)", "Last QSO with this callsign (date+time)", "Ultimo QSO con questo nominativo (data+ora)", "Último QSO con este indicativo (fecha+hora)")</td><td style="font-family:monospace">@DateTime.Now.ToString("dd.MM.yyyy HH:mm")</td></tr>
                             </tbody>
                         </table>
                         <p style="font-size:11px;color:#8b949e;margin-top:4px">
@@ -339,6 +340,7 @@
                                             <tr><td><code>{date}</code></td>     <td>@Loc.T("Aktuelles Datum",        "Current date",      "Data corrente",        "Fecha actual")</td>      <td style="font-family:monospace">@now.ToString("dd.MM.yyyy")</td></tr>
                                             <tr><td><code>{time}</code></td>     <td>@Loc.T("Aktuelle Uhrzeit",       "Current time",      "Ora corrente",         "Hora actual")</td>       <td style="font-family:monospace">@now.ToString("HH:mm")</td></tr>
                                             <tr><td><code>{telemetry}</code></td><td>@Loc.T("Telemetrie-String (aus JSON-Datei)", "Telemetry string (from JSON file)", "Stringa telemetria (da file JSON)", "Cadena telemetría (desde archivo JSON)")</td><td style="font-family:monospace">Temp=22.5°C Hum=60%</td></tr>
+                                            <tr><td><code>{last-qso}</code></td> <td>@Loc.T("Letztes QSO mit diesem Rufzeichen", "Last QSO with this callsign", "Ultimo QSO con questo nominativo", "Último QSO con este indicativo")</td><td style="font-family:monospace">@now.ToString("dd.MM.yyyy HH:mm")</td></tr>
                                         </tbody>
                                     </table>
                                 }
@@ -1088,6 +1090,7 @@
                             <tr><td><code>{date}</code></td>      <td>@Loc.T("Aktuelles Datum",          "Current date",         "Data corrente",            "Fecha actual")</td>            <td style="font-family:monospace">@now.ToString("dd.MM.yyyy")</td></tr>
                             <tr><td><code>{time}</code></td>      <td>@Loc.T("Aktuelle Uhrzeit",         "Current time",         "Ora corrente",             "Hora actual")</td>             <td style="font-family:monospace">@now.ToString("HH:mm")</td></tr>
                             <tr><td><code>{telemetry}</code></td> <td>@Loc.T("Telemetrie-String (aus JSON-Datei)", "Telemetry string (from JSON file)", "Stringa telemetria (da file JSON)", "Cadena telemetría (desde archivo JSON)")</td><td style="font-family:monospace">Temp=22.5°C Hum=60%</td></tr>
+                            <tr><td><code>{last-qso}</code></td>  <td>@Loc.T("Letztes QSO mit diesem Rufzeichen", "Last QSO with this callsign", "Ultimo QSO con questo nominativo", "Último QSO con este indicativo")</td><td style="font-family:monospace">@now.ToString("dd.MM.yyyy HH:mm")</td></tr>
                         </tbody>
                     </table>
                 </div>
