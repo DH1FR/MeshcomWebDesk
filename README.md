@@ -49,7 +49,9 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 
 <video src="docs/MeshComWebDesk.mp4" controls width="100%"></video>
 
-![MeshCom Web Client](docs/screenshot.png?v=2)
+![MeshCom Web Client](docs/screenshot.png?v=3)
+
+![MeshCom AI Search](docs/Screenshot-AI-Search.png)
 
 ![MeshCom Live Map](docs/Screenshot_Map.png)
 
