@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
 using MeshcomWebDesk.Models;
 using MeshcomWebDesk.Services.Database;
@@ -72,6 +73,18 @@ public class ChatService
     /// Arguments: received callsign (as-is), the triggering message.
     /// </summary>
     public event Action<string, MeshcomMessage>? OnWatchlistHit;
+
+    /// <summary>
+    /// Raised when a group message is detected as a CQ call (own callsign excluded).
+    /// Arguments: sender callsign, group number (e.g. "262"), the raw message text.
+    /// </summary>
+    public event Action<string, string, string>? OnCqHeard;
+
+    // Compiled regex: matches messages that contain "CQ" as a standalone word/abbreviation.
+    // Examples matched: "CQ de OE6TZD", "cq cq de DF7AX", "IY6GM CQ 144300", "cQ DO7PAW".
+    private static readonly Regex CqRegex = new(
+        @"(?<![A-Z0-9])CQ(?![A-Z0-9])",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     /// <summary>
     /// The key of the last tab the user actively selected.
@@ -209,6 +222,7 @@ public class ChatService
         _ = _webhook.SendAsync(message, "message");
         _ = _mqtt?.PublishAsync(message, "message");
         CheckWatchlist(message);
+        CheckCq(message, tabKey);
 
         // Fire bot command event for direct messages
         if (!message.IsBroadcast &&
@@ -783,6 +797,37 @@ public class ChatService
             return string.Equals(callsign, entry, StringComparison.OrdinalIgnoreCase);
         var baseCs = callsign.Contains('-') ? callsign[..callsign.IndexOf('-')] : callsign;
         return string.Equals(baseCs, entry, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Detects CQ calls in group messages and fires <see cref="OnCqHeard"/>.
+    /// Rules:
+    ///  - Only group messages (tabKey starts with '#') that pass the group filter.
+    ///  - Message text must contain "CQ" as a standalone token (case-insensitive).
+    ///  - Own callsign is suppressed.
+    /// </summary>
+    private void CheckCq(MeshcomMessage message, string tabKey)
+    {
+        if (!tabKey.StartsWith('#')) return;
+        if (string.IsNullOrWhiteSpace(message.Text)) return;
+        if (string.IsNullOrWhiteSpace(message.From)) return;
+
+        // Suppress own callsign
+        if (string.Equals(message.From, _settings.MyCallsign, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        // Group filter: only whitelisted groups (same logic as tab routing)
+        bool groupAllowed = !_settings.GroupFilterEnabled
+            || _settings.Groups.Contains(tabKey, StringComparer.OrdinalIgnoreCase);
+        if (!groupAllowed) return;
+
+        if (!CqRegex.IsMatch(message.Text)) return;
+
+        // Extract group number from tabKey (strip '#')
+        var group = tabKey.TrimStart('#');
+        _logger.LogInformation("CQ detected: From={From} Group={Group} Text={Text}",
+            message.From, group, message.Text);
+        OnCqHeard?.Invoke(message.From, group, message.Text);
     }
 
     private void NotifyChange()

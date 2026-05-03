@@ -98,6 +98,40 @@
                 }
             };
 
+            // CQ beep: Morse CQ in CW style (700 Hz) – C (dah-dit-dah-dit) Q (dah-dah-dit-dah)
+            // Unit = 80 ms.  Dah = 3 units, Dit = 1 unit, inter-element gap = 1 unit, inter-char = 3 units.
+            window.playCqBeep = function () {
+                try {
+                    var ctx = getAudioContext();
+                    function doCq() {
+                        var u   = 0.08;  // unit in seconds
+                        var hz  = 700;
+                        var vol = 0.30;
+                        // C = dah dit dah dit,  Q = dah dah dit dah
+                        // Pattern: lengths (u), 0 = gap
+                        var pat = [3,0,1,0,3,0,1, 0,0, 3,0,3,0,1,0,3];
+                        var t   = ctx.currentTime + 0.05;
+                        pat.forEach(function (len) {
+                            if (len === 0) { t += u; return; }
+                            var osc  = ctx.createOscillator();
+                            var gain = ctx.createGain();
+                            osc.connect(gain);
+                            gain.connect(ctx.destination);
+                            osc.type = 'sine';
+                            osc.frequency.value = hz;
+                            gain.gain.setValueAtTime(0.0, t);
+                            gain.gain.linearRampToValueAtTime(vol, t + 0.005);
+                            gain.gain.setValueAtTime(vol, t + len * u - 0.005);
+                            gain.gain.linearRampToValueAtTime(0.0, t + len * u);
+                            osc.start(t);
+                            osc.stop(t + len * u);
+                            t += len * u + u; // element + inter-element gap
+                        });
+                    }
+                    if (ctx.state === 'suspended') { ctx.resume().then(doCq); } else { doCq(); }
+                } catch (e) { console.warn('CQ beep failed:', e); }
+            };
+
             // Three-tone ascending beep (660 → 880 → 1100 Hz) for watchlist alerts
             window.playWatchlistBeep = function () {
                 try {

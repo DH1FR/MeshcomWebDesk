@@ -348,6 +348,25 @@
         </div>
     }
 
+    @* ===== CQ TOAST ===== *@
+    @if (_cqAlerts.Count > 0)
+    {
+        <div class="watchlist-toast" style="border-color:#e3b341">
+            <div class="watchlist-toast-header">
+                <span>📡 @Loc.T("CQ gehört", "CQ heard", "CQ sentito", "CQ escuchado")</span>
+                <button class="watchlist-toast-close" @onclick="() => _cqAlerts.Clear()">✕</button>
+            </div>
+            @foreach (var cq in _cqAlerts)
+            {
+                <div class="watchlist-toast-row">
+                    <span class="watchlist-callsign">@cq.Callsign</span>
+                    <span class="watchlist-badge" style="background:#e3b341;color:#000">CQ #@cq.Group</span>
+                    <span class="watchlist-age">@FormatAlertAge(cq.Time)</span>
+                </div>
+            }
+        </div>
+    }
+
     @* ===== STATUS BAR ===== *@
     <div class="status-bar">
         <button class="status-mute-btn @(_soundEnabled ? "" : "status-mute-off")"
@@ -896,6 +915,10 @@
     private List<WatchlistAlert> _watchlistAlerts = [];
     private bool _playWatchlistSound;
 
+    private record CqAlert(string Callsign, string Group, DateTime Time);
+    private List<CqAlert> _cqAlerts = [];
+    private bool _playCqSound;
+
     // ── Welcome dialog ────────────────────────────────────────────────────
     private static readonly string _appVersion =
         typeof(Chat).Assembly.GetName().Version is { } v
@@ -914,6 +937,7 @@
         ChatService.OnChange += OnChatChanged;
         UdpService.OnStatusChange += OnStatusChanged;
         ChatService.OnWatchlistHit += HandleWatchlistHit;
+        ChatService.OnCqHeard += HandleCqHeard;
         ChatService.OnNewDirectTab += HandleNewDirectTab;
         ChatService.OnDirectMessage += HandleDirectMessage;
         // Restore active tab from service memory so the first render already shows the correct tab
@@ -1043,6 +1067,12 @@
             catch (JSException) { }
         }
 
+        if (_playCqSound)
+        {
+            _playCqSound = false;
+            try { await JS.InvokeVoidAsync("playCqBeep"); }
+            catch (Exception) { }
+        }
         if (_playWatchlistSound)
         {
             _playWatchlistSound = false;
@@ -1389,6 +1419,7 @@
         ChatService.OnChange -= OnChatChanged;
         UdpService.OnStatusChange -= OnStatusChanged;
         ChatService.OnWatchlistHit -= HandleWatchlistHit;
+        ChatService.OnCqHeard -= HandleCqHeard;
         ChatService.OnNewDirectTab -= HandleNewDirectTab;
         ChatService.OnDirectMessage -= HandleDirectMessage;
     }
@@ -1710,6 +1741,45 @@
                 {
                     var limit = Math.Max(1, SettingsOptions.CurrentValue.WatchAlertMinutes);
                     _watchlistAlerts.RemoveAll(a => (DateTime.Now - a.Time).TotalMinutes > limit);
+                    StateHasChanged();
+                });
+        }
+        catch (Exception) { }
+    }
+
+    private async void HandleCqHeard(string callsign, string group, string text)
+    {
+        if (_disposed) return;
+        try
+        {
+            await InvokeAsync(() =>
+            {
+                if (_disposed) return;
+                var existing = _cqAlerts.FirstOrDefault(a =>
+                    string.Equals(a.Callsign, callsign, StringComparison.OrdinalIgnoreCase)
+                    && a.Group == group);
+                if (existing is not null)
+                    _cqAlerts.Remove(existing);
+                _cqAlerts.Insert(0, new CqAlert(callsign, group, DateTime.Now));
+                if (_soundEnabled)
+                    _playCqSound = true;
+                if (_voiceEnabled == true)
+                {
+                    var phonetic = PhoneticAlphabetHelper.Spell(callsign, Loc.Current);
+                    var groupSpelled = string.Join(" ", group.ToCharArray());
+                    _pendingSpeech.Enqueue(Loc.T(
+                        $"C Q C Q von {phonetic} in Gruppe {groupSpelled}",
+                        $"C Q C Q from {phonetic} in group {groupSpelled}",
+                        $"C Q C Q da {phonetic} nel gruppo {groupSpelled}",
+                        $"C Q C Q de {phonetic} en grupo {groupSpelled}"));
+                }
+                StateHasChanged();
+            });
+            await Task.Delay(TimeSpan.FromSeconds(62));
+            if (!_disposed)
+                await InvokeAsync(() =>
+                {
+                    _cqAlerts.RemoveAll(a => (DateTime.Now - a.Time).TotalSeconds > 60);
                     StateHasChanged();
                 });
         }
