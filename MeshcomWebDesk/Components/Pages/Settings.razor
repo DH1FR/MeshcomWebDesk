@@ -1,4 +1,4 @@
-﻿@page "/settings"
+@page "/settings"
 @rendermode InteractiveServer
 @using Microsoft.Extensions.Options
 @using MeshcomWebDesk.Services.Database
@@ -183,10 +183,10 @@
                                 <tr><td><code>{node-firmware}</code></td><td>@Loc.T("Node-Firmware", "Node firmware", "Firmware del nodo", "Firmware del nodo")</td><td style="font-family:monospace">4.35</td></tr>
                                 <tr><td><code>{node-hw}</code></td>  <td>@Loc.T("Node-Hardware",        "Node hardware",         "Hardware del nodo",      "Hardware del nodo")</td>   <td style="font-family:monospace">T-BEAM</td></tr>
                                 <tr><td><code>{callsign}</code></td> <td>@Loc.T("Anrufendes Rufzeichen","Caller's callsign",    "Nominativo chiamante",   "Indicativo llamante")</td>  <td style="font-family:monospace">OE1KBC-1</td></tr>
-                                <tr><td><code>{mylocator}</code></td> <td>@Loc.T("Eigener QTH-Locator", "Own QTH Locator", "Locatore QTH proprio", "Localizador QTH propio")</td>         <td style="font-family:monospace">JN48QN</td></tr>
+                                <tr><td><code>{mylocator}</code></td> <td>@Loc.T("Eigener QTH-Locator", "Own QTH Locator", "Locatore QTH proprio", "Localizador QTH propio")</td>         <td style="font-family:monospace">JN48qn</td></tr>
                                 <tr><td><code>{dest-name}</code></td><td>@Loc.T("QRZ-Vorname",          "QRZ first name",        "Nome QRZ",               "Nombre QRZ")</td>           <td style="font-family:monospace;color:#7ee787">@Loc.T("Max ⚠️ nur wenn gecacht","Max ⚠️ if cached","Max ⚠️ se in cache","Max ⚠️ si en caché")</td></tr>
                                 <tr><td><code>{dest-loc}</code></td> <td>@Loc.T("QRZ-Ort",              "QRZ location",          "Luogo QRZ",              "Lugar QRZ")</td>            <td style="font-family:monospace;color:#7ee787">@Loc.T("Wien ⚠️ nur wenn gecacht","Wien ⚠️ if cached","Wien ⚠️ se in cache","Wien ⚠️ si en caché")</td></tr>
-                                <tr><td><code>{locator}</code></td>  <td>@Loc.T("QTH-Locator (Gesprächspartner)", "QTH Locator (partner)", "Locatore QTH (partner)", "Localizador QTH (interlocutor)")</td> <td style="font-family:monospace">JN48QN</td></tr>
+                                <tr><td><code>{locator}</code></td>  <td>@Loc.T("QTH-Locator (Gesprächspartner)", "QTH Locator (partner)", "Locatore QTH (partner)", "Localizador QTH (interlocutor)")</td> <td style="font-family:monospace">JN48qn</td></tr>
                                 <tr><td><code>{rssi}</code></td>     <td>@Loc.T("RSSI (dBm)",           "RSSI (dBm)",            "RSSI (dBm)",             "RSSI (dBm)")</td>           <td style="font-family:monospace">-85</td></tr>
                                 <tr><td><code>{snr}</code></td>      <td>@Loc.T("SNR (dB)",             "SNR (dB)",              "SNR (dB)",               "SNR (dB)")</td>             <td style="font-family:monospace">9.5</td></tr>
                                 <tr><td><code>{hw}</code></td>       <td>@Loc.T("Hardware-Name",        "Hardware name",         "Nome hardware",          "Nombre hardware")</td>      <td style="font-family:monospace">T-BEAM</td></tr>
@@ -196,6 +196,7 @@
                                 <tr><td><code>{srctype-label}</code></td><td>@Loc.T("Verbindungstyp (lesbar)","Connection type (readable)","Tipo connessione (leggibile)","Tipo conexión (legible)")</td><td style="font-family:monospace">LoRa / UDP/Gateway</td></tr>
                                 <tr><td><code>{date}</code></td>     <td>@Loc.T("Aktuelles Datum",      "Current date",          "Data corrente",          "Fecha actual")</td>         <td style="font-family:monospace">@now.ToString("dd.MM.yyyy")</td></tr>
                                 <tr><td><code>{time}</code></td>     <td>@Loc.T("Aktuelle Uhrzeit",     "Current time",          "Ora corrente",           "Hora actual")</td>          <td style="font-family:monospace">@now.ToString("HH:mm")</td></tr>
+                                <tr><td><code>{telemetry}</code></td><td>@Loc.T("Telemetrie-String (aus JSON-Datei)", "Telemetry string (from JSON file)", "Stringa telemetria (da file JSON)", "Cadena telemetría (desde archivo JSON)")</td><td style="font-family:monospace">Temp=22.5°C Hum=60%</td></tr>
                             </tbody>
                         </table>
                         <p style="font-size:11px;color:#8b949e;margin-top:4px">
@@ -324,10 +325,10 @@
                                             <tr><td><code>{node-firmware}</code></td><td>@Loc.T("Node-Firmware",     "Node firmware",     "Firmware del nodo",    "Firmware del nodo")</td> <td style="font-family:monospace">4.35</td></tr>
                                             <tr><td><code>{node-hw}</code></td>  <td>@Loc.T("Node-Hardware",         "Node hardware",     "Hardware del nodo",    "Hardware del nodo")</td> <td style="font-family:monospace">T-BEAM</td></tr>
                                             <tr><td><code>{callsign}</code></td>  <td>@Loc.T("Anrufendes Rufzeichen",       "Caller's callsign",    "Nominativo chiamante",  "Indicativo llamante")</td> <td style="font-family:monospace">OE1KBC-1</td></tr>
-                                            <tr><td><code>{mylocator}</code></td>   <td>@Loc.T("Eigener QTH-Locator", "Own QTH Locator", "Locatore QTH proprio", "Localizador QTH propio")</td> <td style="font-family:monospace">JN48QN</td></tr>
+                                            <tr><td><code>{mylocator}</code></td>   <td>@Loc.T("Eigener QTH-Locator", "Own QTH Locator", "Locatore QTH proprio", "Localizador QTH propio")</td> <td style="font-family:monospace">JN48qn</td></tr>
                                             <tr><td><code>{dest-name}</code></td><td>@Loc.T("Vorname (QRZ, Anrufer)",    "First name (QRZ, caller)", "Nome (QRZ, chiamante)", "Nombre (QRZ, llamante)")</td><td style="font-family:monospace">Max</td></tr>
                                             <tr><td><code>{dest-loc}</code></td> <td>@Loc.T("Standort (QRZ, Anrufer)",   "Location (QRZ, caller)",   "Luogo (QRZ, chiamante)","Lugar (QRZ, llamante)")</td> <td style="font-family:monospace">Wien</td></tr>
-                                            <tr><td><code>{locator}</code></td>   <td>@Loc.T("QTH-Locator (Gesprächspartner)", "QTH Locator (partner)", "Locatore QTH (partner)",   "Localizador QTH (interlocutor)")</td> <td style="font-family:monospace">JN48QN</td></tr>
+                                            <tr><td><code>{locator}</code></td>   <td>@Loc.T("QTH-Locator (Gesprächspartner)", "QTH Locator (partner)", "Locatore QTH (partner)",   "Localizador QTH (interlocutor)")</td> <td style="font-family:monospace">JN48qn</td></tr>
                                             <tr><td><code>{rssi}</code></td>     <td>@Loc.T("RSSI (dBm)",                "RSSI (dBm)",               "RSSI (dBm)",            "RSSI (dBm)")</td>           <td style="font-family:monospace">-85</td></tr>
                                             <tr><td><code>{snr}</code></td>      <td>@Loc.T("SNR (dB)",               "SNR (dB)",          "SNR (dB)",             "SNR (dB)")</td>          <td style="font-family:monospace">9.5</td></tr>
                                             <tr><td><code>{hw}</code></td>       <td>@Loc.T("Hardware-Name",          "Hardware name",     "Nome hardware",        "Nombre hardware")</td>   <td style="font-family:monospace">T-BEAM</td></tr>
@@ -337,6 +338,7 @@
                                             <tr><td><code>{srctype-label}</code></td><td>@Loc.T("Verbindungstyp (lesbar)", "Connection type (readable)", "Tipo connessione (leggibile)", "Tipo conexión (legible)")</td><td style="font-family:monospace">LoRa / UDP/Gateway</td></tr>
                                             <tr><td><code>{date}</code></td>     <td>@Loc.T("Aktuelles Datum",        "Current date",      "Data corrente",        "Fecha actual")</td>      <td style="font-family:monospace">@now.ToString("dd.MM.yyyy")</td></tr>
                                             <tr><td><code>{time}</code></td>     <td>@Loc.T("Aktuelle Uhrzeit",       "Current time",      "Ora corrente",         "Hora actual")</td>       <td style="font-family:monospace">@now.ToString("HH:mm")</td></tr>
+                                            <tr><td><code>{telemetry}</code></td><td>@Loc.T("Telemetrie-String (aus JSON-Datei)", "Telemetry string (from JSON file)", "Stringa telemetria (da file JSON)", "Cadena telemetría (desde archivo JSON)")</td><td style="font-family:monospace">Temp=22.5°C Hum=60%</td></tr>
                                         </tbody>
                                     </table>
                                 }
@@ -1073,10 +1075,10 @@
                             <tr><td><code>{node-firmware}</code></td><td>@Loc.T("Node-Firmware",          "Node firmware",        "Firmware del nodo",        "Firmware del nodo")</td>      <td style="font-family:monospace">4.35</td></tr>
                             <tr><td><code>{node-hw}</code></td>    <td>@Loc.T("Node-Hardware",            "Node hardware",        "Hardware del nodo",        "Hardware del nodo")</td>      <td style="font-family:monospace">T-BEAM</td></tr>
                             <tr><td><code>{callsign}</code></td>  <td>@Loc.T("Rufzeichen Gesprächspartner", "Chat partner callsign", "Nominativo interlocutore", "Indicativo interlocutor")</td> <td style="font-family:monospace">OE1KBC-1</td></tr>
-                            <tr><td><code>{mylocator}</code></td>   <td>@Loc.T("Eigener QTH-Locator", "Own QTH Locator", "Locatore QTH proprio", "Localizador QTH propio")</td>             <td style="font-family:monospace">JN48QN</td></tr>
+                            <tr><td><code>{mylocator}</code></td>   <td>@Loc.T("Eigener QTH-Locator", "Own QTH Locator", "Locatore QTH proprio", "Localizador QTH propio")</td>             <td style="font-family:monospace">JN48qn</td></tr>
                             <tr><td><code>{dest-name}</code></td> <td>@Loc.T("Vorname (QRZ)",            "First name (QRZ)",     "Nome (QRZ)",               "Nombre (QRZ)")</td>           <td style="font-family:monospace">Max</td></tr>
                             <tr><td><code>{dest-loc}</code></td>  <td>@Loc.T("Standort (QRZ)",           "Location (QRZ)",       "Posizione (QRZ)",          "Ubicación (QRZ)")</td>        <td style="font-family:monospace">Vienna, AT</td></tr>
-                            <tr><td><code>{locator}</code></td>   <td>@Loc.T("QTH-Locator (Gesprächspartner)", "QTH Locator (partner)", "Locatore QTH (partner)",   "Localizador QTH (interlocutor)")</td> <td style="font-family:monospace">JN48QN</td></tr>
+                            <tr><td><code>{locator}</code></td>   <td>@Loc.T("QTH-Locator (Gesprächspartner)", "QTH Locator (partner)", "Locatore QTH (partner)",   "Localizador QTH (interlocutor)")</td> <td style="font-family:monospace">JN48qn</td></tr>
                             <tr><td><code>{rssi}</code></td>      <td>@Loc.T("RSSI (letzter Empfang)",   "RSSI (last RX)",       "RSSI (ultima RX)",         "RSSI (última RX)")</td>       <td style="font-family:monospace">-85</td></tr>
                             <tr><td><code>{snr}</code></td>       <td>@Loc.T("SNR (letzter Empfang)",    "SNR (last RX)",        "SNR (ultima RX)",          "SNR (última RX)")</td>        <td style="font-family:monospace">6.5</td></tr>
                             <tr><td><code>{hw}</code></td>        <td>@Loc.T("Hardware-Typ",             "Hardware type",        "Tipo hardware",            "Tipo hardware")</td>           <td style="font-family:monospace">T-Beam</td></tr>
@@ -1085,6 +1087,7 @@
                             <tr><td><code>{version}</code></td>   <td>@Loc.T("App-Version",              "App version",          "Versione app",             "Versión app")</td>             <td style="font-family:monospace">1.0.0</td></tr>
                             <tr><td><code>{date}</code></td>      <td>@Loc.T("Aktuelles Datum",          "Current date",         "Data corrente",            "Fecha actual")</td>            <td style="font-family:monospace">@now.ToString("dd.MM.yyyy")</td></tr>
                             <tr><td><code>{time}</code></td>      <td>@Loc.T("Aktuelle Uhrzeit",         "Current time",         "Ora corrente",             "Hora actual")</td>             <td style="font-family:monospace">@now.ToString("HH:mm")</td></tr>
+                            <tr><td><code>{telemetry}</code></td> <td>@Loc.T("Telemetrie-String (aus JSON-Datei)", "Telemetry string (from JSON file)", "Stringa telemetria (da file JSON)", "Cadena telemetría (desde archivo JSON)")</td><td style="font-family:monospace">Temp=22.5°C Hum=60%</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -1629,7 +1632,7 @@
 
             // Build message buckets (same logic as MeshcomUdpService)
             const int MaxMsg    = 150;
-            const int PrefixMax = 11; // longest prefix e.g. "JN48QN/99:"
+            const int PrefixMax = 11; // longest prefix e.g. "JN48qn/99:"
             const int BucketLen = MaxMsg - PrefixMax;
             var buckets = new List<string>();
             var current = new System.Text.StringBuilder();

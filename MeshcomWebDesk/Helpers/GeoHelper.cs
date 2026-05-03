@@ -74,7 +74,7 @@ public static class GeoHelper
         char s1 = (char)('A' + (int)(lon * 12));
         char s2 = (char)('A' + (int)(lat * 24));
 
-        return $"{f1}{f2}{d1}{d2}{s1}{s2}";
+        return $"{f1}{f2}{d1}{d2}{char.ToLower(s1)}{char.ToLower(s2)}";
     }
 
     private static double ToRad(double deg) => deg * Math.PI / 180.0;

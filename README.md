@@ -1,4 +1,4 @@
-﻿```
+```
   ███╗   ███╗███████╗███████╗██╗  ██╗ ██████╗ ██████╗ ███╗   ███╗
   ████╗ ████║██╔════╝██╔════╝██║  ██║██╔════╝██╔═══██╗████╗ ████║
   ██╔████╔██║█████╗  ███████╗███████║██║     ██║   ██║██╔████╔██║
@@ -78,8 +78,8 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 - **QRZ.com tooltips** – when enabled, hovering over any callsign (tab buttons, chat messages, monitor From/To) shows the operator's first name and home QTH (e.g. `Chat mit DH1FR-2 öffnen · Max, Berlin`)
 - **Audio notification** 🔔 when a new direct message to your own callsign arrives (Web Audio API, no audio file required); mute toggle in the status bar
 - **🔊 Voice announcements** – incoming direct messages are read aloud using the browser's built-in **Web Speech API** (no plugin or audio file required); toggle with the 🔊/🔇 button in the status bar; state is saved in `localStorage` and restored on reload; language passed to the speech synthesiser matches the current UI language
-- **⚡ Quick Texts** – configurable one-click text buttons in the send bar; clicking a button loads the predefined text into the input field for review before sending; supports all `{variable}` placeholders (`{mycall}`, `{mylocator}`, `{callsign}`, `{locator}`, `{rssi}`, `{time}`, `{date}`, …); buttons can be **reordered by drag & drop** in the flyout; new order is saved immediately; configured in **Settings → ⚡ Quick Texts**
-- **Variable expansion in the send bar** – type any `{variable}` directly in the message input field; press **Tab** to expand as a preview; variables are always expanded automatically on send
+- **⚡ Quick Texts** – configurable one-click text buttons in the send bar; clicking a button loads the predefined text into the input field for review before sending; supports all `{variable}` placeholders (`{mycall}`, `{mylocator}`, `{callsign}`, `{locator}`, `{rssi}`, `{time}`, `{date}`, `{telemetry}`, …); buttons can be **reordered by drag & drop** in the flyout; new order is saved immediately; configured in **Settings → ⚡ Quick Texts**
+- **Variable expansion in the send bar** – type any `{variable}` directly in the message input field (e.g. `{telemetry}`, `{mycall}`, `{date}`); press **Tab** to expand as a live preview; variables are always expanded automatically on send
 - **Browser spell-check** – the message input field has `spellcheck="true"`; the browser's built-in spell checker underlines misspelled words when spell-checking is enabled in the browser settings
 - **Draggable tabs** – chat tabs can be reordered by drag & drop; order is saved in `localStorage` and restored on every visit
 - **Timestamps** – time is always shown as `HH:mm:ss`; for messages not from today a compact date (`dd.MM.yy`) is shown below the time without increasing row height
@@ -90,7 +90,7 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 ### 📻 MH – Most Recently Heard
 - Live table of all heard stations with last message, timestamp and message count
 - **GPS position** parsed from EXTUDP position packets (`lat_dir` / `long_dir` APRS format)
-- **QTH Locator** – Maidenhead locator (e.g. `JN48QN`) calculated from GPS coordinates; shown below the GPS position in the MH table and in the station card popup; also available as `{locator}` placeholder in Auto-Reply, Bot commands and Quick Texts
+- **QTH Locator** – Maidenhead locator (e.g. `JN48qn`) calculated from GPS coordinates; shown below the GPS position in the MH table and in the station card popup; also available as `{locator}` placeholder in Auto-Reply, Bot commands and Quick Texts
 - **Station card popup** – hovering (desktop) or tapping (mobile) a callsign shows a rich card with QRZ name/QTH, RSSI/SNR, battery, distance, QTH locator, GPS coordinates (as OSM link) and firmware; buttons: **💬 Open Chat** and **🔗 aprs.fi**
 - **Distance calculation** (Haversine) from own position to each heard station
 - **Battery level** 🔋 column parsed from `batt` field in position/telemetry packets, colour-coded (🟢 >60% / 🟡 >30% / 🔴 ≤30%)
@@ -160,7 +160,7 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 - **Periodic beacon** – sends a configurable text to a configurable group at a fixed interval
 - Interval is configurable in whole hours (minimum 1 h); first transmission after **one full interval** (no send on every restart)
 - Enabled / disabled via `BeaconEnabled` flag – applies **live** without restart
-- **Supported placeholders** in `BeaconText`: `{version}`, `{mycall}`, `{mylocator}`, `{date}`, `{time}` – shown as inline hint in Settings
+- **Supported placeholders** in `BeaconText`: `{version}`, `{mycall}`, `{mylocator}`, `{date}`, `{time}`, `{telemetry}` – shown as inline hint in Settings
 - **Status indicator** in the status bar: pulsing `●` dot with next scheduled send time; turns yellow when < 10 min away
 - Beacon appears in the monitor feed and in the corresponding group chat tab
 - **"Send Beacon Now"** test button in Settings – sends the beacon immediately without waiting for the interval
@@ -168,8 +168,8 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 ### ↩️ Auto-Reply
 - Sends a configurable reply text automatically when a **brand-new direct chat tab** is opened by an incoming message (first contact from a callsign)
 - Enabled / disabled via `AutoReplyEnabled` – applies **live** without restart
-- **Supported placeholders** in `AutoReplyText`: `{mycall}`, `{mylocator}`, `{callsign}`, `{locator}`, `{dest-name}`, `{dest-loc}`, `{rssi}`, `{snr}`, `{hw}`, `{route}`, `{hops}`, `{srctype}`, `{srctype-label}`, `{date}`, `{time}`, `{version}`  
-  Example: `MeshCom WebDesk V{version} – QTH: {mylocator}` → `MeshCom WebDesk V1.8.0 – QTH: JN48QN`
+- **Supported placeholders** in `AutoReplyText`: `{mycall}`, `{mylocator}`, `{callsign}`, `{locator}`, `{dest-name}`, `{dest-loc}`, `{rssi}`, `{snr}`, `{hw}`, `{route}`, `{hops}`, `{srctype}`, `{srctype-label}`, `{date}`, `{time}`, `{version}`, `{telemetry}`  
+  Example: `MeshCom WebDesk V{version} – QTH: {mylocator}` → `MeshCom WebDesk V1.8.0 – QTH: JN48qn`
 - **Test button** in Settings – send the auto-reply text immediately to any callsign without waiting for an incoming message
 
 ### 🤖 Bot – Remote commands via direct message
@@ -189,7 +189,7 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 - **Bare `ping` keyword**: a direct message containing only `ping` (case-insensitive, with optional surrounding whitespace) is treated identically to `--ping`
 - **User-defined commands** fully configurable in **Settings → 🤖 Bot** – no code changes required:
   - `Name` – command name without `--` (e.g. `info`)
-  - `Response` – reply text; supports all `{variable}` placeholders (`{mycall}`, `{mylocator}`, `{callsign}`, `{locator}`, `{version}`, `{rssi}`, `{snr}`, `{hw}`, `{route}`, `{hops}`, `{srctype}`, `{srctype-label}`, `{date}`, `{time}`)
+  - `Response` – reply text; supports all `{variable}` placeholders (`{mycall}`, `{mylocator}`, `{callsign}`, `{locator}`, `{version}`, `{rssi}`, `{snr}`, `{hw}`, `{route}`, `{hops}`, `{srctype}`, `{srctype-label}`, `{date}`, `{time}`, `{telemetry}`)
   - `Description` – optional short text shown in `--help` output
 - **Test button** in Settings – enter any command (e.g. `--ping`) and an optional sender callsign; the bot executes the command locally (dry-run, no UDP send) and shows the exact reply including all expanded `{variable}` placeholders
 - **📤 Export / 📥 Import** – export all user-defined bot commands as `MeshComWebDesk-bot-commands.json` (browser download); import a previously exported or hand-edited file to replace the current list; filename editable before export
@@ -1244,7 +1244,7 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
 ### v1.7.5
 - **feat:** 💬 **Draggable chat tabs** – tabs can be reordered by drag & drop; order persisted in `localStorage`
-- **feat:** 📻 **MH – QTH Locator** – Maidenhead locator (`JN48QN`) shown below GPS coordinates in the MH table; also in the station card popup (with clickable OSM link for GPS coordinates)
+- **feat:** 📻 **MH – QTH Locator** – Maidenhead locator (`JN48qn`) shown below GPS coordinates in the MH table; also in the station card popup (with clickable OSM link for GPS coordinates)
 - **feat:** 🗺️ **Map popup – GPS & QTH Locator** – station popup now shows QTH locator and GPS coordinates as a clickable OSM link
 - **feat:** 🔧 **`{locator}` variable** – QTH locator of the chat partner available in Auto-Reply, Bot commands and Quick Texts
 - **feat:** ⚙️ **Beacon variables hint** – all supported placeholders (`{version}`, `{mycall}`, `{date}`, `{time}`) shown inline below the beacon text field

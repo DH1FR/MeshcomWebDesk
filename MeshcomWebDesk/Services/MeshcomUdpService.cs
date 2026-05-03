@@ -430,7 +430,12 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             ? Helpers.GeoHelper.ToMaidenhead(Status.OwnLatitude.Value, Status.OwnLongitude.Value)
             : string.Empty;
 
+        var telemetry = template.Contains("{telemetry}", StringComparison.OrdinalIgnoreCase)
+            ? BuildTelemetryString(_settings, out _, out _, out _) ?? string.Empty
+            : string.Empty;
+
         return template
+            .Replace("{telemetry}",     telemetry,                                          StringComparison.OrdinalIgnoreCase)
             .Replace("{version}",       AppVersion,                                         StringComparison.OrdinalIgnoreCase)
             .Replace("{mycall}",        _settings.MyCallsign,                               StringComparison.OrdinalIgnoreCase)
             .Replace("{mylocator}",     myLocator,                                          StringComparison.OrdinalIgnoreCase)
@@ -634,22 +639,27 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         return SendMessageAsync(callsign, text);
     }
 
-    private async Task SendTelemetryAsync(MeshcomSettings s)
+    /// <summary>
+    /// Reads the telemetry JSON file and builds the flat "key=value unit" string
+    /// from the configured <see cref="MeshcomSettings.TelemetryMapping"/>.
+    /// Returns <c>null</c> when the file does not exist, cannot be parsed, or yields no values.
+    /// Also returns captured weather roles via out parameters so the caller can update
+    /// <see cref="ServiceStatus"/> without re-reading the file.
+    /// </summary>
+    private string? BuildTelemetryString(MeshcomSettings s,
+        out double? ownTemp, out double? ownHumidity, out double? ownPressure)
     {
+        ownTemp = null; ownHumidity = null; ownPressure = null;
+
+        if (!File.Exists(s.TelemetryFilePath))
+            return null;
+
         try
         {
-            if (!File.Exists(s.TelemetryFilePath))
-            {
-                _logger.LogWarning("Telemetry file not found: {Path}", s.TelemetryFilePath);
-                return;
-            }
-
-            var fileContent = await File.ReadAllTextAsync(s.TelemetryFilePath);
+            var fileContent = File.ReadAllText(s.TelemetryFilePath);
             using var doc = JsonDocument.Parse(fileContent);
-            var root = doc.RootElement;
-
+            var root  = doc.RootElement;
             var parts = new List<string>();
-            double? ownTemp = null, ownHumidity = null, ownPressure = null;
 
             foreach (var entry in s.TelemetryMapping)
             {
@@ -688,11 +698,30 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                 parts.Add($"{label}={formatted}{entry.Unit}");
             }
 
-            if (parts.Count == 0)
+            return parts.Count > 0 ? string.Join(" ", parts) : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private async Task SendTelemetryAsync(MeshcomSettings s)
+    {
+        try
+        {
+            var telemetryString = BuildTelemetryString(s, out var ownTemp, out var ownHumidity, out var ownPressure);
+
+            if (telemetryString is null)
             {
-                _logger.LogWarning("No telemetry values could be read from {Path}", s.TelemetryFilePath);
+                if (!File.Exists(s.TelemetryFilePath))
+                    _logger.LogWarning("Telemetry file not found: {Path}", s.TelemetryFilePath);
+                else
+                    _logger.LogWarning("No telemetry values could be read from {Path}", s.TelemetryFilePath);
                 return;
             }
+
+            var parts = telemetryString.Split(' ').ToList();
 
             // Build prefix from own GPS position (Maidenhead locator) or fall back to "TM"
             var locator = (Status.OwnLatitude.HasValue && Status.OwnLongitude.HasValue)
