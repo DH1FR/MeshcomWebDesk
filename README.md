@@ -83,7 +83,7 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 - **Browser spell-check** – the message input field has `spellcheck="true"`; the browser's built-in spell checker underlines misspelled words when spell-checking is enabled in the browser settings
 - **Draggable tabs** – chat tabs can be reordered by drag & drop; order is saved in `localStorage` and restored on every visit
 - **Timestamps** – time is always shown as `HH:mm:ss`; for messages not from today a compact date (`dd.MM.yy`) is shown below the time without increasing row height
-- **🔎 QSO dialog** – every direct-chat tab shows a 🔎 button once the MySQL database is active; opens a four-tab modal with **KI-Zusammenfassung** (AI summary), **Verlauf** (history), **Suche** (text search) and **KI-Suche** (AI search); History and Search work without an AI API key – MySQL only required
+- **🔎 QSO dialog** – every direct-chat tab shows a 🔎 button once the MySQL database is active; opens a four-tab modal with **KI-Zusammenfassung** (AI summary), **Verlauf** (history), **Suche** (text search) and **KI-Suche** (AI search); History and Search work without an AI API key – MySQL only required; **KI-Suche** supports an optional „Search all direct QSOs" mode to search across all 1:1 conversations at once
 - **📋 Recent QSO partners** – a 📋 button next to the **+** tab button opens a flyout listing the most recently contacted callsigns (sorted by last contact time); clicking a row opens the chat tab directly; populated from the MySQL database
 - **📤 Export / 📥 Import of Quick Texts** – export the quick-text list as `MeshComWebDesk-quick-texts.json`; import to replace the list; filename editable before export; share presets with other operators
 
@@ -309,6 +309,7 @@ Clicking it opens a modal dialog with **four tabs**:
 - Ask any natural-language question about the conversation (e.g. *"What did Jürgen recommend?"*)
 - The AI receives all relevant messages and responds with a precise answer **citing exact timestamps**
 - Optional date range to narrow the search window
+- **„Alle Direkt-QSOs durchsuchen" / „Search all direct QSOs"** – optional checkbox to search across **all direct 1:1 QSOs** instead of just the current conversation; group messages (`#...`) and broadcasts are excluded; the AI lists the callsigns found and cites the exact timestamp and original text for each match
 - Requires AI to be enabled and an API key to be configured
 
 #### ⚙️ Setting up AI features (step by step)

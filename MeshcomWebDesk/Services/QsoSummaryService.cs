@@ -630,6 +630,8 @@ public sealed class QsoSummaryService
     /// <summary>
     /// Sends a natural-language search query to the AI together with relevant messages
     /// and returns the AI answer with found passages and timestamps.
+    /// When <paramref name="allDirectContacts"/> is <c>true</c>, all direct 1:1 QSOs
+    /// (regardless of remote callsign) are included instead of a single conversation.
     /// </summary>
     public async Task<string?> SearchAsync(
         string callsignBase,
@@ -638,6 +640,7 @@ public sealed class QsoSummaryService
         IReadOnlyList<HeardStation>? mhList = null,
         DateTime? from = null,
         DateTime? to   = null,
+        bool allDirectContacts = false,
         CancellationToken ct = default)
     {
         if (!IsAvailable(out var db, out var ai))
@@ -655,8 +658,11 @@ public sealed class QsoSummaryService
             await using var conn = new MySqlConnection(db.MySqlConnectionString);
             await conn.OpenAsync(ct);
 
-            // Load only the direct conversation between the two stations
-            var where = BuildDirectConversationWhere(callsignBase, myCallsign, from, to, null);
+            // Load messages – either all direct QSOs or a single conversation
+            var where = allDirectContacts
+                ? BuildAllDirectWhere(myCallsign, from, to)
+                : BuildDirectConversationWhere(callsignBase, myCallsign, from, to, null);
+
             await using var cmd = new MySqlCommand(
                 $"""
                 SELECT timestamp, from_call, to_call, text, is_outgoing
@@ -675,34 +681,52 @@ public sealed class QsoSummaryService
                     reader.GetDateTime(0), reader.GetString(1),
                     reader.GetString(2), reader.GetString(3), reader.GetBoolean(4)));
 
-            _logger.LogInformation("QsoSummaryService: SearchAsync({Callsign}) – {Count} messages loaded, query='{Query}'",
-                callsignBase, messages.Count, query);
+            _logger.LogInformation(
+                "QsoSummaryService: SearchAsync({Mode}) – {Count} messages loaded, query='{Query}'",
+                allDirectContacts ? "ALL" : callsignBase, messages.Count, query);
 
             // ── Station context from QRZ.com and MH list ──────────────────
             var sbCtx = new StringBuilder();
 
-            // Remote station info
-            var remoteQrz = _qrz.GetCached(callsignBase);
-            var remoteMh  = mhList?.FirstOrDefault(s =>
-                s.Callsign.Equals(callsignBase, StringComparison.OrdinalIgnoreCase) ||
-                s.Callsign.StartsWith(callsignBase + "-", StringComparison.OrdinalIgnoreCase));
-
-            sbCtx.AppendLine($"Informationen zur Gegenstation {callsignBase}:");
-            if (remoteQrz?.FirstName != null)
-                sbCtx.AppendLine($"  Vorname: {remoteQrz.FirstName}");
-            if (remoteQrz?.Location != null)
-                sbCtx.AppendLine($"  Standort (QRZ.com): {remoteQrz.Location}");
-            if (remoteMh != null)
+            if (allDirectContacts)
             {
-                if (remoteMh.Latitude.HasValue && remoteMh.Longitude.HasValue)
+                // In all-contacts mode: list the distinct remote callsigns found in the messages
+                var remoteCallsigns = messages
+                    .Select(m => m.IsOutgoing ? m.To : m.From)
+                    .Where(c => !string.IsNullOrWhiteSpace(c))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(c => c)
+                    .ToList();
+
+                sbCtx.AppendLine($"Die Suche umfasst alle Direkt-QSOs von {myCallsign}.");
+                if (remoteCallsigns.Count > 0)
+                    sbCtx.AppendLine($"Enthaltene Rufzeichen: {string.Join(", ", remoteCallsigns)}");
+            }
+            else
+            {
+                // Remote station info
+                var remoteQrz = _qrz.GetCached(callsignBase);
+                var remoteMh  = mhList?.FirstOrDefault(s =>
+                    s.Callsign.Equals(callsignBase, StringComparison.OrdinalIgnoreCase) ||
+                    s.Callsign.StartsWith(callsignBase + "-", StringComparison.OrdinalIgnoreCase));
+
+                sbCtx.AppendLine($"Informationen zur Gegenstation {callsignBase}:");
+                if (remoteQrz?.FirstName != null)
+                    sbCtx.AppendLine($"  Vorname: {remoteQrz.FirstName}");
+                if (remoteQrz?.Location != null)
+                    sbCtx.AppendLine($"  Standort (QRZ.com): {remoteQrz.Location}");
+                if (remoteMh != null)
                 {
-                    var grid = LatLonToMaidenhead(remoteMh.Latitude.Value, remoteMh.Longitude.Value);
-                    sbCtx.AppendLine($"  GPS-Position: {remoteMh.Latitude:F4}° N, {remoteMh.Longitude:F4}° E");
-                    sbCtx.AppendLine($"  QTH-Kenner (Maidenhead): {grid}");
+                    if (remoteMh.Latitude.HasValue && remoteMh.Longitude.HasValue)
+                    {
+                        var grid = LatLonToMaidenhead(remoteMh.Latitude.Value, remoteMh.Longitude.Value);
+                        sbCtx.AppendLine($"  GPS-Position: {remoteMh.Latitude:F4}° N, {remoteMh.Longitude:F4}° E");
+                        sbCtx.AppendLine($"  QTH-Kenner (Maidenhead): {grid}");
+                    }
+                    if (remoteMh.Firmware != null)
+                        sbCtx.AppendLine($"  Firmware: {remoteMh.Firmware}");
+                    sbCtx.AppendLine($"  Zuletzt gehört: {remoteMh.LastHeard:dd.MM.yyyy HH:mm}");
                 }
-                if (remoteMh.Firmware != null)
-                    sbCtx.AppendLine($"  Firmware: {remoteMh.Firmware}");
-                sbCtx.AppendLine($"  Zuletzt gehört: {remoteMh.LastHeard:dd.MM.yyyy HH:mm}");
             }
 
             // Own station info
@@ -714,11 +738,17 @@ public sealed class QsoSummaryService
                 sbCtx.AppendLine($"  Standort (QRZ.com): {ownQrz.Location}");
 
             // Check if we have ANY context to answer the question
-            bool hasStationContext = remoteQrz != null || remoteMh != null;
+            bool hasStationContext = allDirectContacts
+                ? messages.Count > 0
+                : (_qrz.GetCached(callsignBase) != null ||
+                   mhList?.Any(s =>
+                       s.Callsign.Equals(callsignBase, StringComparison.OrdinalIgnoreCase) ||
+                       s.Callsign.StartsWith(callsignBase + "-", StringComparison.OrdinalIgnoreCase)) == true);
+
             if (messages.Count == 0 && !hasStationContext)
             {
-                _logger.LogWarning("QsoSummaryService: SearchAsync({Callsign}) – no messages and no station data found " +
-                    "(myCallsign={My})", callsignBase, myCallsign);
+                _logger.LogWarning("QsoSummaryService: SearchAsync({Mode}) – no messages and no station data found " +
+                    "(myCallsign={My})", allDirectContacts ? "ALL" : callsignBase, myCallsign);
                 return null;
             }
 
@@ -736,8 +766,12 @@ public sealed class QsoSummaryService
                 ? $"\nNachrichtenverlauf ({messages.Count} Nachrichten):\n{sb}"
                 : "\n(Kein Nachrichtenverlauf vorhanden – beantworte die Frage ausschließlich anhand der Stationsdaten.)";
 
+            var scopeDescription = allDirectContacts
+                ? $"allen Direkt-QSOs von {myCallsign}"
+                : $"dem QSO-Verlauf zwischen {myCallsign} und {callsignBase}";
+
             var prompt = $"""
-                Du hilfst bei Fragen zu einer Amateurfunk-Station und dem QSO-Verlauf.
+                Du hilfst bei Fragen zu {scopeDescription}.
                 Der Benutzer ist {myCallsign}. Zeilen mit 'ICH' sind vom Benutzer gesendete Nachrichten.
 
                 Bekannte Stationsdaten (nutze diese vorrangig für Fragen zu Person, Name, QTH, Locator, Standort):
@@ -863,6 +897,51 @@ public sealed class QsoSummaryService
             conditions.Add("text LIKE @txt");
             parms["@txt"] = $"%{textFilter}%";
         }
+
+        return ($"WHERE {string.Join(" AND ", conditions)}", parms);
+    }
+
+    /// <summary>
+    /// Builds a WHERE clause that covers ALL direct 1:1 QSOs involving <paramref name="myCallsign"/>,
+    /// regardless of the remote callsign. Group messages (#...) and broadcasts (*) are excluded.
+    /// </summary>
+    private static (string Sql, Dictionary<string, object> Params) BuildAllDirectWhere(
+        string myCallsign, DateTime? from, DateTime? to)
+    {
+        var myBase = myCallsign.Contains('-')
+            ? myCallsign[..myCallsign.IndexOf('-')]
+            : myCallsign;
+
+        // Must involve own callsign (any SSID) on either side
+        // AND remote side must not be a group (#...) or broadcast (*  / ALL)
+        var conditions = new List<string>
+        {
+            """
+            (
+                (from_call = @myCall OR from_call LIKE @myLike)
+             OR (to_call   = @myCall OR to_call   LIKE @myLike)
+            )
+            """,
+            // Exclude group and broadcast destinations/sources
+            "to_call   NOT LIKE '#%'",
+            "from_call NOT LIKE '#%'",
+            "to_call   NOT IN ('*','ALL','all')",
+            "from_call NOT IN ('*','ALL','all')",
+            "is_position_beacon = 0",
+            "is_telemetry = 0",
+            "is_outgoing IS NOT NULL",
+            "text IS NOT NULL AND text != ''",
+            "text NOT LIKE '%:ack%'"
+        };
+
+        var parms = new Dictionary<string, object>
+        {
+            ["@myCall"] = myCallsign,
+            ["@myLike"] = myBase + "-%"
+        };
+
+        if (from.HasValue) { conditions.Add("timestamp >= @from"); parms["@from"] = from.Value; }
+        if (to.HasValue)   { conditions.Add("timestamp <= @to");   parms["@to"]   = to.Value; }
 
         return ($"WHERE {string.Join(" AND ", conditions)}", parms);
     }

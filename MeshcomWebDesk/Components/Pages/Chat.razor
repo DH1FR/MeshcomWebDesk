@@ -658,7 +658,13 @@
                         <button class="btn-cancel" @onclick="() => { _searchFrom = null; _searchTo = null; }">✕</button>
                     }
                 </div>
-                <div style="padding:8px 14px;display:flex;gap:8px">
+                <div style="padding:4px 14px 2px 14px;display:flex;align-items:center;gap:8px">
+                    <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#8b949e;cursor:pointer;user-select:none">
+                        <input type="checkbox" @bind="_aiSearchAllContacts" style="cursor:pointer" />
+                        @Loc.T("Alle Direkt-QSOs durchsuchen", "Search all direct QSOs", "Cerca tutti i QSO diretti", "Buscar todos los QSO directos")
+                    </label>
+                </div>
+                <div style="padding:4px 14px 8px 14px;display:flex;gap:8px">
                     <input type="text" id="ai-search-input"
                            @bind="_searchQuery" @bind:event="onchange"
                            @onkeydown="OnSearchKeyDown"
@@ -681,11 +687,24 @@
                     {
                         <div class="qso-summary-hint">
                             <span>💡</span>
-                            <span>@Loc.T(
-                                "Stelle eine Frage zum Gespraechsverlauf. Die KI durchsucht alle Nachrichten und nennt dir genaue Zeitstempel.",
-                                "Ask a question about the conversation. The AI searches all messages and cites exact timestamps.",
-                                "Fai una domanda sulla conversazione. L'IA cerca tutti i messaggi e cita i timestamp.",
-                                "Haz una pregunta sobre la conversacion. La IA busca todos los mensajes y cita las marcas de tiempo.")</span>
+                            <span>
+                                @if (_aiSearchAllContacts)
+                                {
+                                    @Loc.T(
+                                        "Alle Direkt-QSOs werden durchsucht. Stelle eine Frage zu beliebigen Gesprächen. Die KI nennt Rufzeichen, Datum und Originaltext.",
+                                        "All direct QSOs will be searched. Ask a question about any conversation. The AI cites callsign, date and original text.",
+                                        "Verranno cercati tutti i QSO diretti. L'IA cita nominativo, data e testo originale.",
+                                        "Se buscarán todos los QSO directos. La IA cita indicativo, fecha y texto original.")
+                                }
+                                else
+                                {
+                                    @Loc.T(
+                                        "Stelle eine Frage zum Gesprächsverlauf. Die KI durchsucht alle Nachrichten und nennt dir genaue Zeitstempel.",
+                                        "Ask a question about the conversation. The AI searches all messages and cites exact timestamps.",
+                                        "Fai una domanda sulla conversazione. L'IA cerca tutti i messaggi e cita i timestamp.",
+                                        "Haz una pregunta sobre la conversacion. La IA busca todos los mensajes y cita las marcas de tiempo.")
+                                }
+                            </span>
                         </div>
                     }
                     @if (_aiSearchError != null)
@@ -766,6 +785,7 @@
     private string   _searchQuery = string.Empty;
     private DateTime? _searchFrom;
     private DateTime? _searchTo;
+    private bool     _aiSearchAllContacts;   // true = search across all direct QSOs
 
     private bool _scrollMessages;
 
@@ -1520,10 +1540,10 @@
 
     private async Task RunAiSearchAsync()
     {
-        Logger.LogInformation("Chat: RunAiSearchAsync called – query='{Q}', callsign='{C}'",
-            _searchQuery, _qsoSummaryCallsign);
+        Logger.LogInformation("Chat: RunAiSearchAsync called – query='{Q}', callsign='{C}', allContacts={A}",
+            _searchQuery, _qsoSummaryCallsign, _aiSearchAllContacts);
 
-        if (string.IsNullOrWhiteSpace(_searchQuery) || _qsoSummaryCallsign is null)
+        if (string.IsNullOrWhiteSpace(_searchQuery) || (_qsoSummaryCallsign is null && !_aiSearchAllContacts))
         {
             Logger.LogWarning("Chat: RunAiSearchAsync aborted – query empty or callsign null");
             return;
@@ -1534,10 +1554,13 @@
         StateHasChanged();
 
         var result = await QsoSummaryService.SearchAsync(
-            _qsoSummaryCallsign, _myCallsign, _searchQuery,
-            mhList: ChatService.MhList,
-            from:   _searchFrom,
-            to:     _searchTo.HasValue ? _searchTo.Value.AddDays(1) : null);
+            _qsoSummaryCallsign ?? string.Empty,
+            _myCallsign,
+            _searchQuery,
+            mhList:           ChatService.MhList,
+            from:             _searchFrom,
+            to:               _searchTo.HasValue ? _searchTo.Value.AddDays(1) : null,
+            allDirectContacts: _aiSearchAllContacts);
 
         if (result is null)
             _aiSearchError = Loc.T(
