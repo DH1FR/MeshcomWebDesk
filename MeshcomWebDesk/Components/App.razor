@@ -98,8 +98,10 @@
                 }
             };
 
-            // CQ beep: Morse CQ in CW style (700 Hz) – C (dah-dit-dah-dit) Q (dah-dah-dit-dah)
-            // Unit = 80 ms.  Dah = 3 units, Dit = 1 unit, inter-element gap = 1 unit, inter-char = 3 units.
+            // CQ beep: Morse CQ in CW style (700 Hz)
+            // Timing: dit=1u dah=3u, inter-element gap=1u, inter-character gap=3u. Unit = 80 ms.
+            // C = dah dit dah dit   (- . - .)
+            // Q = dah dah dit dah   (- - . -)
             window.playCqBeep = function () {
                 try {
                     var ctx = getAudioContext();
@@ -107,12 +109,22 @@
                         var u   = 0.08;  // unit in seconds
                         var hz  = 700;
                         var vol = 0.30;
-                        // C = dah dit dah dit,  Q = dah dah dit dah
-                        // Pattern: lengths (u), 0 = gap
-                        var pat = [3,0,1,0,3,0,1, 0,0, 3,0,3,0,1,0,3];
                         var t   = ctx.currentTime + 0.05;
-                        pat.forEach(function (len) {
-                            if (len === 0) { t += u; return; }
+
+                        // elements: positive = tone length in units; after each tone, 1u gap is added.
+                        // A special inter-character gap of 3u is inserted between C and Q.
+                        // C: dah(3) dit(1) dah(3) dit(1)
+                        // Q: dah(3) dah(3) dit(1) dah(3)
+                        var cq = [3, 1, 3, 1,  null,  3, 3, 1, 3];
+                        // null = inter-character pause (3u) instead of normal 1u inter-element
+
+                        cq.forEach(function (len) {
+                            if (len === null) {
+                                // inter-character: 3u total. 1u was already added after last element,
+                                // so add 2u more.
+                                t += 2 * u;
+                                return;
+                            }
                             var osc  = ctx.createOscillator();
                             var gain = ctx.createGain();
                             osc.connect(gain);
@@ -124,8 +136,8 @@
                             gain.gain.setValueAtTime(vol, t + len * u - 0.005);
                             gain.gain.linearRampToValueAtTime(0.0, t + len * u);
                             osc.start(t);
-                            osc.stop(t + len * u);
-                            t += len * u + u; // element + inter-element gap
+                            osc.stop(t + len * u + 0.01);
+                            t += len * u + u; // tone + inter-element gap (1u)
                         });
                     }
                     if (ctx.state === 'suspended') { ctx.resume().then(doCq); } else { doCq(); }
