@@ -318,9 +318,11 @@ public class ChatService
         {
             // m.To may carry the '#' prefix (e.g. "#9") while the node echo uses the raw
             // group number (e.g. "9") – strip '#' on both sides before comparing.
+            // SequenceNumber is set to "TX" immediately on send (node never echoes back
+            // in EXTUDP mode), so match both null and "TX".
             var msg = _allMessages.LastOrDefault(m =>
                 m.IsOutgoing &&
-                m.SequenceNumber == null &&
+                (m.SequenceNumber == null || m.SequenceNumber == "TX") &&
                 string.Equals(m.To.TrimStart('#'), destination.TrimStart('#'), StringComparison.OrdinalIgnoreCase));
             if (msg != null)
                 msg.SequenceNumber = sequenceNumber;
@@ -350,11 +352,15 @@ public class ChatService
             // Fallback: match oldest unacknowledged outgoing message to the ACK sender.
             // This covers the case where the node never sent a {NNN} echo so the
             // outgoing message still has SequenceNumber = "TX".
+            // Time-limited to 10 minutes to prevent stale messages loaded from disk
+            // (from a previous session) from consuming ACKs for new messages.
             if (msg == null && ackSender != null)
             {
+                var cutoff = DateTime.Now.AddMinutes(-10);
                 msg = _allMessages.FirstOrDefault(m =>
                     m.IsOutgoing &&
                     !m.IsAcknowledged &&
+                    m.Timestamp >= cutoff &&
                     string.Equals(m.To, ackSender, StringComparison.OrdinalIgnoreCase));
             }
 

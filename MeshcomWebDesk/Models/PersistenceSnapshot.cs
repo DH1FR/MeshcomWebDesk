@@ -18,4 +18,8 @@ public class PersistenceSnapshot
     public double? OwnLongitude { get; set; }
     public int? OwnAltitude { get; set; }
     public string OwnPositionSource { get; set; } = string.Empty;
+
+    /// <summary>Last known node hardware ID and firmware version, persisted so status bar is populated immediately on restart.</summary>
+    public int? NodeHwId { get; set; }
+    public string? NodeFirmware { get; set; }
 }

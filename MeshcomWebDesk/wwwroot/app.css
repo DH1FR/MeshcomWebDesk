@@ -407,6 +407,39 @@ h1:focus {
 }
 .msg-call-link:hover { color: #79c0ff; text-decoration: underline solid; }
 
+/* Wrapper für Rufzeichen + @-Button */
+.msg-call-group,
+.mon-call-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+/* @-Button zum Einfügen des Rufzeichens in den Nachrichtentext */
+.btn-mention {
+    display: inline-block;
+    opacity: 0;
+    font-size: 10px;
+    padding: 0 3px;
+    line-height: 1.3;
+    background: #21262d;
+    color: #79c0ff;
+    border: 1px solid #30363d;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    vertical-align: middle;
+    user-select: none;
+}
+.message:hover .btn-mention,
+.mon-row:hover .btn-mention {
+    opacity: 1;
+}
+.btn-mention:hover {
+    background: #0f3460;
+    color: #a0c4ff;
+}
+
 .msg-text {
     color: #e0e0e0;
 }
@@ -812,6 +845,7 @@ h1:focus {
 .mon-dist    { color: #8b949e; }
 .mon-sys     { color: #6e7681; font-size: 11px; }
 .mon-hops    { color: #6e7681; font-size: 10px; margin: 0 2px; cursor: help; }
+.mon-seq     { color: #6e7681; font-size: 11px; margin-left: 4px; }
 
 /* Signal */
 .mon-signal {
@@ -1446,12 +1480,17 @@ h1:focus {
     min-height: 28px;
     flex-shrink: 0;
     overflow: hidden;
+    /* Volle Breite des Elternelements nutzen */
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* Dynamisch per ResizeObserver gesetzt (chat.js initStatusBar):
-   .status-bar.hide-compact  → .status-compact ausblenden
-   .status-bar.hide-detail   → .status-detail  ausblenden          */
+   .status-bar.hide-compact  → .status-compact ausblenden  (Stufe 1: IP:Port)
+   .status-bar.hide-medium   → .status-medium  ausblenden  (Stufe 2: node-hw, GPS)
+   .status-bar.hide-detail   → .status-detail  ausblenden  (Stufe 3: RX/TX, RSSI …) */
 .status-bar.hide-compact .status-compact { display: none !important; }
+.status-bar.hide-medium  .status-medium  { display: none !important; }
 .status-bar.hide-detail  .status-detail  { display: none !important; }
 
 .status-item {
@@ -2214,18 +2253,22 @@ h1:focus {
 
 /* Coverage cloud legend swatches */
 .leg-coverage {
+    display: inline-block;
     width: 28px;
-    height: 12px;
+    height: 14px;
+    min-width: 28px;
+    min-height: 14px;
     border-radius: 3px;
     flex-shrink: 0;
+    vertical-align: middle;
 }
 .leg-coverage-measured {
-    background: rgba(77, 171, 247, 0.18);
-    border: 2px dashed rgba(77, 171, 247, 0.7);
+    background: rgba(77, 171, 247, 0.35);
+    border: 2px dashed rgba(77, 171, 247, 0.95);
 }
 .leg-coverage-topo {
-    background: rgba(240, 192, 96, 0.15);
-    border: 2px dashed rgba(240, 192, 96, 0.65);
+    background: rgba(240, 192, 96, 0.30);
+    border: 2px dashed rgba(240, 192, 96, 0.90);
 }
 
 /* Leaflet APRS-style markers */

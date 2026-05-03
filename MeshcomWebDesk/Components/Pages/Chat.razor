@@ -30,6 +30,9 @@
                     <button class="tab-button tab-recent-btn @(_showRecentPartners ? "active" : "")"
                             @onclick="ToggleRecentPartnersAsync"
                             title="@Loc.T("Letzte QSO-Partner", "Recent QSO partners", "Partner QSO recenti", "Socios QSO recientes")">📋</button>
+                    <button class="tab-button tab-recent-btn @(_globalSearchMode && _qsoSummaryVisible ? "active" : "")"
+                            @onclick="OpenGlobalSearchAsync"
+                            title="@Loc.T("Alle Direkt-Nachrichten durchsuchen", "Search all direct messages", "Cerca tutti i messaggi diretti", "Buscar todos los mensajes directos")">🔍</button>
                 }
             </div>
             @foreach (var tab in _tabs)
@@ -126,9 +129,12 @@
                             else
                             {
                                 var msgFn = QrzFirstName(msg.From);
-                                <span class="msg-call msg-call-link"
-                                      @onclick="() => OpenTabFromMonitor(msg.From)"
-                                      title="@(Loc.T($"Chat mit {msg.From} öffnen", $"Open chat with {msg.From}", $"Apri chat con {msg.From}", $"Abrir chat con {msg.From}") + QrzSuffix(msg.From))">@msg.From@if (msgFn is not null){<span class="qrz-badge"> · @msgFn</span>}:</span>
+                                <span class="msg-call-group">
+                                    <span class="msg-call msg-call-link"
+                                          @onclick="() => OpenTabFromMonitor(msg.From)"
+                                          title="@(Loc.T($"Chat mit {msg.From} öffnen", $"Open chat with {msg.From}", $"Apri chat con {msg.From}", $"Abrir chat con {msg.From}") + QrzSuffix(msg.From))">@msg.From@if (msgFn is not null){<span class="qrz-badge"> · @msgFn</span>}:</span>
+                                    <button class="btn-mention" @onclick="() => InsertMentionAsync(msg.From)" title="@MentionTitle(msg.From)">&#64;</button>
+                                </span>
                             }
                             <span class="msg-text">@FormatMessageWithLinks(msg.Text)</span>
                             @if (msg.IsOutgoing)
@@ -139,7 +145,7 @@
                     }
                 </div>
 
-                <SendBar OnSend="HandleSendMessage" Callsign="@_activeTab.Key" />
+                <SendBar @ref="_sendBar" OnSend="HandleSendMessage" Callsign="@_activeTab.Key" />
             }
             else
             {
@@ -211,8 +217,11 @@
                             @if (!string.Equals(m.From, _myCallsign, StringComparison.OrdinalIgnoreCase))
                             {
                                 var monFn = QrzFirstName(m.From);
-                                <span class="mon-call mon-call-link" @onclick="() => OpenTabFromMonitor(m.From)"
-                                      title="@(Loc.T($"Chat mit {m.From} öffnen", $"Open chat with {m.From}", $"Apri chat con {m.From}", $"Abrir chat con {m.From}") + QrzSuffix(m.From))">@m.From@if (monFn is not null){<span class="qrz-badge"> · @monFn</span>}</span>
+                                <span class="mon-call-group">
+                                    <span class="mon-call mon-call-link" @onclick="() => OpenTabFromMonitor(m.From)"
+                                          title="@(Loc.T($"Chat mit {m.From} öffnen", $"Open chat with {m.From}", $"Apri chat con {m.From}", $"Abrir chat con {m.From}") + QrzSuffix(m.From))">@m.From@if (monFn is not null){<span class="qrz-badge"> · @monFn</span>}</span>
+                                    <button class="btn-mention" @onclick="() => InsertMentionAsync(m.From)" title="@MentionTitle(m.From)">&#64;</button>
+                                </span>
                             }
                             else
                             {
@@ -296,6 +305,13 @@
                         <span class="mon-content mon-sys">@MonTruncate(m.RawData, 80)</span>
                     }
 
+                    @* Sequence number for outgoing MSG (appears once node echo assigns it) *@
+                    @if (m.IsOutgoing && !m.IsAck && !m.IsPositionBeacon && !m.IsTelemetry &&
+                         m.SequenceNumber != null && m.SequenceNumber != "TX")
+                    {
+                        <span class="mon-seq" title="@Loc.T("Sequenznummer", "Sequence number", "Numero di sequenza", "Número de secuencia")">{@m.SequenceNumber}</span>
+                    }
+
                     @* Signal *@
                     @if (m.Rssi.HasValue)
                     {
@@ -370,6 +386,20 @@
         <span class="status-item">
             <span class="status-badge status-badge-neutral">🎙️ @_myCallsign</span>
         </span>
+        @if (!string.IsNullOrEmpty(MeshcomLookup.HwName(_status.NodeHwId)))
+        {
+            <span class="status-sep status-medium">|</span>
+            <span class="status-item status-medium" title="@Loc.T($"Node Hardware · Firmware: {_status.NodeFirmware}", $"Node hardware · Firmware: {_status.NodeFirmware}", $"Hardware node · Firmware: {_status.NodeFirmware}", $"Hardware del nodo · Firmware: {_status.NodeFirmware}")">
+                <span class="status-badge status-badge-info">⚙️ @MeshcomLookup.HwName(_status.NodeHwId)@if (!string.IsNullOrEmpty(_status.NodeFirmware)) {<text>&nbsp;·&nbsp;@_status.NodeFirmware</text>}</span>
+            </span>
+        }
+        @if (_status.OwnLatitude.HasValue && _status.OwnLongitude.HasValue)
+        {
+            <span class="status-sep status-medium">|</span>
+            <span class="status-item status-medium">
+                <span class="status-badge status-badge-info">📍 @GeoHelper.FormatCoord(_status.OwnLatitude, _status.OwnLongitude)@if (_status.OwnAltitude.HasValue) {<text>&nbsp;·&nbsp;@_status.OwnAltitude&nbsp;m</text>}</span>
+            </span>
+        }
         <span class="status-sep status-detail">|</span>
         <span class="status-item status-detail">
             <span class="status-badge status-badge-neutral">📨 RX @_status.RxCount / TX @_status.TxCount</span>
@@ -402,13 +432,6 @@
                 <span class="status-badge status-badge-neutral">📤 @LT(_status.LastTxTime.Value).ToString("HH:mm:ss")</span>
             </span>
         }
-        @if (_status.OwnLatitude.HasValue && _status.OwnLongitude.HasValue)
-        {
-            <span class="status-sep status-detail">|</span>
-            <span class="status-item status-detail">
-                <span class="status-badge status-badge-info">📍 @GeoHelper.FormatCoord(_status.OwnLatitude, _status.OwnLongitude)@if (_status.OwnAltitude.HasValue) {<text>&nbsp;·&nbsp;@_status.OwnAltitude&nbsp;m</text>}</span>
-            </span>
-        }
     </div>
 </div>
 
@@ -420,7 +443,14 @@
 
             <!-- Header -->
             <div class="qso-summary-header">
-                <span>🤖 @_qsoSummaryCallsign</span>
+                @if (_globalSearchMode)
+                {
+                    <span>🔍 @Loc.T("Alle Direkt-Nachrichten durchsuchen", "Search all direct messages", "Cerca tutti i messaggi diretti", "Buscar todos los mensajes directos")</span>
+                }
+                else
+                {
+                    <span>🤖 @_qsoSummaryCallsign</span>
+                }
                 <button class="qso-summary-close" @onclick="CloseQsoSummary">&times;</button>
             </div>
 
@@ -446,6 +476,8 @@
 
             <!-- Tab Navigation -->
             <div class="qso-modal-tabs">
+                @if (!_globalSearchMode)
+                {
                 <button class="qso-modal-tab @(_qsoModalTab == 0 ? "active" : "")" @onclick='() => SwitchModalTab(0)'
                         disabled="@(!IsAiActive)"
                         title="@(!IsAiActive ? Loc.T("KI nicht aktiv – API-Key in den Einstellungen hinterlegen", "AI not active – add API key in settings", "IA non attiva – aggiungere API key", "IA no activa – añade API key") : null)">
@@ -454,6 +486,7 @@
                 <button class="qso-modal-tab @(_qsoModalTab == 1 ? "active" : "")" @onclick='() => SwitchModalTab(1)'>
                     📜 @Loc.T("Verlauf", "History", "Cronologia", "Historial")
                 </button>
+                }
                 <button class="qso-modal-tab @(_qsoModalTab == 2 ? "active" : "")" @onclick='() => SwitchModalTab(2)'>
                     🔎 @Loc.T("Suche", "Search", "Cerca", "Buscar")
                 </button>
@@ -644,7 +677,13 @@
                         <button class="btn-cancel" @onclick="() => { _searchFrom = null; _searchTo = null; }">✕</button>
                     }
                 </div>
-                <div style="padding:8px 14px;display:flex;gap:8px">
+                <div style="padding:4px 14px 2px 14px;display:flex;align-items:center;gap:8px">
+                    <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#8b949e;cursor:pointer;user-select:none">
+                        <input type="checkbox" @bind="_aiSearchAllContacts" style="cursor:pointer" disabled="@_globalSearchMode" />
+                        @Loc.T("Alle Direkt-QSOs durchsuchen", "Search all direct QSOs", "Cerca tutti i QSO diretti", "Buscar todos los QSO directos")
+                    </label>
+                </div>
+                <div style="padding:4px 14px 8px 14px;display:flex;gap:8px">
                     <input type="text" id="ai-search-input"
                            @bind="_searchQuery" @bind:event="onchange"
                            @onkeydown="OnSearchKeyDown"
@@ -667,11 +706,24 @@
                     {
                         <div class="qso-summary-hint">
                             <span>💡</span>
-                            <span>@Loc.T(
-                                "Stelle eine Frage zum Gespraechsverlauf. Die KI durchsucht alle Nachrichten und nennt dir genaue Zeitstempel.",
-                                "Ask a question about the conversation. The AI searches all messages and cites exact timestamps.",
-                                "Fai una domanda sulla conversazione. L'IA cerca tutti i messaggi e cita i timestamp.",
-                                "Haz una pregunta sobre la conversacion. La IA busca todos los mensajes y cita las marcas de tiempo.")</span>
+                            <span>
+                                @if (_aiSearchAllContacts)
+                                {
+                                    @Loc.T(
+                                        "Alle Direkt-QSOs werden durchsucht. Stelle eine Frage zu beliebigen Gesprächen. Die KI nennt Rufzeichen, Datum und Originaltext.",
+                                        "All direct QSOs will be searched. Ask a question about any conversation. The AI cites callsign, date and original text.",
+                                        "Verranno cercati tutti i QSO diretti. L'IA cita nominativo, data e testo originale.",
+                                        "Se buscarán todos los QSO directos. La IA cita indicativo, fecha y texto original.")
+                                }
+                                else
+                                {
+                                    @Loc.T(
+                                        "Stelle eine Frage zum Gesprächsverlauf. Die KI durchsucht alle Nachrichten und nennt dir genaue Zeitstempel.",
+                                        "Ask a question about the conversation. The AI searches all messages and cites exact timestamps.",
+                                        "Fai una domanda sulla conversazione. L'IA cerca tutti i messaggi e cita i timestamp.",
+                                        "Haz una pregunta sobre la conversacion. La IA busca todos los mensajes y cita las marcas de tiempo.")
+                                }
+                            </span>
                         </div>
                     }
                     @if (_aiSearchError != null)
@@ -714,6 +766,7 @@
     private ConnectionStatus _status = new();
     private MeshcomSettings _settings = new();
     private bool _showMonitor = false;
+    private SendBar? _sendBar;
 
     // QSO Summary modal state
     private bool               _qsoSummaryVisible;
@@ -752,6 +805,8 @@
     private string   _searchQuery = string.Empty;
     private DateTime? _searchFrom;
     private DateTime? _searchTo;
+    private bool     _aiSearchAllContacts;   // true = search across all direct QSOs
+    private bool     _globalSearchMode;       // true = dialog opened from tab-bar search button (no single callsign)
 
     private bool _scrollMessages;
 
@@ -1215,6 +1270,15 @@
         OpenTabFromMonitor(callsign);
     }
 
+    private async Task InsertMentionAsync(string callsign)
+    {
+        if (_sendBar is not null)
+            await _sendBar.InsertMentionAsync(callsign);
+    }
+
+    private string MentionTitle(string callsign) =>
+        "@" + callsign + Loc.T(" in Nachricht einfügen", " insert into message", " inserisci nel messaggio", " insertar en mensaje");
+
     private void CreateNewTab()
     {
         if (string.IsNullOrWhiteSpace(_newTabCallsign))
@@ -1361,6 +1425,23 @@
         _aiSearchError        = null;
         _searchQuery          = string.Empty;
         _qsoModalTab          = 0;
+        _globalSearchMode     = false;
+        _aiSearchAllContacts  = false;
+    }
+
+    private Task OpenGlobalSearchAsync()
+    {
+        _qsoSummaryTab       = null;
+        _qsoSummaryCallsign  = null;
+        _qsoSummaryError     = null;
+        _qsoSummaryLoading   = false;
+        _qsoSummaryVisible   = true;
+        _qsoSummaryRecord    = null;
+        _globalSearchMode    = true;
+        _aiSearchAllContacts = true;
+        _qsoModalTab         = IsAiActive ? 3 : 2;
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 
     private async Task RegenerateQsoSummaryAsync()
@@ -1440,19 +1521,21 @@
 
     private async Task RunTextSearchAsync()
     {
-        if (string.IsNullOrWhiteSpace(_textSearchTerm) || _qsoSummaryCallsign is null) return;
+        if (string.IsNullOrWhiteSpace(_textSearchTerm)) return;
+        if (!_globalSearchMode && _qsoSummaryCallsign is null) return;
         _textSearchLoading = true;
         _textSearchPage    = 1;
         StateHasChanged();
 
         var (msgs, total) = await QsoSummaryService.TextSearchAsync(
-            _qsoSummaryCallsign,
-            myCallsign: _myCallsign,
-            searchTerm: _textSearchTerm,
-            from:       _textSearchFrom,
-            to:         _textSearchTo.HasValue ? _textSearchTo.Value.AddDays(1) : null,
-            page:       _textSearchPage,
-            pageSize:   HistoryPageSize);
+            callsignBase:       _qsoSummaryCallsign ?? string.Empty,
+            myCallsign:         _myCallsign,
+            searchTerm:         _textSearchTerm,
+            from:               _textSearchFrom,
+            to:                 _textSearchTo.HasValue ? _textSearchTo.Value.AddDays(1) : null,
+            page:               _textSearchPage,
+            pageSize:           HistoryPageSize,
+            allDirectContacts:  _globalSearchMode);
 
         _textSearchMessages   = msgs;
         _textSearchTotal      = total;
@@ -1506,10 +1589,10 @@
 
     private async Task RunAiSearchAsync()
     {
-        Logger.LogInformation("Chat: RunAiSearchAsync called – query='{Q}', callsign='{C}'",
-            _searchQuery, _qsoSummaryCallsign);
+        Logger.LogInformation("Chat: RunAiSearchAsync called – query='{Q}', callsign='{C}', allContacts={A}",
+            _searchQuery, _qsoSummaryCallsign, _aiSearchAllContacts);
 
-        if (string.IsNullOrWhiteSpace(_searchQuery) || _qsoSummaryCallsign is null)
+        if (string.IsNullOrWhiteSpace(_searchQuery) || (_qsoSummaryCallsign is null && !_aiSearchAllContacts))
         {
             Logger.LogWarning("Chat: RunAiSearchAsync aborted – query empty or callsign null");
             return;
@@ -1520,10 +1603,13 @@
         StateHasChanged();
 
         var result = await QsoSummaryService.SearchAsync(
-            _qsoSummaryCallsign, _myCallsign, _searchQuery,
-            mhList: ChatService.MhList,
-            from:   _searchFrom,
-            to:     _searchTo.HasValue ? _searchTo.Value.AddDays(1) : null);
+            _qsoSummaryCallsign ?? string.Empty,
+            _myCallsign,
+            _searchQuery,
+            mhList:           ChatService.MhList,
+            from:             _searchFrom,
+            to:               _searchTo.HasValue ? _searchTo.Value.AddDays(1) : null,
+            allDirectContacts: _aiSearchAllContacts);
 
         if (result is null)
             _aiSearchError = Loc.T(

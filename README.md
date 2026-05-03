@@ -1,4 +1,4 @@
-﻿```
+```
   ███╗   ███╗███████╗███████╗██╗  ██╗ ██████╗ ██████╗ ███╗   ███╗
   ████╗ ████║██╔════╝██╔════╝██║  ██║██╔════╝██╔═══██╗████╗ ████║
   ██╔████╔██║█████╗  ███████╗███████║██║     ██║   ██║██╔████╔██║
@@ -49,7 +49,9 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 
 <video src="docs/MeshComWebDesk.mp4" controls width="100%"></video>
 
-![MeshCom Web Client](docs/screenshot.png?v=2)
+![MeshCom Web Client](docs/screenshot.png?v=3)
+
+![MeshCom AI Search](docs/Screenshot-AI-Search.png)
 
 ![MeshCom Live Map](docs/Screenshot_Map.png)
 
@@ -74,23 +76,24 @@ The application runs on **Windows** or **Linux** and makes a full web client for
   - `✓✓` green – recipient confirmed delivery (LoRa ACK received)
   - `☁️` – sent to group or broadcast (no ACK expected)
   - `☁️✓` – delivered via gateway (Gateway ACK received)
-- **Clickable callsigns in the monitor** – click any sender or recipient to open a chat tab instantly
+- **Clickable callsigns in the monitor** – click any sender or recipient to open a chat tab instantly; hover over a callsign to reveal a small **`@`** button – clicking it inserts `@CALLSIGN` at the current cursor position in the message input field (useful for addressing someone in a group or broadcast message without switching tabs)
+- **`@`-Mention in chat messages** – the same `@` button appears next to every incoming callsign in the group/broadcast message list; clicking it inserts `@CALLSIGN` at the cursor position in the send bar
 - **QRZ.com tooltips** – when enabled, hovering over any callsign (tab buttons, chat messages, monitor From/To) shows the operator's first name and home QTH (e.g. `Chat mit DH1FR-2 öffnen · Max, Berlin`)
 - **Audio notification** 🔔 when a new direct message to your own callsign arrives (Web Audio API, no audio file required); mute toggle in the status bar
 - **🔊 Voice announcements** – incoming direct messages are read aloud using the browser's built-in **Web Speech API** (no plugin or audio file required); toggle with the 🔊/🔇 button in the status bar; state is saved in `localStorage` and restored on reload; language passed to the speech synthesiser matches the current UI language
-- **⚡ Quick Texts** – configurable one-click text buttons in the send bar; clicking a button loads the predefined text into the input field for review before sending; supports all `{variable}` placeholders (`{mycall}`, `{mylocator}`, `{callsign}`, `{locator}`, `{rssi}`, `{time}`, `{date}`, …); buttons can be **reordered by drag & drop** in the flyout; new order is saved immediately; configured in **Settings → ⚡ Quick Texts**
-- **Variable expansion in the send bar** – type any `{variable}` directly in the message input field; press **Tab** to expand as a preview; variables are always expanded automatically on send
+- **⚡ Quick Texts** – configurable one-click text buttons in the send bar; clicking a button loads the predefined text into the input field for review before sending; supports all `{variable}` placeholders (`{mycall}`, `{mylocator}`, `{callsign}`, `{locator}`, `{rssi}`, `{time}`, `{date}`, `{telemetry}`, …); buttons can be **reordered by drag & drop** in the flyout; new order is saved immediately; configured in **Settings → ⚡ Quick Texts**
+- **Variable expansion in the send bar** – type any `{variable}` directly in the message input field (e.g. `{telemetry}`, `{mycall}`, `{date}`); press **Tab** to expand as a live preview; variables are always expanded automatically on send
 - **Browser spell-check** – the message input field has `spellcheck="true"`; the browser's built-in spell checker underlines misspelled words when spell-checking is enabled in the browser settings
 - **Draggable tabs** – chat tabs can be reordered by drag & drop; order is saved in `localStorage` and restored on every visit
 - **Timestamps** – time is always shown as `HH:mm:ss`; for messages not from today a compact date (`dd.MM.yy`) is shown below the time without increasing row height
-- **🔎 QSO dialog** – every direct-chat tab shows a 🔎 button once the MySQL database is active; opens a four-tab modal with **KI-Zusammenfassung** (AI summary), **Verlauf** (history), **Suche** (text search) and **KI-Suche** (AI search); History and Search work without an AI API key – MySQL only required
+- **🔎 QSO dialog** – every direct-chat tab shows a 🔎 button once the MySQL database is active; opens a four-tab modal with **KI-Zusammenfassung** (AI summary), **Verlauf** (history), **Suche** (text search) and **KI-Suche** (AI search); History and Search work without an AI API key – MySQL only required; **KI-Suche** supports an optional „Search all direct QSOs" mode to search across all 1:1 conversations at once
 - **📋 Recent QSO partners** – a 📋 button next to the **+** tab button opens a flyout listing the most recently contacted callsigns (sorted by last contact time); clicking a row opens the chat tab directly; populated from the MySQL database
 - **📤 Export / 📥 Import of Quick Texts** – export the quick-text list as `MeshComWebDesk-quick-texts.json`; import to replace the list; filename editable before export; share presets with other operators
 
 ### 📻 MH – Most Recently Heard
 - Live table of all heard stations with last message, timestamp and message count
 - **GPS position** parsed from EXTUDP position packets (`lat_dir` / `long_dir` APRS format)
-- **QTH Locator** – Maidenhead locator (e.g. `JN48QN`) calculated from GPS coordinates; shown below the GPS position in the MH table and in the station card popup; also available as `{locator}` placeholder in Auto-Reply, Bot commands and Quick Texts
+- **QTH Locator** – Maidenhead locator (e.g. `JN48qn`) calculated from GPS coordinates; shown below the GPS position in the MH table and in the station card popup; also available as `{locator}` placeholder in Auto-Reply, Bot commands and Quick Texts
 - **Station card popup** – hovering (desktop) or tapping (mobile) a callsign shows a rich card with QRZ name/QTH, RSSI/SNR, battery, distance, QTH locator, GPS coordinates (as OSM link) and firmware; buttons: **💬 Open Chat** and **🔗 aprs.fi**
 - **Distance calculation** (Haversine) from own position to each heard station
 - **Battery level** 🔋 column parsed from `batt` field in position/telemetry packets, colour-coded (🟢 >60% / 🟡 >30% / 🔴 ≤30%)
@@ -160,7 +163,7 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 - **Periodic beacon** – sends a configurable text to a configurable group at a fixed interval
 - Interval is configurable in whole hours (minimum 1 h); first transmission after **one full interval** (no send on every restart)
 - Enabled / disabled via `BeaconEnabled` flag – applies **live** without restart
-- **Supported placeholders** in `BeaconText`: `{version}`, `{mycall}`, `{mylocator}`, `{date}`, `{time}` – shown as inline hint in Settings
+- **Supported placeholders** in `BeaconText`: `{version}`, `{mycall}`, `{mylocator}`, `{date}`, `{time}`, `{telemetry}` – shown as inline hint in Settings
 - **Status indicator** in the status bar: pulsing `●` dot with next scheduled send time; turns yellow when < 10 min away
 - Beacon appears in the monitor feed and in the corresponding group chat tab
 - **"Send Beacon Now"** test button in Settings – sends the beacon immediately without waiting for the interval
@@ -168,8 +171,8 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 ### ↩️ Auto-Reply
 - Sends a configurable reply text automatically when a **brand-new direct chat tab** is opened by an incoming message (first contact from a callsign)
 - Enabled / disabled via `AutoReplyEnabled` – applies **live** without restart
-- **Supported placeholders** in `AutoReplyText`: `{mycall}`, `{mylocator}`, `{callsign}`, `{locator}`, `{dest-name}`, `{dest-loc}`, `{rssi}`, `{snr}`, `{hw}`, `{route}`, `{hops}`, `{srctype}`, `{srctype-label}`, `{date}`, `{time}`, `{version}`  
-  Example: `MeshCom WebDesk V{version} – QTH: {mylocator}` → `MeshCom WebDesk V1.8.0 – QTH: JN48QN`
+- **Supported placeholders** in `AutoReplyText`: `{mycall}`, `{mylocator}`, `{callsign}`, `{locator}`, `{dest-name}`, `{dest-loc}`, `{rssi}`, `{snr}`, `{hw}`, `{route}`, `{hops}`, `{srctype}`, `{srctype-label}`, `{date}`, `{time}`, `{version}`, `{telemetry}`  
+  Example: `MeshCom WebDesk V{version} – QTH: {mylocator}` → `MeshCom WebDesk V1.8.0 – QTH: JN48qn`
 - **Test button** in Settings – send the auto-reply text immediately to any callsign without waiting for an incoming message
 
 ### 🤖 Bot – Remote commands via direct message
@@ -189,7 +192,7 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 - **Bare `ping` keyword**: a direct message containing only `ping` (case-insensitive, with optional surrounding whitespace) is treated identically to `--ping`
 - **User-defined commands** fully configurable in **Settings → 🤖 Bot** – no code changes required:
   - `Name` – command name without `--` (e.g. `info`)
-  - `Response` – reply text; supports all `{variable}` placeholders (`{mycall}`, `{mylocator}`, `{callsign}`, `{locator}`, `{version}`, `{rssi}`, `{snr}`, `{hw}`, `{route}`, `{hops}`, `{srctype}`, `{srctype-label}`, `{date}`, `{time}`)
+  - `Response` – reply text; supports all `{variable}` placeholders (`{mycall}`, `{mylocator}`, `{callsign}`, `{locator}`, `{version}`, `{rssi}`, `{snr}`, `{hw}`, `{route}`, `{hops}`, `{srctype}`, `{srctype-label}`, `{date}`, `{time}`, `{telemetry}`)
   - `Description` – optional short text shown in `--help` output
 - **Test button** in Settings – enter any command (e.g. `--ping`) and an optional sender callsign; the bot executes the command locally (dry-run, no UDP send) and shows the exact reply including all expanded `{variable}` placeholders
 - **📤 Export / 📥 Import** – export all user-defined bot commands as `MeshComWebDesk-bot-commands.json` (browser download); import a previously exported or hand-edited file to replace the current list; filename editable before export
@@ -309,6 +312,7 @@ Clicking it opens a modal dialog with **four tabs**:
 - Ask any natural-language question about the conversation (e.g. *"What did Jürgen recommend?"*)
 - The AI receives all relevant messages and responds with a precise answer **citing exact timestamps**
 - Optional date range to narrow the search window
+- **„Alle Direkt-QSOs durchsuchen" / „Search all direct QSOs"** – optional checkbox to search across **all direct 1:1 QSOs** instead of just the current conversation; group messages (`#...`) and broadcasts are excluded; the AI lists the callsigns found and cites the exact timestamp and original text for each match
 - Requires AI to be enabled and an API key to be configured
 
 #### ⚙️ Setting up AI features (step by step)
@@ -1179,7 +1183,22 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
 ---
 
-## 📋 Changelog
+ ## 📋 Changelog
+
+### v1.9.3
+- **feat:** 🔧 **Variable {telemetry}** – Telemetrie-String aus der JSON-Datei steht überall als {telemetry}-Platzhalter zur Verfügung (Auto-Reply, Bot, Bake-Text, Quick Texts, Nachrichteneingabe); JSON wird bei jedem Abruf neu eingelesen; dokumentiert in der Variablen-Referenztabelle in den Einstellungen und im README
+- **feat:** 🗺️ **Locator-Format korrigiert** – Maidenhead-Locator wird jetzt überall korrekt dargestellt (letzte zwei Buchstaben kleingeschrieben, z. B. JO40nu statt JO40NU); zentral in GeoHelper.ToMaidenhead() geändert
+- **feat:** @**-Mention-Button** – neben jedem fremden Rufzeichen in der Nachrichtenliste (Gruppen/Alle) und im Monitor erscheint beim Hover ein kleiner @-Button; Klick fügt @RUFZEICHEN an der aktuellen Cursorposition im Nachrichteneingabefeld ein, ohne den bestehenden Chat-Tab-Klick zu beeinflussen
+- **feat:** 🔍 **Globaler Such-Button in der Tab-Leiste** – neuer 🔍-Button neben 📋 öffnet den QSO-Dialog im globalen Modus: Text-Suche und KI-Suche durchsuchen **alle Direkt-QSOs** gleichzeitig; Checkbox „Alle Direkt-QSOs durchsuchen" ist automatisch aktiviert und gesperrt; Tabs KI-Zusammenfassung und Verlauf sind im globalen Modus ausgeblendet
+- **feat:** 🔍 **KI-Suche über alle Direkt-QSOs** – in der KI-Suche des QSO-Dialogs ist optional das Durchsuchen aller 1:1-QSOs möglich (Checkbox „Alle Direkt-QSOs durchsuchen"); Gruppen- und Broadcast-Nachrichten werden dabei ausgeschlossen
+- **feat:** ⚙️ **Node-Firmware & Hardware in Statusleiste** – Firmware-Version und Hardware-Name des eigenen Nodes werden automatisch aus eingehenden `src_type:"node"`-Paketen gelesen und in der Statusleiste angezeigt (⚙️ 4.35 · T-BEAM); Wert erscheint sobald das erste Node-Paket empfangen wird
+- **feat:** 🔧 **Neue Variablen `{node-firmware}` und `{node-hw}`** – Firmware-Version und Hardware-Name des eigenen Nodes stehen in Auto-Reply, Bot-Befehlen, Bake-Text und Quick Texts als Platzhalter zur Verfügung; ergänzt in der Variablen-Referenztabelle in den Einstellungen
+- **feat:** 💬 **Sequenznummer im Monitor** – sobald der Node die Sequenznummer per Echo zurückmeldet, wird sie nachträglich neben der gesendeten Nachricht im Monitor angezeigt (`{411}`); erleichtert die Zuordnung von ACK zu TX
+- **fix:** 💬 **ACK-Zuordnung – Fallback auf 10 Minuten begrenzt** – der Fallback-Match (älteste unbestätigte Nachricht an Sender) wurde auf Nachrichten der letzten 10 Minuten beschränkt; verhindert dass beim Neustart geladene alte Nachrichten fälschlicherweise neue ACKs konsumieren
+- **fix:** 💬 **`AssignOutgoingSequence` – `SequenceNumber == "TX"` wird berücksichtigt** – beim Senden wird sofort `"TX"` als Sequenznummer gesetzt; die Suche nach dem passenden Echo-Paket schlug dadurch fehl (suchte nur `null`); beide Werte werden jetzt abgeglichen
+- **fix:** 📱 **iPad – Statusleiste nutzt volle Breite** – `width:100%; box-sizing:border-box` verhindert dass Safari/iPad die Statusleiste schmaler als den Container rendert; 8px Toleranzpuffer im JS-Overflow-Check verhindert vorzeitiges Ausblenden von Elementen
+- **fix:** 🔊 **iOS/iPad – Beep-Töne** – `AudioContext`-Entsperrung auf `touchstart` (statt nur `click`) umgestellt; Kontext wird beim ersten Touch sofort erzeugt und entsperrt
+- **fix:** 🔊 **iOS/iPad – Sprachausgabe** – `speechSynthesis` aus Hintergrund-Callbacks ist auf iOS durch Apple blockiert; TTS wird auf iOS/iPadOS übersprungen; Beep-Töne werden als Benachrichtigung verwendet
 
 ### v1.9.2
 - **feat:** 🗺️ **MH-Liste – Automatisches Löschen alter Einträge** – neue Einstellung „MH-Liste: Max. Alter (Stunden)" im Abschnitt *Chat & Monitor*; Einträge, deren `LastHeard`-Zeitstempel älter als die konfigurierte Anzahl Stunden ist, werden stündlich automatisch entfernt; beim Programmstart und beim Speichern der Einstellungen werden veraltete Einträge ebenfalls sofort bereinigt; `0` deaktiviert das Feature (rückwärtskompatibel); Karte zeigt damit nur noch aktuelle Stationen; bestehende Werte (Tage) werden automatisch in Stunden migriert
@@ -1187,6 +1206,7 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 - **perf:** 📻 **MH-Liste & Karte** – neues `OnMhChange`-Event; MH-Liste und Karte reagieren nur noch auf MH-relevante Updates; Karte mit 400 ms Debounce; QRZ-Abfragen nur für neue, unbekannte Rufzeichen
 - **feat:** 📊 **Statusleiste responsive** – passt sich dynamisch der verfügbaren Breite an; Elemente werden stufenweise ausgeblendet wenn der Platz nicht ausreicht (`ResizeObserver` + `MutationObserver`)
 - **fix:** ⚙️ **MH Max. Alter – Persistenz** – `MhMaxAgeHours` wurde nach einem Seitenwechsel auf 0 zurückgesetzt; Fehler in `SettingsService` behoben
+- **fix:** 🗺️ **Karte – Reichweiten-Wolke** – die Reichweiten-Wolke (Convex Hull) wurde nach einem MH-Update oder MH-Purge nicht neu berechnet und blieb leer; `UpdateMarkersAsync()` ruft jetzt `setCoverage` automatisch neu auf wenn die Anzeige aktiv ist
 
 ### v1.9.1
 - **feat:** Bug fixes and optimizations.
@@ -1241,7 +1261,7 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
 ### v1.7.5
 - **feat:** 💬 **Draggable chat tabs** – tabs can be reordered by drag & drop; order persisted in `localStorage`
-- **feat:** 📻 **MH – QTH Locator** – Maidenhead locator (`JN48QN`) shown below GPS coordinates in the MH table; also in the station card popup (with clickable OSM link for GPS coordinates)
+- **feat:** 📻 **MH – QTH Locator** – Maidenhead locator (`JN48qn`) shown below GPS coordinates in the MH table; also in the station card popup (with clickable OSM link for GPS coordinates)
 - **feat:** 🗺️ **Map popup – GPS & QTH Locator** – station popup now shows QTH locator and GPS coordinates as a clickable OSM link
 - **feat:** 🔧 **`{locator}` variable** – QTH locator of the chat partner available in Auto-Reply, Bot commands and Quick Texts
 - **feat:** ⚙️ **Beacon variables hint** – all supported placeholders (`{version}`, `{mycall}`, `{date}`, `{time}`) shown inline below the beacon text field

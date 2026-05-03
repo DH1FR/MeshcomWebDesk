@@ -72,4 +72,12 @@ public class ConnectionStatus
 
     /// <summary>UTC timestamp when the own telemetry values were last sent.</summary>
     public DateTime? OwnTelemetrySentTime { get; set; }
+
+    // ── Own node metadata (from src_type:"node" packets) ─────────────────
+
+    /// <summary>Firmware version string of the connected node, e.g. "4.35" or "4.35-beta".</summary>
+    public string? NodeFirmware { get; set; }
+
+    /// <summary>Hardware ID of the connected node (from hw_id field).</summary>
+    public int? NodeHwId { get; set; }
 }

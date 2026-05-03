@@ -137,7 +137,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                         }
 
                         // Skip node echoes of our own sent messages (already recorded as outgoing).
-                        // Still extract own GPS position from the echo if present.
+                        // Still extract own GPS position and node metadata from the echo if present.
                         if (string.Equals(message.From, _settings.MyCallsign, StringComparison.OrdinalIgnoreCase))
                         {
                             if (message.Latitude.HasValue && message.Longitude.HasValue)
@@ -148,6 +148,21 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                             // Assign node-assigned sequence number to matching outgoing message
                             if (message.SequenceNumber != null)
                                 _chatService.AssignOutgoingSequence(message.To, message.SequenceNumber);
+                            // Capture node firmware + hardware from src_type:"node" packets
+                            bool metaChanged = false;
+                            if (!string.IsNullOrEmpty(message.Firmware) && Status.NodeFirmware != message.Firmware)
+                            {
+                                Status.NodeFirmware = message.Firmware;
+                                metaChanged = true;
+                            }
+                            if (message.HwId.HasValue && Status.NodeHwId != message.HwId)
+                            {
+                                Status.NodeHwId = message.HwId;
+                                metaChanged = true;
+                            }
+                            _logger.LogDebug("Node echo meta: firmware={Fw} hw_id={HwId} NodeFirmware={NodeFw} NodeHwId={NodeHwId}",
+                                message.Firmware, message.HwId, Status.NodeFirmware, Status.NodeHwId);
+                            if (metaChanged) NotifyStatusChange();
                             _logger.LogDebug("Skipping node echo from {From}", message.From);
                             // Do not add node echoes to the monitor – the TX entry is already shown there.
                         }
@@ -415,23 +430,30 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             ? Helpers.GeoHelper.ToMaidenhead(Status.OwnLatitude.Value, Status.OwnLongitude.Value)
             : string.Empty;
 
+        var telemetry = template.Contains("{telemetry}", StringComparison.OrdinalIgnoreCase)
+            ? BuildTelemetryString(_settings, out _, out _, out _) ?? string.Empty
+            : string.Empty;
+
         return template
-            .Replace("{version}",    AppVersion,                                         StringComparison.OrdinalIgnoreCase)
-            .Replace("{mycall}",     _settings.MyCallsign,                               StringComparison.OrdinalIgnoreCase)
-            .Replace("{mylocator}",  myLocator,                                          StringComparison.OrdinalIgnoreCase)
-            .Replace("{callsign}",   callsign              ?? string.Empty,              StringComparison.OrdinalIgnoreCase)
-            .Replace("{dest-name}",  qrz?.FirstName        ?? string.Empty,              StringComparison.OrdinalIgnoreCase)
-            .Replace("{dest-loc}",   qrz?.Location         ?? string.Empty,              StringComparison.OrdinalIgnoreCase)
-            .Replace("{locator}",    locator,                                            StringComparison.OrdinalIgnoreCase)
-            .Replace("{rssi}",       station?.LastRssi?.ToString()      ?? string.Empty, StringComparison.OrdinalIgnoreCase)
-            .Replace("{snr}",        station?.LastSnr?.ToString("F1")   ?? string.Empty, StringComparison.OrdinalIgnoreCase)
-            .Replace("{hw}",         MeshcomLookup.HwName(station?.HwId),                StringComparison.OrdinalIgnoreCase)
-            .Replace("{route}",      route,                                              StringComparison.OrdinalIgnoreCase)
-            .Replace("{hops}",           station?.HopCount.ToString()       ?? string.Empty, StringComparison.OrdinalIgnoreCase)
-            .Replace("{srctype-label}",  srcLabel,                                           StringComparison.OrdinalIgnoreCase)
-            .Replace("{srctype}",        srcType,                                            StringComparison.OrdinalIgnoreCase)
-            .Replace("{date}",       now.ToString("dd.MM.yyyy"),                         StringComparison.OrdinalIgnoreCase)
-            .Replace("{time}",       now.ToString("HH:mm"),                              StringComparison.OrdinalIgnoreCase);
+            .Replace("{telemetry}",     telemetry,                                          StringComparison.OrdinalIgnoreCase)
+            .Replace("{version}",       AppVersion,                                         StringComparison.OrdinalIgnoreCase)
+            .Replace("{mycall}",        _settings.MyCallsign,                               StringComparison.OrdinalIgnoreCase)
+            .Replace("{mylocator}",     myLocator,                                          StringComparison.OrdinalIgnoreCase)
+            .Replace("{node-firmware}", Status.NodeFirmware             ?? string.Empty,    StringComparison.OrdinalIgnoreCase)
+            .Replace("{node-hw}",       MeshcomLookup.HwName(Status.NodeHwId),              StringComparison.OrdinalIgnoreCase)
+            .Replace("{callsign}",      callsign              ?? string.Empty,              StringComparison.OrdinalIgnoreCase)
+            .Replace("{dest-name}",     qrz?.FirstName        ?? string.Empty,              StringComparison.OrdinalIgnoreCase)
+            .Replace("{dest-loc}",      qrz?.Location         ?? string.Empty,              StringComparison.OrdinalIgnoreCase)
+            .Replace("{locator}",       locator,                                            StringComparison.OrdinalIgnoreCase)
+            .Replace("{rssi}",          station?.LastRssi?.ToString()      ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace("{snr}",           station?.LastSnr?.ToString("F1")   ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace("{hw}",            MeshcomLookup.HwName(station?.HwId),                StringComparison.OrdinalIgnoreCase)
+            .Replace("{route}",         route,                                              StringComparison.OrdinalIgnoreCase)
+            .Replace("{hops}",          station?.HopCount.ToString()       ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+            .Replace("{srctype-label}", srcLabel,                                           StringComparison.OrdinalIgnoreCase)
+            .Replace("{srctype}",       srcType,                                            StringComparison.OrdinalIgnoreCase)
+            .Replace("{date}",          now.ToString("dd.MM.yyyy"),                         StringComparison.OrdinalIgnoreCase)
+            .Replace("{time}",          now.ToString("HH:mm"),                              StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -617,22 +639,27 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         return SendMessageAsync(callsign, text);
     }
 
-    private async Task SendTelemetryAsync(MeshcomSettings s)
+    /// <summary>
+    /// Reads the telemetry JSON file and builds the flat "key=value unit" string
+    /// from the configured <see cref="MeshcomSettings.TelemetryMapping"/>.
+    /// Returns <c>null</c> when the file does not exist, cannot be parsed, or yields no values.
+    /// Also returns captured weather roles via out parameters so the caller can update
+    /// <see cref="ServiceStatus"/> without re-reading the file.
+    /// </summary>
+    private string? BuildTelemetryString(MeshcomSettings s,
+        out double? ownTemp, out double? ownHumidity, out double? ownPressure)
     {
+        ownTemp = null; ownHumidity = null; ownPressure = null;
+
+        if (!File.Exists(s.TelemetryFilePath))
+            return null;
+
         try
         {
-            if (!File.Exists(s.TelemetryFilePath))
-            {
-                _logger.LogWarning("Telemetry file not found: {Path}", s.TelemetryFilePath);
-                return;
-            }
-
-            var fileContent = await File.ReadAllTextAsync(s.TelemetryFilePath);
+            var fileContent = File.ReadAllText(s.TelemetryFilePath);
             using var doc = JsonDocument.Parse(fileContent);
-            var root = doc.RootElement;
-
+            var root  = doc.RootElement;
             var parts = new List<string>();
-            double? ownTemp = null, ownHumidity = null, ownPressure = null;
 
             foreach (var entry in s.TelemetryMapping)
             {
@@ -671,11 +698,30 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                 parts.Add($"{label}={formatted}{entry.Unit}");
             }
 
-            if (parts.Count == 0)
+            return parts.Count > 0 ? string.Join(" ", parts) : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private async Task SendTelemetryAsync(MeshcomSettings s)
+    {
+        try
+        {
+            var telemetryString = BuildTelemetryString(s, out var ownTemp, out var ownHumidity, out var ownPressure);
+
+            if (telemetryString is null)
             {
-                _logger.LogWarning("No telemetry values could be read from {Path}", s.TelemetryFilePath);
+                if (!File.Exists(s.TelemetryFilePath))
+                    _logger.LogWarning("Telemetry file not found: {Path}", s.TelemetryFilePath);
+                else
+                    _logger.LogWarning("No telemetry values could be read from {Path}", s.TelemetryFilePath);
                 return;
             }
+
+            var parts = telemetryString.Split(' ').ToList();
 
             // Build prefix from own GPS position (Maidenhead locator) or fall back to "TM"
             var locator = (Status.OwnLatitude.HasValue && Status.OwnLongitude.HasValue)
@@ -929,8 +975,14 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             string? msgId = root.TryGetProperty("msg_id", out var msgIdProp) ? msgIdProp.GetString() : null;
 
             // ── Hardware, firmware, battery ──────────────────────────────────
-            int? hwId = root.TryGetProperty("hw_id", out var hwProp) && hwProp.ValueKind == JsonValueKind.Number
-                ? hwProp.GetInt32() : null;
+            int? hwId = null;
+            if (root.TryGetProperty("hw_id", out var hwProp))
+            {
+                if (hwProp.ValueKind == JsonValueKind.Number)
+                    hwId = hwProp.GetInt32();
+                else if (hwProp.ValueKind == JsonValueKind.String && int.TryParse(hwProp.GetString(), out var hwIdParsed))
+                    hwId = hwIdParsed;
+            }
 
             int? battery = root.TryGetProperty("batt", out var battProp) && battProp.ValueKind == JsonValueKind.Number
                 ? battProp.GetInt32() : null;

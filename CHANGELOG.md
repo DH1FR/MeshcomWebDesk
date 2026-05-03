@@ -16,6 +16,7 @@
 
 ### Bugfixes
 - **MH Max. Alter**: Der Wert `MhMaxAgeHours` wurde nach einem Seitenwechsel auf 0 zurückgesetzt – Fehler in `SettingsService` behoben, der Wert wird jetzt korrekt in `appsettings.override.json` gespeichert.
+- **Karte – Reichweiten-Wolke**: Die Reichweiten-Wolke (Convex Hull) wurde nach einem MH-Update oder MH-Purge nicht neu berechnet und blieb leer. `UpdateMarkersAsync()` ruft jetzt `setCoverage` automatisch neu auf wenn die Anzeige aktiv ist.
 
 ---
 

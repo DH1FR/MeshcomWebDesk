@@ -237,6 +237,27 @@ window.meshcomChat = (function () {
             overlay.addEventListener('click', function(e) { if (e.target === overlay) dismiss(); });
         },
 
+        // ── SendBar: fügt Text an der aktuellen Cursorposition ein ──
+        insertAtCursor: (id, text) => {
+            var el = document.getElementById(id);
+            if (!el) return;
+            var start = el.selectionStart;
+            var end   = el.selectionEnd;
+            var val   = el.value;
+            el.value  = val.substring(0, start) + text + val.substring(end);
+            var pos   = start + text.length;
+            el.setSelectionRange(pos, pos);
+            el.focus();
+            // Counter aktualisieren
+            var bar     = el.closest('.send-bar');
+            var counter = bar && bar.querySelector('.char-counter');
+            if (counter) {
+                var len = el.value.length;
+                counter.textContent = len + '/149';
+                counter.className = 'char-counter' + (len >= 145 ? ' char-danger' : len >= 130 ? ' char-warn' : '');
+            }
+        },
+
         // ── SendBar: liest den aktuellen Wert des Eingabefelds ──
         getSendBarValue: (id) => {
             var el = document.getElementById(id);
@@ -364,16 +385,43 @@ window.meshcomChat = (function () {
             bar.dataset.statusBarInit = '1';
 
             var rafId = 0;
-            function update() {
-                // Klassen entfernen → ehrliche scrollWidth messen
-                bar.classList.remove('hide-compact', 'hide-detail');
+            var timerId = 0;
+            var observer;
 
-                if (bar.scrollWidth > bar.clientWidth) {
+            // Prüft Überlauf zuverlässig auf Safari/iPad:
+            // Overflow kurz auf visible setzen → scrollWidth zeigt echte Inhaltsbreite.
+            function isOverflowing() {
+                bar.style.overflow = 'visible';
+                var overflowing = bar.scrollWidth > bar.offsetWidth + 4;
+                bar.style.overflow = '';
+                return overflowing;
+            }
+
+            function update() {
+                // Observer trennen damit Klassenänderungen keinen Loop auslösen
+                observer.disconnect();
+
+                bar.classList.remove('hide-compact', 'hide-medium', 'hide-detail');
+
+                // Stufe 1: status-compact ausblenden (IP:Port)
+                if (isOverflowing()) {
                     bar.classList.add('hide-compact');
                 }
-                if (bar.scrollWidth > bar.clientWidth) {
+
+                // Stufe 2: status-medium ausblenden (node-hw, GPS)
+                if (isOverflowing()) {
+                    bar.classList.add('hide-medium');
+                }
+
+                // Stufe 3: status-detail ausblenden (RX/TX, RSSI, Zeiten …)
+                if (isOverflowing()) {
                     bar.classList.add('hide-detail');
                 }
+
+                // Observer wieder aktivieren
+                observer.observe(bar, {
+                    subtree: true, childList: true, characterData: true, attributes: true
+                });
             }
 
             function scheduleUpdate() {
@@ -381,15 +429,55 @@ window.meshcomChat = (function () {
                 rafId = requestAnimationFrame(function () { rafId = 0; update(); });
             }
 
+            function scheduleUpdateDelayed() {
+                if (timerId) clearTimeout(timerId);
+                timerId = setTimeout(function () {
+                    timerId = 0;
+                    if (rafId) cancelAnimationFrame(rafId);
+                    rafId = requestAnimationFrame(function () { rafId = 0; update(); });
+                }, 150);
+            }
+
+            observer = new MutationObserver(scheduleUpdateDelayed);
+
+            // Reagiert auf Größenänderung des Containers (z.B. Fenster-Resize)
+            new ResizeObserver(scheduleUpdate).observe(bar);
+
+            // Reagiert auf Textänderungen innerhalb der Statusleiste
+            observer.observe(bar, {
+                subtree: true, childList: true, characterData: true, attributes: true
+            });
+
+            // Erste Messung verzögert
+            setTimeout(scheduleUpdate, 150);
+
+            // RAF-basiertes Update für ResizeObserver (Layout bereits stabil)
+            function scheduleUpdate() {
+                if (rafId) return;
+                rafId = requestAnimationFrame(function () { rafId = 0; update(); });
+            }
+
+            // Verzögertes Update für DOM-Mutationen: auf iPad/Safari ist das Layout
+            // nach einer Mutation im RAF noch nicht fertig berechnet.
+            function scheduleUpdateDelayed() {
+                if (timerId) clearTimeout(timerId);
+                timerId = setTimeout(function () {
+                    timerId = 0;
+                    if (rafId) cancelAnimationFrame(rafId);
+                    rafId = requestAnimationFrame(function () { rafId = 0; update(); });
+                }, 120);
+            }
+
             // Reagiert auf Größenänderung des Containers (z.B. Fenster-Resize)
             new ResizeObserver(scheduleUpdate).observe(bar);
 
             // Reagiert auf Textänderungen innerhalb der Statusleiste (Daten kommen nach)
-            new MutationObserver(scheduleUpdate).observe(bar, {
+            new MutationObserver(scheduleUpdateDelayed).observe(bar, {
                 subtree: true, childList: true, characterData: true, attributes: true
             });
 
-            scheduleUpdate();
+            // Erste Messung ebenfalls verzögert
+            setTimeout(scheduleUpdate, 120);
         }
     };
 }());

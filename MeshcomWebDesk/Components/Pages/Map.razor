@@ -108,10 +108,9 @@
                     {
                         <div class="map-legend-section">@Loc.T("Reichweite", "Coverage", "Copertura", "Cobertura")</div>
                         <div class="map-legend-row">
-                            <span class="leg-coverage leg-coverage-measured"></span>
+                            <div style="display:inline-block;width:28px;height:14px;min-width:28px;border-radius:3px;background:rgba(77,171,247,0.35);border:2px dashed rgba(77,171,247,0.95);flex-shrink:0"></div>
                             <span>📡 @Loc.T("Gemessen (Convex Hull)", "Measured (convex hull)", "Misurata (hull)", "Medida (hull)")</span>
                         </div>
-
                     }
                     @if (_showRelayLines)
                     {
@@ -387,6 +386,32 @@
             relayLines,
             _showRelayLines,
             ownInfo);
+
+        // Wenn Coverage aktiv ist, nach jedem Marker-Update neu berechnen
+        if (_showCoverage)
+        {
+            if (status.OwnLatitude.HasValue && status.OwnLongitude.HasValue)
+            {
+                var covPoints = mhList
+                    .Where(s => s.Latitude.HasValue && s.Longitude.HasValue
+                        && s.HopCount == 0
+                        && GeoHelper.CalculateDistanceKm(
+                            status.OwnLatitude.Value, status.OwnLongitude.Value,
+                            s.Latitude!.Value, s.Longitude!.Value) <= 500)
+                    .Select(s => new[] { s.Latitude!.Value, s.Longitude!.Value })
+                    .ToArray();
+                await JS.InvokeVoidAsync("meshcomMap.setCoverage",
+                    covPoints,
+                    null,
+                    status.OwnLatitude.Value,
+                    status.OwnLongitude.Value);
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("meshcomMap.setCoverage", null, null, null, null);
+                _showCoverage = false;
+            }
+        }
     }
 
     private async Task ToggleRelayLines()
@@ -572,9 +597,13 @@
             return;
         }
 
-        // Measured hull – nur aktuell direkt empfangene Stationen (HopCount == 0, kein Relay)
+        // Reichweiten-Hull: nur direkt gehörte Stationen (HopCount == 0), max. 500 km
         var measuredPoints = ChatService.MhList
-            .Where(s => s.Latitude.HasValue && s.Longitude.HasValue && s.HopCount == 0)
+            .Where(s => s.Latitude.HasValue && s.Longitude.HasValue
+                && s.HopCount == 0
+                && GeoHelper.CalculateDistanceKm(
+                    status.OwnLatitude.Value, status.OwnLongitude.Value,
+                    s.Latitude!.Value, s.Longitude!.Value) <= 500)
             .Select(s => new[] { s.Latitude!.Value, s.Longitude!.Value })
             .ToArray();
 

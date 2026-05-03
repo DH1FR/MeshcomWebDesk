@@ -80,6 +80,8 @@ public class DataPersistenceService : BackgroundService
             snapshot.OwnLongitude      = _udpService.Status.OwnLongitude;
             snapshot.OwnAltitude       = _udpService.Status.OwnAltitude;
             snapshot.OwnPositionSource = _udpService.Status.OwnPositionSource;
+            snapshot.NodeHwId          = _udpService.Status.NodeHwId;
+            snapshot.NodeFirmware      = _udpService.Status.NodeFirmware;
             var json     = JsonSerializer.Serialize(snapshot, JsonOptions);
             await File.WriteAllTextAsync(path, json);
             _logger.LogDebug("State saved to {Path} ({Tabs} tabs, {Mh} MH entries, {Mon} monitor entries)",
@@ -119,6 +121,12 @@ public class DataPersistenceService : BackgroundService
                         snapshot.OwnLongitude.Value,
                         snapshot.OwnAltitude,
                         snapshot.OwnPositionSource);
+                }
+
+                if (snapshot.NodeHwId.HasValue || !string.IsNullOrEmpty(snapshot.NodeFirmware))
+                {
+                    _udpService.Status.NodeHwId     = snapshot.NodeHwId;
+                    _udpService.Status.NodeFirmware = snapshot.NodeFirmware;
                 }
 
                 _logger.LogInformation(

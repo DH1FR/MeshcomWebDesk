@@ -57,6 +57,7 @@
     private List<QuickTextEntry> _quickTexts = [];
     private const int MaxLength = 149;
     private DotNetObjectReference<SendBar>? _dotNetRef;
+    private IDisposable? _settingsListener;
 
     private bool CanSend => true; // Validierung erfolgt beim Senden via JS
 
@@ -64,7 +65,7 @@
     {
         Loc.OnChange += ForceRerender;
         LoadQuickTextsFromSettings();
-        SettingsMonitor.OnChange(_ => { LoadQuickTextsFromSettings(); InvokeAsync(ForceRerender); });
+        _settingsListener = SettingsMonitor.OnChange(_ => { LoadQuickTextsFromSettings(); InvokeAsync(ForceRerender); });
     }
 
     private bool _rendered;
@@ -93,6 +94,7 @@
     public void Dispose()
     {
         Loc.OnChange -= ForceRerender;
+        _settingsListener?.Dispose();
         _dotNetRef?.Dispose();
     }
 
@@ -177,5 +179,12 @@
     private async Task SendAsync()
     {
         await JsSendAsync();
+    }
+
+    /// <summary>Fügt @CALLSIGN an der aktuellen Cursorposition im Eingabefeld ein.</summary>
+    public async Task InsertMentionAsync(string callsign)
+    {
+        var mention = "@" + callsign;
+        await JS.InvokeVoidAsync("meshcomChat.insertAtCursor", "send-bar-input", mention);
     }
 }
