@@ -30,6 +30,9 @@
                     <button class="tab-button tab-recent-btn @(_showRecentPartners ? "active" : "")"
                             @onclick="ToggleRecentPartnersAsync"
                             title="@Loc.T("Letzte QSO-Partner", "Recent QSO partners", "Partner QSO recenti", "Socios QSO recientes")">📋</button>
+                    <button class="tab-button tab-recent-btn @(_globalSearchMode && _qsoSummaryVisible ? "active" : "")"
+                            @onclick="OpenGlobalSearchAsync"
+                            title="@Loc.T("Alle Direkt-Nachrichten durchsuchen", "Search all direct messages", "Cerca tutti i messaggi diretti", "Buscar todos los mensajes directos")">🔍</button>
                 }
             </div>
             @foreach (var tab in _tabs)
@@ -440,7 +443,14 @@
 
             <!-- Header -->
             <div class="qso-summary-header">
-                <span>🤖 @_qsoSummaryCallsign</span>
+                @if (_globalSearchMode)
+                {
+                    <span>🔍 @Loc.T("Alle Direkt-Nachrichten durchsuchen", "Search all direct messages", "Cerca tutti i messaggi diretti", "Buscar todos los mensajes directos")</span>
+                }
+                else
+                {
+                    <span>🤖 @_qsoSummaryCallsign</span>
+                }
                 <button class="qso-summary-close" @onclick="CloseQsoSummary">&times;</button>
             </div>
 
@@ -466,6 +476,8 @@
 
             <!-- Tab Navigation -->
             <div class="qso-modal-tabs">
+                @if (!_globalSearchMode)
+                {
                 <button class="qso-modal-tab @(_qsoModalTab == 0 ? "active" : "")" @onclick='() => SwitchModalTab(0)'
                         disabled="@(!IsAiActive)"
                         title="@(!IsAiActive ? Loc.T("KI nicht aktiv – API-Key in den Einstellungen hinterlegen", "AI not active – add API key in settings", "IA non attiva – aggiungere API key", "IA no activa – añade API key") : null)">
@@ -474,6 +486,7 @@
                 <button class="qso-modal-tab @(_qsoModalTab == 1 ? "active" : "")" @onclick='() => SwitchModalTab(1)'>
                     📜 @Loc.T("Verlauf", "History", "Cronologia", "Historial")
                 </button>
+                }
                 <button class="qso-modal-tab @(_qsoModalTab == 2 ? "active" : "")" @onclick='() => SwitchModalTab(2)'>
                     🔎 @Loc.T("Suche", "Search", "Cerca", "Buscar")
                 </button>
@@ -666,7 +679,7 @@
                 </div>
                 <div style="padding:4px 14px 2px 14px;display:flex;align-items:center;gap:8px">
                     <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#8b949e;cursor:pointer;user-select:none">
-                        <input type="checkbox" @bind="_aiSearchAllContacts" style="cursor:pointer" />
+                        <input type="checkbox" @bind="_aiSearchAllContacts" style="cursor:pointer" disabled="@_globalSearchMode" />
                         @Loc.T("Alle Direkt-QSOs durchsuchen", "Search all direct QSOs", "Cerca tutti i QSO diretti", "Buscar todos los QSO directos")
                     </label>
                 </div>
@@ -793,6 +806,7 @@
     private DateTime? _searchFrom;
     private DateTime? _searchTo;
     private bool     _aiSearchAllContacts;   // true = search across all direct QSOs
+    private bool     _globalSearchMode;       // true = dialog opened from tab-bar search button (no single callsign)
 
     private bool _scrollMessages;
 
@@ -1411,6 +1425,23 @@
         _aiSearchError        = null;
         _searchQuery          = string.Empty;
         _qsoModalTab          = 0;
+        _globalSearchMode     = false;
+        _aiSearchAllContacts  = false;
+    }
+
+    private Task OpenGlobalSearchAsync()
+    {
+        _qsoSummaryTab       = null;
+        _qsoSummaryCallsign  = null;
+        _qsoSummaryError     = null;
+        _qsoSummaryLoading   = false;
+        _qsoSummaryVisible   = true;
+        _qsoSummaryRecord    = null;
+        _globalSearchMode    = true;
+        _aiSearchAllContacts = true;
+        _qsoModalTab         = IsAiActive ? 3 : 2;
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 
     private async Task RegenerateQsoSummaryAsync()
@@ -1490,19 +1521,21 @@
 
     private async Task RunTextSearchAsync()
     {
-        if (string.IsNullOrWhiteSpace(_textSearchTerm) || _qsoSummaryCallsign is null) return;
+        if (string.IsNullOrWhiteSpace(_textSearchTerm)) return;
+        if (!_globalSearchMode && _qsoSummaryCallsign is null) return;
         _textSearchLoading = true;
         _textSearchPage    = 1;
         StateHasChanged();
 
         var (msgs, total) = await QsoSummaryService.TextSearchAsync(
-            _qsoSummaryCallsign,
-            myCallsign: _myCallsign,
-            searchTerm: _textSearchTerm,
-            from:       _textSearchFrom,
-            to:         _textSearchTo.HasValue ? _textSearchTo.Value.AddDays(1) : null,
-            page:       _textSearchPage,
-            pageSize:   HistoryPageSize);
+            callsignBase:       _qsoSummaryCallsign ?? string.Empty,
+            myCallsign:         _myCallsign,
+            searchTerm:         _textSearchTerm,
+            from:               _textSearchFrom,
+            to:                 _textSearchTo.HasValue ? _textSearchTo.Value.AddDays(1) : null,
+            page:               _textSearchPage,
+            pageSize:           HistoryPageSize,
+            allDirectContacts:  _globalSearchMode);
 
         _textSearchMessages   = msgs;
         _textSearchTotal      = total;

@@ -564,6 +564,7 @@ public sealed class QsoSummaryService
     /// <summary>
     /// Simple full-text search without AI – returns matching messages from the direct
     /// conversation between MyCallsign and the remote callsign.
+    /// When <paramref name="allDirectContacts"/> is <c>true</c>, all direct 1:1 QSOs are searched.
     /// </summary>
     public async Task<(List<QsoHistoryMessage> Messages, int TotalCount)> TextSearchAsync(
         string callsignBase,
@@ -573,6 +574,7 @@ public sealed class QsoSummaryService
         DateTime? to   = null,
         int       page     = 1,
         int       pageSize = 50,
+        bool      allDirectContacts = false,
         CancellationToken ct = default)
     {
         if (!IsDbOnlyAvailable(out var db))
@@ -586,7 +588,19 @@ public sealed class QsoSummaryService
             await using var conn = new MySqlConnection(db.MySqlConnectionString);
             await conn.OpenAsync(ct);
 
-            var where = BuildDirectConversationWhere(callsignBase, myCallsign, from, to, searchTerm);
+            (string Sql, Dictionary<string, object> Params) where;
+            if (allDirectContacts)
+            {
+                var baseWhere = BuildAllDirectWhere(myCallsign, from, to);
+                // append text filter
+                var sql = baseWhere.Sql + " AND text LIKE @txt";
+                baseWhere.Params["@txt"] = $"%{searchTerm}%";
+                where = (sql, baseWhere.Params);
+            }
+            else
+            {
+                where = BuildDirectConversationWhere(callsignBase, myCallsign, from, to, searchTerm);
+            }
 
             await using var countCmd = new MySqlCommand(
                 $"SELECT COUNT(*) FROM `{db.MySqlTableName}` {where.Sql}", conn);
