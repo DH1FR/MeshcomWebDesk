@@ -222,4 +222,28 @@ public class MeshcomSettings
     /// Clicking a button loads the text into the input field for review before sending.
     /// </summary>
     public List<QuickTextEntry> QuickTexts { get; set; } = [];
+
+    // ── Station / RF parameters ──────────────────────────────────────────
+
+    /// <summary>Transmitter output power in dBm (e.g. 20 = 100 mW). Default: 20 dBm.</summary>
+    public int TxPowerDbm { get; set; } = 20;
+
+    /// <summary>
+    /// Coaxial cable type key used to look up loss per 10 m at the configured frequency.
+    /// Supported values: "none", "rg174", "rg58", "rg213", "h155", "aircell7", "lmr400".
+    /// Default: "rg213".
+    /// </summary>
+    public string CableType { get; set; } = "rg213";
+
+    /// <summary>Total coaxial cable length in metres. Default: 5 m.</summary>
+    public double CableLengthM { get; set; } = 5.0;
+
+    /// <summary>Antenna gain in dBi. Default: 2.15 dBi (half-wave dipole).</summary>
+    public double AntennaGainDbi { get; set; } = 2.15;
+
+    /// <summary>Antenna height above ground level in metres. Default: 5 m.</summary>
+    public double AntennaHeightM { get; set; } = 5.0;
+
+    /// <summary>Operating frequency in MHz. Default: 433.175 MHz.</summary>
+    public double FrequencyMhz { get; set; } = 433.175;
 }

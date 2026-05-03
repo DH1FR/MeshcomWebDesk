@@ -1186,6 +1186,7 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
  ## 📋 Changelog
 
 ### v1.9.4
+- **feat:** 📻 **Station / HF-Parameter** – neue Einstellungssektion mit TX-Leistung (dBm), Kabeltyp + Kabellänge (automatischer Verlust), Antennengewinn (dBi), Antennenhöhe (m) und Frequenz (MHz); EIRP wird live berechnet und angezeigt; auf der Karte wird beim Aktivieren der Reichweitenanzeige ein gelber FSPL-Kreis (Freiraumdämpfung, theoretische Maximalreichweite) mit 3 konzentrischen Ringen (25/50/75%) eingeblendet; Tooltip zeigt EIRP, Antennenhöhe und Frequenz
 - **feat:** 🕐 **Neue Variable `{last-qso}`** – Zeitstempel des letzten direkten QSOs mit dem aktuellen Rufzeichen; Format `dd.MM.yyyy HH:mm`; verfügbar in Auto-Reply, Bot-Befehlen und Quick Texts; Datenbank (MySQL) wird als primäre Quelle verwendet, Fallback auf den letzten In-Memory-Nachrichteintrag wenn keine DB konfiguriert ist; dokumentiert in den Variablen-Referenztabellen in den Einstellungen
 
 

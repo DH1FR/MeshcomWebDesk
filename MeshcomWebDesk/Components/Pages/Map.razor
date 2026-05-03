@@ -111,6 +111,10 @@
                             <div style="display:inline-block;width:28px;height:14px;min-width:28px;border-radius:3px;background:rgba(77,171,247,0.35);border:2px dashed rgba(77,171,247,0.95);flex-shrink:0"></div>
                             <span>📡 @Loc.T("Gemessen (Convex Hull)", "Measured (convex hull)", "Misurata (hull)", "Medida (hull)")</span>
                         </div>
+                        <div class="map-legend-row">
+                            <div style="display:inline-block;width:28px;height:14px;min-width:28px;border-radius:3px;background:rgba(227,179,65,0.12);border:2px dashed rgba(227,179,65,0.85);flex-shrink:0"></div>
+                            <span>📻 @Loc.T("FSPL-Reichweite (theor.)", "FSPL range (theor.)", "Portata FSPL (teor.)", "Alcance FSPL (teór.)")</span>
+                        </div>
                     }
                     @if (_showRelayLines)
                     {
@@ -586,6 +590,7 @@
         if (!_showCoverage)
         {
             await JS.InvokeVoidAsync("meshcomMap.setCoverage", null, null, null, null);
+            await JS.InvokeVoidAsync("meshcomMap.removeFsplCircle");
             return;
         }
 
@@ -593,6 +598,7 @@
         if (!status.OwnLatitude.HasValue || !status.OwnLongitude.HasValue)
         {
             await JS.InvokeVoidAsync("meshcomMap.setCoverage", null, null, null, null);
+            await JS.InvokeVoidAsync("meshcomMap.removeFsplCircle");
             _showCoverage = false;
             return;
         }
@@ -612,5 +618,29 @@
             null,
             status.OwnLatitude.Value,
             status.OwnLongitude.Value);
+
+        // FSPL-Kreis aus Station-Einstellungen
+        var cfg    = SettingsMonitor.CurrentValue;
+        var cableLossPerM = CableLossPerM(cfg.CableType);
+        var cableLoss     = cableLossPerM * cfg.CableLengthM;
+        var eirp          = cfg.TxPowerDbm - cableLoss + cfg.AntennaGainDbi;
+        await JS.InvokeVoidAsync("meshcomMap.setFsplCircle",
+            status.OwnLatitude.Value,
+            status.OwnLongitude.Value,
+            eirp,
+            cfg.FrequencyMhz,
+            cfg.AntennaHeightM,
+            -120);
     }
+
+    private static double CableLossPerM(string cableType) => cableType switch
+    {
+        "rg174"    => 5.0  / 10.0,
+        "rg58"     => 2.5  / 10.0,
+        "rg213"    => 1.2  / 10.0,
+        "h155"     => 0.8  / 10.0,
+        "aircell7" => 0.6  / 10.0,
+        "lmr400"   => 0.4  / 10.0,
+        _          => 0.0,
+    };
 }

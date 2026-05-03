@@ -7,6 +7,7 @@ window.meshcomMap = (function () {
     var _ownLayer        = null;
     var _relayLayer      = null;
     var _coverageLayer   = null;
+    var _fsplLayer       = null;
     var _lastBounds      = null;
     var _stationMarkers  = {};
     var _initialFitDone  = false;
@@ -388,6 +389,66 @@ window.meshcomMap = (function () {
 
             if (!_map.hasLayer(_coverageLayer))
                 _coverageLayer.addTo(_map);
+        },
+
+        // ── FSPL-Kreis (theoretische Freiraumreichweite) ──────────────────
+        // eirpDbm      : EIRP in dBm (TX – Kabelverlust + Antennengewinn)
+        // freqMhz      : Sendefrequenz in MHz
+        // antennaHeightM: Antennenhöhe in m (wird für Tooltip angezeigt)
+        // rxSensDbm    : Empfänger-Empfindlichkeit in dBm (typisch –120 für MeshCom)
+        setFsplCircle: function (lat, lon, eirpDbm, freqMhz, antennaHeightM, rxSensDbm) {
+            if (!_map) return;
+            if (_fsplLayer) { _map.removeLayer(_fsplLayer); _fsplLayer = null; }
+            if (lat == null || lon == null) return;
+
+            rxSensDbm = rxSensDbm != null ? rxSensDbm : -120;
+
+            // FSPL: d = (10 ^ ((EIRP – rxSens – 20*log10(f) – 20*log10(4π/c)) / 20)) in m
+            // Simplified: d_km = 10 ^ ((EIRP – rxSens – 20*log10(fMHz) – 32.44) / 20)
+            var linkBudget = eirpDbm - rxSensDbm;
+            var fspl_max   = linkBudget;  // dB
+            var d_km       = Math.pow(10, (fspl_max - 20 * Math.log10(freqMhz) - 32.44) / 20);
+            var d_m        = d_km * 1000;
+
+            _fsplLayer = L.layerGroup();
+
+            // Outer dashed circle (max range)
+            L.circle([lat, lon], {
+                radius:      d_m,
+                color:       '#e3b341',
+                weight:      2,
+                opacity:     0.85,
+                fillColor:   '#e3b341',
+                fillOpacity: 0.06,
+                dashArray:   '8,5',
+                interactive: false
+            }).bindTooltip(
+                '📻 FSPL-Reichweite: ' + (d_km >= 1 ? d_km.toFixed(1) + ' km' : Math.round(d_m) + ' m') +
+                '<br>EIRP: ' + eirpDbm.toFixed(1) + ' dBm' +
+                '<br>Antennenhöhe: ' + antennaHeightM + ' m' +
+                '<br>Frequenz: ' + freqMhz + ' MHz' +
+                '<br><small style="color:#8b949e">Freiraumdämpfung, ohne Geländeberücksichtigung</small>',
+                { sticky: true, className: 'relay-tooltip' }
+            ).addTo(_fsplLayer);
+
+            // Inner rings at 25% / 50% / 75% of max range
+            [0.75, 0.5, 0.25].forEach(function(frac) {
+                L.circle([lat, lon], {
+                    radius:      d_m * frac,
+                    color:       '#e3b341',
+                    weight:      1,
+                    opacity:     0.3,
+                    fill:        false,
+                    dashArray:   '4,6',
+                    interactive: false
+                }).addTo(_fsplLayer);
+            });
+
+            _fsplLayer.addTo(_map);
+        },
+
+        removeFsplCircle: function () {
+            if (_fsplLayer && _map) { _map.removeLayer(_fsplLayer); _fsplLayer = null; }
         },
     };
 

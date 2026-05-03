@@ -74,6 +74,61 @@
             }
         </div>
 
+        <!-- Station / RF -->
+        <div class="settings-section @(IsOpen("station") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("station")'>📻 @Loc.T("Station / HF-Parameter", "Station / RF Parameters", "Stazione / Parametri RF", "Estación / Parámetros RF") <span class="section-chevron">@(IsOpen("station") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("station")) {
+            var cableLossMap = new Dictionary<string, double> { ["none"]=0.0,["rg174"]=5.0,["rg58"]=2.5,["rg213"]=1.2,["h155"]=0.8,["aircell7"]=0.6,["lmr400"]=0.4 };
+            var lossPerM     = cableLossMap.TryGetValue(_model.CableType, out var lpm) ? lpm / 10.0 : 0.0;
+            var cableLossDb  = lossPerM * _model.CableLengthM;
+            var eirp         = _model.TxPowerDbm - cableLossDb + _model.AntennaGainDbi;
+            <div class="settings-grid">
+                <label>@Loc.T("TX-Leistung", "TX Power", "Potenza TX", "Potencia TX") (dBm)</label>
+                <div style="display:flex;align-items:center;gap:8px">
+                    <input type="number" min="-10" max="40" step="1" @bind="_model.TxPowerDbm" style="width:80px" />
+                    <small style="color:#8b949e">@(Math.Round(Math.Pow(10, _model.TxPowerDbm / 10.0), 0).ToString("F0")) mW</small>
+                </div>
+
+                <label>@Loc.T("Kabeltyp", "Cable Type", "Tipo cavo", "Tipo de cable")</label>
+                <select @bind="_model.CableType">
+                    <option value="none">@Loc.T("Direktmontage / &lt; 0,5 m (0,0 dB/10m)", "Direct mount / &lt; 0.5 m (0.0 dB/10m)", "Montaggio diretto (0,0 dB/10m)", "Montaje directo (0,0 dB/10m)")</option>
+                    <option value="lmr400">LMR-400 (0,4 dB/10m)</option>
+                    <option value="aircell7">Aircell 7 (0,6 dB/10m)</option>
+                    <option value="h155">H-155 (0,8 dB/10m)</option>
+                    <option value="rg213">RG-213 (1,2 dB/10m)</option>
+                    <option value="rg58">RG-58 (2,5 dB/10m)</option>
+                    <option value="rg174">RG-174 (5,0 dB/10m)</option>
+                </select>
+
+                <label>@Loc.T("Kabellänge", "Cable Length", "Lunghezza cavo", "Longitud cable") (m)</label>
+                <div style="display:flex;align-items:center;gap:8px">
+                    <input type="number" min="0" max="500" step="0.5" @bind="_model.CableLengthM" style="width:80px" />
+                    <small style="color:#8b949e">@Loc.T("Verlust", "Loss", "Perdita", "Pérdida"): @cableLossDb.ToString("F2") dB</small>
+                </div>
+
+                <label>@Loc.T("Antennengewinn", "Antenna Gain", "Guadagno antenna", "Ganancia antena") (dBi)</label>
+                <input type="number" min="-5" max="30" step="0.1" @bind="_model.AntennaGainDbi" style="width:80px" />
+
+                <label>@Loc.T("Antennenhöhe (ü. Boden)", "Antenna Height (AGL)", "Altezza antenna (AGL)", "Altura antena (AGL)") (m)</label>
+                <input type="number" min="0" max="500" step="0.5" @bind="_model.AntennaHeightM" style="width:80px" />
+
+                <label>@Loc.T("Frequenz", "Frequency", "Frequenza", "Frecuencia") (MHz)</label>
+                <input type="number" min="300" max="1000" step="0.025" @bind="_model.FrequencyMhz" style="width:100px" />
+            </div>
+            <div style="margin-top:0.75rem;padding:0.5rem 0.75rem;background:#161b22;border:1px solid #30363d;border-radius:6px;display:flex;gap:1.5rem;flex-wrap:wrap">
+                <span>⚡ EIRP: <strong style="color:@(eirp >= 20 ? "#3fb950" : eirp >= 10 ? "#e3b341" : "#f85149")">@eirp.ToString("F2") dBm</strong> (@(Math.Round(Math.Pow(10, eirp / 10.0), 0).ToString("F0")) mW)</span>
+                <small style="color:#8b949e;align-self:center">= TX @_model.TxPowerDbm dBm − Kabel @cableLossDb.ToString("F2") dB + Antenne @_model.AntennaGainDbi dBi</small>
+            </div>
+            <div style="margin-top:0.4rem">
+                <small style="color:#8b949e">💡 @Loc.T(
+                    "EIRP-Kreis auf der Karte zeigt die theoretische Freiraumreichweite (ohne Geländeberücksichtigung).",
+                    "EIRP circle on the map shows the theoretical free-space range (no terrain considered).",
+                    "Il cerchio EIRP sulla mappa mostra la portata teorica in spazio libero (senza rilievo del terreno).",
+                    "El círculo EIRP en el mapa muestra el alcance teórico en espacio libre (sin considerar el terreno).")</small>
+            </div>
+            }
+        </div>
+
         <!-- Logging -->
         <div class="settings-section @(IsOpen("log") ? "" : "settings-section-collapsed")">
             <h2 class="settings-section-title" @onclick='() => Toggle("log")'>📝 Logging <span class="section-chevron">@(IsOpen("log") ? "▲" : "▼")</span></h2>
@@ -2017,6 +2072,12 @@
             AiSummaryDays           = s.Ai.SummaryDays,
             AiMaxMessages           = s.Ai.MaxMessages,
             AiLogRequests           = s.Ai.LogRequests,
+            TxPowerDbm              = s.TxPowerDbm,
+            CableType               = s.CableType,
+            CableLengthM            = s.CableLengthM,
+            AntennaGainDbi          = s.AntennaGainDbi,
+            AntennaHeightM          = s.AntennaHeightM,
+            FrequencyMhz            = s.FrequencyMhz,
             QuickTexts              = s.QuickTexts
                 .Select(q => new QuickTextEntry { Label = q.Label, Text = q.Text })
                 .ToList(),
@@ -2539,6 +2600,12 @@
                 AiSummaryDays      = s.Ai.SummaryDays,
                 AiMaxMessages      = s.Ai.MaxMessages,
                 AiLogRequests      = s.Ai.LogRequests,
+                TxPowerDbm     = s.TxPowerDbm,
+                CableType      = s.CableType,
+                CableLengthM   = s.CableLengthM,
+                AntennaGainDbi = s.AntennaGainDbi,
+                AntennaHeightM = s.AntennaHeightM,
+                FrequencyMhz   = s.FrequencyMhz,
                 QuickTexts  = s.QuickTexts.Select(q => new QuickTextEntry { Label = q.Label, Text = q.Text }).ToList(),
                 GroupLabels = s.GroupLabels.Select(g => new GroupLabelEntry { Group = g.Group, ShortLabel = g.ShortLabel, Label = g.Label }).ToList()
             };
@@ -2643,6 +2710,14 @@
         public int    AiSummaryDays      { get; set; } = 365;
         public int    AiMaxMessages      { get; set; } = 50;
         public bool   AiLogRequests      { get; set; }
+
+        // Station / RF
+        public int    TxPowerDbm     { get; set; } = 20;
+        public string CableType      { get; set; } = "rg213";
+        public double CableLengthM   { get; set; } = 5.0;
+        public double AntennaGainDbi { get; set; } = 2.15;
+        public double AntennaHeightM { get; set; } = 5.0;
+        public double FrequencyMhz   { get; set; } = 433.175;
 
         // Quick Texts
         public List<QuickTextEntry> QuickTexts { get; set; } = [];
@@ -2750,6 +2825,12 @@
                 MaxMessages   = AiMaxMessages,
                 LogRequests   = AiLogRequests
             },
+            TxPowerDbm     = TxPowerDbm,
+            CableType      = CableType,
+            CableLengthM   = CableLengthM,
+            AntennaGainDbi = AntennaGainDbi,
+            AntennaHeightM = AntennaHeightM,
+            FrequencyMhz   = FrequencyMhz,
             QuickTexts = QuickTexts,
             GroupLabels = GroupLabels
         };
