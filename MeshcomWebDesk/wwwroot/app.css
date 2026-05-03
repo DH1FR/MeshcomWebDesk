@@ -380,6 +380,13 @@ h1:focus {
     text-align: right;
 }
 
+.msg-out-left {
+    background: #1b4332;
+    align-self: flex-start;
+    border-left: 3px solid #2d6a4f;
+    text-align: left;
+}
+
 .msg-time {
     font-size: 11px;
     color: #6c757d;

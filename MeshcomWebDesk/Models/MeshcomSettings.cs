@@ -264,4 +264,10 @@ public class MeshcomSettings
     /// Typical value: 30 dB. Higher = smaller (more realistic) circle.
     /// </summary>
     public double SystemMarginDb { get; set; } = 30.0;
+
+    /// <summary>
+    /// When true, own outgoing messages are displayed left-aligned (like incoming messages)
+    /// instead of the default right-aligned layout.
+    /// </summary>
+    public bool OwnMessagesAlignLeft { get; set; } = false;
 }

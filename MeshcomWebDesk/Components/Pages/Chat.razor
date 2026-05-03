@@ -116,7 +116,7 @@
                 <div class="message-list" id="tab-messages">
                     @foreach (var msg in _activeTabMessages)
                     {
-                        <div class="message @(msg.IsOutgoing ? "msg-out" : "msg-in")">
+                        <div class="message @(msg.IsOutgoing ? (_settings.OwnMessagesAlignLeft ? "msg-out-left" : "msg-out") : "msg-in")">
                             <span class="msg-time">
                                 @{ var msgTs = LT(msg.Timestamp); var msgDate = TsDate(msgTs); }
                                 @msgTs.ToString("HH:mm:ss")

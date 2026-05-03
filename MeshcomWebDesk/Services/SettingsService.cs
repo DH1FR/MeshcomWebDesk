@@ -164,8 +164,9 @@ public class SettingsService
                 ["AntennaGainDbi"]          = s.AntennaGainDbi,
                 ["AntennaType"]             = s.AntennaType,
                 ["AntennaHeightM"]          = s.AntennaHeightM,
-                ["FrequencyMhz"]   = s.FrequencyMhz,
-                ["SystemMarginDb"] = s.SystemMarginDb
+                ["FrequencyMhz"]            = s.FrequencyMhz,
+                ["SystemMarginDb"]          = s.SystemMarginDb,
+                ["OwnMessagesAlignLeft"]    = s.OwnMessagesAlignLeft
             }
         };
 
