@@ -156,7 +156,13 @@ public class SettingsService
                     ["ShortLabel"] = g.ShortLabel,
                     ["Label"]      = g.Label
                 }).ToArray()),
-                ["MhMaxAgeHours"] = s.MhMaxAgeHours
+                ["MhMaxAgeHours"]  = s.MhMaxAgeHours,
+                ["TxPowerDbm"]     = s.TxPowerDbm,
+                ["CableType"]      = s.CableType,
+                ["CableLengthM"]   = s.CableLengthM,
+                ["AntennaGainDbi"] = s.AntennaGainDbi,
+                ["AntennaHeightM"] = s.AntennaHeightM,
+                ["FrequencyMhz"]   = s.FrequencyMhz
             }
         };
 
