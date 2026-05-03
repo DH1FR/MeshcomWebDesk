@@ -1303,14 +1303,18 @@
                             <div class="@(_aiBalanceResult.StartsWith("✅") ? "settings-success" : _aiBalanceResult.StartsWith("❌") ? "settings-error" : "settings-notice")" style="margin-top:0">
                                 @if (_aiBalanceResult.Contains("https://"))
                                 {
-                                    var dashUrl = "https://platform.openai.com/settings/organization/billing/overview";
                                     var txt = _aiBalanceResult[.._aiBalanceResult.IndexOf("https://")].TrimEnd();
                                     <span>@txt </span>
-                                    <a href="@dashUrl" target="_blank" rel="noopener" style="color:#58a6ff">OpenAI Billing Dashboard →</a>
+                                    <a href="https://platform.openai.com/settings/organization/billing/overview" target="_blank" rel="noopener" style="color:#58a6ff">Billing →</a>
+                                    <span style="color:#8b949e"> | </span>
+                                    <a href="https://platform.openai.com/usage" target="_blank" rel="noopener" style="color:#58a6ff">Usage →</a>
                                 }
                                 else
                                 {
-                                    @_aiBalanceResult
+                                    <span>@_aiBalanceResult </span>
+                                    <a href="https://platform.openai.com/settings/organization/billing/overview" target="_blank" rel="noopener" style="color:#58a6ff">Billing →</a>
+                                    <span style="color:#8b949e"> | </span>
+                                    <a href="https://platform.openai.com/usage" target="_blank" rel="noopener" style="color:#58a6ff">Usage →</a>
                                 }
                             </div>
                         }
