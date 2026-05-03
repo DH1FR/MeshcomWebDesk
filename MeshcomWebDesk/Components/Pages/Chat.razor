@@ -137,6 +137,7 @@
                                 </span>
                             }
                             <span class="msg-text">@FormatMessageWithLinks(msg.Text)</span>
+                            <button class="btn-copy-msg" title="@Loc.T("Text kopieren", "Copy text", "Copia testo", "Copiar texto")" @onclick="() => CopyMessageAsync(msg.Text)">📋</button>
                             @if (msg.IsOutgoing)
                             {
                                 <span class="@AckCssClass(msg)" title="@AckTooltip(msg)">@AckIcon(msg)</span>
@@ -1278,6 +1279,11 @@
 
     private string MentionTitle(string callsign) =>
         "@" + callsign + Loc.T(" in Nachricht einfügen", " insert into message", " inserisci nel messaggio", " insertar en mensaje");
+
+    private async Task CopyMessageAsync(string text)
+    {
+        await JS.InvokeVoidAsync("meshcomChat.copyToClipboard", text);
+    }
 
     private void CreateNewTab()
     {

@@ -237,6 +237,22 @@ window.meshcomChat = (function () {
             overlay.addEventListener('click', function(e) { if (e.target === overlay) dismiss(); });
         },
 
+        // ── Nachricht in Zwischenablage kopieren ──
+        copyToClipboard: (text) => {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                return navigator.clipboard.writeText(text);
+            }
+            // Fallback für ältere Browser
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            return Promise.resolve();
+        },
+
         // ── SendBar: fügt Text an der aktuellen Cursorposition ein ──
         insertAtCursor: (id, text) => {
             var el = document.getElementById(id);
