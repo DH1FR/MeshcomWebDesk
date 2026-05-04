@@ -2832,12 +2832,12 @@ h1:focus {
 
 
 /* Telnet Page */
-.telnet-page{display:flex;flex-direction:column;height:calc(100vh - 56px);padding:.5rem;gap:.4rem;box-sizing:border-box}
+.telnet-page{display:flex;flex-direction:column;height:calc(100vh - 56px);height:calc(100dvh - 56px);padding:.5rem;padding-bottom:calc(.5rem + env(safe-area-inset-bottom));gap:.4rem;box-sizing:border-box}
 .telnet-header{display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-shrink:0}
 .telnet-title{font-weight:600;font-size:.95rem;display:flex;align-items:center;gap:.4rem}
-.telnet-output{flex:1;overflow-y:auto;background:#0d1117;color:#c9d1d9;font-family:'Courier New',Consolas,monospace;font-size:.82rem;line-height:1.4;padding:.5rem .6rem;border:1px solid #30363d;border-radius:4px;white-space:pre-wrap;word-break:break-all}
+.telnet-output{flex:1;min-height:0;overflow-y:auto;background:#0d1117;color:#c9d1d9;font-family:'Courier New',Consolas,monospace;font-size:.82rem;line-height:1.4;padding:.5rem .6rem;border:1px solid #30363d;border-radius:4px;white-space:pre-wrap;word-break:break-all}
 .telnet-line{min-height:1.2em}
-.telnet-input-bar{display:flex;align-items:center;gap:.4rem;flex-shrink:0}
+.telnet-input-bar{display:flex;align-items:center;gap:.4rem;flex-shrink:0;padding-bottom:env(safe-area-inset-bottom)}
 .telnet-prompt{color:#58a6ff;font-family:'Courier New',Consolas,monospace;font-weight:bold;flex-shrink:0}
-.telnet-input{flex:1;background:#161b22;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:.35rem .5rem;font-family:'Courier New',Consolas,monospace;font-size:.85rem;outline:none}
+.telnet-input{flex:1;background:#161b22;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:.35rem .5rem;font-family:'Courier New',Consolas,monospace;font-size:.85rem;outline:none;-webkit-appearance:none}
 .telnet-input:focus{border-color:#58a6ff}
