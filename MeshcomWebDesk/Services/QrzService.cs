@@ -31,6 +31,10 @@ public class QrzService
     private readonly SemaphoreSlim _loginLock = new(1, 1);
     private readonly ConcurrentDictionary<string, QrzCacheEntry> _cache = new(StringComparer.OrdinalIgnoreCase);
 
+    // Deduplicates concurrent lookups for the same callsign:
+    // while a network request is in flight, all other callers await the same Task.
+    private readonly ConcurrentDictionary<string, Task<QrzInfo?>> _inflightLookups = new(StringComparer.OrdinalIgnoreCase);
+
     public QrzService(IOptionsMonitor<MeshcomSettings> settingsMonitor, ILogger<QrzService> logger)
     {
         _settingsMonitor = settingsMonitor;
@@ -74,13 +78,18 @@ public class QrzService
                 _logger.LogInformation("QRZ cache expired for {Callsign} ({Age:F0}d ≥ {Max}d), refreshing…", bare, ageDays, maxAge);
         }
 
-        var result = await FetchAsync(bare, settings);
-        if (settings.LogRequests)
-            _logger.LogInformation("QRZ lookup (API): {Callsign} → {Result}", bare,
-                result is null ? "not found" : $"{result.FirstName}, {result.Location}");
-        _cache[bare] = new QrzCacheEntry(result, DateTime.UtcNow);
-        SaveCacheToDisk();
-        return result;
+        // Deduplicate concurrent requests for the same callsign.
+        // GetOrAdd ensures only one Task is created even under parallel pressure.
+        var task = _inflightLookups.GetOrAdd(bare, _ => FetchAndCacheAsync(bare, settings));
+        try
+        {
+            return await task;
+        }
+        finally
+        {
+            // Remove only when this is still the same task (avoids removing a newer one)
+            _inflightLookups.TryRemove(new KeyValuePair<string, Task<QrzInfo?>>(bare, task));
+        }
     }
 
     /// <summary>Clears the in-memory callsign cache, the session key and the on-disk cache file.</summary>
@@ -124,6 +133,18 @@ public class QrzService
     }
 
     // ── Disk persistence ───────────────────────────────────────────────────────
+
+    /// <summary>Fetches from QRZ API, writes to cache and disk. Called at most once per callsign at a time.</summary>
+    private async Task<QrzInfo?> FetchAndCacheAsync(string bare, QrzSettings settings)
+    {
+        var result = await FetchAsync(bare, settings);
+        if (settings.LogRequests)
+            _logger.LogInformation("QRZ lookup (API): {Callsign} → {Result}", bare,
+                result is null ? "not found" : $"{result.FirstName}, {result.Location}");
+        _cache[bare] = new QrzCacheEntry(result, DateTime.UtcNow);
+        SaveCacheToDisk();
+        return result;
+    }
 
     private void LoadCacheFromDisk()
     {

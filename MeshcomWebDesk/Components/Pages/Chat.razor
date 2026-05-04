@@ -1198,8 +1198,8 @@
 
     private void HandleNewDirectTab(string callsign)
     {
-        if (_voiceEnabled != true) return;
-        SpeakDirectMessage(callsign);
+        if (_voiceEnabled == true)
+            SpeakDirectMessage(callsign);
         InvokeAsync(StateHasChanged);
     }
 
