@@ -32,12 +32,24 @@ public class BotCommandService
     /// by some MeshCom clients / mobile keyboards instead of --).
     /// Also accepts a bare <c>ping</c> keyword (case-insensitive) for compatibility with
     /// clients that send plain "ping" without a command prefix.
+    /// Note: after <c>--</c> or <c>—</c> a letter must follow immediately so that
+    /// decoration strings like <c>---===</c> or <c>---</c> are not mistaken for commands.
     /// </summary>
     public static bool IsCommand(string? text) =>
         text != null &&
-        (text.StartsWith("--", StringComparison.Ordinal) ||
-         text.StartsWith('\u2014') ||
+        (IsHyphenCommand(text) ||
+         IsEmDashCommand(text) ||
          text.Trim().Equals("ping", StringComparison.OrdinalIgnoreCase));
+
+    private static bool IsHyphenCommand(string text) =>
+        text.Length > 2 &&
+        text.StartsWith("--", StringComparison.Ordinal) &&
+        char.IsLetter(text[2]);
+
+    private static bool IsEmDashCommand(string text) =>
+        text.Length > 1 &&
+        text[0] == '\u2014' &&
+        char.IsLetter(text[1]);
 
     /// <summary>
     /// All currently active commands: built-in (DI-registered) plus user-defined (from config).
