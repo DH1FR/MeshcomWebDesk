@@ -48,13 +48,23 @@
                @bind="_inputText"
                @bind:event="oninput"
                @onkeydown="OnKeyDown"
-               placeholder="@Loc.T("Befehl eingeben …", "Enter command …", "Inserisci comando …", "Introduce comando …")"
+               placeholder="@(TelnetService.IsConnected ? Loc.T("Befehl eingeben …", "Enter command …", "Inserisci comando …", "Introduce comando …") : Loc.T("Nicht verbunden", "Not connected", "Non connesso", "No conectado"))"
                autocomplete="off"
                spellcheck="false"
+               disabled="@(!TelnetService.IsConnected)"
                id="telnet-input" />
-        <button class="btn-action btn-sm" @onclick="SendInputAsync">
-            @Loc.T("Senden", "Send", "Invia", "Enviar")
-        </button>
+        @if (TelnetService.IsConnected)
+        {
+            <button class="btn-action btn-sm" @onclick="SendInputAsync">
+                @Loc.T("Senden", "Send", "Invia", "Enviar")
+            </button>
+        }
+        else
+        {
+            <button class="btn-action btn-sm" @onclick="ConnectAsync">
+                @Loc.T("Verbinden", "Connect", "Connetti", "Conectar")
+            </button>
+        }
     </div>
 
 </div>
@@ -74,9 +84,7 @@
     {
         _settings = SettingsMon.CurrentValue;
         TelnetService.OnChange += HandleChange;
-
-        if (TelnetService.IsEnabled && !TelnetService.IsConnected)
-            await TelnetService.ConnectAsync();
+        // No auto-connect here – connection is controlled via the status bar toggle.
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -115,6 +123,12 @@
         lock (TelnetService.Lines)
             TelnetService.Lines.Clear();
         StateHasChanged();
+    }
+
+    private async Task ConnectAsync()
+    {
+        await TelnetService.ConnectAsync();
+        await InvokeAsync(StateHasChanged);
     }
 
     // ── Events ────────────────────────────────────────────────────────────
