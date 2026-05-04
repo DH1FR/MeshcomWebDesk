@@ -320,7 +320,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             catch (Exception ex) { _logger.LogDebug(ex, "QRZ pre-lookup for auto-reply failed for {Callsign}", callsign); }
         }
 
-        var text = await ExpandVariablesAsync(_settings.AutoReplyText, callsign);
+        var text = await ExpandVariablesAsync(_settings.AutoReplyText, callsign, before: DateTime.Now);
         _logger.LogInformation("Auto-reply to new contact {Callsign}", callsign);
         await SendMessageAsync(callsign, text);
     }
@@ -337,7 +337,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             }
 
             var reply = await _botCommandService.ExecuteAsync(message.Text!, message.From, message);
-            reply = await ExpandVariablesAsync(reply, message.From);
+            reply = await ExpandVariablesAsync(reply, message.From, before: message.Timestamp);
 
             var parts = SplitMessage(reply);
             _logger.LogInformation("Bot reply to {From} ({Parts} part(s)): {Preview}",
@@ -492,7 +492,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     /// by querying the MySQL database for the last direct message timestamp with <paramref name="callsign"/>.
     /// Falls back to in-memory messages when the DB is not available.
     /// </summary>
-    public async Task<string> ExpandVariablesAsync(string template, string? callsign = null, CancellationToken ct = default)
+    public async Task<string> ExpandVariablesAsync(string template, string? callsign = null, DateTime? before = null, CancellationToken ct = default)
     {
         // First apply all synchronous variables
         var result = ExpandVariables(template, callsign);
@@ -507,23 +507,27 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         {
             // 1. Try MySQL DB (full history)
             var callsignBase = callsign.Contains('-') ? callsign[..callsign.IndexOf('-')] : callsign;
-            var dbTime = await _qsoSummaryService.GetLastQsoTimeDbOnlyAsync(callsignBase, ct);
+            var dbTime = await _qsoSummaryService.GetLastQsoTimeDbOnlyAsync(callsignBase, before, ct);
             if (dbTime.HasValue)
             {
                 lastQsoStr = dbTime.Value.ToString("dd.MM.yyyy HH:mm");
             }
             else
             {
-                // 2. Fallback: most recent in-memory message for this tab
+                // 2. Fallback: most recent in-memory message for this tab (excluding current trigger)
                 var lastMsg = _chatService.GetTabMessages(callsign)
                     .OrderByDescending(m => m.Timestamp)
-                    .FirstOrDefault();
+                    .FirstOrDefault(m => before == null || m.Timestamp < before.Value);
                 if (lastMsg != null)
                     lastQsoStr = lastMsg.Timestamp.ToString("dd.MM.yyyy HH:mm");
             }
         }
 
-        return result.Replace("{last-qso}", lastQsoStr, StringComparison.OrdinalIgnoreCase);
+        result = result.Replace("{last-qso}",
+            string.IsNullOrEmpty(lastQsoStr) ? "kein QSO" : lastQsoStr,
+            StringComparison.OrdinalIgnoreCase);
+
+        return result;
     }
 
     /// <summary>

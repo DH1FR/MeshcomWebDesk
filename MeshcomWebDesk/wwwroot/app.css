@@ -380,6 +380,13 @@ h1:focus {
     text-align: right;
 }
 
+.msg-out-left {
+    background: #1b4332;
+    align-self: flex-start;
+    border-left: 3px solid #2d6a4f;
+    text-align: left;
+}
+
 .msg-time {
     font-size: 11px;
     color: #6c757d;
@@ -877,6 +884,7 @@ h1:focus {
 .mon-sys     { color: #6e7681; font-size: 11px; }
 .mon-hops    { color: #6e7681; font-size: 10px; margin: 0 2px; cursor: help; }
 .mon-seq     { color: #6e7681; font-size: 11px; margin-left: 4px; }
+.mon-msgid   { color: #4a90a4; font-size: 11px; margin-left: 4px; font-family: monospace; }
 
 /* Signal */
 .mon-signal {

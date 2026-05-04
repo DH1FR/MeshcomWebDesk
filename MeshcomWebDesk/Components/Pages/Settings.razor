@@ -219,6 +219,15 @@
                     <small>@Loc.T("(eine pro Zeile, z.\u00a0B. #262)", "(one per line, e.\u00a0g. #262)", "(uno per riga, es. #262)", "(uno por línea, p.ej. #262)")</small>
                 </label>
                 <textarea rows="4" @bind="_model.GroupsText"></textarea>
+
+                <label>
+                    @Loc.T("Eigene Nachrichten linksbündig", "Own messages left-aligned", "Messaggi propri allineati a sinistra", "Mensajes propios alineados a la izquierda")<br />
+                    <small>@Loc.T("Eigene gesendete Nachrichten werden links statt rechts angezeigt", "Own sent messages are displayed on the left instead of the right", "I propri messaggi inviati vengono visualizzati a sinistra invece che a destra", "Los mensajes enviados propios se muestran a la izquierda en lugar de a la derecha")</small>
+                </label>
+                <label class="settings-toggle">
+                    <input type="checkbox" @bind="_model.OwnMessagesAlignLeft" />
+                    <span>@(_model.OwnMessagesAlignLeft ? Loc.T("Linksbündig", "Left-aligned", "Allineato a sinistra", "Alineado a la izquierda") : Loc.T("Rechtsbündig (Standard)", "Right-aligned (default)", "Allineato a destra (predefinito)", "Alineado a la derecha (predeterminado)"))</span>
+                </label>
             </div>
             }
         </div>
@@ -2136,6 +2145,7 @@
             AntennaHeightM          = s.AntennaHeightM,
             FrequencyMhz            = s.FrequencyMhz,
             SystemMarginDb          = s.SystemMarginDb,
+            OwnMessagesAlignLeft    = s.OwnMessagesAlignLeft,
             QuickTexts              = s.QuickTexts
                 .Select(q => new QuickTextEntry { Label = q.Label, Text = q.Text })
                 .ToList(),
@@ -2665,6 +2675,7 @@
                 AntennaGainDbi          = s.AntennaGainDbi,
                 AntennaType             = s.AntennaType,
                 AntennaHeightM          = s.AntennaHeightM,
+                OwnMessagesAlignLeft    = s.OwnMessagesAlignLeft,
                 GroupLabels = s.GroupLabels.Select(g => new GroupLabelEntry { Group = g.Group, ShortLabel = g.ShortLabel, Label = g.Label }).ToList()
             };
             await SettingsService.SaveMeshcomSettingsAsync(_model.ToSettings());
@@ -2779,6 +2790,7 @@
         public double AntennaHeightM          { get; set; } = 5.0;
         public double FrequencyMhz            { get; set; } = 433.175;
         public double SystemMarginDb          { get; set; } = 30.0;
+        public bool   OwnMessagesAlignLeft    { get; set; } = false;
 
         // Quick Texts
         public List<QuickTextEntry> QuickTexts { get; set; } = [];
@@ -2893,8 +2905,9 @@
             AntennaGainDbi          = AntennaGainDbi,
             AntennaType             = AntennaType,
             AntennaHeightM          = AntennaHeightM,
-            FrequencyMhz   = FrequencyMhz,
-            SystemMarginDb = SystemMarginDb,
+            FrequencyMhz            = FrequencyMhz,
+            SystemMarginDb          = SystemMarginDb,
+            OwnMessagesAlignLeft    = OwnMessagesAlignLeft,
             QuickTexts = QuickTexts,
             GroupLabels = GroupLabels
         };

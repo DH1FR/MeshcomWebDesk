@@ -1,4 +1,4 @@
-```
+﻿```
   ███╗   ███╗███████╗███████╗██╗  ██╗ ██████╗ ██████╗ ███╗   ███╗
   ████╗ ████║██╔════╝██╔════╝██║  ██║██╔════╝██╔═══██╗████╗ ████║
   ██╔████╔██║█████╗  ███████╗███████║██║     ██║   ██║██╔████╔██║
@@ -78,7 +78,7 @@ The application runs on **Windows** or **Linux** and makes a full web client for
   - `☁️✓` – delivered via gateway (Gateway ACK received)
 - **Clickable callsigns in the monitor** – click any sender or recipient to open a chat tab instantly; hover over a callsign to reveal a small **`@`** button – clicking it inserts `@CALLSIGN` at the current cursor position in the message input field (useful for addressing someone in a group or broadcast message without switching tabs)
 - **`@`-Mention in chat messages** – the same `@` button appears next to every incoming callsign in the group/broadcast message list; clicking it inserts `@CALLSIGN` at the cursor position in the send bar
-- **QRZ.com tooltips** – when enabled, hovering over any callsign (tab buttons, chat messages, monitor From/To) shows the operator's first name and home QTH (e.g. `Chat mit DH1FR-2 öffnen · Max, Berlin`)
+- **QRZ.com tooltips** – when enabled, hovering over any callsign (tab buttons, chat messages, monitor From/To) shows the operator's first name and home QTH (e.g. `Chat mit DH1FR-2 öffnen · Max, Berlin`); concurrent lookups for the same callsign share a single HTTP request (in-flight deduplication)
 - **Audio notification** 🔔 when a new direct message to your own callsign arrives (Web Audio API, no audio file required); mute toggle in the status bar
 - **🔊 Voice announcements** – incoming direct messages are read aloud using the browser's built-in **Web Speech API** (no plugin or audio file required); toggle with the 🔊/🔇 button in the status bar; state is saved in `localStorage` and restored on reload; language passed to the speech synthesiser matches the current UI language
 - **⚡ Quick Texts** – configurable one-click text buttons in the send bar; clicking a button loads the predefined text into the input field for review before sending; supports all `{variable}` placeholders (`{mycall}`, `{mylocator}`, `{callsign}`, `{locator}`, `{rssi}`, `{time}`, `{date}`, `{telemetry}`, …); buttons can be **reordered by drag & drop** in the flyout; new order is saved immediately; configured in **Settings → ⚡ Quick Texts**
@@ -90,7 +90,7 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 - **📋 Recent QSO partners** – a 📋 button next to the **+** tab button opens a flyout listing the most recently contacted callsigns (sorted by last contact time); clicking a row opens the chat tab directly; populated from the MySQL database
 - **📤 Export / 📥 Import of Quick Texts** – export the quick-text list as `MeshComWebDesk-quick-texts.json`; import to replace the list; filename editable before export; share presets with other operators
 - **📋 Copy message to clipboard** – hovering over a message in a direct chat tab reveals a 📋 button; clicking it copies the message text to the clipboard (JS Clipboard API)
-- **{last-qso} variable** – expands to the date and time of the last direct QSO with the current callsign (database-first with in-memory fallback); available in Auto-Reply, Bot commands, Beacon and Quick Texts
+- **{last-qso} variable** – expands to the date and time of the **previous** direct QSO with the current callsign (the contact that triggered the expansion is excluded); `kein QSO` / `no QSO` if no prior QSO exists; database-first with in-memory fallback; available in Auto-Reply, Bot commands, Beacon and Quick Texts
 
 ### 📻 MH – Most Recently Heard
 - Live table of all heard stations with last message, timestamp and message count
@@ -179,7 +179,7 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 
 ### 🤖 Bot – Remote commands via direct message
 - **Command-based auto-responses** for incoming direct messages
-- Trigger: any direct message starting with `--` (two hyphens) or `—` (em dash, as typed by many MeshCom clients and mobile keyboards)
+- Trigger: any direct message starting with `--` (two hyphens) or `—` (em dash, as typed by many MeshCom clients and mobile keyboards) **immediately followed by a letter** – decoration strings like `---===` are intentionally ignored
 - **Built-in commands:**
 
   | Command | Response |
@@ -1213,6 +1213,16 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 ---
 
  ## 📋 Changelog
+
+### v1.9.5
+- **feat:** 💬 **MsgId im Monitor** – eingehende Nachrichten zeigen die Nachrichten-ID (msg_id) im Monitor an; erleichtert Diagnose und ACK-Zuordnung
+- **feat:** 🟡 **Toast-Bezeichnung** – Toast-Anzeige für Watchlist- und CQ-Treffer zeigt jetzt „empfangen" statt „gehört"
+- **feat:** ↔️ **Eigene Nachrichten linksbündig** – neue Option OwnMessagesAlignLeft in den Einstellungen; eigene gesendete Nachrichten können optional linksbündig dargestellt werden (Standard: rechtsbündig)
+- **feat:** 🔊 **Watchlist-TTS Drosselung** – Sprachansagen für Watchlist-Treffer werden pro Rufzeichen maximal einmal alle 5 Minuten ausgelöst
+- **fix:** 🕔 **{last-qso} zeigt vorheriges QSO** – Variable liefert jetzt den Zeitpunkt des *vorherigen* direkten QSOs (aktuelles Paket wird ausgeschlossen); kein vorheriges QSO → „kein QSO"
+- **fix:** 🤖 **Bot: ---=== nicht mehr als Befehl erkannt** – Dekorations-Strings wie ---=== (WebDesk-Ident-Auto-Reply) werden nicht mehr als Bot-Befehl interpretiert
+- **fix:** 💬 **Direkt-Tab ohne Voice sofort sichtbar** – neu angelegte Direkt-Tabs erscheinen jetzt auch dann sofort in der UI wenn Sprachansagen deaktiviert sind
+- **fix:** 🔍 **QRZ Race Condition** – In-Flight-Deduplizierung für QRZ-Abfragen verhindert parallele Mehrfach-Requests für dasselbe Rufzeichen
 
 ### v1.9.4
 - **feat:** 📻 **Station / HF-Parameter** – neue Einstellungssektion mit TX-Leistung (dBm), Kabeltyp (15 vordefinierte 50-Ω-Typen), Kabeldämpfung (manuell eingebbar), Antennengewinn (dBi), Antennentyp (Freitext), Antennengehöhe (m) und Frequenz (MHz); EIRP und theoretische Freiraumreichweite werden live berechnet und angezeigt
