@@ -374,8 +374,10 @@ public sealed class QsoSummaryService
         }
     }
 
-    /// <summary>Returns the timestamp of the last direct message with <paramref name="callsignBase"/> from the DB.</summary>
-    public async Task<DateTime?> GetLastQsoTimeAsync(string callsignBase, CancellationToken ct = default)
+    /// <summary>Returns the timestamp of the last direct message with <paramref name="callsignBase"/> from the DB.
+    /// When <paramref name="before"/> is supplied only messages strictly older than that instant are considered,
+    /// so that the message which triggered the lookup is not returned as "last QSO".</summary>
+    public async Task<DateTime?> GetLastQsoTimeAsync(string callsignBase, DateTime? before = null, CancellationToken ct = default)
     {
         if (!IsAvailable(out var db, out _)) return null;
 
@@ -383,6 +385,8 @@ public sealed class QsoSummaryService
         {
             await using var conn = new MySqlConnection(db.MySqlConnectionString);
             await conn.OpenAsync(ct);
+
+            var beforeClause = before.HasValue ? "  AND timestamp < @before" : string.Empty;
 
             // Match callsign with or without SSID
             await using var cmd = new MySqlCommand(
@@ -392,9 +396,12 @@ public sealed class QsoSummaryService
                     OR to_call  = @cs OR to_call  LIKE @csLike)
                   AND is_position_beacon = 0
                   AND is_telemetry       = 0
+                {beforeClause}
                 """, conn);
             cmd.Parameters.AddWithValue("@cs",     callsignBase);
             cmd.Parameters.AddWithValue("@csLike", callsignBase + "-%");
+            if (before.HasValue)
+                cmd.Parameters.AddWithValue("@before", before.Value);
 
             var result = await cmd.ExecuteScalarAsync(ct);
             return result is null or DBNull ? null : Convert.ToDateTime(result);
@@ -409,8 +416,10 @@ public sealed class QsoSummaryService
     /// <summary>
     /// Returns the timestamp of the last direct message with <paramref name="callsignBase"/> from the DB.
     /// Only requires MySQL (no AI key needed) – suitable for variable expansion.
+    /// When <paramref name="before"/> is supplied only messages strictly older than that instant are considered,
+    /// so that the message which triggered the lookup is not returned as "last QSO".
     /// </summary>
-    public async Task<DateTime?> GetLastQsoTimeDbOnlyAsync(string callsignBase, CancellationToken ct = default)
+    public async Task<DateTime?> GetLastQsoTimeDbOnlyAsync(string callsignBase, DateTime? before = null, CancellationToken ct = default)
     {
         if (!IsDbOnlyAvailable(out var db)) return null;
 
@@ -419,6 +428,8 @@ public sealed class QsoSummaryService
             await using var conn = new MySqlConnection(db.MySqlConnectionString);
             await conn.OpenAsync(ct);
 
+            var beforeClause = before.HasValue ? "  AND timestamp < @before" : string.Empty;
+
             await using var cmd = new MySqlCommand(
                 $"""
                 SELECT MAX(timestamp) FROM `{db.MySqlTableName}`
@@ -426,9 +437,12 @@ public sealed class QsoSummaryService
                     OR to_call  = @cs OR to_call  LIKE @csLike)
                   AND is_position_beacon = 0
                   AND is_telemetry       = 0
+                {beforeClause}
                 """, conn);
             cmd.Parameters.AddWithValue("@cs",     callsignBase);
             cmd.Parameters.AddWithValue("@csLike", callsignBase + "-%");
+            if (before.HasValue)
+                cmd.Parameters.AddWithValue("@before", before.Value);
 
             var result = await cmd.ExecuteScalarAsync(ct);
             return result is null or DBNull ? null : Convert.ToDateTime(result);
@@ -1017,8 +1031,11 @@ public sealed class QsoSummaryService
     }
 
     private static async Task<DateTime?> GetLastQsoTimeInternalAsync(
-        MySqlConnection conn, DatabaseSettings db, string callsignBase, CancellationToken ct)
+        MySqlConnection conn, DatabaseSettings db, string callsignBase, CancellationToken ct,
+        DateTime? before = null)
     {
+        var beforeClause = before.HasValue ? "  AND timestamp < @before" : string.Empty;
+
         await using var cmd = new MySqlCommand(
             $"""
             SELECT MAX(timestamp) FROM `{db.MySqlTableName}`
@@ -1027,9 +1044,12 @@ public sealed class QsoSummaryService
               AND is_position_beacon = 0
               AND is_telemetry       = 0
               AND text IS NOT NULL AND text != ''
+            {beforeClause}
             """, conn);
         cmd.Parameters.AddWithValue("@cs",     callsignBase);
         cmd.Parameters.AddWithValue("@csLike", callsignBase + "-%");
+        if (before.HasValue)
+            cmd.Parameters.AddWithValue("@before", before.Value);
         var result = await cmd.ExecuteScalarAsync(ct);
         return result is null or DBNull ? null : Convert.ToDateTime(result);
     }
