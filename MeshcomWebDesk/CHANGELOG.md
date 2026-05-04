@@ -1,6 +1,6 @@
 ﻿# Changelog
 
-## [1.9.5] – in Entwicklung (dev)
+## [1.9.5] – veröffentlicht
 
 ### Features
 - **MsgId im Monitor**: Eingehende Nachrichten zeigen jetzt die Nachrichten-ID (`msg_id`) im Monitor an.
