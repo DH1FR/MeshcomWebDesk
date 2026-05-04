@@ -313,6 +313,13 @@
                         <span class="mon-seq" title="@Loc.T("Sequenznummer", "Sequence number", "Numero di sequenza", "Número de secuencia")">{@m.SequenceNumber}</span>
                     }
 
+                    @* MsgId for incoming messages *@
+                    @if (!m.IsOutgoing && !m.IsAck && !m.IsPositionBeacon && !m.IsTelemetry &&
+                         !string.IsNullOrEmpty(m.MsgId))
+                    {
+                        <span class="mon-msgid" title="@Loc.T("Message-ID", "Message ID", "ID messaggio", "ID de mensaje")">@m.MsgId</span>
+                    }
+
                     @* Signal *@
                     @if (m.Rssi.HasValue)
                     {
