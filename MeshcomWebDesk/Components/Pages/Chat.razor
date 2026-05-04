@@ -393,11 +393,11 @@
         </button>
         @if (TelnetService.IsEnabled)
         {
-            <a class="status-mute-btn @(TelnetService.IsConnected ? "" : "status-mute-off")"
-               href="/telnet"
-               title="@(TelnetService.IsConnected ? Loc.T("Telnet verbunden – Tab öffnen", "Telnet connected – open tab", "Telnet connesso – apri scheda", "Telnet conectado – abrir pestaña") : Loc.T("Telnet getrennt – Tab öffnen", "Telnet disconnected – open tab", "Telnet disconnesso – apri scheda", "Telnet desconectado – abrir pestaña"))">
+            <button class="status-mute-btn @(TelnetService.IsConnected ? "" : "status-mute-off")"
+                    @onclick="ToggleTelnetAsync"
+                    title="@(TelnetService.IsConnected ? Loc.T("Telnet verbunden – klicken zum Trennen", "Telnet connected – click to disconnect", "Telnet connesso – clic per disconnettersi", "Telnet conectado – clic para desconectar") : Loc.T("Telnet getrennt – klicken zum Verbinden", "Telnet disconnected – click to connect", "Telnet disconnesso – clic per connettersi", "Telnet desconectado – clic para conectar"))">
                 <span class="status-badge @(TelnetService.IsConnected ? "status-badge-ok" : "status-badge-err")">@(TelnetService.IsConnected ? "🖥️" : "🖥️✗")</span>
-            </a>
+            </button>
         }
         <span class="status-sep">|</span>
         <span class="status-item" title="@UdpStatusTooltip">
@@ -1210,6 +1210,15 @@
         _voiceEnabled = _voiceEnabled != true;
         try { await JS.InvokeVoidAsync("meshcomChat.setVoiceEnabled", _voiceEnabled); }
         catch (JSException) { }
+    }
+
+    private async Task ToggleTelnetAsync()
+    {
+        if (TelnetService.IsConnected)
+            await TelnetService.DisconnectAsync();
+        else
+            await TelnetService.ConnectAsync();
+        await InvokeAsync(StateHasChanged);
     }
 
     private void HandleNewDirectTab(string callsign)
