@@ -1,0 +1,133 @@
+@page "/telnet"
+@using MeshcomWebDesk.Models
+@using MeshcomWebDesk.Services
+@using Microsoft.Extensions.Options
+@rendermode InteractiveServer
+@inject TelnetService TelnetService
+@inject IOptionsMonitor<MeshcomSettings> SettingsMon
+@inject LanguageService Loc
+@inject IJSRuntime JS
+@implements IDisposable
+
+<PageTitle>Telnet – MeshCom WebDesk</PageTitle>
+
+<ErrorBoundary>
+<ChildContent>
+<div class="telnet-page">
+
+    @* ── Header ── *@
+    <div class="telnet-header">
+        <span class="telnet-title">
+            🖥️ Telnet &nbsp;·&nbsp;
+            <span class="status-badge @(TelnetService.IsConnected ? "status-badge-ok" : "status-badge-err")">
+                @(TelnetService.IsConnected
+                    ? $"● {Loc.T("Verbunden", "Connected", "Connesso", "Conectado")} {_settings.DeviceIp}:23"
+                    : $"○ {Loc.T("Getrennt", "Disconnected", "Disconnesso", "Desconectado")}")
+            </span>
+        </span>
+        <button class="btn-action btn-sm" @onclick="ClearLines">
+            @Loc.T("Löschen", "Clear", "Cancella", "Borrar")
+        </button>
+    </div>
+
+    @* ── Output ── *@
+    <div class="telnet-output" id="telnet-output">
+        @lock (TelnetService.Lines)
+        {
+            @foreach (var line in TelnetService.Lines)
+            {
+                <div class="telnet-line">@line</div>
+            }
+        }
+    </div>
+
+    @* ── Input ── *@
+    <div class="telnet-input-bar">
+        <span class="telnet-prompt">&gt;</span>
+        <input class="telnet-input"
+               @bind="_inputText"
+               @bind:event="oninput"
+               @onkeydown="OnKeyDown"
+               placeholder="@Loc.T("Befehl eingeben …", "Enter command …", "Inserisci comando …", "Introduce comando …")"
+               autocomplete="off"
+               spellcheck="false"
+               id="telnet-input" />
+        <button class="btn-action btn-sm" @onclick="SendInputAsync">
+            @Loc.T("Senden", "Send", "Invia", "Enviar")
+        </button>
+    </div>
+
+</div>
+</ChildContent>
+<ErrorContent Context="ex">
+    <div class="alert alert-danger">Telnet-Fehler: @ex.Message</div>
+</ErrorContent>
+</ErrorBoundary>
+
+@code {
+    private MeshcomSettings _settings = new();
+    private string _inputText = string.Empty;
+
+    // ── Lifecycle ─────────────────────────────────────────────────────────
+
+    protected override async Task OnInitializedAsync()
+    {
+        _settings = SettingsMon.CurrentValue;
+        TelnetService.OnChange += HandleChange;
+
+        if (TelnetService.IsEnabled && !TelnetService.IsConnected)
+            await TelnetService.ConnectAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await ScrollToBottomAsync();
+    }
+
+    public void Dispose()
+    {
+        TelnetService.OnChange -= HandleChange;
+        // Don't disconnect on dispose – user may navigate away and come back;
+        // TelnetService manages its own lifecycle based on IsEnabled.
+    }
+
+    // ── Input handling ────────────────────────────────────────────────────
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await SendInputAsync();
+    }
+
+    private async Task SendInputAsync()
+    {
+        var text = _inputText.Trim();
+        if (string.IsNullOrEmpty(text)) return;
+
+        _inputText = string.Empty;
+        // No local echo – the node echoes the input back
+        await TelnetService.SendLineAsync(text);
+        await ScrollToBottomAsync();
+    }
+
+    private void ClearLines()
+    {
+        lock (TelnetService.Lines)
+            TelnetService.Lines.Clear();
+        StateHasChanged();
+    }
+
+    // ── Events ────────────────────────────────────────────────────────────
+
+    private void HandleChange() =>
+        InvokeAsync(async () => { StateHasChanged(); await ScrollToBottomAsync(); });
+
+    private async Task ScrollToBottomAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("scrollElementToBottom", "telnet-output");
+        }
+        catch { /* JS not ready */ }
+    }
+}

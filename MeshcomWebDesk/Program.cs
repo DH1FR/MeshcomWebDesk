@@ -115,6 +115,7 @@ builder.Services.AddSingleton<QrzService>();
 builder.Services.AddSingleton<MqttService>();
 builder.Services.AddSingleton<UpdateCheckService>();
 builder.Services.AddSingleton<ElevationService>();
+builder.Services.AddSingleton<TelnetService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<UpdateCheckService>());
 builder.Services.AddSingleton<IMeshcomSender>(sp => sp.GetRequiredService<MeshcomUdpService>());
 builder.Services.AddSingleton<IMeshcomVariableExpander>(sp => sp.GetRequiredService<MeshcomUdpService>());

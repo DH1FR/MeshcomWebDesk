@@ -243,6 +243,32 @@
             }
         </div>
 
+        <!-- Telnet -->
+        <div class="settings-section @(IsOpen("telnet") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("telnet")'>🖥️ Telnet <span class="section-chevron">@(IsOpen("telnet") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("telnet")) {
+            <div class="settings-grid">
+                <label>
+                    @Loc.T("Telnet aktivieren", "Enable Telnet", "Abilita Telnet", "Activar Telnet")<br />
+                    <small>
+                        @Loc.T("Öffnet einen Telnet-Client-Tab (Port 23, Device IP). Verbindung wird beim Öffnen des Tabs hergestellt.",
+                               "Opens a Telnet client tab (port 23, device IP). Connection is established when the tab is opened.",
+                               "Apre una scheda client Telnet (porta 23, IP dispositivo). La connessione viene stabilita all'apertura della scheda.",
+                               "Abre una pestaña cliente Telnet (puerto 23, IP del dispositivo). La conexión se establece al abrir la pestaña.")
+                    </small><br />
+                    <small style="color:#e3b341">⚠️ @Loc.T("Voraussetzung: Telnet-Konsole (Port 23) muss auf dem MeshCom-Node aktiviert sein (\"enable Telnet console\").",
+                                              "Prerequisite: Telnet console (port 23) must be enabled on the MeshCom node (\"enable Telnet console\").",
+                                              "Prerequisito: la console Telnet (porta 23) deve essere abilitata sul nodo MeshCom (\"enable Telnet console\").",
+                                              "Requisito previo: la consola Telnet (puerto 23) debe estar habilitada en el nodo MeshCom (\"enable Telnet console\").")</small>
+                </label>
+                <label class="settings-toggle">
+                    <input type="checkbox" @bind="_model.TelnetEnabled" />
+                    <span>@(_model.TelnetEnabled ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                </label>
+            </div>
+            }
+        </div>
+
         <!-- Auto-Reply -->
         <div class="settings-section @(IsOpen("autoreply") ? "" : "settings-section-collapsed")">
             <h2 class="settings-section-title" @onclick='() => Toggle("autoreply")'>↩️ Auto-Reply <span class="section-chevron">@(IsOpen("autoreply") ? "▲" : "▼")</span></h2>
@@ -2146,6 +2172,7 @@
             FrequencyMhz            = s.FrequencyMhz,
             SystemMarginDb          = s.SystemMarginDb,
             OwnMessagesAlignLeft    = s.OwnMessagesAlignLeft,
+            TelnetEnabled           = s.TelnetEnabled,
             QuickTexts              = s.QuickTexts
                 .Select(q => new QuickTextEntry { Label = q.Label, Text = q.Text })
                 .ToList(),
@@ -2676,6 +2703,7 @@
                 AntennaType             = s.AntennaType,
                 AntennaHeightM          = s.AntennaHeightM,
                 OwnMessagesAlignLeft    = s.OwnMessagesAlignLeft,
+                TelnetEnabled           = s.TelnetEnabled,
                 GroupLabels = s.GroupLabels.Select(g => new GroupLabelEntry { Group = g.Group, ShortLabel = g.ShortLabel, Label = g.Label }).ToList()
             };
             await SettingsService.SaveMeshcomSettingsAsync(_model.ToSettings());
@@ -2791,6 +2819,7 @@
         public double FrequencyMhz            { get; set; } = 433.175;
         public double SystemMarginDb          { get; set; } = 30.0;
         public bool   OwnMessagesAlignLeft    { get; set; } = false;
+        public bool   TelnetEnabled           { get; set; } = false;
 
         // Quick Texts
         public List<QuickTextEntry> QuickTexts { get; set; } = [];
@@ -2908,6 +2937,7 @@
             FrequencyMhz            = FrequencyMhz,
             SystemMarginDb          = SystemMarginDb,
             OwnMessagesAlignLeft    = OwnMessagesAlignLeft,
+            TelnetEnabled           = TelnetEnabled,
             QuickTexts = QuickTexts,
             GroupLabels = GroupLabels
         };

@@ -2,7 +2,19 @@
 
 ## [1.9.6] – in Entwicklung (dev)
 
+### Features
+- **Telnet-Client-Tab**: Neuer Tab „🖥️ Telnet" (rechts neben Suchen) für direkten Konsolenzugriff auf den MeshCom-Node über Telnet (Port 23, Device IP).
+  - Nur sichtbar wenn in den Einstellungen aktiviert.
+  - Verbindung wird beim Öffnen des Tabs hergestellt; automatische Reconnect-Logik.
+  - IAC-Telnet-Negotiation-Bytes werden gefiltert, lokales Echo unterdrückt (Echo kommt vom Node).
+  - Eingaben werden mit CRLF gesendet (kompatibel mit MeshCom-Node-Konsole).
+  - Ausgabe-Buffer (max. 500 Zeilen) mit automatischem Scroll ans Ende.
+- **Telnet-Statusindikator**: Statusleiste zeigt 🖥️ (grün, verbunden) bzw. 🖥️✗ (rot, getrennt) – analog zum Sprachansage-Toggle; Klick öffnet den Telnet-Tab.
+- **Einstellungen – Telnet-Sektion**: Neuer Abschnitt in den Einstellungen mit Aktivierungs-Checkbox und Hinweis, dass auf dem MeshCom-Node die Telnet-Konsole aktiviert sein muss (`enable Telnet console`, Port 23).
 
+### Bugfixes
+- **TelnetEnabled wurde nicht gespeichert**: `SettingsService.SaveMeshcomSettingsAsync` schrieb `TelnetEnabled` nicht in `appsettings.override.json` – der Wert ging nach jedem Neustart verloren. Behoben.
+- **TelnetEnabled fehlte im Backup/Restore**: Beim Wiederherstellen einer Einstellungssicherung wurde `TelnetEnabled` nicht übertragen. Behoben.
 
 ---
 

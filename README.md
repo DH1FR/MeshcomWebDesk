@@ -1214,6 +1214,12 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
  ## 📋 Changelog
 
+### v1.9.6 *(dev)*
+- **feat:** 🖥️ **Telnet-Client-Tab** – neuer Tab „Telnet" (rechts neben Suchen) für direkten Konsolenzugriff auf den MeshCom-Node (Port 23, Device IP); nur sichtbar wenn in den Einstellungen aktiviert; Verbindung wird beim Tab-Öffnen hergestellt
+- **feat:** 🖥️ **Telnet-Statusindikator** – Statusleiste zeigt Verbindungsstatus (grün/rot) analog zum Sprachansage-Toggle; Klick öffnet den Telnet-Tab
+- **feat:** ⚙️ **Einstellungen – Telnet-Sektion** – Aktivierungs-Checkbox mit Hinweis, dass auf dem Node `enable Telnet console` (Port 23) aktiv sein muss
+- **fix:** 💾 **TelnetEnabled nicht gespeichert/wiederhergestellt** – Einstellung ging nach Neustart und bei Backup-Restore verloren
+
 ### v1.9.5
 - **feat:** 💬 **MsgId im Monitor** – eingehende Nachrichten zeigen die Nachrichten-ID (msg_id) im Monitor an; erleichtert Diagnose und ACK-Zuordnung
 - **feat:** 🟡 **Toast-Bezeichnung** – Toast-Anzeige für Watchlist- und CQ-Treffer zeigt jetzt „empfangen" statt „gehört"

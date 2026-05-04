@@ -270,4 +270,12 @@ public class MeshcomSettings
     /// instead of the default right-aligned layout.
     /// </summary>
     public bool OwnMessagesAlignLeft { get; set; } = false;
+
+    // ── Telnet ───────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// When true, a Telnet client tab is shown and a connection to
+    /// <see cref="DeviceIp"/>:23 is maintained while the tab is open.
+    /// </summary>
+    public bool TelnetEnabled { get; set; } = false;
 }

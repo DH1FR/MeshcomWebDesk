@@ -1,5 +1,6 @@
 @inherits LayoutComponentBase
 @inject MeshcomWebDesk.Services.LanguageService Loc
+@inject Microsoft.Extensions.Options.IOptionsMonitor<MeshcomWebDesk.Models.MeshcomSettings> SettingsMon
 @implements IDisposable
 
 <div class="app-layout">
@@ -12,6 +13,10 @@
             <NavLink class="app-nav-link" href="/" Match="NavLinkMatch.All">💬 <span class="nav-label">@Loc.T("Chat", "Chat")</span></NavLink>
             <NavLink class="app-nav-link" href="/mh">📻 <span class="nav-label">MH</span></NavLink>
             <NavLink class="app-nav-link" href="/map">🗺️ <span class="nav-label">@Loc.T("Karte", "Map", "Mappa", "Mapa")</span></NavLink>
+            @if (SettingsMon.CurrentValue.TelnetEnabled)
+            {
+                <NavLink class="app-nav-link" href="/telnet">🖥️ <span class="nav-label">Telnet</span></NavLink>
+            }
             <NavLink class="app-nav-link" href="/settings">⚙️ <span class="nav-label">@Loc.T("Einstellungen", "Settings", "Impostazioni", "Configuración")</span></NavLink>
             <NavLink class="app-nav-link" href="/clear">🗑️ <span class="nav-label">@Loc.T("Löschen", "Clear", "Elimina", "Borrar")</span></NavLink>
             <NavLink class="app-nav-link" href="/about">ℹ️ <span class="nav-label">@Loc.T("Über", "About", "Info", "Acerca de")</span></NavLink>
@@ -38,7 +43,11 @@
     private string _version =
         System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? string.Empty;
 
-    protected override void OnInitialized() => Loc.OnChange += StateHasChanged;
+    protected override void OnInitialized()
+    {
+        Loc.OnChange += StateHasChanged;
+        SettingsMon.OnChange((settings, name) => InvokeAsync(StateHasChanged));
+    }
 
     public void Dispose() => Loc.OnChange -= StateHasChanged;
 }

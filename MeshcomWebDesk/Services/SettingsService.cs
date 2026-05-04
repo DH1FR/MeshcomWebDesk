@@ -166,7 +166,8 @@ public class SettingsService
                 ["AntennaHeightM"]          = s.AntennaHeightM,
                 ["FrequencyMhz"]            = s.FrequencyMhz,
                 ["SystemMarginDb"]          = s.SystemMarginDb,
-                ["OwnMessagesAlignLeft"]    = s.OwnMessagesAlignLeft
+                ["OwnMessagesAlignLeft"]    = s.OwnMessagesAlignLeft,
+                ["TelnetEnabled"]           = s.TelnetEnabled
             }
         };
 
