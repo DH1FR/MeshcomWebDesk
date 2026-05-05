@@ -320,9 +320,9 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             catch (Exception ex) { _logger.LogDebug(ex, "QRZ pre-lookup for auto-reply failed for {Callsign}", callsign); }
         }
 
-        // Use the timestamp of the triggering message as upper bound so that
-        // the message itself is excluded from the {last-qso} lookup.
-        var text = await ExpandVariablesAsync(_settings.AutoReplyText, callsign, before: triggerTimestamp);
+        // Subtract 1 minute so {last-qso} only shows QSOs clearly before the current exchange,
+        // not messages from the same session/minute window.
+        var text = await ExpandVariablesAsync(_settings.AutoReplyText, callsign, before: triggerTimestamp.AddMinutes(-1));
         _logger.LogInformation("Auto-reply to new contact {Callsign}", callsign);
         await SendMessageAsync(callsign, text);
     }
