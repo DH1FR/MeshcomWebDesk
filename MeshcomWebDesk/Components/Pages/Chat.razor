@@ -1221,7 +1221,7 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private void HandleNewDirectTab(string callsign)
+    private void HandleNewDirectTab(string callsign, MeshcomMessage message)
     {
         if (_voiceEnabled == true)
             SpeakDirectMessage(callsign);

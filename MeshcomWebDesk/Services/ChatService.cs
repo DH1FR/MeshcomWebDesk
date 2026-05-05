@@ -47,7 +47,7 @@ public class ChatService
     /// The argument is the remote callsign. Not raised for broadcast (*) or group (#) tabs,
     /// and not raised when tabs are restored from a snapshot or opened manually.
     /// </summary>
-    public event Action<string>? OnNewDirectTab;
+    public event Action<string, MeshcomMessage>? OnNewDirectTab;
 
     /// <summary>
     /// Raised for every incoming direct message addressed to our own callsign,
@@ -203,7 +203,7 @@ public class ChatService
         // Fire OnNewDirectTab AFTER the incoming message is in the tab so the auto-reply
         // (AddOutgoingMessage) appears after it in the conversation, not before.
         if (wasNewDirect)
-            OnNewDirectTab?.Invoke(message.From);
+            OnNewDirectTab?.Invoke(message.From, message);
 
         // Fire OnDirectMessage for every direct MSG to own callsign (tab new or existing).
         // This allows voice announcements even for follow-up messages.

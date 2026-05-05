@@ -79,7 +79,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             _logger.LogInformation("Settings reloaded from appsettings.json.");
         });
 
-        _chatService.OnNewDirectTab += callsign => _ = SendAutoReplyAsync(callsign);
+        _chatService.OnNewDirectTab += (callsign, msg) => _ = SendAutoReplyAsync(callsign, msg.Timestamp);
         _chatService.OnBotCommand   += msg      => _ = HandleBotCommandAsync(msg);
     }
 
@@ -307,7 +307,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         return ("#" + stripped).ToLowerInvariant();
     }
 
-    private async Task SendAutoReplyAsync(string callsign)
+    private async Task SendAutoReplyAsync(string callsign, DateTime triggerTimestamp)
     {
         if (!_settings.AutoReplyEnabled || string.IsNullOrWhiteSpace(_settings.AutoReplyText))
             return;
@@ -320,7 +320,9 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             catch (Exception ex) { _logger.LogDebug(ex, "QRZ pre-lookup for auto-reply failed for {Callsign}", callsign); }
         }
 
-        var text = await ExpandVariablesAsync(_settings.AutoReplyText, callsign, before: DateTime.Now);
+        // Use the timestamp of the triggering message as upper bound so that
+        // the message itself is excluded from the {last-qso} lookup.
+        var text = await ExpandVariablesAsync(_settings.AutoReplyText, callsign, before: triggerTimestamp);
         _logger.LogInformation("Auto-reply to new contact {Callsign}", callsign);
         await SendMessageAsync(callsign, text);
     }
