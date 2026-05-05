@@ -80,7 +80,7 @@
 
     // ── Lifecycle ─────────────────────────────────────────────────────────
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         _settings = SettingsMon.CurrentValue;
         TelnetService.OnChange += HandleChange;

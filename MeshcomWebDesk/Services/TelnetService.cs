@@ -46,55 +46,55 @@ public class TelnetService : IAsyncDisposable
         var host = s.DeviceIp;
         var port = s.TelnetPort;
         UnknownCertThumbprint = null;
+
+        AppendLine($"[Verbinde mit {host}:{port} …]");
+        OnChange?.Invoke();
+
+        using var timeoutCts  = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         try
         {
+            // TCP connect with timeout
             _tcp = new TcpClient();
-            await _tcp.ConnectAsync(host, port);
+            await _tcp.ConnectAsync(host, port, timeoutCts.Token);
 
             _ssl = new SslStream(_tcp.GetStream(), leaveInnerStreamOpen: false,
                 userCertificateValidationCallback: ValidateDeviceCert);
 
-            // Use SslClientAuthenticationOptions so our callback controls validation entirely.
-            // TargetHost is sent as SNI but cert validation is fully delegated to ValidateDeviceCert.
             var sslOptions = new SslClientAuthenticationOptions
             {
                 TargetHost                          = host,
                 RemoteCertificateValidationCallback = ValidateDeviceCert,
-                // Do not require a valid CA chain – we pin by fingerprint instead
             };
-            await _ssl.AuthenticateAsClientAsync(sslOptions);
+            await _ssl.AuthenticateAsClientAsync(sslOptions, timeoutCts.Token);
 
             _reader = new StreamReader(_ssl, Encoding.UTF8);
             _writer = new StreamWriter(_ssl, Encoding.UTF8) { AutoFlush = true };
 
-            // Read first line from device.
-            // With password set:    "Password: "  → send password, read banner/result
-            // Without password set: banner line   → go directly to read loop
-            var firstLine = await _reader.ReadLineAsync();
+            // Read first line from device with timeout
+            var firstLine = await _reader.ReadLineAsync(timeoutCts.Token);
             _logger.LogDebug("Telnet first line: {Line}", firstLine);
 
             if (firstLine != null && firstLine.TrimStart().StartsWith("Password", StringComparison.OrdinalIgnoreCase))
             {
-                // Password prompt received – send password
+                // Password prompt – send password
                 await _writer.WriteLineAsync(s.TelnetPassword);
-                var authResult = await _reader.ReadLineAsync();
+                var authResult = await _reader.ReadLineAsync(timeoutCts.Token);
                 _logger.LogDebug("Telnet auth result: {Result}", authResult);
 
                 if (authResult != null && authResult.Contains("denied", StringComparison.OrdinalIgnoreCase))
                 {
                     _logger.LogWarning("Telnet auth failed: {Result}", authResult);
                     await DisposeConnectionAsync();
-                    LastLine = $"❌ {authResult}";
+                    AppendLine($"❌ Zugang verweigert: {authResult}");
                     OnChange?.Invoke();
                     return;
                 }
-                // authResult is the banner line
                 if (!string.IsNullOrEmpty(authResult))
                     AppendLine(authResult);
             }
             else
             {
-                // No password required – firstLine is already the banner
+                // No password – firstLine is the banner
                 if (!string.IsNullOrEmpty(firstLine))
                     AppendLine(firstLine);
             }
@@ -105,11 +105,17 @@ public class TelnetService : IAsyncDisposable
             _ = ReadLoopAsync(_cts.Token);
             _logger.LogInformation("Telnet connected to {Host}:{Port}", host, port);
         }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Telnet connect timed out to {Host}:{Port}", host, port);
+            await DisposeConnectionAsync();
+            AppendLine($"❌ Timeout beim Verbinden mit {host}:{port} (10s)");
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Telnet connect failed");
             await DisposeConnectionAsync();
-            LastLine = $"❌ {ex.Message}";
+            AppendLine($"❌ Verbindungsfehler: {ex.Message}");
         }
         OnChange?.Invoke();
     }
