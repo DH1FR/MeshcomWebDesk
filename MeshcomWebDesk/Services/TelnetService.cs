@@ -54,16 +54,41 @@ public class TelnetService : IAsyncDisposable
             _ssl = new SslStream(_tcp.GetStream(), leaveInnerStreamOpen: false,
                 userCertificateValidationCallback: ValidateDeviceCert);
 
-            // ESP32 mbedTLS (IDF 5.x) supports TLS 1.2 but may not handle TLS 1.3.
-            // .NET 10 default (SslProtocols.None) negotiates TLS 1.3 first → EOF from server.
-            // Force TLS 1.2 to match the embedded device capability.
+            // ESP32 mbedTLS only supports RSA key exchange cipher suites with its self-signed RSA cert.
+            // .NET 10 on Windows (SChannel) offers ECDHE/DHE first which causes the handshake to fail
+            // with "ClientKeyExchange failed in DHM/ECD" on the device side.
+            // CipherSuitesPolicy selects only RSA-based suites (no DHE/ECDHE key exchange).
+            CipherSuitesPolicy? cipherPolicy = null;
+            try
+            {
+                cipherPolicy = new CipherSuitesPolicy(new[]
+                {
+                    TlsCipherSuite.TLS_RSA_WITH_AES_128_CBC_SHA,
+                    TlsCipherSuite.TLS_RSA_WITH_AES_256_CBC_SHA,
+                    TlsCipherSuite.TLS_RSA_WITH_AES_128_CBC_SHA256,
+                    TlsCipherSuite.TLS_RSA_WITH_AES_256_CBC_SHA256,
+                    TlsCipherSuite.TLS_RSA_WITH_AES_128_GCM_SHA256,
+                    TlsCipherSuite.TLS_RSA_WITH_AES_256_GCM_SHA384,
+                });
+            }
+            catch (PlatformNotSupportedException)
+            {
+                // CipherSuitesPolicy is not supported on this platform (Windows <10.0.20348)
+                // Fall back to default – may fail if server rejects ECDHE
+                _logger.LogWarning("CipherSuitesPolicy not supported on this platform, using defaults");
+            }
+
 #pragma warning disable SYSLIB0039
-            await _ssl.AuthenticateAsClientAsync(
-                targetHost:                 "meshcom",
-                clientCertificates:         null,
-                enabledSslProtocols:        System.Security.Authentication.SslProtocols.Tls12,
-                checkCertificateRevocation: false);
+            var sslOptions = new SslClientAuthenticationOptions
+            {
+                TargetHost                          = "meshcom",
+                RemoteCertificateValidationCallback = ValidateDeviceCert,
+                EnabledSslProtocols                 = System.Security.Authentication.SslProtocols.Tls12,
+                CipherSuitesPolicy                  = cipherPolicy,
+                CertificateRevocationCheckMode      = System.Security.Cryptography.X509Certificates.X509RevocationMode.NoCheck,
+            };
 #pragma warning restore SYSLIB0039
+            await _ssl.AuthenticateAsClientAsync(sslOptions, timeoutCts.Token);
 
             _writer = new StreamWriter(_ssl, Encoding.UTF8) { AutoFlush = true };
 
