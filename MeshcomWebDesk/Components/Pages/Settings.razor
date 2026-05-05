@@ -2080,7 +2080,8 @@
     private async Task TrustTelnetCertAsync()
     {
         if (string.IsNullOrEmpty(_telnetUnknownCert)) return;
-        _model.TelnetCertThumbprint = _telnetUnknownCert;
+        _model.TelnetCertThumbprint       = _telnetUnknownCert;
+        TelnetService.UnknownCertThumbprint = null;
         _telnetUnknownCert = null;
         await SaveAsync();
     }
@@ -2123,6 +2124,11 @@
     {
         Loc.OnChange += StateHasChanged;
         TelnetService.OnChange += OnTelnetChange;
+
+        // Pick up fingerprint that arrived before this page was opened
+        if (!string.IsNullOrEmpty(TelnetService.UnknownCertThumbprint))
+            _telnetUnknownCert = TelnetService.UnknownCertThumbprint;
+
         var s = SettingsMonitor.CurrentValue;
         // Check if we arrived here after a successful backup restore
         var uri   = new Uri(Nav.Uri);
@@ -2776,6 +2782,9 @@
                 AntennaHeightM          = s.AntennaHeightM,
                 OwnMessagesAlignLeft    = s.OwnMessagesAlignLeft,
                 TelnetEnabled           = s.TelnetEnabled,
+                TelnetPort              = s.TelnetPort,
+                TelnetPassword          = s.TelnetPassword,
+                TelnetCertThumbprint    = s.TelnetCertThumbprint,
                 GroupLabels = s.GroupLabels.Select(g => new GroupLabelEntry { Group = g.Group, ShortLabel = g.ShortLabel, Label = g.Label }).ToList()
             };
             await SettingsService.SaveMeshcomSettingsAsync(_model.ToSettings());

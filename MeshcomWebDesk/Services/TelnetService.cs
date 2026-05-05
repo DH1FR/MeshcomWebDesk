@@ -22,7 +22,7 @@ public class TelnetService : IAsyncDisposable
 
     public bool    IsConnected           { get; private set; }
     public bool    IsEnabled             => _settingsMonitor.CurrentValue.TelnetEnabled;
-    public string? UnknownCertThumbprint { get; private set; }
+    public string? UnknownCertThumbprint { get; set; }
     public string  LastLine              { get; private set; } = string.Empty;
     public List<string> Lines { get; } = new(500);
 
