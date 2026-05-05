@@ -1,5 +1,7 @@
-﻿using System.Net.Security;
+﻿using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Authentication;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -60,10 +62,19 @@ public class TelnetService : IAsyncDisposable
             _ssl = new SslStream(_tcp.GetStream(), leaveInnerStreamOpen: false,
                 userCertificateValidationCallback: ValidateDeviceCert);
 
+            // Use explicit TLS options:
+            // - Allow TLS 1.0–1.3 so older node firmware is accepted
+            // - Disable SNI (TargetHost = "") when connecting to an IP address,
+            //   because many embedded TLS stacks drop the connection on unknown SNI
+            bool isIpAddress = IPAddress.TryParse(host, out _);
             var sslOptions = new SslClientAuthenticationOptions
             {
-                TargetHost                          = host,
+                TargetHost                          = isIpAddress ? string.Empty : host,
                 RemoteCertificateValidationCallback = ValidateDeviceCert,
+#pragma warning disable SYSLIB0039  // TLS 1.0/1.1 are obsolete in .NET but needed for embedded devices
+                EnabledSslProtocols                 = SslProtocols.Tls | SslProtocols.Tls11
+                                                    | SslProtocols.Tls12 | SslProtocols.Tls13,
+#pragma warning restore SYSLIB0039
             };
             await _ssl.AuthenticateAsClientAsync(sslOptions, timeoutCts.Token);
 
