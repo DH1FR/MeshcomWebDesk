@@ -54,14 +54,16 @@ public class TelnetService : IAsyncDisposable
             _ssl = new SslStream(_tcp.GetStream(), leaveInnerStreamOpen: false,
                 userCertificateValidationCallback: ValidateDeviceCert);
 
-            // AuthenticateAsClient with a dummy target name so .NET does not abort on empty SNI.
-            // Cert validation is fully handled by ValidateDeviceCert (fingerprint pin / first-connect).
-            // TLS version negotiation is left to the OS defaults (TLS 1.2/1.3 on modern Windows).
+            // ESP32 mbedTLS (IDF 5.x) supports TLS 1.2 but may not handle TLS 1.3.
+            // .NET 10 default (SslProtocols.None) negotiates TLS 1.3 first → EOF from server.
+            // Force TLS 1.2 to match the embedded device capability.
+#pragma warning disable SYSLIB0039
             await _ssl.AuthenticateAsClientAsync(
-                targetHost:              "meshcom",   // dummy SNI – cert validated by fingerprint
-                clientCertificates:      null,
-                enabledSslProtocols:     System.Security.Authentication.SslProtocols.None, // OS default
+                targetHost:                 "meshcom",
+                clientCertificates:         null,
+                enabledSslProtocols:        System.Security.Authentication.SslProtocols.Tls12,
                 checkCertificateRevocation: false);
+#pragma warning restore SYSLIB0039
 
             _writer = new StreamWriter(_ssl, Encoding.UTF8) { AutoFlush = true };
 
