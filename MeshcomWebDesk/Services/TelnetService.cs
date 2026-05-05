@@ -54,17 +54,14 @@ public class TelnetService : IAsyncDisposable
             _ssl = new SslStream(_tcp.GetStream(), leaveInnerStreamOpen: false,
                 userCertificateValidationCallback: ValidateDeviceCert);
 
-            bool isIpAddress = IPAddress.TryParse(host, out _);
-            var sslOptions = new SslClientAuthenticationOptions
-            {
-                TargetHost                          = isIpAddress ? string.Empty : host,
-                RemoteCertificateValidationCallback = ValidateDeviceCert,
-#pragma warning disable SYSLIB0039
-                EnabledSslProtocols = SslProtocols.Tls | SslProtocols.Tls11
-                                    | SslProtocols.Tls12 | SslProtocols.Tls13,
-#pragma warning restore SYSLIB0039
-            };
-            await _ssl.AuthenticateAsClientAsync(sslOptions, timeoutCts.Token);
+            // AuthenticateAsClient with a dummy target name so .NET does not abort on empty SNI.
+            // Cert validation is fully handled by ValidateDeviceCert (fingerprint pin / first-connect).
+            // TLS version negotiation is left to the OS defaults (TLS 1.2/1.3 on modern Windows).
+            await _ssl.AuthenticateAsClientAsync(
+                targetHost:              "meshcom",   // dummy SNI – cert validated by fingerprint
+                clientCertificates:      null,
+                enabledSslProtocols:     System.Security.Authentication.SslProtocols.None, // OS default
+                checkCertificateRevocation: false);
 
             _writer = new StreamWriter(_ssl, Encoding.UTF8) { AutoFlush = true };
 
