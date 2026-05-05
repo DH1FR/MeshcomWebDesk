@@ -322,7 +322,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
 
         // Subtract 1 minute so {last-qso} only shows QSOs clearly before the current exchange,
         // not messages from the same session/minute window.
-        var text = await ExpandVariablesAsync(_settings.AutoReplyText, callsign, before: triggerTimestamp.AddMinutes(-1));
+        var text = await ExpandVariablesAsync(_settings.AutoReplyText, callsign, before: triggerTimestamp.AddMinutes(-5));
         _logger.LogInformation("Auto-reply to new contact {Callsign}", callsign);
         await SendMessageAsync(callsign, text);
     }
