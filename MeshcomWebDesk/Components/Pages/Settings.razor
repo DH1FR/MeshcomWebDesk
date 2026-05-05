@@ -13,6 +13,7 @@
 @inject MeshcomWebDesk.Services.QsoSummaryService QsoSummaryService
 @inject NavigationManager Nav
 @inject ChatService ChatService
+@inject TelnetService TelnetService
 @implements IDisposable
 
 <PageTitle>@Loc.T("Einstellungen", "Settings", "Impostazioni", "Configuración") – MeshCom WebDesk</PageTitle>
@@ -251,20 +252,60 @@
                 <label>
                     @Loc.T("Telnet aktivieren", "Enable Telnet", "Abilita Telnet", "Activar Telnet")<br />
                     <small>
-                        @Loc.T("Öffnet einen Telnet-Client-Tab (Port 23, Device IP). Verbindung wird beim Öffnen des Tabs hergestellt.",
-                               "Opens a Telnet client tab (port 23, device IP). Connection is established when the tab is opened.",
-                               "Apre una scheda client Telnet (porta 23, IP dispositivo). La connessione viene stabilita all'apertura della scheda.",
-                               "Abre una pestaña cliente Telnet (puerto 23, IP del dispositivo). La conexión se establece al abrir la pestaña.")
-                    </small><br />
-                    <small style="color:#e3b341">⚠️ @Loc.T("Voraussetzung: Telnet-Konsole (Port 23) muss auf dem MeshCom-Node aktiviert sein (\"enable Telnet console\").",
-                                              "Prerequisite: Telnet console (port 23) must be enabled on the MeshCom node (\"enable Telnet console\").",
-                                              "Prerequisito: la console Telnet (porta 23) deve essere abilitata sul nodo MeshCom (\"enable Telnet console\").",
-                                              "Requisito previo: la consola Telnet (puerto 23) debe estar habilitada en el nodo MeshCom (\"enable Telnet console\").")</small>
+                        @Loc.T("Öffnet einen TLS-Telnet-Client-Tab (Port 2323, Device IP).",
+                               "Opens a TLS Telnet client tab (port 2323, device IP).",
+                               "Apre una scheda client Telnet TLS (porta 2323, IP dispositivo).",
+                               "Abre una pestaña cliente Telnet TLS (puerto 2323, IP del dispositivo)")
+                    </small>
                 </label>
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.TelnetEnabled" />
                     <span>@(_model.TelnetEnabled ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
                 </label>
+
+                <label>@Loc.T("Port", "Port", "Porta", "Puerto")</label>
+                <input type="number" @bind="_model.TelnetPort" min="1" max="65535" />
+
+                <label>@Loc.T("Passwort", "Password", "Password", "Contraseña")</label>
+                <input type="password" @bind="_model.TelnetPassword" placeholder="••••••••" autocomplete="new-password" />
+
+                <label>
+                    @Loc.T("Zertifikat-Fingerprint (SHA-256)", "Certificate Fingerprint (SHA-256)", "Impronta certificato (SHA-256)", "Huella del certificado (SHA-256)")<br />
+                    <small>@Loc.T("Leer = beim ersten Verbinden anzeigen und bestätigen",
+                                  "Empty = show and confirm on first connect",
+                                  "Vuoto = mostra e conferma al primo collegamento",
+                                  "Vacío = mostrar y confirmar en la primera conexión")</small>
+                </label>
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <input type="text" @bind="_model.TelnetCertThumbprint"
+                           placeholder="AA:BB:CC:…"
+                           style="flex:1; min-width:200px; font-family:monospace; font-size:11px;" />
+                    @if (!string.IsNullOrEmpty(_model.TelnetCertThumbprint))
+                    {
+                        <button class="btn-danger" style="padding:2px 8px; font-size:11px;"
+                                @onclick="() => _model.TelnetCertThumbprint = string.Empty"
+                                title="@Loc.T("Fingerprint löschen (nächster Connect = First-Connect-Modus)", "Clear fingerprint (next connect = first-connect mode)", "Cancella impronta", "Borrar huella")">
+                            🗑
+                        </button>
+                    }
+                </div>
+
+                @if (!string.IsNullOrEmpty(_telnetUnknownCert))
+                {
+                    <span></span>
+                    <div class="settings-warn" style="margin-top:0">
+                        <strong>@Loc.T("Unbekanntes Zertifikat", "Unknown Certificate", "Certificato sconosciuto", "Certificado desconocido")</strong><br />
+                        <span style="font-family:monospace; font-size:11px; word-break:break-all;">@_telnetUnknownCert</span><br />
+                        <div style="display:flex; gap:8px; margin-top:6px;">
+                            <button class="btn-primary" @onclick="TrustTelnetCertAsync">
+                                ✅ @Loc.T("Vertrauen & speichern", "Trust & save", "Fidati e salva", "Confiar y guardar")
+                            </button>
+                            <button class="btn-secondary" @onclick="() => _telnetUnknownCert = null">
+                                ✖ @Loc.T("Abbrechen", "Cancel", "Annulla", "Cancelar")
+                            </button>
+                        </div>
+                    </div>
+                }
             </div>
             }
         </div>
@@ -1600,6 +1641,9 @@
     private bool    _mqttTesting;
     private string? _mqttTestResult;
 
+    // Telnet: unknown cert fingerprint from first-connect
+    private string? _telnetUnknownCert;
+
     private bool    _qrzTesting;
     private string? _qrzTestResult;
 
@@ -2029,6 +2073,18 @@
         _dbSetupError = null;
     }
 
+    /// <summary>
+    /// Called when the user clicks "Trust &amp; save" after a first-connect.
+    /// Saves the displayed fingerprint into the model and persists settings.
+    /// </summary>
+    private async Task TrustTelnetCertAsync()
+    {
+        if (string.IsNullOrEmpty(_telnetUnknownCert)) return;
+        _model.TelnetCertThumbprint = _telnetUnknownCert;
+        _telnetUnknownCert = null;
+        await SaveAsync();
+    }
+
     private async Task TestDbConnectionAsync()
     {
         _dbTestResult = null;
@@ -2066,6 +2122,7 @@
     protected override void OnInitialized()
     {
         Loc.OnChange += StateHasChanged;
+        TelnetService.OnChange += OnTelnetChange;
         var s = SettingsMonitor.CurrentValue;
         // Check if we arrived here after a successful backup restore
         var uri   = new Uri(Nav.Uri);
@@ -2173,6 +2230,9 @@
             SystemMarginDb          = s.SystemMarginDb,
             OwnMessagesAlignLeft    = s.OwnMessagesAlignLeft,
             TelnetEnabled           = s.TelnetEnabled,
+            TelnetPort              = s.TelnetPort,
+            TelnetPassword          = s.TelnetPassword,
+            TelnetCertThumbprint    = s.TelnetCertThumbprint,
             QuickTexts              = s.QuickTexts
                 .Select(q => new QuickTextEntry { Label = q.Label, Text = q.Text })
                 .ToList(),
@@ -2182,7 +2242,19 @@
         };
     }
 
-    public void Dispose() => Loc.OnChange -= StateHasChanged;
+    private void OnTelnetChange()
+    {
+        // Pull unknown cert fingerprint from TelnetService after first-connect
+        if (!string.IsNullOrEmpty(TelnetService.UnknownCertThumbprint))
+            _telnetUnknownCert = TelnetService.UnknownCertThumbprint;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Loc.OnChange -= StateHasChanged;
+        TelnetService.OnChange -= OnTelnetChange;
+    }
 
     private async Task SaveAsync()
     {
@@ -2820,6 +2892,9 @@
         public double SystemMarginDb          { get; set; } = 30.0;
         public bool   OwnMessagesAlignLeft    { get; set; } = false;
         public bool   TelnetEnabled           { get; set; } = false;
+        public int    TelnetPort              { get; set; } = 2323;
+        public string TelnetPassword          { get; set; } = string.Empty;
+        public string TelnetCertThumbprint    { get; set; } = string.Empty;
 
         // Quick Texts
         public List<QuickTextEntry> QuickTexts { get; set; } = [];
@@ -2938,6 +3013,9 @@
             SystemMarginDb          = SystemMarginDb,
             OwnMessagesAlignLeft    = OwnMessagesAlignLeft,
             TelnetEnabled           = TelnetEnabled,
+            TelnetPort              = TelnetPort,
+            TelnetPassword          = TelnetPassword,
+            TelnetCertThumbprint    = TelnetCertThumbprint,
             QuickTexts = QuickTexts,
             GroupLabels = GroupLabels
         };

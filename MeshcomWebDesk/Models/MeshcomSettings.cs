@@ -273,9 +273,18 @@ public class MeshcomSettings
 
     // ── Telnet ───────────────────────────────────────────────────────────
 
-    /// <summary>
-    /// When true, a Telnet client tab is shown and a connection to
-    /// <see cref="DeviceIp"/>:23 is maintained while the tab is open.
-    /// </summary>
+    /// <summary>When true, a Telnet client tab is shown and a TLS connection to the node is maintained.</summary>
     public bool TelnetEnabled { get; set; } = false;
+
+    /// <summary>TCP port for the TLS Telnet connection. Default: 2323.</summary>
+    public int TelnetPort { get; set; } = 2323;
+
+    /// <summary>Password sent after the TLS handshake. Stored encrypted (dp: prefix).</summary>
+    public string TelnetPassword { get; set; } = string.Empty;
+
+    /// <summary>
+    /// SHA-256 fingerprint of the trusted node certificate (hex, no colons).
+    /// Empty = first-connect mode: accept any cert and expose fingerprint for user confirmation.
+    /// </summary>
+    public string TelnetCertThumbprint { get; set; } = string.Empty;
 }

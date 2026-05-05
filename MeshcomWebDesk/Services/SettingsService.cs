@@ -167,7 +167,10 @@ public class SettingsService
                 ["FrequencyMhz"]            = s.FrequencyMhz,
                 ["SystemMarginDb"]          = s.SystemMarginDb,
                 ["OwnMessagesAlignLeft"]    = s.OwnMessagesAlignLeft,
-                ["TelnetEnabled"]           = s.TelnetEnabled
+                ["TelnetEnabled"]           = s.TelnetEnabled,
+                ["TelnetPort"]              = s.TelnetPort,
+                ["TelnetPassword"]          = Encrypt(s.TelnetPassword),
+                ["TelnetCertThumbprint"]    = s.TelnetCertThumbprint
             }
         };
 
