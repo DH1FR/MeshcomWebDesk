@@ -414,12 +414,13 @@ public sealed class QsoSummaryService
     }
 
     /// <summary>
-    /// Returns the timestamp of the last direct message with <paramref name="callsignBase"/> from the DB.
-    /// Only requires MySQL (no AI key needed) – suitable for variable expansion.
-    /// When <paramref name="before"/> is supplied only messages strictly older than that instant are considered,
-    /// so that the message which triggered the lookup is not returned as "last QSO".
+    /// Returns the timestamp of the last completed QSO session with <paramref name="callsignBase"/>.
+    /// A "session" ends when there is a gap of at least <paramref name="sessionGapMinutes"/> minutes
+    /// between consecutive messages. The returned timestamp is the last message before such a gap,
+    /// meaning it belongs to a previous session – not the current one.
+    /// Falls back to in-memory messages when the DB is not available.
     /// </summary>
-    public async Task<DateTime?> GetLastQsoTimeDbOnlyAsync(string callsignBase, DateTime? before = null, CancellationToken ct = default)
+    public async Task<DateTime?> GetLastQsoTimeDbOnlyAsync(string callsignBase, DateTime? before = null, int sessionGapMinutes = 10, CancellationToken ct = default)
     {
         if (!IsDbOnlyAvailable(out var db)) return null;
 
@@ -428,24 +429,45 @@ public sealed class QsoSummaryService
             await using var conn = new MySqlConnection(db.MySqlConnectionString);
             await conn.OpenAsync(ct);
 
-            var beforeClause = before.HasValue ? "  AND timestamp < @before" : string.Empty;
+            // Fetch all message timestamps for this callsign ordered newest-first.
+            // We look for the first gap of >= sessionGapMinutes between consecutive rows.
+            // The timestamp just BEFORE that gap is the end of the previous session.
+            var beforeClause = before.HasValue ? "AND timestamp < @before" : string.Empty;
 
             await using var cmd = new MySqlCommand(
                 $"""
-                SELECT MAX(timestamp) FROM `{db.MySqlTableName}`
+                SELECT timestamp FROM `{db.MySqlTableName}`
                 WHERE (from_call = @cs OR from_call LIKE @csLike
-                    OR to_call  = @cs OR to_call  LIKE @csLike)
+                    OR to_call   = @cs OR to_call   LIKE @csLike)
                   AND is_position_beacon = 0
                   AND is_telemetry       = 0
-                {beforeClause}
+                  {beforeClause}
+                ORDER BY timestamp DESC
+                LIMIT 200
                 """, conn);
             cmd.Parameters.AddWithValue("@cs",     callsignBase);
             cmd.Parameters.AddWithValue("@csLike", callsignBase + "-%");
             if (before.HasValue)
                 cmd.Parameters.AddWithValue("@before", before.Value);
 
-            var result = await cmd.ExecuteScalarAsync(ct);
-            return result is null or DBNull ? null : Convert.ToDateTime(result);
+            var timestamps = new List<DateTime>();
+            await using var reader = await cmd.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+                timestamps.Add(reader.GetDateTime(0));
+
+            if (timestamps.Count == 0) return null;
+
+            // Walk the list (newest → oldest) and find the first gap >= sessionGapMinutes.
+            // timestamps[0] = newest, timestamps[i+1] = older
+            for (int i = 0; i < timestamps.Count - 1; i++)
+            {
+                var gap = timestamps[i] - timestamps[i + 1];
+                if (gap.TotalMinutes >= sessionGapMinutes)
+                    return timestamps[i + 1]; // last message of the previous session
+            }
+
+            // All messages are in one continuous session – no prior session found.
+            return null;
         }
         catch (Exception ex)
         {

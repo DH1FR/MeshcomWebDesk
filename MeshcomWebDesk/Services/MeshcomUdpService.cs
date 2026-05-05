@@ -322,7 +322,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
 
         // Subtract 1 minute so {last-qso} only shows QSOs clearly before the current exchange,
         // not messages from the same session/minute window.
-        var text = await ExpandVariablesAsync(_settings.AutoReplyText, callsign, before: triggerTimestamp.AddMinutes(-5));
+        var text = await ExpandVariablesAsync(_settings.AutoReplyText, callsign, before: triggerTimestamp);
         _logger.LogInformation("Auto-reply to new contact {Callsign}", callsign);
         await SendMessageAsync(callsign, text);
     }
@@ -509,19 +509,26 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         {
             // 1. Try MySQL DB (full history)
             var callsignBase = callsign.Contains('-') ? callsign[..callsign.IndexOf('-')] : callsign;
-            var dbTime = await _qsoSummaryService.GetLastQsoTimeDbOnlyAsync(callsignBase, before, ct);
+            var dbTime = await _qsoSummaryService.GetLastQsoTimeDbOnlyAsync(callsignBase, before, sessionGapMinutes: 10, ct);
             if (dbTime.HasValue)
             {
                 lastQsoStr = dbTime.Value.ToString("dd.MM.yyyy HH:mm");
             }
             else
             {
-                // 2. Fallback: most recent in-memory message for this tab (excluding current trigger)
-                var lastMsg = _chatService.GetTabMessages(callsign)
+                // 2. Fallback: find last message before a session gap of >= 10 min in memory
+                var msgs = _chatService.GetTabMessages(callsign)
+                    .Where(m => before == null || m.Timestamp < before.Value)
                     .OrderByDescending(m => m.Timestamp)
-                    .FirstOrDefault(m => before == null || m.Timestamp < before.Value);
-                if (lastMsg != null)
-                    lastQsoStr = lastMsg.Timestamp.ToString("dd.MM.yyyy HH:mm");
+                    .ToList();
+                for (int i = 0; i < msgs.Count - 1; i++)
+                {
+                    if ((msgs[i].Timestamp - msgs[i + 1].Timestamp).TotalMinutes >= 10)
+                    {
+                        lastQsoStr = msgs[i + 1].Timestamp.ToString("dd.MM.yyyy HH:mm");
+                        break;
+                    }
+                }
             }
         }
 
