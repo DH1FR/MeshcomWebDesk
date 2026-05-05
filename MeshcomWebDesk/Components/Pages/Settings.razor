@@ -246,16 +246,16 @@
 
         <!-- Telnet -->
         <div class="settings-section @(IsOpen("telnet") ? "" : "settings-section-collapsed")">
-            <h2 class="settings-section-title" @onclick='() => Toggle("telnet")'>🖥️ Telnet <span class="section-chevron">@(IsOpen("telnet") ? "▲" : "▼")</span></h2>
+            <h2 class="settings-section-title" @onclick='() => Toggle("telnet")'>🖥️ TLS Console <span class="section-chevron">@(IsOpen("telnet") ? "▲" : "▼")</span></h2>
             @if (IsOpen("telnet")) {
             <div class="settings-grid">
                 <label>
-                    @Loc.T("Telnet aktivieren", "Enable Telnet", "Abilita Telnet", "Activar Telnet")<br />
+                    @Loc.T("TLS Console aktivieren", "Enable TLS Console", "Abilita TLS Console", "Activar TLS Console")<br />
                     <small>
-                        @Loc.T("Öffnet einen TLS-Telnet-Client-Tab (Port 2323, Device IP).",
-                               "Opens a TLS Telnet client tab (port 2323, device IP).",
-                               "Apre una scheda client Telnet TLS (porta 2323, IP dispositivo).",
-                               "Abre una pestaña cliente Telnet TLS (puerto 2323, IP del dispositivo)")
+                        @Loc.T("Öffnet einen TLS-Console-Tab (Port 2323, Device IP).",
+                               "Opens a TLS Console tab (port 2323, device IP).",
+                               "Apre una scheda TLS Console (porta 2323, IP dispositivo).",
+                               "Abre una pestaña TLS Console (puerto 2323, IP del dispositivo)")
                     </small>
                 </label>
                 <label class="settings-toggle">

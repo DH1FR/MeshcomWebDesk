@@ -9,7 +9,7 @@
 @inject IJSRuntime JS
 @implements IDisposable
 
-<PageTitle>Telnet – MeshCom WebDesk</PageTitle>
+<PageTitle>TLS Console – MeshCom WebDesk</PageTitle>
 
 <ErrorBoundary>
 <ChildContent>
@@ -18,7 +18,7 @@
     @* ── Header ── *@
     <div class="telnet-header">
         <span class="telnet-title">
-            🖥️ Telnet &nbsp;·&nbsp;
+            🖥️ TLS Console &nbsp;·&nbsp;
             <span class="status-badge @(TelnetService.IsConnected ? "status-badge-ok" : "status-badge-err")">
                 @(TelnetService.IsConnected
                     ? $"● {Loc.T("Verbunden", "Connected", "Connesso", "Conectado")} {_settings.DeviceIp}:{_settings.TelnetPort}"
@@ -70,7 +70,7 @@
 </div>
 </ChildContent>
 <ErrorContent Context="ex">
-    <div class="alert alert-danger">Telnet-Fehler: @ex.Message</div>
+    <div class="alert alert-danger">TLS Console Fehler: @ex.Message</div>
 </ErrorContent>
 </ErrorBoundary>
 
