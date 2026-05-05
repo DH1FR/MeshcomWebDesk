@@ -50,26 +50,56 @@ public class TelnetService : IAsyncDisposable
         {
             _tcp = new TcpClient();
             await _tcp.ConnectAsync(host, port);
+
             _ssl = new SslStream(_tcp.GetStream(), leaveInnerStreamOpen: false,
                 userCertificateValidationCallback: ValidateDeviceCert);
-            await _ssl.AuthenticateAsClientAsync(host);
+
+            // Use SslClientAuthenticationOptions so our callback controls validation entirely.
+            // TargetHost is sent as SNI but cert validation is fully delegated to ValidateDeviceCert.
+            var sslOptions = new SslClientAuthenticationOptions
+            {
+                TargetHost                          = host,
+                RemoteCertificateValidationCallback = ValidateDeviceCert,
+                // Do not require a valid CA chain – we pin by fingerprint instead
+            };
+            await _ssl.AuthenticateAsClientAsync(sslOptions);
+
             _reader = new StreamReader(_ssl, Encoding.UTF8);
             _writer = new StreamWriter(_ssl, Encoding.UTF8) { AutoFlush = true };
-            var banner = await _reader.ReadLineAsync();
-            _logger.LogDebug("Telnet banner: {Banner}", banner);
-            await _writer.WriteLineAsync(s.TelnetPassword);
-            var result = await _reader.ReadLineAsync();
-            _logger.LogDebug("Telnet auth result: {Result}", result);
-            if (result != null && result.Contains("denied", StringComparison.OrdinalIgnoreCase))
+
+            // Read first line from device.
+            // With password set:    "Password: "  → send password, read banner/result
+            // Without password set: banner line   → go directly to read loop
+            var firstLine = await _reader.ReadLineAsync();
+            _logger.LogDebug("Telnet first line: {Line}", firstLine);
+
+            if (firstLine != null && firstLine.TrimStart().StartsWith("Password", StringComparison.OrdinalIgnoreCase))
             {
-                _logger.LogWarning("Telnet auth failed: {Result}", result);
-                await DisposeConnectionAsync();
-                LastLine = $"❌ {result}";
-                OnChange?.Invoke();
-                return;
+                // Password prompt received – send password
+                await _writer.WriteLineAsync(s.TelnetPassword);
+                var authResult = await _reader.ReadLineAsync();
+                _logger.LogDebug("Telnet auth result: {Result}", authResult);
+
+                if (authResult != null && authResult.Contains("denied", StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning("Telnet auth failed: {Result}", authResult);
+                    await DisposeConnectionAsync();
+                    LastLine = $"❌ {authResult}";
+                    OnChange?.Invoke();
+                    return;
+                }
+                // authResult is the banner line
+                if (!string.IsNullOrEmpty(authResult))
+                    AppendLine(authResult);
             }
+            else
+            {
+                // No password required – firstLine is already the banner
+                if (!string.IsNullOrEmpty(firstLine))
+                    AppendLine(firstLine);
+            }
+
             IsConnected = true;
-            LastLine    = result ?? string.Empty;
             AppendLine($"[Verbunden mit {host}:{port}]");
             _cts = new CancellationTokenSource();
             _ = ReadLoopAsync(_cts.Token);
@@ -110,21 +140,31 @@ public class TelnetService : IAsyncDisposable
         X509Chain? chain, SslPolicyErrors errors)
     {
         if (cert == null) return false;
+
         var raw         = cert.GetRawCertData();
         var hash        = SHA256.HashData(raw);
         var fingerprint = string.Join(":", hash.Select(b => b.ToString("X2")));
+
         var knownThumbprint = _settingsMonitor.CurrentValue.TelnetCertThumbprint
             .Replace(":", "").Replace(" ", "").ToUpperInvariant();
+
         if (string.IsNullOrEmpty(knownThumbprint))
         {
+            // First-connect: accept any cert (self-signed, IP-addressed), expose fingerprint
             UnknownCertThumbprint = fingerprint;
-            _logger.LogWarning("Telnet: unknown cert fingerprint {Fp}", fingerprint);
-            return errors == SslPolicyErrors.None
-                || errors == SslPolicyErrors.RemoteCertificateChainErrors;
+            _logger.LogWarning("Telnet: first-connect cert fingerprint {Fp} – awaiting user confirmation", fingerprint);
+            return true; // accept unconditionally, user will confirm fingerprint
         }
+
+        // Pinned: compare SHA-256 fingerprints (ignore colons/spaces/case)
         var incoming = fingerprint.Replace(":", "").ToUpperInvariant();
-        if (incoming == knownThumbprint) return true;
-        _logger.LogError("Telnet cert mismatch! Expected {E}, got {G}", knownThumbprint, incoming);
+        if (incoming == knownThumbprint)
+        {
+            _logger.LogDebug("Telnet cert fingerprint OK");
+            return true;
+        }
+
+        _logger.LogError("Telnet cert MISMATCH! Expected {E}, got {G} – connection refused", knownThumbprint, incoming);
         return false;
     }
 
