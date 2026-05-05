@@ -21,7 +21,7 @@
             🖥️ Telnet &nbsp;·&nbsp;
             <span class="status-badge @(TelnetService.IsConnected ? "status-badge-ok" : "status-badge-err")">
                 @(TelnetService.IsConnected
-                    ? $"● {Loc.T("Verbunden", "Connected", "Connesso", "Conectado")} {_settings.DeviceIp}:23"
+                    ? $"● {Loc.T("Verbunden", "Connected", "Connesso", "Conectado")} {_settings.DeviceIp}:{_settings.TelnetPort}"
                     : $"○ {Loc.T("Getrennt", "Disconnected", "Disconnesso", "Desconectado")}")
             </span>
         </span>
