@@ -54,27 +54,24 @@ public class TelnetService : IAsyncDisposable
             _ssl = new SslStream(_tcp.GetStream(), leaveInnerStreamOpen: false,
                 userCertificateValidationCallback: ValidateDeviceCert);
 
-            // ESP32 mbedTLS only supports RSA key exchange cipher suites with its self-signed RSA cert.
-            // .NET 10 on Windows (SChannel) offers ECDHE/DHE first which causes the handshake to fail
-            // with "ClientKeyExchange failed in DHM/ECD" on the device side.
-            // CipherSuitesPolicy selects only RSA-based suites (no DHE/ECDHE key exchange).
+            // MeshCom node uses ECDHE-ECDSA key exchange (EC cert, X25519 temp key).
+            // Restrict to ECDHE-ECDSA suites so .NET/SChannel does not offer incompatible suites first.
             CipherSuitesPolicy? cipherPolicy = null;
             try
             {
                 cipherPolicy = new CipherSuitesPolicy(new[]
                 {
-                    TlsCipherSuite.TLS_RSA_WITH_AES_128_CBC_SHA,
-                    TlsCipherSuite.TLS_RSA_WITH_AES_256_CBC_SHA,
-                    TlsCipherSuite.TLS_RSA_WITH_AES_128_CBC_SHA256,
-                    TlsCipherSuite.TLS_RSA_WITH_AES_256_CBC_SHA256,
-                    TlsCipherSuite.TLS_RSA_WITH_AES_128_GCM_SHA256,
-                    TlsCipherSuite.TLS_RSA_WITH_AES_256_GCM_SHA384,
+                    TlsCipherSuite.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+                    TlsCipherSuite.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+                    TlsCipherSuite.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,
+                    TlsCipherSuite.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384,
+                    TlsCipherSuite.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
+                    TlsCipherSuite.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
                 });
             }
             catch (PlatformNotSupportedException)
             {
-                // CipherSuitesPolicy is not supported on this platform (Windows <10.0.20348)
-                // Fall back to default – may fail if server rejects ECDHE
+                // CipherSuitesPolicy not supported on this platform – use defaults
                 _logger.LogWarning("CipherSuitesPolicy not supported on this platform, using defaults");
             }
 
