@@ -10,10 +10,6 @@ using MeshcomWebDesk.Models;
 
 namespace MeshcomWebDesk.Services;
 
-/// <summary>
-/// TLS Telnet client connecting to the MeshCom node on port 2323.
-/// Connect flow: TCP → SslStream handshake → cert pin check → password → read loop.
-/// </summary>
 public class TelnetService : IAsyncDisposable
 {
     private readonly IOptionsMonitor<MeshcomSettings> _settingsMonitor;
@@ -21,7 +17,6 @@ public class TelnetService : IAsyncDisposable
 
     private TcpClient?    _tcp;
     private SslStream?    _ssl;
-    private StreamReader? _reader;
     private StreamWriter? _writer;
     private CancellationTokenSource? _cts;
 
@@ -29,8 +24,6 @@ public class TelnetService : IAsyncDisposable
     public bool    IsEnabled             => _settingsMonitor.CurrentValue.TelnetEnabled;
     public string? UnknownCertThumbprint { get; private set; }
     public string  LastLine              { get; private set; } = string.Empty;
-
-    /// <summary>Ring-buffer of received output lines (newest last).</summary>
     public List<string> Lines { get; } = new(500);
 
     public event Action? OnChange;
@@ -49,54 +42,47 @@ public class TelnetService : IAsyncDisposable
         var port = s.TelnetPort;
         UnknownCertThumbprint = null;
 
-        AppendLine($"[Verbinde mit {host}:{port} …]");
+        AppendLine($"[Verbinde mit {host}:{port}...]");
         OnChange?.Invoke();
 
-        using var timeoutCts  = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         try
         {
-            // TCP connect with timeout
             _tcp = new TcpClient();
             await _tcp.ConnectAsync(host, port, timeoutCts.Token);
 
             _ssl = new SslStream(_tcp.GetStream(), leaveInnerStreamOpen: false,
                 userCertificateValidationCallback: ValidateDeviceCert);
 
-            // Use explicit TLS options:
-            // - Allow TLS 1.0–1.3 so older node firmware is accepted
-            // - Disable SNI (TargetHost = "") when connecting to an IP address,
-            //   because many embedded TLS stacks drop the connection on unknown SNI
             bool isIpAddress = IPAddress.TryParse(host, out _);
             var sslOptions = new SslClientAuthenticationOptions
             {
                 TargetHost                          = isIpAddress ? string.Empty : host,
                 RemoteCertificateValidationCallback = ValidateDeviceCert,
-#pragma warning disable SYSLIB0039  // TLS 1.0/1.1 are obsolete in .NET but needed for embedded devices
-                EnabledSslProtocols                 = SslProtocols.Tls | SslProtocols.Tls11
-                                                    | SslProtocols.Tls12 | SslProtocols.Tls13,
+#pragma warning disable SYSLIB0039
+                EnabledSslProtocols = SslProtocols.Tls | SslProtocols.Tls11
+                                    | SslProtocols.Tls12 | SslProtocols.Tls13,
 #pragma warning restore SYSLIB0039
             };
             await _ssl.AuthenticateAsClientAsync(sslOptions, timeoutCts.Token);
 
-            _reader = new StreamReader(_ssl, Encoding.UTF8);
             _writer = new StreamWriter(_ssl, Encoding.UTF8) { AutoFlush = true };
 
-            // Read first line from device with timeout
-            var firstLine = await _reader.ReadLineAsync(timeoutCts.Token);
-            _logger.LogDebug("Telnet first line: {Line}", firstLine);
+            // Server sends "Password: " WITHOUT newline – use pause-based read
+            var firstLine = await ReadUntilNewlineOrPauseAsync(timeoutCts.Token);
+            _logger.LogDebug("Telnet first line: '{Line}'", firstLine);
 
-            if (firstLine != null && firstLine.TrimStart().StartsWith("Password", StringComparison.OrdinalIgnoreCase))
+            if (firstLine.TrimStart().StartsWith("Password", StringComparison.OrdinalIgnoreCase))
             {
-                // Password prompt – send password
                 await _writer.WriteLineAsync(s.TelnetPassword);
-                var authResult = await _reader.ReadLineAsync(timeoutCts.Token);
-                _logger.LogDebug("Telnet auth result: {Result}", authResult);
+                var authResult = await ReadUntilNewlineOrPauseAsync(timeoutCts.Token);
+                _logger.LogDebug("Telnet auth result: '{Result}'", authResult);
 
-                if (authResult != null && authResult.Contains("denied", StringComparison.OrdinalIgnoreCase))
+                if (authResult.Contains("denied", StringComparison.OrdinalIgnoreCase))
                 {
                     _logger.LogWarning("Telnet auth failed: {Result}", authResult);
                     await DisposeConnectionAsync();
-                    AppendLine($"❌ Zugang verweigert: {authResult}");
+                    AppendLine($"Zugang verweigert: {authResult}");
                     OnChange?.Invoke();
                     return;
                 }
@@ -105,7 +91,6 @@ public class TelnetService : IAsyncDisposable
             }
             else
             {
-                // No password – firstLine is the banner
                 if (!string.IsNullOrEmpty(firstLine))
                     AppendLine(firstLine);
             }
@@ -120,13 +105,13 @@ public class TelnetService : IAsyncDisposable
         {
             _logger.LogWarning("Telnet connect timed out to {Host}:{Port}", host, port);
             await DisposeConnectionAsync();
-            AppendLine($"❌ Timeout beim Verbinden mit {host}:{port} (10s)");
+            AppendLine($"Timeout beim Verbinden mit {host}:{port} (10s)");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Telnet connect failed");
             await DisposeConnectionAsync();
-            AppendLine($"❌ Verbindungsfehler: {ex.Message}");
+            AppendLine($"Verbindungsfehler: {ex.Message}");
         }
         OnChange?.Invoke();
     }
@@ -157,45 +142,72 @@ public class TelnetService : IAsyncDisposable
         X509Chain? chain, SslPolicyErrors errors)
     {
         if (cert == null) return false;
-
         var raw         = cert.GetRawCertData();
         var hash        = SHA256.HashData(raw);
         var fingerprint = string.Join(":", hash.Select(b => b.ToString("X2")));
-
         var knownThumbprint = _settingsMonitor.CurrentValue.TelnetCertThumbprint
             .Replace(":", "").Replace(" ", "").ToUpperInvariant();
-
         if (string.IsNullOrEmpty(knownThumbprint))
         {
-            // First-connect: accept any cert (self-signed, IP-addressed), expose fingerprint
             UnknownCertThumbprint = fingerprint;
-            _logger.LogWarning("Telnet: first-connect cert fingerprint {Fp} – awaiting user confirmation", fingerprint);
-            return true; // accept unconditionally, user will confirm fingerprint
-        }
-
-        // Pinned: compare SHA-256 fingerprints (ignore colons/spaces/case)
-        var incoming = fingerprint.Replace(":", "").ToUpperInvariant();
-        if (incoming == knownThumbprint)
-        {
-            _logger.LogDebug("Telnet cert fingerprint OK");
+            _logger.LogWarning("Telnet: first-connect cert fingerprint {Fp}", fingerprint);
             return true;
         }
-
-        _logger.LogError("Telnet cert MISMATCH! Expected {E}, got {G} – connection refused", knownThumbprint, incoming);
+        var incoming = fingerprint.Replace(":", "").ToUpperInvariant();
+        if (incoming == knownThumbprint) return true;
+        _logger.LogError("Telnet cert MISMATCH! Expected {E}, got {G}", knownThumbprint, incoming);
         return false;
+    }
+
+    private async Task<string> ReadUntilNewlineOrPauseAsync(CancellationToken ct)
+    {
+        var sb  = new StringBuilder();
+        var buf = new byte[1];
+        while (!ct.IsCancellationRequested)
+        {
+            using var pauseCts = new CancellationTokenSource(TimeSpan.FromMilliseconds(300));
+            using var linked   = CancellationTokenSource.CreateLinkedTokenSource(ct, pauseCts.Token);
+            try
+            {
+                int n = await _ssl!.ReadAsync(buf.AsMemory(0, 1), linked.Token);
+                if (n == 0) break;
+                char c = (char)buf[0];
+                if (c == '\n') break;
+                if (c != '\r') sb.Append(c);
+            }
+            catch (OperationCanceledException)
+            {
+                if (ct.IsCancellationRequested) throw;
+                break; // 300ms pause = prompt without newline
+            }
+        }
+        return sb.ToString();
     }
 
     private async Task ReadLoopAsync(CancellationToken ct)
     {
+        var sb  = new StringBuilder();
+        var buf = new byte[256];
         try
         {
-            while (!ct.IsCancellationRequested && _reader != null)
+            while (!ct.IsCancellationRequested && _ssl != null)
             {
-                var line = await _reader.ReadLineAsync(ct);
-                if (line == null) break;
-                LastLine = line;
-                AppendLine(line);
-                OnChange?.Invoke();
+                int n = await _ssl.ReadAsync(buf.AsMemory(), ct);
+                if (n == 0) break;
+                var text = Encoding.UTF8.GetString(buf, 0, n);
+                foreach (char c in text)
+                {
+                    if (c == '\n')
+                    {
+                        var line = sb.ToString();
+                        if (line.Length > 0) { LastLine = line; AppendLine(line); OnChange?.Invoke(); }
+                        sb.Clear();
+                    }
+                    else if (c != '\r')
+                    {
+                        sb.Append(c);
+                    }
+                }
             }
         }
         catch (OperationCanceledException) { }
@@ -215,7 +227,6 @@ public class TelnetService : IAsyncDisposable
     private async Task DisposeConnectionAsync()
     {
         if (_writer != null) { try { await _writer.DisposeAsync(); } catch { } _writer = null; }
-        if (_reader != null) { try { _reader.Dispose(); } catch { } _reader = null; }
         if (_ssl    != null) { try { await _ssl.DisposeAsync(); } catch { } _ssl = null; }
         if (_tcp    != null) { try { _tcp.Dispose(); } catch { } _tcp = null; }
     }
