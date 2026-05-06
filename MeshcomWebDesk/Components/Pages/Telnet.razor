@@ -164,13 +164,6 @@
         // Open OTA web server in a new tab
         var url = $"http://{SettingsMon.CurrentValue.DeviceIp}/";
         await JS.InvokeVoidAsync("open", url, "_blank");
-        // Disconnect in background after 10s so the node has time to reboot
-        _ = Task.Run(async () =>
-        {
-            await Task.Delay(10000);
-            await TelnetService.DisconnectAsync();
-            await InvokeAsync(StateHasChanged);
-        });
     }
 
     // ── Events ────────────────────────────────────────────────────────────
