@@ -25,9 +25,25 @@
                     : $"○ {Loc.T("Getrennt", "Disconnected", "Disconnesso", "Desconectado")}")
             </span>
         </span>
-        <button class="btn-action btn-sm" @onclick="ClearLines">
-            @Loc.T("Löschen", "Clear", "Cancella", "Borrar")
-        </button>
+        <div style="display:flex;gap:.4rem">
+            @if (TelnetService.IsConnected)
+            {
+                <button class="btn-action btn-sm" title="@Loc.T("OTA-Update starten – sendet --ota-update an den Node und öffnet den OTA-Webserver", "Start OTA update – sends --ota-update to node and opens OTA web server", "Avvia aggiornamento OTA", "Iniciar actualización OTA")"
+                        @onclick="StartOtaAsync">
+                    🔄 OTA
+                </button>
+                <button class="btn-danger btn-sm" @onclick="DisconnectAsync">
+                    @Loc.T("Trennen", "Disconnect", "Disconnetti", "Desconectar")
+                </button>
+            }
+            <button class="btn-sm @(_paused ? "btn-primary" : "btn-action")" @onclick="TogglePause"
+                    title="@(_paused ? Loc.T("Ausgabe fortsetzen (Scroll wieder aktiv)", "Resume output (scroll re-enabled)", "Riprendi output", "Reanudar salida") : Loc.T("Ausgabe pausieren (neue Zeilen kommen weiter rein)", "Pause output (new lines still buffered)", "Pausa output", "Pausar salida"))">
+                @(_paused ? "▶ " + Loc.T("Weiter", "Resume", "Riprendi", "Reanudar") : "⏸ " + Loc.T("Pause", "Pause", "Pausa", "Pausa"))
+            </button>
+            <button class="btn-action btn-sm" @onclick="ClearLines">
+                @Loc.T("Löschen", "Clear", "Cancella", "Borrar")
+            </button>
+        </div>
     </div>
 
     @* ── Output ── *@
@@ -77,6 +93,7 @@
 @code {
     private MeshcomSettings _settings = new();
     private string _inputText = string.Empty;
+    private bool _paused = false;
 
     // ── Lifecycle ─────────────────────────────────────────────────────────
 
@@ -131,10 +148,47 @@
         await InvokeAsync(StateHasChanged);
     }
 
+    private async Task DisconnectAsync()
+    {
+        await TelnetService.DisconnectAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task StartOtaAsync()
+    {
+        await TelnetService.SendLineAsync("--ota-update");
+        AppendOtaHint();
+    }
+
+    private void AppendOtaHint()
+    {
+        // Give the node ~3 s to boot into OTA mode, then open its web server in a new tab.
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(3000);
+            var url = $"http://{SettingsMon.CurrentValue.DeviceIp}/";
+            await InvokeAsync(async () =>
+            {
+                await JS.InvokeVoidAsync("open", url, "_blank");
+            });
+        });
+    }
+
     // ── Events ────────────────────────────────────────────────────────────
 
-    private void HandleChange() =>
+    private void HandleChange()
+    {
+        if (_paused) return;
         InvokeAsync(async () => { StateHasChanged(); await ScrollToBottomAsync(); });
+    }
+
+    private void TogglePause()
+    {
+        _paused = !_paused;
+        if (!_paused)
+            // Resume: render all buffered lines and scroll to bottom
+            InvokeAsync(async () => { StateHasChanged(); await ScrollToBottomAsync(); });
+    }
 
     private async Task ScrollToBottomAsync()
     {
