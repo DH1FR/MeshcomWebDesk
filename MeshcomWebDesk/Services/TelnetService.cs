@@ -87,7 +87,8 @@ public class TelnetService : IAsyncDisposable
 #pragma warning restore SYSLIB0039
             await _ssl.AuthenticateAsClientAsync(sslOptions, timeoutCts.Token);
 
-            _writer = new StreamWriter(_ssl, Encoding.UTF8) { AutoFlush = true };
+            // UTF8Encoding without BOM – BOM would corrupt the first write (e.g. password)
+            _writer = new StreamWriter(_ssl, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false)) { AutoFlush = true };
 
             // Server sends "Password: " WITHOUT newline – use pause-based read
             var firstLine = await ReadUntilNewlineOrPauseAsync(timeoutCts.Token);
@@ -95,7 +96,9 @@ public class TelnetService : IAsyncDisposable
 
             if (firstLine.TrimStart().StartsWith("Password", StringComparison.OrdinalIgnoreCase))
             {
-                await _writer.WriteLineAsync(s.TelnetPassword);
+                // Send password with explicit CRLF (same as PuTTY)
+                await _writer.WriteAsync(s.TelnetPassword + "\r\n");
+                await _writer.FlushAsync();
                 var authResult = await ReadUntilNewlineOrPauseAsync(timeoutCts.Token);
                 _logger.LogDebug("Telnet auth result: '{Result}'", authResult);
 
