@@ -614,8 +614,10 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     /// </summary>
     private async Task RunTelemetryAsync(CancellationToken stoppingToken)
     {
-        // Track the (date, hour) slot already sent to avoid double-firing in the same hour
-        var lastSentSlot = (Date: DateOnly.MinValue, Hour: -1);
+        // On startup, pre-fill lastSentSlot with the current slot so that a restart
+        // during a scheduled hour does not immediately re-send the telemetry message.
+        var startupNow   = DateTime.Now;
+        var lastSentSlot = (Date: DateOnly.FromDateTime(startupNow), Hour: startupNow.Hour);
 
         while (!stoppingToken.IsCancellationRequested)
         {
