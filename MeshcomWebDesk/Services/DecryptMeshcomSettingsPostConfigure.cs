@@ -27,6 +27,7 @@ public sealed class DecryptMeshcomSettingsPostConfigure : IPostConfigureOptions<
         options.TelemetryApiKey                = TryDecrypt(options.TelemetryApiKey);
         options.Mqtt.Password                  = TryDecrypt(options.Mqtt.Password);
         options.Ai.ApiKey                      = TryDecrypt(options.Ai.ApiKey);
+        options.TelnetPassword                 = TryDecrypt(options.TelnetPassword);
 
         // Migration: MhMaxAgeDays (days) → MhMaxAgeHours (hours).
         // When the old key is present and the new one is still at its default (0), convert.
