@@ -159,7 +159,9 @@
     private async Task StartOtaAsync()
     {
         await TelnetService.SendLineAsync("--ota-update");
-        // Open OTA web server immediately in a new tab
+        // Short delay so the node can process the command before the browser opens the OTA page
+        await Task.Delay(1000);
+        // Open OTA web server in a new tab
         var url = $"http://{SettingsMon.CurrentValue.DeviceIp}/";
         await JS.InvokeVoidAsync("open", url, "_blank");
         // Disconnect in background after 10s so the node has time to reboot
