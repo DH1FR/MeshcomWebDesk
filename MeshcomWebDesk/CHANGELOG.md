@@ -3,18 +3,29 @@
 ## [1.9.6] – in Entwicklung (dev)
 
 ### Features
-- **Telnet-Client-Tab**: Neuer Tab „🖥️ Telnet" (rechts neben Suchen) für direkten Konsolenzugriff auf den MeshCom-Node über Telnet (Port 23, Device IP).
+- **TLS-Console-Tab**: Neuer Tab „🖥️ TLS Console" (rechts neben Suchen) für verschlüsselten Konsolenzugriff auf den MeshCom-Node über TLS (Standard-Port 2323, Device IP).
   - Nur sichtbar wenn in den Einstellungen aktiviert.
-  - Verbindung wird beim Öffnen des Tabs hergestellt; automatische Reconnect-Logik.
-  - IAC-Telnet-Negotiation-Bytes werden gefiltert, lokales Echo unterdrückt (Echo kommt vom Node).
-  - Eingaben werden mit CRLF gesendet (kompatibel mit MeshCom-Node-Konsole).
+  - Verbindung wird über den Statusleisten-Schalter manuell aufgebaut und getrennt.
+  - TLS mit selbst-signiertem Zertifikat (ECDHE-ECDSA); Fingerprint-Vertrauen direkt in den Einstellungen.
+  - Passwort-Authentifizierung; Passwort wird verschlüsselt gespeichert (DPAPI).
+  - Lokales Echo unterdrückt (Echo kommt vom Node), Eingaben mit CRLF gesendet.
   - Ausgabe-Buffer (max. 500 Zeilen) mit automatischem Scroll ans Ende.
-- **Telnet-Statusindikator**: Statusleiste zeigt 🖥️ (grün, verbunden) bzw. 🖥️✗ (rot, getrennt) – analog zum Sprachansage-Toggle; Klick öffnet den Telnet-Tab.
-- **Einstellungen – Telnet-Sektion**: Neuer Abschnitt in den Einstellungen mit Aktivierungs-Checkbox und Hinweis, dass auf dem MeshCom-Node die Telnet-Konsole aktiviert sein muss (`enable Telnet console`, Port 23).
+  - **Pause**: Bildschirmausgabe anhalten (neue Zeilen werden weiter gepuffert, Scroll gestoppt).
+  - **Manuelles Trennen**: „Trennen"-Button im Header der TLS-Console.
+  - **Firmware-Link**: Link zu `https://github.com/icssw-org/MeshCom-Firmware` im Konsolenheader.
+- **OTA-Update**: Button „🔄 OTA" in der TLS-Console sendet `--ota-update` an den Node.
+  - Countdown-Dialog (5 Sek.) mit animiertem Fortschrittsbalken zeigt den Warte-Zeitraum an.
+  - OTA-Webseite (`http://<DeviceIP>/`) öffnet sich nach dem Countdown automatisch im neuen Tab.
+  - TLS-Console-Verbindung wird nach dem Öffnen der OTA-Seite automatisch getrennt.
+- **TLS-Console-Statusindikator**: Statusleiste zeigt 🖥️ (grün, verbunden) bzw. 🖥️✗ (rot, getrennt) – analog zum Sprachansage-Toggle; Klick baut Verbindung auf bzw. trennt sie.
+- **Einstellungen – TLS-Console-Sektion**: Neuer Abschnitt mit Aktivierungs-Checkbox, Port, Passwort, Zertifikat-Fingerprint (Trust & Save) und Hinweis, dass auf dem MeshCom-Node die Telnet-Konsole (`enable Telnet console`) aktiviert sein muss.
+- **Lautsprechersymbol bleibt erhalten**: Der Sprachansage-Schalter in der Statusleiste bleibt nach einem Seitenaufbau/Reconnect sichtbar (war vorher kurzzeitig ausgeblendet, bis localStorage geladen wurde).
 
 ### Bugfixes
 - **TelnetEnabled wurde nicht gespeichert**: `SettingsService.SaveMeshcomSettingsAsync` schrieb `TelnetEnabled` nicht in `appsettings.override.json` – der Wert ging nach jedem Neustart verloren. Behoben.
 - **TelnetEnabled fehlte im Backup/Restore**: Beim Wiederherstellen einer Einstellungssicherung wurde `TelnetEnabled` nicht übertragen. Behoben.
+- **Passwort-Authentifizierung TLS-Console**: DPAPI-Entschlüsselung für `TelnetPassword` fehlte beim Start – die Konsole erhielt den verschlüsselten `dp:`-String statt des Klartexts. Behoben.
+- **Telemetrie-Doppelversand nach Neustart**: Der Telemetrie-Scheduler sendete nach einem Neustart innerhalb der geplanten Stunde erneut. `lastSentSlot` wird jetzt auf die aktuelle Stunde initialisiert. Behoben.
 
 ---
 

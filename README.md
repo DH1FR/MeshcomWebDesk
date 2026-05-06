@@ -1215,11 +1215,19 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
  ## 📋 Changelog
 
 ### v1.9.6 *(dev)*
-- **feat:** 🖥️ **Telnet-Client-Tab** – neuer Tab „Telnet" (rechts neben Suchen) für direkten Konsolenzugriff auf den MeshCom-Node (Port 23, Device IP); nur sichtbar wenn in den Einstellungen aktiviert; Verbindung wird beim Tab-Öffnen hergestellt
-- **feat:** 🖥️ **Telnet-Statusindikator** – Statusleiste zeigt Verbindungsstatus (grün/rot) analog zum Sprachansage-Toggle; Klick öffnet den Telnet-Tab
-- **feat:** ⚙️ **Einstellungen – Telnet-Sektion** – Aktivierungs-Checkbox mit Hinweis, dass auf dem Node `enable Telnet console` (Port 23) aktiv sein muss
+- **feat:** 🖥️ **TLS-Console-Tab** – neuer Tab „TLS Console" (rechts neben Suchen) für verschlüsselten Konsolenzugriff auf den MeshCom-Node (TLS, Standard-Port 2323, Device IP); nur sichtbar wenn in den Einstellungen aktiviert; manuelles Verbinden/Trennen über den Statusleisten-Schalter
+- **feat:** 🔒 **TLS mit Zertifikat-Fingerprint-Vertrauen** – selbst-signierte Zertifikate werden über einen SHA-256-Fingerprint in den Einstellungen akzeptiert; „Trust & Save"-Funktion übernimmt unbekannte Zertifikate direkt beim ersten Verbindungsversuch
+- **feat:** 🔑 **Passwort-Authentifizierung** – Passwort wird verschlüsselt (DPAPI) gespeichert und bei der Anmeldung automatisch übertragen
+- **feat:** ⏸️ **Pause-Funktion** – Bildschirmausgabe der TLS-Console anhalten; neue Zeilen werden weiter gepuffert, Scroll gestoppt
+- **feat:** 🔌 **Manuelles Trennen** – „Trennen"-Button im Header der TLS-Console
+- **feat:** 📦 **Firmware-Link** – Link zu [MeshCom-Firmware auf GitHub](https://github.com/icssw-org/MeshCom-Firmware) direkt im Konsolenheader
+- **feat:** 🔄 **OTA-Update** – Button „🔄 OTA" sendet `--ota-update` an den Node; 5-Sekunden-Countdown-Dialog mit animiertem Fortschrittsbalken; OTA-Webseite öffnet sich danach automatisch im neuen Tab; TLS-Console wird nach dem Öffnen der OTA-Seite automatisch getrennt
+- **feat:** 🖥️ **TLS-Console-Statusindikator** – Statusleiste zeigt Verbindungsstatus (grün/rot) analog zum Sprachansage-Toggle; Klick baut Verbindung auf bzw. trennt sie
+- **feat:** ⚙️ **Einstellungen – TLS-Console-Sektion** – Aktivierungs-Checkbox, Port, Passwort, Zertifikat-Fingerprint sowie Hinweis, dass auf dem Node `enable Telnet console` aktiv sein muss
+- **feat:** 🔊 **Lautsprechersymbol bleibt erhalten** – Sprachansage-Schalter in der Statusleiste bleibt nach Seitenaufbau/Reconnect sofort sichtbar (vorher kurzzeitig ausgeblendet)
 - **fix:** 💾 **TelnetEnabled nicht gespeichert/wiederhergestellt** – Einstellung ging nach Neustart und bei Backup-Restore verloren
-
+- **fix:** 🔑 **Passwort TLS-Console** – verschlüsselter `dp:`-String wurde statt Klartext an den Node gesendet; Entschlüsselung beim Start korrigiert
+- **fix:** 📡 **Telemetrie-Doppelversand nach Neustart** – Telemetrie-Scheduler sendete nach einem Neustart innerhalb der geplanten Stunde erneut; `lastSentSlot` wird jetzt auf die aktuelle Stunde initialisiert
 ### v1.9.5
 - **feat:** 💬 **MsgId im Monitor** – eingehende Nachrichten zeigen die Nachrichten-ID (msg_id) im Monitor an; erleichtert Diagnose und ACK-Zuordnung
 - **feat:** 🟡 **Toast-Bezeichnung** – Toast-Anzeige für Watchlist- und CQ-Treffer zeigt jetzt „empfangen" statt „gehört"
