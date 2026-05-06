@@ -90,33 +90,52 @@ public class TelnetService : IAsyncDisposable
             // UTF8Encoding without BOM – BOM would corrupt the first write (e.g. password)
             _writer = new StreamWriter(_ssl, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false)) { AutoFlush = true };
 
-            // Server sends "Password: " WITHOUT newline – use pause-based read
-            var firstLine = await ReadUntilNewlineOrPauseAsync(timeoutCts.Token);
-            _logger.LogDebug("Telnet first line: '{Line}'", firstLine);
+            // Read all initial lines from server; skip empty leading lines.
+            // Server may send: "\nPassword: " (no trailing newline) or directly the welcome banner.
+            string promptLine = string.Empty;
+            for (int i = 0; i < 5; i++)
+            {
+                var line = await ReadUntilNewlineOrPauseAsync(timeoutCts.Token);
+                _logger.LogDebug("Telnet init line {I}: '{Line}'", i, line);
+                if (string.IsNullOrEmpty(line)) continue;
+                promptLine = line;
+                break;
+            }
 
-            if (firstLine.TrimStart().StartsWith("Password", StringComparison.OrdinalIgnoreCase))
+            if (promptLine.TrimStart().StartsWith("Password", StringComparison.OrdinalIgnoreCase))
             {
                 // Send password with explicit CRLF (same as PuTTY)
                 await _writer.WriteAsync(s.TelnetPassword + "\r\n");
                 await _writer.FlushAsync();
-                var authResult = await ReadUntilNewlineOrPauseAsync(timeoutCts.Token);
+
+                // Read server response – may be multi-line (welcome banner after success, or "Access denied")
+                var authResponse = new System.Text.StringBuilder();
+                for (int i = 0; i < 5; i++)
+                {
+                    var line = await ReadUntilNewlineOrPauseAsync(timeoutCts.Token);
+                    _logger.LogDebug("Telnet auth response line {I}: '{Line}'", i, line);
+                    if (!string.IsNullOrEmpty(line))
+                        authResponse.AppendLine(line);
+                }
+                var authResult = authResponse.ToString();
                 _logger.LogDebug("Telnet auth result: '{Result}'", authResult);
 
-                if (authResult.Contains("denied", StringComparison.OrdinalIgnoreCase))
+                if (authResult.Contains("denied", StringComparison.OrdinalIgnoreCase) ||
+                    authResult.Contains("invalid", StringComparison.OrdinalIgnoreCase))
                 {
                     _logger.LogWarning("Telnet auth failed: {Result}", authResult);
                     await DisposeConnectionAsync();
-                    AppendLine($"Zugang verweigert: {authResult}");
+                    AppendLine($"Zugang verweigert: {authResult.Trim()}");
                     OnChange?.Invoke();
                     return;
                 }
-                if (!string.IsNullOrEmpty(authResult))
-                    AppendLine(authResult);
+                if (!string.IsNullOrWhiteSpace(authResult))
+                    AppendLine(authResult.Trim());
             }
             else
             {
-                if (!string.IsNullOrEmpty(firstLine))
-                    AppendLine(firstLine);
+                if (!string.IsNullOrEmpty(promptLine))
+                    AppendLine(promptLine);
             }
 
             IsConnected = true;
