@@ -2832,7 +2832,7 @@ h1:focus {
 
 
 /* Telnet Page */
-.telnet-page{display:flex;flex-direction:column;height:calc(100vh - 56px);height:calc(100dvh - 56px);padding:.5rem;padding-bottom:calc(.5rem + env(safe-area-inset-bottom));gap:.4rem;box-sizing:border-box}
+.telnet-page{display:flex;flex-direction:column;height:calc(100vh - 56px);height:calc(100dvh - 56px);padding:.5rem;padding-bottom:calc(.5rem + env(safe-area-inset-bottom));gap:.4rem;box-sizing:border-box;position:relative}
 .telnet-header{display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-shrink:0}
 .telnet-title{font-weight:600;font-size:.95rem;display:flex;align-items:center;gap:.4rem}
 .telnet-output{flex:1;min-height:0;overflow-y:auto;background:#0d1117;color:#c9d1d9;font-family:'Courier New',Consolas,monospace;font-size:.82rem;line-height:1.4;padding:.5rem .6rem;border:1px solid #30363d;border-radius:4px;white-space:pre-wrap;word-break:break-all}
@@ -2841,3 +2841,13 @@ h1:focus {
 .telnet-prompt{color:#58a6ff;font-family:'Courier New',Consolas,monospace;font-weight:bold;flex-shrink:0}
 .telnet-input{flex:1;background:#161b22;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:.35rem .5rem;font-family:'Courier New',Consolas,monospace;font-size:.85rem;outline:none;-webkit-appearance:none}
 .telnet-input:focus{border-color:#58a6ff}
+/* OTA countdown dialog */
+.ota-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:200;border-radius:4px}
+.ota-dialog{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:1.5rem 2rem;max-width:360px;width:90%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.6)}
+.ota-icon{font-size:2.2rem;margin-bottom:.5rem;animation:ota-spin 1s linear infinite}
+@keyframes ota-spin{to{transform:rotate(360deg)}}
+.ota-title{font-weight:700;font-size:1rem;margin-bottom:.6rem;color:#e6edf3}
+.ota-msg{font-size:.88rem;color:#8b949e;margin-bottom:1rem;line-height:1.5}
+.ota-msg strong{color:#58a6ff}
+.ota-progress{height:6px;background:#30363d;border-radius:3px;overflow:hidden}
+.ota-progress-bar{height:100%;background:linear-gradient(90deg,#238636,#58a6ff);border-radius:3px;transition:width .9s linear}

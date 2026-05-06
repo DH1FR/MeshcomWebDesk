@@ -48,6 +48,23 @@
         </div>
     </div>
 
+    @* ── OTA-Dialog ── *@
+    @if (_otaCountdown >= 0)
+    {
+        <div class="ota-overlay">
+            <div class="ota-dialog">
+                <div class="ota-icon">🔄</div>
+                <div class="ota-title">@Loc.T("OTA-Update wird gestartet", "Starting OTA Update", "Avvio aggiornamento OTA", "Iniciando actualización OTA")</div>
+                <div class="ota-msg">@Loc.T("Der Node startet den OTA-Webserver. Die Seite öffnet sich in", "The node is starting the OTA web server. Page opens in", "Il nodo sta avviando il server OTA. La pagina si apre tra", "El nodo está iniciando el servidor OTA. La página se abrirá en")
+                    <strong>&nbsp;@_otaCountdown @Loc.T("Sekunden", "seconds", "secondi", "segundos")</strong> …
+                </div>
+                <div class="ota-progress">
+                    <div class="ota-progress-bar" style="width:@((5 - _otaCountdown) * 20)%"></div>
+                </div>
+            </div>
+        </div>
+    }
+
     @* ── Output ── *@
     <div class="telnet-output" id="telnet-output">
         @lock (TelnetService.Lines)
@@ -156,14 +173,25 @@
         await InvokeAsync(StateHasChanged);
     }
 
+    private int _otaCountdown = -1;  // -1 = dialog hidden
+
     private async Task StartOtaAsync()
     {
         await TelnetService.SendLineAsync("--ota-update");
-        // Short delay so the node can process the command before the browser opens the OTA page
-        await Task.Delay(1000);
-        // Open OTA web server in a new tab
         var url = $"http://{SettingsMon.CurrentValue.DeviceIp}/";
+
+        // Show countdown dialog for 5 seconds
+        for (var i = 5; i >= 0; i--)
+        {
+            _otaCountdown = i;
+            await InvokeAsync(StateHasChanged);
+            if (i > 0) await Task.Delay(1000);
+        }
+
+        // Open OTA web server in a new tab
         await JS.InvokeVoidAsync("open", url, "_blank");
+        _otaCountdown = -1;
+        await InvokeAsync(StateHasChanged);
     }
 
     // ── Events ────────────────────────────────────────────────────────────
