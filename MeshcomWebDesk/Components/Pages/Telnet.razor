@@ -24,6 +24,8 @@
                     ? $"● {Loc.T("Verbunden", "Connected", "Connesso", "Conectado")} {_settings.DeviceIp}:{_settings.TelnetPort}"
                     : $"○ {Loc.T("Getrennt", "Disconnected", "Disconnesso", "Desconectado")}")
             </span>
+            &nbsp;<a href="https://github.com/icssw-org/MeshCom-Firmware" target="_blank" rel="noopener"
+                     title="MeshCom Firmware – GitHub" style="font-size:.8rem;opacity:.6;text-decoration:none">📦 Firmware</a>
         </span>
         <div style="display:flex;gap:.4rem">
             @if (TelnetService.IsConnected)
