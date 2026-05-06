@@ -396,6 +396,8 @@ public sealed class QsoSummaryService
                     OR to_call  = @cs OR to_call  LIKE @csLike)
                   AND is_position_beacon = 0
                   AND is_telemetry       = 0
+                  AND to_call NOT IN ('*', 'ALL', 'all')
+                  AND to_call NOT LIKE '#%'
                 {beforeClause}
                 """, conn);
             cmd.Parameters.AddWithValue("@cs",     callsignBase);
@@ -441,6 +443,8 @@ public sealed class QsoSummaryService
                     OR to_call   = @cs OR to_call   LIKE @csLike)
                   AND is_position_beacon = 0
                   AND is_telemetry       = 0
+                  AND to_call NOT IN ('*', 'ALL', 'all')
+                  AND to_call NOT LIKE '#%'
                   {beforeClause}
                 ORDER BY timestamp DESC
                 LIMIT 200
