@@ -157,7 +157,8 @@
     private async Task StartOtaAsync()
     {
         await TelnetService.SendLineAsync("--ota-update");
-        // Node reboots into OTA mode – disconnect immediately
+        // Wait for the node to process the command before disconnecting
+        await Task.Delay(2000);
         await TelnetService.DisconnectAsync();
         await InvokeAsync(StateHasChanged);
         AppendOtaHint();
