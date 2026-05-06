@@ -192,6 +192,9 @@
         await JS.InvokeVoidAsync("open", url, "_blank");
         _otaCountdown = -1;
         await InvokeAsync(StateHasChanged);
+        // Disconnect TLS console after OTA page is opened
+        await TelnetService.DisconnectAsync();
+        await InvokeAsync(StateHasChanged);
     }
 
     // ── Events ────────────────────────────────────────────────────────────
