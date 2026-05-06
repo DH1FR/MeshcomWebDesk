@@ -850,7 +850,7 @@
     private bool _scrollMessages;
 
     private bool _soundEnabled = true;
-    private bool? _voiceEnabled;   // null = not yet loaded from localStorage
+    private bool? _voiceEnabled = false;  // false until restored from localStorage; null = hide button
     private bool _playSound;
     private readonly Queue<string> _pendingSpeech = new();
     // Zeitpunkt der letzten TTS-Ansage "Nachricht von …" pro Rufzeichen
