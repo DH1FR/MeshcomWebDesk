@@ -157,24 +157,15 @@
     private async Task StartOtaAsync()
     {
         await TelnetService.SendLineAsync("--ota-update");
-        // Wait for the node to process the command before disconnecting
-        await Task.Delay(10000);
-        await TelnetService.DisconnectAsync();
-        await InvokeAsync(StateHasChanged);
-        AppendOtaHint();
-    }
-
-    private void AppendOtaHint()
-    {
-        // Give the node ~3 s to boot into OTA mode, then open its web server in a new tab.
+        // Open OTA web server immediately in a new tab
+        var url = $"http://{SettingsMon.CurrentValue.DeviceIp}/";
+        await JS.InvokeVoidAsync("open", url, "_blank");
+        // Disconnect in background after 10s so the node has time to reboot
         _ = Task.Run(async () =>
         {
-            await Task.Delay(3000);
-            var url = $"http://{SettingsMon.CurrentValue.DeviceIp}/";
-            await InvokeAsync(async () =>
-            {
-                await JS.InvokeVoidAsync("open", url, "_blank");
-            });
+            await Task.Delay(10000);
+            await TelnetService.DisconnectAsync();
+            await InvokeAsync(StateHasChanged);
         });
     }
 
