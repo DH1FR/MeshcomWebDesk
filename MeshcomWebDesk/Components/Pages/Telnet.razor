@@ -34,6 +34,10 @@
                         @onclick="StartOtaAsync">
                     🔄 OTA
                 </button>
+                <button class="btn-warn btn-sm" title="@Loc.T("Node neu starten – sendet --reboot an den Node", "Reboot node – sends --reboot to node", "Riavvia il nodo", "Reiniciar nodo")"
+                        @onclick="() => _rebootConfirm = true">
+                    🔁 @Loc.T("Reboot", "Reboot", "Riavvio", "Reiniciar")
+                </button>
                 <button class="btn-danger btn-sm" @onclick="DisconnectAsync">
                     @Loc.T("Trennen", "Disconnect", "Disconnetti", "Desconectar")
                 </button>
@@ -47,6 +51,22 @@
             </button>
         </div>
     </div>
+
+    @* ── Reboot-Bestätigung ── *@
+    @if (_rebootConfirm)
+    {
+        <div class="ota-overlay">
+            <div class="ota-dialog">
+                <div class="ota-icon">🔁</div>
+                <div class="ota-title">@Loc.T("Node neu starten?", "Reboot node?", "Riavviare il nodo?", "¿Reiniciar el nodo?")</div>
+                <div class="ota-msg">@Loc.T("Der Node wird neu gestartet. Die TLS-Verbindung wird danach getrennt.", "The node will be rebooted. The TLS connection will be disconnected afterwards.", "Il nodo verrà riavviato. La connessione TLS verrà disconnessa.", "El nodo se reiniciará. La conexión TLS se desconectará.")</div>
+                <div style="display:flex;gap:.6rem;justify-content:center;margin-top:.8rem">
+                    <button class="btn-danger btn-sm" @onclick="RebootConfirmedAsync">🔁 @Loc.T("Ja, neu starten", "Yes, reboot", "Sì, riavvia", "Sí, reiniciar")</button>
+                    <button class="btn-action btn-sm" @onclick="() => _rebootConfirm = false">@Loc.T("Abbrechen", "Cancel", "Annulla", "Cancelar")</button>
+                </div>
+            </div>
+        </div>
+    }
 
     @* ── OTA-Dialog ── *@
     @if (_otaCountdown >= 0)
@@ -174,6 +194,18 @@
     }
 
     private int _otaCountdown = -1;  // -1 = dialog hidden
+    private bool _rebootConfirm = false;
+
+    private async Task RebootConfirmedAsync()
+    {
+        _rebootConfirm = false;
+        await InvokeAsync(StateHasChanged);
+        await TelnetService.SendLineAsync("--reboot");
+        // Short delay so the node processes the command, then disconnect
+        await Task.Delay(1500);
+        await TelnetService.DisconnectAsync();
+        await InvokeAsync(StateHasChanged);
+    }
 
     private async Task StartOtaAsync()
     {

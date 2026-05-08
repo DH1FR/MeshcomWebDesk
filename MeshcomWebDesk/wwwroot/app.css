@@ -1502,6 +1502,18 @@ h1:focus {
     transition: background 0.15s;
 }
 .btn-danger:hover { background: #a32a2a; }
+.btn-warn {
+    background: #5a3e00;
+    color: #fff;
+    border: 1px solid #d29922;
+    border-radius: 6px;
+    padding: 8px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.btn-warn:hover { background: #7a5500; }
 
 /* ===== Status Bar ===== */
 .status-bar {
