@@ -15,6 +15,7 @@
 @inject MonitorSinkService MonitorSink
 @inject MeshcomWebDesk.Services.QsoSummaryService QsoSummaryService
 @inject TelnetService TelnetService
+@inject SerialConsoleService SerialConsoleService
 @implements IDisposable
 
 <PageTitle>MeshCom Web Client</PageTitle>
@@ -393,10 +394,14 @@
         </button>
         @if (TelnetService.IsEnabled)
         {
-            <button class="status-mute-btn @(TelnetService.IsConnected ? "" : "status-mute-off")"
+            var consoleConnected = _settings.ConsoleMode == "serial"
+                ? SerialConsoleService.IsConnected
+                : TelnetService.IsConnected;
+            var consoleIcon = _settings.ConsoleMode == "serial" ? "🔌" : "🖥️";
+            <button class="status-mute-btn @(consoleConnected ? "" : "status-mute-off")"
                     @onclick="ToggleTelnetAsync"
-                    title="@(TelnetService.IsConnected ? Loc.T("Telnet verbunden – klicken zum Trennen", "Telnet connected – click to disconnect", "Telnet connesso – clic per disconnettersi", "Telnet conectado – clic para desconectar") : Loc.T("Telnet getrennt – klicken zum Verbinden", "Telnet disconnected – click to connect", "Telnet disconnesso – clic per connettersi", "Telnet desconectado – clic para conectar"))">
-                <span class="status-badge @(TelnetService.IsConnected ? "status-badge-ok" : "status-badge-err")">@(TelnetService.IsConnected ? "🖥️" : "🖥️✗")</span>
+                    title="@(consoleConnected ? Loc.T("Console verbunden – klicken zum Trennen", "Console connected – click to disconnect", "Console connessa – clic per disconnettersi", "Consola conectada – clic para desconectar") : Loc.T("Console getrennt – klicken zum Verbinden", "Console disconnected – click to connect", "Console disconnessa – clic per connettersi", "Consola desconectada – clic para conectar"))">
+                <span class="status-badge @(consoleConnected ? "status-badge-ok" : "status-badge-err")">@(consoleConnected ? consoleIcon : consoleIcon + "✗")</span>
             </button>
         }
         <span class="status-sep">|</span>
@@ -961,6 +966,7 @@
         ChatService.OnNewDirectTab += HandleNewDirectTab;
         ChatService.OnDirectMessage += HandleDirectMessage;
         TelnetService.OnChange += OnTelnetChanged;
+        SerialConsoleService.OnChange += OnTelnetChanged;
         // Restore active tab from service memory so the first render already shows the correct tab
         _activeTabKey = ChatService.ActiveTabKey;
         RefreshData();
@@ -1214,10 +1220,13 @@
 
     private async Task ToggleTelnetAsync()
     {
-        if (TelnetService.IsConnected)
-            await TelnetService.DisconnectAsync();
+        IConsoleService console = _settings.ConsoleMode == "serial"
+            ? SerialConsoleService
+            : TelnetService;
+        if (console.IsConnected)
+            await console.DisconnectAsync();
         else
-            await TelnetService.ConnectAsync();
+            await console.ConnectAsync();
         await InvokeAsync(StateHasChanged);
     }
 
@@ -1459,6 +1468,7 @@
         ChatService.OnNewDirectTab -= HandleNewDirectTab;
         ChatService.OnDirectMessage -= HandleDirectMessage;
         TelnetService.OnChange -= OnTelnetChanged;
+        SerialConsoleService.OnChange -= OnTelnetChanged;
     }
 
     // ── QSO Summary ───────────────────────────────────────────────────────

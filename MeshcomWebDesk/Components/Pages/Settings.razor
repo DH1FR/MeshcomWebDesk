@@ -14,6 +14,7 @@
 @inject NavigationManager Nav
 @inject ChatService ChatService
 @inject TelnetService TelnetService
+@inject SerialConsoleService SerialConsoleService
 @implements IDisposable
 
 <PageTitle>@Loc.T("Einstellungen", "Settings", "Impostazioni", "Configuración") – MeshCom WebDesk</PageTitle>
@@ -244,71 +245,116 @@
             }
         </div>
 
-        <!-- Telnet -->
+        <!-- Console -->
         <div class="settings-section @(IsOpen("telnet") ? "" : "settings-section-collapsed")">
-            <h2 class="settings-section-title" @onclick='() => Toggle("telnet")'>🖥️ TLS Console <span class="section-chevron">@(IsOpen("telnet") ? "▲" : "▼")</span></h2>
+            <h2 class="settings-section-title" @onclick='() => Toggle("telnet")'>🖥️ @Loc.T("Console", "Console", "Console", "Consola") <span class="section-chevron">@(IsOpen("telnet") ? "▲" : "▼")</span></h2>
             @if (IsOpen("telnet")) {
             <div class="settings-grid">
                 <label>
-                    @Loc.T("TLS Console aktivieren", "Enable TLS Console", "Abilita TLS Console", "Activar TLS Console")<br />
-                    <small>
-                        @Loc.T("Öffnet einen TLS-Console-Tab (Port 2323, Device IP).",
-                               "Opens a TLS Console tab (port 2323, device IP).",
-                               "Apre una scheda TLS Console (porta 2323, IP dispositivo).",
-                               "Abre una pestaña TLS Console (puerto 2323, IP del dispositivo)")
-                    </small>
+                    @Loc.T("Console aktivieren", "Enable Console", "Abilita Console", "Activar Consola")<br />
+                    <small>@Loc.T("Öffnet den Console-Tab (TLS oder Seriell).", "Opens the Console tab (TLS or Serial).", "Apre la scheda Console (TLS o seriale).", "Abre la pestaña Consola (TLS o serie).")</small>
                 </label>
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.TelnetEnabled" />
                     <span>@(_model.TelnetEnabled ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
                 </label>
 
-                <label>@Loc.T("Port", "Port", "Porta", "Puerto")</label>
-                <input type="number" @bind="_model.TelnetPort" min="1" max="65535" />
-
-                <label>@Loc.T("Passwort", "Password", "Password", "Contraseña")</label>
-                <input type="password" @bind="_model.TelnetPassword" placeholder="••••••••" autocomplete="new-password" />
-
-                <label>
-                    @Loc.T("Zertifikat-Fingerprint (SHA-256)", "Certificate Fingerprint (SHA-256)", "Impronta certificato (SHA-256)", "Huella del certificado (SHA-256)")<br />
-                    <small>@Loc.T("Leer = beim ersten Verbinden anzeigen und bestätigen",
-                                  "Empty = show and confirm on first connect",
-                                  "Vuoto = mostra e conferma al primo collegamento",
-                                  "Vacío = mostrar y confirmar en la primera conexión")</small>
-                </label>
-                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                    <input type="text" @bind="_model.TelnetCertThumbprint"
-                           placeholder="AA:BB:CC:…"
-                           style="flex:1; min-width:200px; font-family:monospace; font-size:11px;" />
-                    @if (!string.IsNullOrEmpty(_model.TelnetCertThumbprint))
-                    {
-                        <button class="btn-danger" style="padding:2px 8px; font-size:11px;"
-                                @onclick="() => _model.TelnetCertThumbprint = string.Empty"
-                                title="@Loc.T("Fingerprint löschen (nächster Connect = First-Connect-Modus)", "Clear fingerprint (next connect = first-connect mode)", "Cancella impronta", "Borrar huella")">
-                            🗑
-                        </button>
-                    }
+                <label>@Loc.T("Modus", "Mode", "Modalità", "Modo")</label>
+                <div style="display:flex; gap:1rem; align-items:center;">
+                    <label style="display:flex; gap:.3rem; align-items:center; cursor:pointer;">
+                        <input type="radio" name="consoleMode" value="tls"
+                               checked="@(_model.ConsoleMode == "tls")"
+                               @onchange="@(() => _model.ConsoleMode = "tls")" />
+                        🔒 TLS Console
+                    </label>
+                    <label style="display:flex; gap:.3rem; align-items:center; cursor:pointer;">
+                        <input type="radio" name="consoleMode" value="serial"
+                               checked="@(_model.ConsoleMode == "serial")"
+                               @onchange="@(() => _model.ConsoleMode = "serial")" />
+                        🔌 @Loc.T("Seriell Console", "Serial Console", "Console seriale", "Consola serie")
+                    </label>
                 </div>
 
-                @if (!string.IsNullOrEmpty(_telnetUnknownCert))
+                @if (_model.ConsoleMode == "tls")
                 {
-                    <span></span>
-                    <div class="settings-warn" style="margin-top:0">
-                        <strong>@Loc.T("Unbekanntes Zertifikat", "Unknown Certificate", "Certificato sconosciuto", "Certificado desconocido")</strong><br />
-                        <span style="font-family:monospace; font-size:11px; word-break:break-all;">@_telnetUnknownCert</span><br />
-                        <div style="display:flex; gap:8px; margin-top:6px;">
-                            <button class="btn-primary" @onclick="TrustTelnetCertAsync">
-                                ✅ @Loc.T("Vertrauen & speichern", "Trust & save", "Fidati e salva", "Confiar y guardar")
+                    <label>@Loc.T("Port", "Port", "Porta", "Puerto")</label>
+                    <input type="number" @bind="_model.TelnetPort" min="1" max="65535" />
+
+                    <label>@Loc.T("Passwort", "Password", "Password", "Contraseña")</label>
+                    <input type="password" @bind="_model.TelnetPassword" placeholder="••••••••" autocomplete="new-password" />
+
+                    <label>
+                        @Loc.T("Zertifikat-Fingerprint (SHA-256)", "Certificate Fingerprint (SHA-256)", "Impronta certificato (SHA-256)", "Huella del certificado (SHA-256)")<br />
+                        <small>@Loc.T("Leer = beim ersten Verbinden anzeigen und bestätigen", "Empty = show and confirm on first connect", "Vuoto = mostra e conferma al primo collegamento", "Vacío = mostrar y confirmar en la primera conexión")</small>
+                    </label>
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <input type="text" @bind="_model.TelnetCertThumbprint"
+                               placeholder="AA:BB:CC:…"
+                               style="flex:1; min-width:200px; font-family:monospace; font-size:11px;" />
+                        @if (!string.IsNullOrEmpty(_model.TelnetCertThumbprint))
+                        {
+                            <button class="btn-danger" style="padding:2px 8px; font-size:11px;"
+                                    @onclick="() => _model.TelnetCertThumbprint = string.Empty"
+                                    title="@Loc.T("Fingerprint löschen (nächster Connect = First-Connect-Modus)", "Clear fingerprint (next connect = first-connect mode)", "Cancella impronta", "Borrar huella")">
+                                🗑
                             </button>
-                            <button class="btn-secondary" @onclick="() => _telnetUnknownCert = null">
-                                ✖ @Loc.T("Abbrechen", "Cancel", "Annulla", "Cancelar")
-                            </button>
+                        }
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(_telnetUnknownCert))
+                    {
+                        <span></span>
+                        <div class="settings-warn" style="margin-top:0">
+                            <strong>@Loc.T("Unbekanntes Zertifikat", "Unknown Certificate", "Certificato sconosciuto", "Certificado desconocido")</strong><br />
+                            <span style="font-family:monospace; font-size:11px; word-break:break-all;">@_telnetUnknownCert</span><br />
+                            <div style="display:flex; gap:8px; margin-top:6px;">
+                                <button class="btn-primary" @onclick="TrustTelnetCertAsync">
+                                    ✅ @Loc.T("Vertrauen & speichern", "Trust & save", "Fidati e salva", "Confiar y guardar")
+                                </button>
+                                <button class="btn-secondary" @onclick="() => _telnetUnknownCert = null">
+                                    ✖ @Loc.T("Abbrechen", "Cancel", "Annulla", "Cancelar")
+                                </button>
+                            </div>
                         </div>
+                    }
+
+                    <span></span>
+                    <div style="font-size:.8rem; color:#8b949e;">
+                        @Loc.T("Voraussetzung: Auf dem Node muss 'enable Telnet console' (Port 2323) aktiviert sein.",
+                               "Requirement: The node must have 'enable Telnet console' (port 2323) enabled.",
+                               "Requisito: Il nodo deve avere 'enable Telnet console' (porta 2323) abilitato.",
+                               "Requisito: El nodo debe tener 'enable Telnet console' (puerto 2323) activado.")
+                    </div>
+                }
+                else
+                {
+                    <label>@Loc.T("COM-Port", "COM Port", "Porta COM", "Puerto COM")</label>
+                    <div style="display:flex; gap:.5rem; align-items:center;">
+                        <select @bind="_model.SerialPortName" style="flex:1">
+                            <option value="">– @Loc.T("Bitte wählen", "Please select", "Selezionare", "Seleccionar") –</option>
+                            @foreach (var p in _availableSerialPorts)
+                            {
+                                <option value="@p">@p</option>
+                            }
+                        </select>
+                        <button class="btn-action" style="padding:4px 10px; font-size:12px;" @onclick="RefreshSerialPorts">🔄</button>
+                    </div>
+
+                    <label>@Loc.T("Baudrate", "Baud Rate", "Baud rate", "Velocidad en baudios")</label>
+                    <input type="number" @bind="_model.SerialBaudRate" min="300" max="921600" step="100" />
+
+                    <span></span>
+                    <div style="font-size:.8rem; color:#8b949e;">
+                        @Loc.T("Standard: 115200 Baud. Node über USB direkt anschließen.",
+                               "Default: 115200 baud. Connect node directly via USB.",
+                               "Predefinito: 115200 baud. Collegare il nodo direttamente via USB.",
+                               "Por defecto: 115200 baudios. Conectar el nodo directamente por USB.")
                     </div>
                 }
             </div>
             }
         </div>
+
 
         <!-- Auto-Reply -->
         <div class="settings-section @(IsOpen("autoreply") ? "" : "settings-section-collapsed")">
@@ -1652,6 +1698,13 @@
 
     // Telnet: unknown cert fingerprint from first-connect
     private string? _telnetUnknownCert;
+    private string[] _availableSerialPorts = [];
+
+    private void RefreshSerialPorts()
+    {
+        _availableSerialPorts = SerialConsoleService.GetAvailablePorts();
+        StateHasChanged();
+    }
 
     private bool    _qrzTesting;
     private string? _qrzTestResult;
@@ -2138,6 +2191,9 @@
         if (!string.IsNullOrEmpty(TelnetService.UnknownCertThumbprint))
             _telnetUnknownCert = TelnetService.UnknownCertThumbprint;
 
+        // Load available serial ports
+        _availableSerialPorts = SerialConsoleService.GetAvailablePorts();
+
         var s = SettingsMonitor.CurrentValue;
         // Check if we arrived here after a successful backup restore
         var uri   = new Uri(Nav.Uri);
@@ -2245,9 +2301,12 @@
             SystemMarginDb          = s.SystemMarginDb,
             OwnMessagesAlignLeft    = s.OwnMessagesAlignLeft,
             TelnetEnabled           = s.TelnetEnabled,
+            ConsoleMode             = s.ConsoleMode,
             TelnetPort              = s.TelnetPort,
             TelnetPassword          = s.TelnetPassword,
             TelnetCertThumbprint    = s.TelnetCertThumbprint,
+            SerialPortName          = s.SerialPortName,
+            SerialBaudRate          = s.SerialBaudRate,
             QuickTexts              = s.QuickTexts
                 .Select(q => new QuickTextEntry { Label = q.Label, Text = q.Text })
                 .ToList(),
@@ -2791,9 +2850,12 @@
                 AntennaHeightM          = s.AntennaHeightM,
                 OwnMessagesAlignLeft    = s.OwnMessagesAlignLeft,
                 TelnetEnabled           = s.TelnetEnabled,
+                ConsoleMode             = s.ConsoleMode,
                 TelnetPort              = s.TelnetPort,
                 TelnetPassword          = s.TelnetPassword,
                 TelnetCertThumbprint    = s.TelnetCertThumbprint,
+                SerialPortName          = s.SerialPortName,
+                SerialBaudRate          = s.SerialBaudRate,
                 GroupLabels = s.GroupLabels.Select(g => new GroupLabelEntry { Group = g.Group, ShortLabel = g.ShortLabel, Label = g.Label }).ToList()
             };
             await SettingsService.SaveMeshcomSettingsAsync(_model.ToSettings());
@@ -2910,9 +2972,12 @@
         public double SystemMarginDb          { get; set; } = 30.0;
         public bool   OwnMessagesAlignLeft    { get; set; } = false;
         public bool   TelnetEnabled           { get; set; } = false;
+        public string ConsoleMode             { get; set; } = "tls";
         public int    TelnetPort              { get; set; } = 2323;
         public string TelnetPassword          { get; set; } = string.Empty;
         public string TelnetCertThumbprint    { get; set; } = string.Empty;
+        public string SerialPortName          { get; set; } = string.Empty;
+        public int    SerialBaudRate          { get; set; } = 115200;
 
         // Quick Texts
         public List<QuickTextEntry> QuickTexts { get; set; } = [];
@@ -3031,9 +3096,12 @@
             SystemMarginDb          = SystemMarginDb,
             OwnMessagesAlignLeft    = OwnMessagesAlignLeft,
             TelnetEnabled           = TelnetEnabled,
+            ConsoleMode             = ConsoleMode,
             TelnetPort              = TelnetPort,
             TelnetPassword          = TelnetPassword,
             TelnetCertThumbprint    = TelnetCertThumbprint,
+            SerialPortName          = SerialPortName,
+            SerialBaudRate          = SerialBaudRate,
             QuickTexts = QuickTexts,
             GroupLabels = GroupLabels
         };

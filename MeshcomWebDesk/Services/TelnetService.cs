@@ -10,7 +10,7 @@ using MeshcomWebDesk.Models;
 
 namespace MeshcomWebDesk.Services;
 
-public class TelnetService : IAsyncDisposable
+public class TelnetService : IConsoleService, IAsyncDisposable
 {
     private readonly IOptionsMonitor<MeshcomSettings> _settingsMonitor;
     private readonly ILogger<TelnetService> _logger;

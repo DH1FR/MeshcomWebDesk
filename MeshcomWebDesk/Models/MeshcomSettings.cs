@@ -271,10 +271,13 @@ public class MeshcomSettings
     /// </summary>
     public bool OwnMessagesAlignLeft { get; set; } = false;
 
-    // ── Telnet ───────────────────────────────────────────────────────────
+    // ── Telnet / Console ─────────────────────────────────────────────────
 
-    /// <summary>When true, a Telnet client tab is shown and a TLS connection to the node is maintained.</summary>
+    /// <summary>When true, a Console tab is shown.</summary>
     public bool TelnetEnabled { get; set; } = false;
+
+    /// <summary>Console mode: "tls" (default) or "serial".</summary>
+    public string ConsoleMode { get; set; } = "tls";
 
     /// <summary>TCP port for the TLS Telnet connection. Default: 2323.</summary>
     public int TelnetPort { get; set; } = 2323;
@@ -287,4 +290,10 @@ public class MeshcomSettings
     /// Empty = first-connect mode: accept any cert and expose fingerprint for user confirmation.
     /// </summary>
     public string TelnetCertThumbprint { get; set; } = string.Empty;
+
+    /// <summary>Serial port name for serial console mode, e.g. COM3 or /dev/ttyUSB0.</summary>
+    public string SerialPortName { get; set; } = string.Empty;
+
+    /// <summary>Baud rate for serial console mode. Default: 115200.</summary>
+    public int SerialBaudRate { get; set; } = 115200;
 }

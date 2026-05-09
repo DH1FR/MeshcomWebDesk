@@ -4,12 +4,13 @@
 @using Microsoft.Extensions.Options
 @rendermode InteractiveServer
 @inject TelnetService TelnetService
+@inject SerialConsoleService SerialConsoleService
 @inject IOptionsMonitor<MeshcomSettings> SettingsMon
 @inject LanguageService Loc
 @inject IJSRuntime JS
 @implements IDisposable
 
-<PageTitle>TLS Console – MeshCom WebDesk</PageTitle>
+<PageTitle>🖥️ Console – MeshCom WebDesk</PageTitle>
 
 <ErrorBoundary>
 <ChildContent>
@@ -18,17 +19,33 @@
     @* ── Header ── *@
     <div class="telnet-header">
         <span class="telnet-title">
-            🖥️ TLS Console &nbsp;·&nbsp;
-            <span class="status-badge @(TelnetService.IsConnected ? "status-badge-ok" : "status-badge-err")">
-                @(TelnetService.IsConnected
-                    ? $"● {Loc.T("Verbunden", "Connected", "Connesso", "Conectado")} {_settings.DeviceIp}:{_settings.TelnetPort}"
-                    : $"○ {Loc.T("Getrennt", "Disconnected", "Disconnesso", "Desconectado")}")
+            @if (_isSerial)
+            {
+                <span>🔌 @Loc.T("Seriell Console", "Serial Console", "Console seriale", "Consola serie")</span>
+            }
+            else
+            {
+                <span>🖥️ TLS Console</span>
+            }
+            &nbsp;·&nbsp;
+            <span class="status-badge @(Console.IsConnected ? "status-badge-ok" : "status-badge-err")">
+                @if (Console.IsConnected)
+                {
+                    @if (_isSerial)
+                    { @($"● {Loc.T("Verbunden", "Connected", "Connesso", "Conectado")} {_settings.SerialPortName}") }
+                    else
+                    { @($"● {Loc.T("Verbunden", "Connected", "Connesso", "Conectado")} {_settings.DeviceIp}:{_settings.TelnetPort}") }
+                }
+                else
+                {
+                    @($"○ {Loc.T("Getrennt", "Disconnected", "Disconnesso", "Desconectado")}")
+                }
             </span>
             &nbsp;<a href="https://github.com/icssw-org/MeshCom-Firmware" target="_blank" rel="noopener"
                      title="MeshCom Firmware – GitHub" style="font-size:.8rem;opacity:.6;text-decoration:none">📦 Firmware</a>
         </span>
         <div style="display:flex;gap:.4rem">
-            @if (TelnetService.IsConnected)
+            @if (Console.IsConnected)
             {
                 <button class="btn-action btn-sm" title="@Loc.T("OTA-Update starten – sendet --ota-update an den Node und öffnet den OTA-Webserver", "Start OTA update – sends --ota-update to node and opens OTA web server", "Avvia aggiornamento OTA", "Iniciar actualización OTA")"
                         @onclick="StartOtaAsync">
@@ -87,9 +104,9 @@
 
     @* ── Output ── *@
     <div class="telnet-output" id="telnet-output">
-        @lock (TelnetService.Lines)
+        @lock (Console.Lines)
         {
-            @foreach (var line in TelnetService.Lines)
+            @foreach (var line in Console.Lines)
             {
                 <div class="telnet-line">@line</div>
             }
@@ -103,12 +120,12 @@
                @bind="_inputText"
                @bind:event="oninput"
                @onkeydown="OnKeyDown"
-               placeholder="@(TelnetService.IsConnected ? Loc.T("Befehl eingeben …", "Enter command …", "Inserisci comando …", "Introduce comando …") : Loc.T("Nicht verbunden", "Not connected", "Non connesso", "No conectado"))"
+               placeholder="@(Console.IsConnected ? Loc.T("Befehl eingeben …", "Enter command …", "Inserisci comando …", "Introduce comando …") : Loc.T("Nicht verbunden", "Not connected", "Non connesso", "No conectado"))"
                autocomplete="off"
                spellcheck="false"
-               disabled="@(!TelnetService.IsConnected)"
+               disabled="@(!Console.IsConnected)"
                id="telnet-input" />
-        @if (TelnetService.IsConnected)
+        @if (Console.IsConnected)
         {
             <button class="btn-action btn-sm" @onclick="SendInputAsync">
                 @Loc.T("Senden", "Send", "Invia", "Enviar")
@@ -125,7 +142,7 @@
 </div>
 </ChildContent>
 <ErrorContent Context="ex">
-    <div class="alert alert-danger">TLS Console Fehler: @ex.Message</div>
+    <div class="alert alert-danger">Console Fehler: @ex.Message</div>
 </ErrorContent>
 </ErrorBoundary>
 
@@ -134,13 +151,17 @@
     private string _inputText = string.Empty;
     private bool _paused = false;
 
+    // Active console service (TLS or Serial)
+    private IConsoleService Console => _isSerial ? SerialConsoleService : TelnetService;
+    private bool _isSerial => SettingsMon.CurrentValue.ConsoleMode == "serial";
+
     // ── Lifecycle ─────────────────────────────────────────────────────────
 
     protected override void OnInitialized()
     {
         _settings = SettingsMon.CurrentValue;
         TelnetService.OnChange += HandleChange;
-        // No auto-connect here – connection is controlled via the status bar toggle.
+        SerialConsoleService.OnChange += HandleChange;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -151,8 +172,7 @@
     public void Dispose()
     {
         TelnetService.OnChange -= HandleChange;
-        // Don't disconnect on dispose – user may navigate away and come back;
-        // TelnetService manages its own lifecycle based on IsEnabled.
+        SerialConsoleService.OnChange -= HandleChange;
     }
 
     // ── Input handling ────────────────────────────────────────────────────
@@ -169,27 +189,26 @@
         if (string.IsNullOrEmpty(text)) return;
 
         _inputText = string.Empty;
-        // No local echo – the node echoes the input back
-        await TelnetService.SendLineAsync(text);
+        await Console.SendLineAsync(text);
         await ScrollToBottomAsync();
     }
 
     private void ClearLines()
     {
-        lock (TelnetService.Lines)
-            TelnetService.Lines.Clear();
+        lock (Console.Lines)
+            Console.Lines.Clear();
         StateHasChanged();
     }
 
     private async Task ConnectAsync()
     {
-        await TelnetService.ConnectAsync();
+        await Console.ConnectAsync();
         await InvokeAsync(StateHasChanged);
     }
 
     private async Task DisconnectAsync()
     {
-        await TelnetService.DisconnectAsync();
+        await Console.DisconnectAsync();
         await InvokeAsync(StateHasChanged);
     }
 
@@ -200,19 +219,17 @@
     {
         _rebootConfirm = false;
         await InvokeAsync(StateHasChanged);
-        await TelnetService.SendLineAsync("--reboot");
-        // Short delay so the node processes the command, then disconnect
+        await Console.SendLineAsync("--reboot");
         await Task.Delay(1500);
-        await TelnetService.DisconnectAsync();
+        await Console.DisconnectAsync();
         await InvokeAsync(StateHasChanged);
     }
 
     private async Task StartOtaAsync()
     {
-        await TelnetService.SendLineAsync("--ota-update");
+        await Console.SendLineAsync("--ota-update");
         var url = $"http://{SettingsMon.CurrentValue.DeviceIp}/";
 
-        // Show countdown dialog for 5 seconds
         for (var i = 5; i >= 0; i--)
         {
             _otaCountdown = i;
@@ -220,12 +237,10 @@
             if (i > 0) await Task.Delay(1000);
         }
 
-        // Open OTA web server in a new tab
         await JS.InvokeVoidAsync("open", url, "_blank");
         _otaCountdown = -1;
         await InvokeAsync(StateHasChanged);
-        // Disconnect TLS console after OTA page is opened
-        await TelnetService.DisconnectAsync();
+        await Console.DisconnectAsync();
         await InvokeAsync(StateHasChanged);
     }
 
@@ -241,16 +256,12 @@
     {
         _paused = !_paused;
         if (!_paused)
-            // Resume: render all buffered lines and scroll to bottom
             InvokeAsync(async () => { StateHasChanged(); await ScrollToBottomAsync(); });
     }
 
     private async Task ScrollToBottomAsync()
     {
-        try
-        {
-            await JS.InvokeVoidAsync("scrollElementToBottom", "telnet-output");
-        }
+        try { await JS.InvokeVoidAsync("scrollElementToBottom", "telnet-output"); }
         catch { /* JS not ready */ }
     }
 }

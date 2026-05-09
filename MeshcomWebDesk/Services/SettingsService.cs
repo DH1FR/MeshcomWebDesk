@@ -168,9 +168,12 @@ public class SettingsService
                 ["SystemMarginDb"]          = s.SystemMarginDb,
                 ["OwnMessagesAlignLeft"]    = s.OwnMessagesAlignLeft,
                 ["TelnetEnabled"]           = s.TelnetEnabled,
+                ["ConsoleMode"]             = s.ConsoleMode,
                 ["TelnetPort"]              = s.TelnetPort,
                 ["TelnetPassword"]          = Encrypt(s.TelnetPassword),
-                ["TelnetCertThumbprint"]    = s.TelnetCertThumbprint
+                ["TelnetCertThumbprint"]    = s.TelnetCertThumbprint,
+                ["SerialPortName"]          = s.SerialPortName,
+                ["SerialBaudRate"]          = s.SerialBaudRate
             }
         };
 
