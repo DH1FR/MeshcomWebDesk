@@ -588,8 +588,8 @@
                     </span>
                 </div>
 
-                <label>@Loc.T("Interval (Stunden, min. 1)", "Interval (Hours, min. 1)", "Intervallo (ore, min. 1)", "Intervalo (horas, mín. 1)")</label>
-                <input type="number" min="1" @bind="_model.BeaconIntervalHours" />
+                <label>@Loc.T("Interval (Stunden, min. 8)", "Interval (Hours, min. 8)", "Intervallo (ore, min. 8)", "Intervalo (horas, mín. 8)")</label>
+                <input type="number" min="8" @bind="_model.BeaconIntervalHours" />
 
                 <label>@Loc.T("Bake testen", "Test Beacon", "Testa beacon", "Probar baliza")</label>
                 <div style="display:flex; gap:8px; align-items:center;">
@@ -691,7 +691,16 @@
                         }
                     </tbody>
                 </table>
-                <button type="button" class="btn-add" @onclick="() => _model.TelemetryMapping.Add(new TelemetryMappingEntry())">➕ @Loc.T("Zeile hinzufügen", "Add Row", "Aggiungi riga", "Agregar fila")</button>
+                <button type="button" class="btn-add" @onclick="() => _model.TelemetryMapping.Add(new TelemetryMappingEntry())"
+                        disabled="@(_model.TelemetryMapping.Count >= 3)">
+                    ➕ @Loc.T("Zeile hinzufügen", "Add Row", "Aggiungi riga", "Agregar fila")
+                </button>
+                @if (_model.TelemetryMapping.Count >= 3)
+                {
+                    <div style="font-size:.8rem;color:#8b949e;margin-top:.3rem">
+                        @Loc.T("Maximal 3 Messwerte möglich.", "Maximum 3 measurements allowed.", "Massimo 3 misure consentite.", "Máximo 3 medidas permitidas.")
+                    </div>
+                }
             </div>
 
             <!-- Vorschau -->
@@ -2828,7 +2837,7 @@
         public bool   BeaconEnabled       { get; set; }
         public string BeaconGroup         { get; set; } = string.Empty;
         public string BeaconText          { get; set; } = string.Empty;
-        public int    BeaconIntervalHours { get; set; } = 1;
+        public int    BeaconIntervalHours { get; set; } = 8;
         public bool   TelemetryEnabled       { get; set; }
         public string TelemetryFilePath      { get; set; } = string.Empty;
         public string TelemetryGroup         { get; set; } = string.Empty;
@@ -2956,12 +2965,12 @@
             BeaconEnabled       = BeaconEnabled,
             BeaconGroup         = BeaconGroup,
             BeaconText          = BeaconText,
-            BeaconIntervalHours = BeaconIntervalHours < 1 ? 1 : BeaconIntervalHours,
+            BeaconIntervalHours = BeaconIntervalHours < 8 ? 8 : BeaconIntervalHours,
             TelemetryEnabled       = TelemetryEnabled,
             TelemetryFilePath      = TelemetryFilePath,
             TelemetryGroup         = TelemetryGroup,
             TelemetryScheduleHours = TelemetryScheduleHours,
-            TelemetryMapping       = TelemetryMapping,
+            TelemetryMapping       = TelemetryMapping.Take(3).ToList(),
             TelemetryApiEnabled    = TelemetryApiEnabled,
             TelemetryApiKey        = TelemetryApiKey,
             Language               = Language,
