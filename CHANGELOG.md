@@ -2,7 +2,16 @@
 
 ## [1.9.6] – in Entwicklung (dev)
 
+### Features
+- **TLS Console / Seriell Console**: Neue Konsolenseite unterstützt wahlweise TLS-Verbindung (bisheriger Zustand) oder direkten USB-Seriell-Zugriff (115200 Bd). Umschaltung in den Einstellungen unter *Console → Modus*
+- **OTA-Update über Console**: Befehl `--ota-update` startet den OTA-Modus mit 5-Sekunden-Countdown-Dialog; nach Öffnen der OTA-Seite wird die Verbindung automatisch getrennt
+- **Reboot über Console**: Befehl `--reboot` mit Bestätigungsdialog; nach Absenden kurze Verzögerung, dann automatische Verbindungstrennung
+- **Bakenintervall Mindestwert**: Bakenintervall kann nicht mehr unter 8 Stunden gesetzt werden; vorhandene Werte < 8 h werden beim Laden automatisch auf 8 h korrigiert
+- **Telemetrie-Mapping-Limit**: Maximal 3 Telemetrie-Mapping-Einträge möglich; die Schaltfläche zum Hinzufügen wird bei Erreichen des Limits deaktiviert
+- **Docker – Serielle Schnittstelle**: Dokumentation zum Durchreichen von USB-/TTY-Geräten in `docker-compose.yml` ergänzt (siehe README → *Serial Console (USB) in Docker*)
 
+### Bugfixes
+- **Lautsprechersymbol** in der Statusleiste bleibt nach Neuladen der Chat-Seite erhalten
 
 ---
 

@@ -964,6 +964,45 @@ The container runs in the background and restarts automatically (`restart: unles
 Web interface: **http://\<Linux-IP\>:5162**
 
 > **Note:** `network_mode: host` is required so the container can receive UDP packets from the MeshCom device.
+### 🔌 Serial Console (USB) in Docker
+
+If you want to use the **Serial Console** feature (connecting to the MeshCom node via USB/serial instead of TLS),
+the host serial device must be explicitly passed through to the container.
+
+**Linux host – `docker-compose.yml`:**
+
+```yaml
+services:
+  meshcomwebdesk:
+    # ... other settings ...
+    devices:
+      - "/dev/ttyUSB0:/dev/ttyUSB0"   # ESP32 via USB – adjust port name as needed
+      # - "/dev/ttyACM0:/dev/ttyACM0" # alternative: CDC ACM devices
+```
+
+The correct device name can be found with:
+
+```bash
+ls /dev/tty*        # list all serial devices
+dmesg | grep tty    # check kernel log after plugging in the USB cable
+```
+
+Additionally the container user must have access to the serial port. Add the `dialout` group:
+
+```yaml
+services:
+  meshcomwebdesk:
+    # ... other settings ...
+    group_add:
+      - dialout
+```
+
+> **Windows host + Docker Desktop:** USB serial passthrough is not supported out-of-the-box.
+> It requires [usbipd-win](https://github.com/dorssel/usbipd-win) to forward USB devices into WSL2.
+> In this scenario it is recommended to run MeshCom WebDesk **natively on Windows** and use the Serial Console directly.
+
+> **Tip:** Serial Console mode is configured in the app under **Settings → 🖥️ Console → Modus → Seriell Console**.
+> Enter the device name (e.g. `/dev/ttyUSB0`) in the COM-Port field and set the baud rate to `115200`.
 
 ### Changing the configuration
 
