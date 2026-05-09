@@ -1001,7 +1001,7 @@ services:
 > It requires [usbipd-win](https://github.com/dorssel/usbipd-win) to forward USB devices into WSL2.
 > In this scenario it is recommended to run MeshCom WebDesk **natively on Windows** and use the Serial Console directly.
 
-> **Tip:** Serial Console mode is configured in the app under **Settings → 🖥️ Console → Modus → Seriell Console**.
+> **Tip:** Serial Console mode is configured in the app under **Settings → 🖥️ Console → Serial Console**.
 > Enter the device name (e.g. `/dev/ttyUSB0`) in the COM-Port field and set the baud rate to `115200`.
 
 ### Changing the configuration
