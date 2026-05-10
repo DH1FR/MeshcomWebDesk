@@ -13,9 +13,10 @@ public sealed class GatewayService : IHostedService, IAsyncDisposable
 {
     private static readonly TimeSpan RefreshInterval = TimeSpan.FromMinutes(15);
 
-    // Matches a callsign cell in the gateways.html table – e.g. <td>OE3XIR-12</td>
+    // Matches the callsign cell – always has bgcolor="#00FF66" and contains "CALL-N (nn)"
+    // e.g. <td bgcolor="#00FF66">DH1FR-2 (74)</td>
     private static readonly Regex CallsignRegex = new(
-        @"<td[^>]*>\s*([A-Z0-9]+-\d+)\s*</td>",
+        @"<td\s+bgcolor=""#00FF66"">([A-Z0-9]+-\d+)\s*\(\d+\)</td>",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private const string GatewayUrl = "https://meshcom.oevsv.at/gateways.html";
