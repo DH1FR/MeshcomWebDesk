@@ -81,7 +81,7 @@
 
     protected override bool ShouldRender()
     {
-        if (ChatService.TxCooldownRemaining > 0) return true;
+        if (ChatService.TxCooldownRemaining > 0) { _rendered = false; return true; }
         if (!_rendered) { _rendered = true; return true; }
         return false;
     }
