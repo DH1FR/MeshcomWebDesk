@@ -168,6 +168,7 @@ public class SettingsService
                 ["SystemMarginDb"]          = s.SystemMarginDb,
                 ["OwnMessagesAlignLeft"]    = s.OwnMessagesAlignLeft,
                 ["TxCooldownSeconds"]       = s.TxCooldownSeconds,
+                ["GatewayHighlightEnabled"] = s.GatewayHighlightEnabled,
                 ["TelnetEnabled"]           = s.TelnetEnabled,
                 ["ConsoleMode"]             = s.ConsoleMode,
                 ["TelnetPort"]              = s.TelnetPort,

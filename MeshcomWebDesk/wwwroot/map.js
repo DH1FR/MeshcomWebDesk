@@ -36,7 +36,7 @@ window.meshcomMap = (function () {
     }
 
     // APRS-style marker: filled circle (signal colour) + optional relay ring + callsign label
-    function stationIcon(callsign, rssi, hopCount, hasTelem) {
+    function stationIcon(callsign, rssi, hopCount, hasTelem, isGateway) {
         var sigClass = rssi == null ? 'sig-none'
                      : rssi > -90  ? 'sig-good'
                      : rssi > -105 ? 'sig-ok'
@@ -44,10 +44,12 @@ window.meshcomMap = (function () {
         var relayClass = hopCount > 1 ? ' aprs-relay-2'
                        : hopCount > 0 ? ' aprs-relay-1'
                        :                '';
+        var gwClass   = isGateway ? ' aprs-gateway' : '';
+        var gwIcon    = isGateway ? '<span class="aprs-gw-icon">\uD83C\uDF10</span>' : '';
         var telemIcon = hasTelem ? '<span class="aprs-telem-icon">\uD83C\uDF21\uFE0F</span>' : '';
         var html = '<div class="aprs-wrap">'
-                 + '<div class="aprs-dot ' + sigClass + relayClass + '"></div>'
-                 + '<div class="aprs-label">' + esc(callsign) + telemIcon + '</div>'
+                 + '<div class="aprs-dot ' + sigClass + relayClass + gwClass + '"></div>'
+                 + '<div class="aprs-label' + (isGateway ? ' aprs-label-gateway' : '') + '">' + gwIcon + esc(callsign) + telemIcon + '</div>'
                  + '</div>';
         return L.divIcon({ className: '', html: html, iconAnchor: [6, 6] });
     }
@@ -203,7 +205,7 @@ window.meshcomMap = (function () {
                     + aprsLink
                     + aiBtn;
 
-                var _m = L.marker([s.lat, s.lon], { icon: stationIcon(s.callsign, s.rssi, s.hopCount, s.temp != null || s.humidity != null || s.pressure != null) })
+                var _m = L.marker([s.lat, s.lon], { icon: stationIcon(s.callsign, s.rssi, s.hopCount, s.temp != null || s.humidity != null || s.pressure != null, s.isGateway) })
                     .bindPopup(popup)
                     .addTo(_stationLayer);
                 _stationMarkers[s.callsign.toUpperCase()] = _m;

@@ -242,6 +242,15 @@
                            style="flex:1;" />
                     <span style="min-width:3rem; text-align:right; font-weight:600;">@_model.TxCooldownSeconds s</span>
                 </div>
+
+                <label>
+                    @Loc.T("Gateway-Hervorhebung", "Gateway Highlight", "Evidenziazione gateway", "Resaltado de gateway")<br />
+                    <small>@Loc.T("Gateway-Stationen (von meshcom.oevsv.at) mit 🌐-Symbol und Farbe hervorheben.", "Highlight gateway stations (from meshcom.oevsv.at) with a 🌐 symbol and colour.", "Evidenzia le stazioni gateway (da meshcom.oevsv.at) con il simbolo 🌐 e un colore.", "Resalta las estaciones gateway (de meshcom.oevsv.at) con el símbolo 🌐 y color.")</small>
+                </label>
+                <label>
+                    <input type="checkbox" @bind="_model.GatewayHighlightEnabled" />
+                    <span>@(_model.GatewayHighlightEnabled ? Loc.T("Aktiviert", "Enabled", "Attivato", "Activado") : Loc.T("Deaktiviert", "Disabled", "Disattivato", "Desactivado"))</span>
+                </label>
             </div>
             }
         </div>
@@ -2313,6 +2322,7 @@
             SystemMarginDb          = s.SystemMarginDb,
             OwnMessagesAlignLeft    = s.OwnMessagesAlignLeft,
             TxCooldownSeconds       = s.TxCooldownSeconds,
+            GatewayHighlightEnabled = s.GatewayHighlightEnabled,
             TelnetEnabled           = s.TelnetEnabled,
             ConsoleMode             = s.ConsoleMode,
             TelnetPort              = s.TelnetPort,
@@ -2863,6 +2873,7 @@
                 AntennaHeightM          = s.AntennaHeightM,
                 OwnMessagesAlignLeft    = s.OwnMessagesAlignLeft,
                 TxCooldownSeconds       = s.TxCooldownSeconds,
+                GatewayHighlightEnabled = s.GatewayHighlightEnabled,
                 TelnetEnabled           = s.TelnetEnabled,
                 ConsoleMode             = s.ConsoleMode,
                 TelnetPort              = s.TelnetPort,
@@ -2985,8 +2996,9 @@
         public double FrequencyMhz            { get; set; } = 433.175;
         public double SystemMarginDb          { get; set; } = 30.0;
         public bool   OwnMessagesAlignLeft    { get; set; } = false;
-        public int    TxCooldownSeconds       { get; set; } = 5;
-        public bool   TelnetEnabled           { get; set; } = false;
+        public int    TxCooldownSeconds         { get; set; } = 5;
+        public bool   GatewayHighlightEnabled  { get; set; } = true;
+        public bool   TelnetEnabled            { get; set; } = false;
         public string ConsoleMode             { get; set; } = "tls";
         public int    TelnetPort              { get; set; } = 2323;
         public string TelnetPassword          { get; set; } = string.Empty;
@@ -3111,6 +3123,7 @@
             SystemMarginDb          = SystemMarginDb,
             OwnMessagesAlignLeft    = OwnMessagesAlignLeft,
             TxCooldownSeconds       = TxCooldownSeconds,
+            GatewayHighlightEnabled = GatewayHighlightEnabled,
             TelnetEnabled           = TelnetEnabled,
             ConsoleMode             = ConsoleMode,
             TelnetPort              = TelnetPort,

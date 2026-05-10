@@ -277,6 +277,12 @@ public class MeshcomSettings
     /// </summary>
     public int TxCooldownSeconds { get; set; } = 5;
 
+    /// <summary>
+    /// When true, gateway stations (fetched from meshcom.oevsv.at) are highlighted
+    /// with a special colour and 🌐 symbol in the MH list and on the map.
+    /// </summary>
+    public bool GatewayHighlightEnabled { get; set; } = true;
+
     // ── Telnet / Console ─────────────────────────────────────────────────
 
     /// <summary>When true, a Console tab is shown.</summary>

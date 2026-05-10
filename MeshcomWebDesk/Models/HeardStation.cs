@@ -74,6 +74,13 @@ public class HeardStation
     public bool DirectLinkConfirmed { get; set; }
 
     /// <summary>
+    /// Set to <c>true</c> when the station's callsign is found in the public MeshCom
+    /// gateway list (https://meshcom.oevsv.at/gateways.html).
+    /// Updated whenever <see cref="GatewayService"/> refreshes.
+    /// </summary>
+    public bool IsGateway { get; set; }
+
+    /// <summary>
     /// Number of packets received via <see cref="LastRelayPath"/>.
     /// Resets to 1 whenever the relay path changes.
     /// Used to scale relay polyline thickness on the map.

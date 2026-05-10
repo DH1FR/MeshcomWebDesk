@@ -1081,6 +1081,9 @@ h1:focus {
 .mh-row { border-bottom: 1px solid #21262d; transition: background 0.1s; }
 .mh-row:hover { background: #161b22; }
 .mh-row:last-child { border-bottom: none; }
+.mh-row-gateway { background: #0d2b1a !important; border-left: 3px solid #3fb950; }
+.mh-row-gateway:hover { background: #143622 !important; }
+.mh-gw-icon { margin-right: 3px; font-size: .9em; }
 
 .mh-table td { padding: 6px 10px; vertical-align: middle; }
 
@@ -2403,6 +2406,11 @@ h1:focus {
 }
 
 .aprs-own-label { color: #ffd97d; background: rgba(0, 0, 0, 0.75); }
+
+/* Gateway station marker */
+.aprs-dot.aprs-gateway { border: 2px solid #3fb950; box-shadow: 0 0 0 3px rgba(63,185,80,0.45), 0 0 6px 2px rgba(63,185,80,0.30); }
+.aprs-label-gateway { color: #3fb950 !important; }
+.aprs-gw-icon { margin-right: 2px; font-size: .85em; }
 
 /* "No positions" overlay */
 .map-no-data {

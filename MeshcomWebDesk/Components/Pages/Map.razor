@@ -13,6 +13,7 @@
 @inject QsoSummaryService QsoSummaryService
 @inject ElevationService ElevationService
 @inject ILogger<Map> Logger
+@inject GatewayService GatewayService
 @implements IDisposable
 
 <PageTitle>🗺️ @Loc.T("Karte", "Map", "Mappa", "Mapa") – MeshCom WebDesk</PageTitle>
@@ -285,7 +286,8 @@
                     pressure  = s.Pressure,
                     telemMins = s.LastTelemetryTime.HasValue
                         ? (int)(DateTime.UtcNow - s.LastTelemetryTime.Value).TotalMinutes
-                        : (int?)null
+                        : (int?)null,
+                    isGateway = SettingsMonitor.CurrentValue.GatewayHighlightEnabled && GatewayService.IsGateway(s.Callsign)
                 };
             })
             .ToArray();

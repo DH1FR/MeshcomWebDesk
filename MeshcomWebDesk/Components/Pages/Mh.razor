@@ -11,6 +11,7 @@
 @inject LanguageService Loc
 @inject QrzService QrzService
 @inject NavigationManager Nav
+@inject GatewayService GatewayService
 
 <PageTitle>MH – @Loc.T("Zuletzt gehört", "Most Recently Heard", "Più recenti", "Más recientes")</PageTitle>
 
@@ -105,12 +106,14 @@
                     @foreach (var s in filteredList)
                     {
                         var dist = CalcDistance(s);
-                        <tr class="mh-row">
+                        var isGw = SettingsOptions.Value.GatewayHighlightEnabled && s.IsGateway;
+                        <tr class="mh-row @(isGw ? "mh-row-gateway" : "")">
                             <td class="mh-callsign">
                                 <div class="mh-cs-wrap @(_cardCallsign == s.Callsign ? "mh-cs-pinned" : "")"
                                      @onmouseenter="() => _cardCallsign = s.Callsign"
                                      @onmouseleave="() => { if (_cardCallsign == s.Callsign) _cardCallsign = null; }">
                                     <span class="mh-cs-label" @onclick="() => ToggleCard(s.Callsign)">
+                                        @if (isGw) { <span class="mh-gw-icon" title="@Loc.T("Gateway", "Gateway", "Gateway", "Gateway")">🌐</span> }
                                         @s.Callsign
                                     </span>
                                     @if (!string.IsNullOrEmpty(MeshcomLookup.HwName(s.HwId)))
@@ -387,6 +390,7 @@
         _myCallsign = SettingsOptions.Value.MyCallsign;
         _status     = UdpService.Status;
         _stations   = ChatService.MhList;
+        UpdateGatewayFlags(_stations);
         RebuildSearchCache();
         ChatService.OnMhChange    += OnChanged;
         UdpService.OnStatusChange += OnStatusChanged;
@@ -417,6 +421,7 @@
             {
                 if (_disposed) return;
                 _stations = newList;
+                UpdateGatewayFlags(_stations);
                 RebuildSearchCache();
                 StateHasChanged();
             });
@@ -505,6 +510,12 @@
         > 30 => "batt-warn",
         _    => "batt-low"
     };
+
+    private void UpdateGatewayFlags(IReadOnlyList<HeardStation> stations)
+    {
+        foreach (var s in stations)
+            s.IsGateway = GatewayService.IsGateway(s.Callsign);
+    }
 
     private static string BuildStationTooltip(HeardStation s, string firstLabel, QrzInfo? qrz = null)
     {
