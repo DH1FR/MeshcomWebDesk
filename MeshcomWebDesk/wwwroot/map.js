@@ -54,12 +54,14 @@ window.meshcomMap = (function () {
         return L.divIcon({ className: '', html: html, iconAnchor: [6, 6] });
     }
 
-    // Own position: gold diamond + label
-    function ownIcon(callsign, hasTelem) {
+    // Own position: gold diamond + label (+ green gateway ring when isGateway)
+    function ownIcon(callsign, hasTelem, isGateway) {
         var telemIcon = hasTelem ? '<span class="aprs-telem-icon">\uD83C\uDF21\uFE0F</span>' : '';
+        var gwIcon    = isGateway ? '<span class="aprs-gw-icon">\uD83C\uDF10</span>' : '';
+        var gwRing    = isGateway ? ' aprs-own-gateway' : '';
         var html = '<div class="aprs-wrap">'
-                 + '<div class="aprs-dot aprs-own"></div>'
-                 + '<div class="aprs-label aprs-own-label">' + esc(callsign) + telemIcon + '</div>'
+                 + '<div class="aprs-dot aprs-own' + gwRing + '"></div>'
+                 + '<div class="aprs-label aprs-own-label' + (isGateway ? ' aprs-label-gateway' : '') + '">' + gwIcon + esc(callsign) + telemIcon + '</div>'
                  + '</div>';
         return L.divIcon({ className: '', html: html, iconAnchor: [7, 7] });
     }
@@ -246,9 +248,7 @@ window.meshcomMap = (function () {
                     ownPopup += '<br><a href="https://aprs.fi/info/a/' + encodeURIComponent(ownCallsign)
                               + '" target="_blank" rel="noopener" style="font-size:11px;color:#58a6ff">🔗 aprs.fi</a>';
 
-                var _ownM = L.marker([ownLat, ownLon], { icon: info.isGateway
-                        ? stationIcon(ownCallsign, null, 0, info.temp != null || info.humidity != null || info.pressure != null, true)
-                        : ownIcon(ownCallsign, info.temp != null || info.humidity != null || info.pressure != null) })
+                var _ownM = L.marker([ownLat, ownLon], { icon: ownIcon(ownCallsign, info.temp != null || info.humidity != null || info.pressure != null, info.isGateway) })
                     .bindPopup(ownPopup)
                     .addTo(_ownLayer);
                 if (ownCallsign)
