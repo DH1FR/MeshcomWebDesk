@@ -275,7 +275,7 @@ public class MeshcomSettings
     /// Minimum wait time between two transmissions in seconds.
     /// 0 = disabled. Valid range when enabled: 5–60 s.
     /// </summary>
-    public int TxCooldownSeconds { get; set; } = 0;
+    public int TxCooldownSeconds { get; set; } = 5;
 
     // ── Telnet / Console ─────────────────────────────────────────────────
 

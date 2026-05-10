@@ -233,24 +233,14 @@
 
                 <label>
                     @Loc.T("Sendepause (Sekunden)", "TX Cooldown (seconds)", "Pausa TX (secondi)", "Pausa TX (segundos)")<br />
-                    <small>@Loc.T("Mindestwartezeit zwischen zwei Sendungen. 0 = deaktiviert.", "Minimum wait time between two transmissions. 0 = disabled.", "Tempo minimo tra due trasmissioni. 0 = disattivato.", "Tiempo mínimo entre dos transmisiones. 0 = desactivado.")</small>
+                    <small>@Loc.T("Mindestwartezeit zwischen zwei Sendungen (5–60 Sek.).", "Minimum wait time between two transmissions (5–60 s).", "Tempo minimo tra due trasmissioni (5–60 s).", "Tiempo mínimo entre dos transmisiones (5–60 s).")</small>
                 </label>
                 <div style="display:flex; gap:.75rem; align-items:center;">
-                    <input type="checkbox"
-                           checked="@(_model.TxCooldownSeconds > 0)"
-                           @onchange="@(e => _model.TxCooldownSeconds = (bool)e.Value! ? 5 : 0)"
-                           id="txCooldownEnabled" />
-                    <label for="txCooldownEnabled" style="margin:0; font-weight:normal; cursor:pointer;">
-                        @Loc.T("Aktiviert", "Enabled", "Attivato", "Activado")
-                    </label>
-                    @if (_model.TxCooldownSeconds > 0)
-                    {
-                        <input type="range" min="5" max="60" step="1"
-                               value="@_model.TxCooldownSeconds"
-                               @oninput="@(e => _model.TxCooldownSeconds = int.Parse(e.Value!.ToString()!))"
-                               style="flex:1;" />
-                        <span style="min-width:3rem; text-align:right; font-weight:600;">@_model.TxCooldownSeconds s</span>
-                    }
+                    <input type="range" min="5" max="60" step="1"
+                           value="@_model.TxCooldownSeconds"
+                           @oninput="@(e => _model.TxCooldownSeconds = int.Parse(e.Value!.ToString()!))"
+                           style="flex:1;" />
+                    <span style="min-width:3rem; text-align:right; font-weight:600;">@_model.TxCooldownSeconds s</span>
                 </div>
             </div>
             }
@@ -2995,7 +2985,7 @@
         public double FrequencyMhz            { get; set; } = 433.175;
         public double SystemMarginDb          { get; set; } = 30.0;
         public bool   OwnMessagesAlignLeft    { get; set; } = false;
-        public int    TxCooldownSeconds       { get; set; } = 0;
+        public int    TxCooldownSeconds       { get; set; } = 5;
         public bool   TelnetEnabled           { get; set; } = false;
         public string ConsoleMode             { get; set; } = "tls";
         public int    TelnetPort              { get; set; } = 2323;

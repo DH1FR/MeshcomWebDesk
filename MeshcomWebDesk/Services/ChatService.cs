@@ -89,7 +89,7 @@ public class ChatService
     /// </summary>
     public int TxCooldownRemaining =>
         LastTxTime is { } t && _settings.TxCooldownSeconds > 0
-            ? Math.Max(0, _settings.TxCooldownSeconds - (int)(DateTime.UtcNow - t).TotalSeconds)
+            ? Math.Max(0, Math.Max(5, _settings.TxCooldownSeconds) - (int)(DateTime.UtcNow - t).TotalSeconds)
             : 0;
 
     /// <summary>Records the current UTC time as the last transmission time.</summary>
