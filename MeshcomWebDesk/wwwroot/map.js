@@ -194,7 +194,7 @@ window.meshcomMap = (function () {
                     + 'id="ai-btn-' + esc(s.callsign.replace(/[^a-zA-Z0-9]/g,'-')) + '" '
                     + 'style="margin-top:5px;font-size:11px;background:#1a3a5c;color:#79c0ff;border:1px solid #3a6a8a;border-radius:4px;padding:2px 8px;cursor:pointer">🤖 KI-Info</button>'
                     + '<div id="ai-result-' + esc(s.callsign.replace(/[^a-zA-Z0-9]/g,'-')) + '" style="font-size:11px;margin-top:4px;color:#c9d1d9;max-width:260px;white-space:pre-wrap"></div>';
-                var popup = '<b>' + esc(s.callsign) + '</b>' + qrzLine + badgeLine + relayLine + telemLine
+                var popup = '<b>' + esc(s.callsign) + '</b>' + (s.isGateway ? ' <span style="font-size:10px;font-weight:700;background:#0d2b1a;color:#3fb950;border-radius:3px;padding:1px 5px;margin-left:4px">GW</span>' : '') + qrzLine + badgeLine + relayLine + telemLine
                     + (s.text     ? '<br><span style="font-size:12px">' + esc(s.text) + '</span>' : '')
                     + (s.rssi     != null ? '<br>RSSI: ' + s.rssi + ' dBm' : '')
                     + (s.battery  != null ? '&nbsp;🔋 ' + s.battery + '%' : '')
@@ -216,7 +216,9 @@ window.meshcomMap = (function () {
                 var info = ownInfo || {};
                 var ownPopup = '<b>' + esc(ownCallsign) + '</b>';
                 if (info.posSource)
-                    ownPopup += '<br><span style="font-size:11px;color:#aaa">' + esc(info.posSource) + '</span>';
+                    ownPopup += '<br><span style="font-size:11px;color:#aaa">' + esc(info.isGateway && info.posSource === 'Node' ? 'GW' : info.posSource) + '</span>';
+                if (info.isGateway)
+                    ownPopup += ' <span style="font-size:10px;font-weight:700;background:#0d2b1a;color:#3fb950;border-radius:3px;padding:1px 5px;margin-left:4px">GW</span>';
                 if (info.alt      != null)
                     ownPopup += '<br>Alt: ' + info.alt + ' m';
                 if (info.rssi     != null) {
@@ -244,7 +246,9 @@ window.meshcomMap = (function () {
                     ownPopup += '<br><a href="https://aprs.fi/info/a/' + encodeURIComponent(ownCallsign)
                               + '" target="_blank" rel="noopener" style="font-size:11px;color:#58a6ff">🔗 aprs.fi</a>';
 
-                var _ownM = L.marker([ownLat, ownLon], { icon: ownIcon(ownCallsign, info.temp != null || info.humidity != null || info.pressure != null) })
+                var _ownM = L.marker([ownLat, ownLon], { icon: info.isGateway
+                        ? stationIcon(ownCallsign, null, 0, info.temp != null || info.humidity != null || info.pressure != null, true)
+                        : ownIcon(ownCallsign, info.temp != null || info.humidity != null || info.pressure != null) })
                     .bindPopup(ownPopup)
                     .addTo(_ownLayer);
                 if (ownCallsign)

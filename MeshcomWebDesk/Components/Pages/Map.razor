@@ -381,7 +381,8 @@
             pressure   = ownPressure,
             telemMins  = ownTelemTime.HasValue
                 ? (int)(DateTime.UtcNow - ownTelemTime.Value).TotalMinutes
-                : (int?)null
+                : (int?)null,
+            isGateway  = SettingsMonitor.CurrentValue.GatewayHighlightEnabled && GatewayService.IsGateway(cfg.MyCallsign)
         };
 
         await JS.InvokeVoidAsync("meshcomMap.updateMarkers",
