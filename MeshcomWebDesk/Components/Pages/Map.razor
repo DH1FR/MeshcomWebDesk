@@ -105,6 +105,13 @@
                         <span class="leg-dot-own"></span>
                         <span>@Loc.T("Eigene Position", "Own position", "Posizione propria", "Posición propia")</span>
                     </div>
+                    @if (SettingsMonitor.CurrentValue.GatewayHighlightEnabled)
+                    {
+                        <div class="map-legend-row">
+                            <span class="leg-dot aprs-gateway"></span>
+                            <span>🌐 @Loc.T("Gateway (Internet)", "Gateway (Internet)", "Gateway (Internet)", "Gateway (Internet)")</span>
+                        </div>
+                    }
                     @if (_showCoverage)
                     {
                         <div class="map-legend-section">@Loc.T("Reichweite", "Coverage", "Copertura", "Cobertura")</div>

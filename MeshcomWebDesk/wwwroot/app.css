@@ -2280,6 +2280,7 @@ h1:focus {
 }
 .leg-dot.aprs-relay-1 { box-shadow: 0 0 0 3px rgba(86,211,100,0.40), 0 0 3px rgba(0,0,0,0.7); }
 .leg-dot.aprs-relay-2 { box-shadow: 0 0 0 3px rgba(227,179,65,0.50), 0 0 0 6px rgba(227,179,65,0.22), 0 0 3px rgba(0,0,0,0.7); }
+.leg-dot.aprs-gateway { background: #3fb950; border: 2px solid #3fb950; box-shadow: 0 0 0 3px rgba(63,185,80,0.45), 0 0 5px rgba(63,185,80,0.30); }
 
 .leg-dot-own {
     width: 10px;
