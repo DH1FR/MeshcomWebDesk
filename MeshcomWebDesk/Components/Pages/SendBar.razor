@@ -36,8 +36,17 @@
                   lang="de"
                   rows="1"></textarea>
         <span class="char-counter">0/149</span>
-        <button class="btn-send" @onclick="SendAsync">
-            @Loc.T("Senden", "Send", "Invia", "Enviar")
+        <button class="btn-send @(CooldownSeconds > 0 ? "btn-send-cooldown" : "")"
+                disabled="@(CooldownSeconds > 0)"
+                @onclick="SendAsync">
+            @if (CooldownSeconds > 0)
+            {
+                <span>⏳ @CooldownSeconds s</span>
+            }
+            else
+            {
+                @Loc.T("Senden", "Send", "Invia", "Enviar")
+            }
         </button>
     </div>
 </div>
@@ -49,6 +58,8 @@
     [Parameter, EditorRequired] public EventCallback<string> OnSend { get; set; }
     /// <summary>Callsign of the current chat partner (or group). Used for {callsign}, {rssi}, … variable expansion.</summary>
     [Parameter] public string? Callsign { get; set; }
+    /// <summary>Remaining TX cooldown in seconds. 0 = ready to send.</summary>
+    [Parameter] public int CooldownSeconds { get; set; } = 0;
 
     [Inject] private LanguageService Loc { get; set; } = default!;
 

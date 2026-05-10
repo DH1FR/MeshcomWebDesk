@@ -148,7 +148,7 @@
                     }
                 </div>
 
-                <SendBar @ref="_sendBar" OnSend="HandleSendMessage" Callsign="@_activeTab.Key" />
+                <SendBar @ref="_sendBar" OnSend="HandleSendMessage" Callsign="@_activeTab.Key" CooldownSeconds="@ChatService.TxCooldownRemaining" />
             }
             else
             {
@@ -807,6 +807,7 @@
     private bool _showNewTabInput;
     private string _myCallsign = string.Empty;
     private bool _disposed;
+    private CancellationTokenSource? _cooldownCts;
     private ConnectionStatus _status = new();
     private MeshcomSettings _settings = new();
     private bool _showMonitor = false;
@@ -1392,14 +1393,31 @@
     private async Task HandleSendMessage(string text)
     {
         if (_activeTab == null) return;
-        // Strip leading '#' for group tabs – the node uses the raw group number (e.g. "262"),
-        // the '#' is an internal UI convention only.
-        // When destination is broadcast ("*"), also route the outgoing message to the "*" tab
-        // so it appears together with incoming broadcasts instead of creating a separate tab.
+        if (ChatService.TxCooldownRemaining > 0) return;
         var isBroadcast = _activeTab.Key == "*" || _activeTab.Key.TrimStart('#').Equals("alle", StringComparison.OrdinalIgnoreCase);
         var destination = isBroadcast ? "*" : _activeTab.Key.TrimStart('#');
         var tabKey = isBroadcast ? "*" : _activeTab.Key;
         await UdpService.SendMessageAsync(destination, text, tabKey);
+        ChatService.RecordTx();
+        _ = StartCooldownTimerAsync();
+    }
+
+    private async Task StartCooldownTimerAsync()
+    {
+        _cooldownCts?.Cancel();
+        _cooldownCts = new CancellationTokenSource();
+        var token = _cooldownCts.Token;
+        try
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+            while (!token.IsCancellationRequested && ChatService.TxCooldownRemaining > 0)
+            {
+                await timer.WaitForNextTickAsync(token);
+                if (!_disposed) await InvokeAsync(StateHasChanged);
+            }
+            if (!_disposed) await InvokeAsync(StateHasChanged);
+        }
+        catch (OperationCanceledException) { }
     }
 
     /// <summary>Formats a message destination for display in the monitor.
@@ -1459,6 +1477,7 @@
     public void Dispose()
     {
         _disposed = true;
+        _cooldownCts?.Cancel();
         _dotNetRef?.Dispose();
         Loc.OnChange -= StateHasChanged;
         ChatService.OnChange -= OnChatChanged;

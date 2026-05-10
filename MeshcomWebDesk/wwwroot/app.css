@@ -643,6 +643,13 @@ h1:focus {
     cursor: not-allowed;
 }
 
+.btn-send-cooldown {
+    background: #5c4a00 !important;
+    color: #ffc107 !important;
+    font-variant-numeric: tabular-nums;
+    min-width: 5rem;
+}
+
 .char-counter {
     align-self: center;
     font-size: 11px;

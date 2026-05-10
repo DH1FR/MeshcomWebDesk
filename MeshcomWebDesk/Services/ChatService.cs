@@ -80,6 +80,21 @@ public class ChatService
     /// </summary>
     public event Action<string, string, string>? OnCqHeard;
 
+    /// <summary>UTC timestamp of the last outgoing transmission. Null if no message has been sent yet.</summary>
+    public DateTime? LastTxTime { get; private set; }
+
+    /// <summary>
+    /// Remaining cooldown in seconds (0 when ready to transmit).
+    /// Calculated from <see cref="LastTxTime"/> and <c>TxCooldownSeconds</c> in settings.
+    /// </summary>
+    public int TxCooldownRemaining =>
+        LastTxTime is { } t && _settings.TxCooldownSeconds > 0
+            ? Math.Max(0, _settings.TxCooldownSeconds - (int)(DateTime.UtcNow - t).TotalSeconds)
+            : 0;
+
+    /// <summary>Records the current UTC time as the last transmission time.</summary>
+    public void RecordTx() => LastTxTime = DateTime.UtcNow;
+
     // Compiled regex: matches messages that contain "CQ" as a standalone word/abbreviation.
     // Examples matched: "CQ de OE6TZD", "cq cq de DF7AX", "IY6GM CQ 144300", "cQ DO7PAW".
     private static readonly Regex CqRegex = new(

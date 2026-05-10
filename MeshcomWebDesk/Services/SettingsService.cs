@@ -167,6 +167,7 @@ public class SettingsService
                 ["FrequencyMhz"]            = s.FrequencyMhz,
                 ["SystemMarginDb"]          = s.SystemMarginDb,
                 ["OwnMessagesAlignLeft"]    = s.OwnMessagesAlignLeft,
+                ["TxCooldownSeconds"]       = s.TxCooldownSeconds,
                 ["TelnetEnabled"]           = s.TelnetEnabled,
                 ["ConsoleMode"]             = s.ConsoleMode,
                 ["TelnetPort"]              = s.TelnetPort,
