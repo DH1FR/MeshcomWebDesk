@@ -42,12 +42,13 @@ public sealed class GatewayService : IHostedService, IAsyncDisposable
 
     // ── IHostedService ───────────────────────────────────────────────────
 
-    public Task StartAsync(CancellationToken ct)
+    public async Task StartAsync(CancellationToken ct)
     {
+        // Fetch immediately so the list is ready before the first map render.
+        await RefreshAsync();
         _timer = new Timer(async _ => await RefreshAsync(), null,
-                           dueTime:  TimeSpan.Zero,
+                           dueTime:  RefreshInterval,
                            period:   RefreshInterval);
-        return Task.CompletedTask;
     }
 
     public Task StopAsync(CancellationToken ct)
