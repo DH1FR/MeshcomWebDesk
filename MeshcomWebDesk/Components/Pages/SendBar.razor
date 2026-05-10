@@ -37,7 +37,7 @@
                   rows="1"></textarea>
         <span class="char-counter">0/149</span>
         <button class="btn-send @(CooldownSeconds > 0 ? "btn-send-cooldown" : "")"
-                disabled="@(CooldownSeconds > 0)"
+                disabled="@(CooldownSeconds > 0 ? "disabled" : null)"
                 @onclick="SendAsync">
             @if (CooldownSeconds > 0)
             {
@@ -171,6 +171,7 @@
     [JSInvokable]
     public async Task JsSendAsync()
     {
+        if (CooldownSeconds > 0) return;
         _text = await JS.InvokeAsync<string>("meshcomChat.getSendBarValue", "send-bar-input");
         if (string.IsNullOrWhiteSpace(_text) || _text.Length > MaxLength) return;
         var expanded = await UdpService.ExpandVariablesAsync(_text, Callsign);
