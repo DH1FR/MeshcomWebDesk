@@ -392,16 +392,23 @@ public sealed class QsoSummaryService
             await using var cmd = new MySqlCommand(
                 $"""
                 SELECT MAX(timestamp) FROM `{db.MySqlTableName}`
-                WHERE (from_call = @cs OR from_call LIKE @csLike
-                    OR to_call  = @cs OR to_call  LIKE @csLike)
+                WHERE (
+                      (from_call = @cs OR from_call LIKE @csLike)
+                      AND (to_call = @my OR to_call LIKE @myLike)
+                  OR  (to_call   = @cs OR to_call   LIKE @csLike)
+                      AND (from_call = @my OR from_call LIKE @myLike)
+                )
                   AND is_position_beacon = 0
                   AND is_telemetry       = 0
-                  AND to_call NOT IN ('*', 'ALL', 'all')
-                  AND to_call NOT LIKE '#%'
                 {beforeClause}
                 """, conn);
             cmd.Parameters.AddWithValue("@cs",     callsignBase);
             cmd.Parameters.AddWithValue("@csLike", callsignBase + "-%");
+            var myBase = _settings.CurrentValue.MyCallsign is { Length: > 0 } my
+                ? (my.Contains('-') ? my[..my.IndexOf('-')] : my)
+                : string.Empty;
+            cmd.Parameters.AddWithValue("@my",     myBase);
+            cmd.Parameters.AddWithValue("@myLike", myBase + "-%");
             if (before.HasValue)
                 cmd.Parameters.AddWithValue("@before", before.Value);
 
@@ -439,18 +446,25 @@ public sealed class QsoSummaryService
             await using var cmd = new MySqlCommand(
                 $"""
                 SELECT timestamp FROM `{db.MySqlTableName}`
-                WHERE (from_call = @cs OR from_call LIKE @csLike
-                    OR to_call   = @cs OR to_call   LIKE @csLike)
+                WHERE (
+                      (from_call = @cs OR from_call LIKE @csLike)
+                      AND (to_call   = @my OR to_call   LIKE @myLike)
+                  OR  (to_call   = @cs OR to_call   LIKE @csLike)
+                      AND (from_call = @my OR from_call LIKE @myLike)
+                )
                   AND is_position_beacon = 0
                   AND is_telemetry       = 0
-                  AND to_call NOT IN ('*', 'ALL', 'all')
-                  AND to_call NOT LIKE '#%'
                   {beforeClause}
                 ORDER BY timestamp DESC
                 LIMIT 200
                 """, conn);
+            var myBase2 = _settings.CurrentValue.MyCallsign is { Length: > 0 } my2
+                ? (my2.Contains('-') ? my2[..my2.IndexOf('-')] : my2)
+                : string.Empty;
             cmd.Parameters.AddWithValue("@cs",     callsignBase);
             cmd.Parameters.AddWithValue("@csLike", callsignBase + "-%");
+            cmd.Parameters.AddWithValue("@my",     myBase2);
+            cmd.Parameters.AddWithValue("@myLike", myBase2 + "-%");
             if (before.HasValue)
                 cmd.Parameters.AddWithValue("@before", before.Value);
 
