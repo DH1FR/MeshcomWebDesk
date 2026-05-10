@@ -4,6 +4,7 @@
 @inject IOptionsMonitor<MeshcomSettings> SettingsMonitor
 @inject MeshcomUdpService UdpService
 @inject SettingsService SettingsSvc
+@inject ChatService ChatService
 
 <div class="send-bar-wrap">
     @if (_flyoutOpen && _quickTexts.Count > 0)
@@ -36,12 +37,12 @@
                   lang="de"
                   rows="1"></textarea>
         <span class="char-counter">0/149</span>
-        <button class="btn-send @(CooldownSeconds > 0 ? "btn-send-cooldown" : "")"
-                disabled="@(CooldownSeconds > 0 ? "disabled" : null)"
+        <button class="btn-send @(ChatService.TxCooldownRemaining > 0 ? "btn-send-cooldown" : "")"
+                disabled="@(ChatService.TxCooldownRemaining > 0 ? "disabled" : null)"
                 @onclick="SendAsync">
-            @if (CooldownSeconds > 0)
+            @if (ChatService.TxCooldownRemaining > 0)
             {
-                <span>⏳ @CooldownSeconds s</span>
+                <span>⏳ @ChatService.TxCooldownRemaining s</span>
             }
             else
             {
@@ -58,8 +59,6 @@
     [Parameter, EditorRequired] public EventCallback<string> OnSend { get; set; }
     /// <summary>Callsign of the current chat partner (or group). Used for {callsign}, {rssi}, … variable expansion.</summary>
     [Parameter] public string? Callsign { get; set; }
-    /// <summary>Remaining TX cooldown in seconds. 0 = ready to send.</summary>
-    [Parameter] public int CooldownSeconds { get; set; } = 0;
 
     [Inject] private LanguageService Loc { get; set; } = default!;
 
@@ -69,8 +68,7 @@
     private const int MaxLength = 149;
     private DotNetObjectReference<SendBar>? _dotNetRef;
     private IDisposable? _settingsListener;
-
-    private bool CanSend => true; // Validierung erfolgt beim Senden via JS
+    private CancellationTokenSource? _cooldownCts;
 
     protected override void OnInitialized()
     {
@@ -83,6 +81,7 @@
 
     protected override bool ShouldRender()
     {
+        if (ChatService.TxCooldownRemaining > 0) return true;
         if (!_rendered) { _rendered = true; return true; }
         return false;
     }
@@ -104,6 +103,7 @@
 
     public void Dispose()
     {
+        _cooldownCts?.Cancel();
         Loc.OnChange -= ForceRerender;
         _settingsListener?.Dispose();
         _dotNetRef?.Dispose();
@@ -171,7 +171,7 @@
     [JSInvokable]
     public async Task JsSendAsync()
     {
-        if (CooldownSeconds > 0) return;
+        if (ChatService.TxCooldownRemaining > 0) return;
         _text = await JS.InvokeAsync<string>("meshcomChat.getSendBarValue", "send-bar-input");
         if (string.IsNullOrWhiteSpace(_text) || _text.Length > MaxLength) return;
         var expanded = await UdpService.ExpandVariablesAsync(_text, Callsign);
@@ -179,6 +179,25 @@
         _text = string.Empty;
         await JS.InvokeVoidAsync("meshcomChat.setSendBarValue", "send-bar-input", string.Empty);
         await OnSend.InvokeAsync(text);
+        _ = StartCooldownTimerAsync();
+    }
+
+    private async Task StartCooldownTimerAsync()
+    {
+        _cooldownCts?.Cancel();
+        _cooldownCts = new CancellationTokenSource();
+        var token = _cooldownCts.Token;
+        try
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+            while (!token.IsCancellationRequested && ChatService.TxCooldownRemaining > 0)
+            {
+                await timer.WaitForNextTickAsync(token);
+                await InvokeAsync(StateHasChanged);
+            }
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (OperationCanceledException) { }
     }
 
     [JSInvokable]
