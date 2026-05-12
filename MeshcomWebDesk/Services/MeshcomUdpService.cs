@@ -82,7 +82,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             _logger.LogInformation("Settings reloaded from appsettings.json.");
         });
 
-        _chatService.OnNewDirectTab += (callsign, msg) => _ = SendAutoReplyAsync(callsign, msg.Timestamp);
+        _chatService.OnNewDirectTab += (callsign, msg) => _ = SendAutoReplyAsync(callsign, msg.Timestamp, msg.NodeId);
         _chatService.OnBotCommand   += msg      => _ = HandleBotCommandAsync(msg);
     }
 
@@ -350,7 +350,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         return ("#" + stripped).ToLowerInvariant();
     }
 
-    private async Task SendAutoReplyAsync(string callsign, DateTime triggerTimestamp)
+    private async Task SendAutoReplyAsync(string callsign, DateTime triggerTimestamp, Guid? nodeId = null)
     {
         if (!_settings.AutoReplyEnabled || string.IsNullOrWhiteSpace(_settings.AutoReplyText))
             return;
@@ -366,8 +366,8 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         // Subtract 1 minute so {last-qso} only shows QSOs clearly before the current exchange,
         // not messages from the same session/minute window.
         var text = await ExpandVariablesAsync(_settings.AutoReplyText, callsign, before: triggerTimestamp);
-        _logger.LogInformation("Auto-reply to new contact {Callsign}", callsign);
-        await SendMessageAsync(callsign, text);
+        _logger.LogInformation("Auto-reply to new contact {Callsign} via node {NodeId}", callsign, nodeId);
+        await SendMessageAsync(callsign, text, sourceNodeId: nodeId);
     }
 
     private async Task HandleBotCommandAsync(MeshcomMessage message)
@@ -385,12 +385,13 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             reply = await ExpandVariablesAsync(reply, message.From, before: message.Timestamp);
 
             var parts = SplitMessage(reply);
-            _logger.LogInformation("Bot reply to {From} ({Parts} part(s)): {Preview}",
-                message.From, parts.Count, reply.Length > 80 ? reply[..80] + "…" : reply);
+            _logger.LogInformation("Bot reply to {From} via node {NodeId} ({Parts} part(s)): {Preview}",
+                message.From, message.NodeId, parts.Count, reply.Length > 80 ? reply[..80] + "…" : reply);
 
             for (var i = 0; i < parts.Count; i++)
             {
-                await SendMessageAsync(message.From, parts[i]);
+                // Reply via the same node that received the command
+                await SendMessageAsync(message.From, parts[i], sourceNodeId: message.NodeId);
                 if (i < parts.Count - 1)
                     await Task.Delay(TimeSpan.FromSeconds(2));
             }
@@ -933,7 +934,9 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     /// <param name="text">Message text.</param>
     /// <param name="tabKey">Original chat-tab key (e.g. "#9", "*"). Used for local tab routing only.
     /// When null, <paramref name="destination"/> is used for both wire and tab routing.</param>
-    public async Task SendMessageAsync(string destination, string text, string? tabKey = null)
+    /// <param name="sourceNodeId">When set, overrides the selected node and sends via this node instead.
+    /// Used by AutoReply and Bot to reply on the same node that received the incoming message.</param>
+    public async Task SendMessageAsync(string destination, string text, string? tabKey = null, Guid? sourceNodeId = null)
     {
         if (_udpClient == null)
         {
@@ -951,12 +954,17 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
 
         try
         {
-            // Resolve selected node – fall back to legacy settings if no multi-node is configured.
-            var selectedNode   = _nodeManager.SelectedNode;
-            var selectedNodeId = selectedNode?.Id;
-            var fromCallsign   = selectedNode?.Callsign ?? _settings.MyCallsign;
-            var deviceIp       = selectedNode?.DeviceIp  ?? _settings.DeviceIp;
-            var devicePort     = selectedNode?.DevicePort ?? _settings.DevicePort;
+            // Resolve sending node:
+            // 1. sourceNodeId (AutoReply/Bot – same node that received the message)
+            // 2. SelectedNode (manual send from UI)
+            // 3. Legacy fallback to top-level settings
+            var sendingNode = sourceNodeId is not null
+                ? _nodeManager.Nodes.FirstOrDefault(n => n.Id == sourceNodeId) ?? _nodeManager.SelectedNode
+                : _nodeManager.SelectedNode;
+            var selectedNodeId = sendingNode?.Id;
+            var fromCallsign   = sendingNode?.Callsign ?? _settings.MyCallsign;
+            var deviceIp       = sendingNode?.DeviceIp  ?? _settings.DeviceIp;
+            var devicePort     = sendingNode?.DevicePort ?? _settings.DevicePort;
 
             var json = JsonSerializer.Serialize(new { type = "msg", dst = destination, msg = text });
             var bytes = Encoding.UTF8.GetBytes(json);
