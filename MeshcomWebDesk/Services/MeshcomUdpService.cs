@@ -262,37 +262,54 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
 
     /// <summary>
     /// Send a registration packet to the MeshCom device so it adds this client
-    /// to its UDP sender list and starts delivering data.
+    /// <summary>
+    /// Send a registration packet to every configured MeshCom device so each one adds
+    /// this client to its UDP sender list and starts delivering data.
+    /// In legacy single-node mode only the primary device is registered.
     /// </summary>
     private async Task RegisterWithDeviceAsync()
     {
         if (_udpClient == null) return;
 
-        try
-        {
-            var json = JsonSerializer.Serialize(new { type = "info", src = _settings.MyCallsign });
-            var bytes = Encoding.UTF8.GetBytes(json);
-            var remoteEp = new IPEndPoint(IPAddress.Parse(_settings.DeviceIp), _settings.DevicePort);
+        // Build the list of (ip, port, callsign) tuples to register with.
+        // Multi-node: one entry per NodeProfile.
+        // Legacy: single entry from top-level settings.
+        var targets = _nodeManager.Nodes.Count > 0
+            ? _nodeManager.Nodes.Select(n => (n.DeviceIp, n.DevicePort, n.Callsign, n.Id as Guid?)).ToList()
+            : new List<(string, int, string, Guid?)>
+              { (_settings.DeviceIp, _settings.DevicePort, _settings.MyCallsign, (Guid?)null) };
 
-            await _udpClient.SendAsync(bytes, bytes.Length, remoteEp);
-            _logger.LogInformation("UDP registration packet sent to {DeviceIp}:{DevicePort}", _settings.DeviceIp, _settings.DevicePort);
-            if (_settings.LogUdpTraffic)
-                _logger.LogInformation("[UDP-TX] {Remote} {Data}", remoteEp, json);
-            Status.IsRegistered = true;
-            NotifyStatusChange();
-            _chatService.AddRawMessage(new MeshcomMessage
-            {
-                From      = _settings.MyCallsign,
-                IsOutgoing = true,
-                Text      = json,
-                RawData   = json,
-                NodeId    = _nodeManager.PrimaryNode?.Id
-            });
-        }
-        catch (Exception ex)
+        foreach (var (ip, port, callsign, nodeId) in targets)
         {
-            _logger.LogError(ex, "Failed to send UDP registration packet to {DeviceIp}:{DevicePort}", _settings.DeviceIp, _settings.DevicePort);
+            try
+            {
+                var json  = JsonSerializer.Serialize(new { type = "info", src = callsign });
+                var bytes = Encoding.UTF8.GetBytes(json);
+                var remoteEp = new IPEndPoint(IPAddress.Parse(ip), port);
+
+                await _udpClient.SendAsync(bytes, bytes.Length, remoteEp);
+                _logger.LogInformation("UDP registration packet sent to {DeviceIp}:{DevicePort} as {Callsign}",
+                    ip, port, callsign);
+                if (_settings.LogUdpTraffic)
+                    _logger.LogInformation("[UDP-TX] {Remote} {Data}", remoteEp, json);
+
+                _chatService.AddRawMessage(new MeshcomMessage
+                {
+                    From       = callsign,
+                    IsOutgoing = true,
+                    Text       = json,
+                    RawData    = json,
+                    NodeId     = nodeId
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send UDP registration packet to {DeviceIp}:{DevicePort}", ip, port);
+            }
         }
+
+        Status.IsRegistered = true;
+        NotifyStatusChange();
     }
 
     /// <summary>

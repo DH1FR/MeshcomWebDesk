@@ -232,9 +232,19 @@ public class ChatService
         // Determine tab key based on destination:
         //   Broadcast from known correspondent     → sender's direct tab
         //   Broadcast from unknown station         → tab "*" ("Alle")
-        //   Direct to us (MyCallsign)              → tab by sender callsign
+        //   Direct to us                           → tab by sender callsign
         //   Group (any other dst)                  → tab "#<group>"
+        //
+        // "Direct to us" means: message.To matches the configured callsign (myCallsign)
+        // OR the node that received this packet is identified (nodeId != null) AND
+        // message.To is not a broadcast/group address – i.e. it is addressed to the
+        // hardware callsign of this node even if NodeProfile.Callsign is configured differently.
         string tabKey;
+        bool isDirectToNode = nodeId is not null
+            && !message.IsBroadcast
+            && message.To != "*"
+            && !message.To.StartsWith('#');
+
         if (message.IsBroadcast)
         {
             bool addressedToUs = string.Equals(message.To, myCallsign, StringComparison.OrdinalIgnoreCase);
@@ -242,8 +252,9 @@ public class ChatService
                 ? message.From
                 : "*";
         }
-        else if (string.Equals(message.To, myCallsign, StringComparison.OrdinalIgnoreCase))
+        else if (string.Equals(message.To, myCallsign, StringComparison.OrdinalIgnoreCase) || isDirectToNode)
         {
+            // Direct message to this node (regardless of whether NodeProfile.Callsign matches exactly)
             tabKey = message.From;
         }
         else
@@ -280,7 +291,7 @@ public class ChatService
 
         bool isDirectToUs = !message.IsBroadcast &&
             !message.IsAck && !message.IsPositionBeacon && !message.IsTelemetry &&
-            string.Equals(message.To, myCallsign, StringComparison.OrdinalIgnoreCase);
+            (string.Equals(message.To, myCallsign, StringComparison.OrdinalIgnoreCase) || isDirectToNode);
         if (isDirectToUs && !wasNewDirect)
             OnDirectMessage?.Invoke(message.From, message);
 
