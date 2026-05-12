@@ -115,7 +115,17 @@
                         <label>@Loc.T("Name", "Name", "Nome", "Nombre")</label>
                         <input type="text" @bind="node.Name" />
                         <label>@Loc.T("Rufzeichen", "Callsign", "Nominativo", "Indicativo")</label>
-                        <input type="text" @bind="node.Callsign" placeholder="OE1ABC-2" style="text-transform:uppercase" />
+                        <div>
+                            <input type="text" @bind="node.Callsign" placeholder="OE1ABC-2" style="text-transform:uppercase;width:100%" />
+                            @if (string.IsNullOrWhiteSpace(node.Callsign))
+                            {
+                                <small style="color:#f85149">⚠️ @Loc.T("Rufzeichen darf nicht leer sein.", "Callsign must not be empty.", "Il nominativo non può essere vuoto.", "El indicativo no puede estar vacío.")</small>
+                            }
+                            else if (_model.Nodes.Count(n => string.Equals(n.Callsign, node.Callsign, StringComparison.OrdinalIgnoreCase)) > 1)
+                            {
+                                <small style="color:#f85149">⚠️ @Loc.T("Rufzeichen wird von mehreren Nodes verwendet – Echo-Erkennung schlägt fehl!", "Callsign used by multiple nodes – echo detection will fail!", "Nominativo usato da più nodi – il rilevamento eco fallirà!", "Indicativo usado por varios nodos – ¡la detección de eco fallará!")</small>
+                            }
+                        </div>
                         <label>Device IP</label>
                         <input type="text" @bind="node.DeviceIp" />
                         <label>Device Port</label>
