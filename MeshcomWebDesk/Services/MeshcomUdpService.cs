@@ -951,12 +951,19 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
 
         try
         {
+            // Resolve selected node – fall back to legacy settings if no multi-node is configured.
+            var selectedNode   = _nodeManager.SelectedNode;
+            var selectedNodeId = selectedNode?.Id;
+            var fromCallsign   = selectedNode?.Callsign ?? _settings.MyCallsign;
+            var deviceIp       = selectedNode?.DeviceIp  ?? _settings.DeviceIp;
+            var devicePort     = selectedNode?.DevicePort ?? _settings.DevicePort;
+
             var json = JsonSerializer.Serialize(new { type = "msg", dst = destination, msg = text });
             var bytes = Encoding.UTF8.GetBytes(json);
-            var remoteEp = new IPEndPoint(IPAddress.Parse(_settings.DeviceIp), _settings.DevicePort);
+            var remoteEp = new IPEndPoint(IPAddress.Parse(deviceIp), devicePort);
 
             await _udpClient.SendAsync(bytes, bytes.Length, remoteEp);
-            _logger.LogDebug("UDP TX [{Remote}]: {Data}", remoteEp, json);
+            _logger.LogDebug("UDP TX [{Remote}] as {From}: {Data}", remoteEp, fromCallsign, json);
             if (_settings.LogUdpTraffic)
                 _logger.LogInformation("[UDP-TX] {Remote} {Data}", remoteEp, json);
 
@@ -964,16 +971,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             Status.LastTxTime = DateTime.Now;
             NotifyStatusChange();
 
-            // The MeshCom firmware (extudp_functions.cpp / getExtern) NEVER sends an echo
-            // back to the EXTUDP client after queuing a message for LoRa TX.
-            // Therefore ⏳ → ✓ via node-echo is impossible for any message type.
-            // Mark all outgoing messages as "transmitted" immediately (✓).
-            // Direct messages may still reach ✓✓ when the recipient sends an APRS ACK.
-            // Pass the tab key as-is; ChatService._tabs uses OrdinalIgnoreCase so casing does not matter.
             var resolvedTabKey = tabKey ?? destination;
-            // Tag the outgoing message with the selected node so it lands in the right state bucket
-            var selectedNodeId = _nodeManager.SelectedNode?.Id;
-            var fromCallsign   = _nodeManager.GetCallsignForNode(selectedNodeId) ?? _settings.MyCallsign;
             _chatService.AddOutgoingMessage(new MeshcomMessage
             {
                 From           = fromCallsign,
