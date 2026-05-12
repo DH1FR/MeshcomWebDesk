@@ -232,8 +232,9 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                         // Unparseable data (status, telemetry, etc.) – raw feed only, no tab
                         _chatService.AddRawMessage(new MeshcomMessage
                         {
-                            Text = raw,
-                            RawData = raw
+                            Text   = raw,
+                            RawData = raw,
+                            NodeId = sourceNode?.Id
                         });
                     }
                 }
@@ -284,7 +285,8 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                 From      = _settings.MyCallsign,
                 IsOutgoing = true,
                 Text      = json,
-                RawData   = json
+                RawData   = json,
+                NodeId    = _nodeManager.PrimaryNode?.Id
             });
         }
         catch (Exception ex)
@@ -941,14 +943,18 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             // Direct messages may still reach ✓✓ when the recipient sends an APRS ACK.
             // Pass the tab key as-is; ChatService._tabs uses OrdinalIgnoreCase so casing does not matter.
             var resolvedTabKey = tabKey ?? destination;
+            // Tag the outgoing message with the selected node so it lands in the right state bucket
+            var selectedNodeId = _nodeManager.SelectedNode?.Id;
+            var fromCallsign   = _nodeManager.GetCallsignForNode(selectedNodeId) ?? _settings.MyCallsign;
             _chatService.AddOutgoingMessage(new MeshcomMessage
             {
-                From           = _settings.MyCallsign,
+                From           = fromCallsign,
                 To             = resolvedTabKey,
                 Text           = text,
                 IsOutgoing     = true,
                 RawData        = json,
-                SequenceNumber = "TX"
+                SequenceNumber = "TX",
+                NodeId         = selectedNodeId
             });
         }
         catch (Exception ex)

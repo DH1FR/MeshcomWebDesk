@@ -34,11 +34,11 @@ public class TelnetService : IConsoleService, IAsyncDisposable
         _logger          = logger;
     }
 
-    public async Task ConnectAsync()
+    public async Task ConnectAsync(string? hostOverride = null)
     {
         if (IsConnected) return;
         var s    = _settingsMonitor.CurrentValue;
-        var host = s.DeviceIp;
+        var host = hostOverride ?? s.DeviceIp;
         var port = s.TelnetPort;
         UnknownCertThumbprint = null;
 

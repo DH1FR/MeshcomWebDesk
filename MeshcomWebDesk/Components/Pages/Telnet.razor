@@ -5,6 +5,7 @@
 @rendermode InteractiveServer
 @inject TelnetService TelnetService
 @inject SerialConsoleService SerialConsoleService
+@inject NodeManager NodeManager
 @inject IOptionsMonitor<MeshcomSettings> SettingsMon
 @inject LanguageService Loc
 @inject IJSRuntime JS
@@ -215,7 +216,9 @@
 
     private async Task ConnectAsync()
     {
-        await Console.ConnectAsync();
+        // Use the IP of the selected node (falls back to settings DeviceIp for legacy/primary)
+        var nodeIp = NodeManager.SelectedNode?.DeviceIp;
+        await Console.ConnectAsync(string.IsNullOrWhiteSpace(nodeIp) ? null : nodeIp);
         await InvokeAsync(StateHasChanged);
     }
 

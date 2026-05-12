@@ -27,7 +27,8 @@ public class ChatService
 
     private readonly ConcurrentDictionary<Guid, NodeState> _nodeState = new();
 
-    /// <summary>Returns (or lazily creates) the state bucket for <paramref name="nodeId"/>.</summary>
+    /// <summary>Returns (or lazily creates) the state bucket for a concrete <paramref name="nodeId"/>.
+    /// Passing <c>null</c> uses <see cref="Guid.Empty"/> (legacy single-node fallback).</summary>
     private NodeState GetState(Guid? nodeId) => _nodeState.GetOrAdd(nodeId ?? Guid.Empty, _ => new NodeState());
 
     /// <summary>Returns the state for the primary node (or Guid.Empty in legacy mode).</summary>
@@ -36,6 +37,11 @@ public class ChatService
         var primaryId = _nodeManager?.PrimaryNode?.Id;
         return GetState(primaryId);
     }
+
+    /// <summary>Resolves <paramref name="nodeId"/> to its state bucket:
+    /// <c>null</c> → primary node; explicit Guid → that node's bucket.</summary>
+    private NodeState ResolveState(Guid? nodeId) =>
+        nodeId is null ? GetPrimaryState() : ResolveState(nodeId);
 
     /// <summary>True when <paramref name="nodeId"/> refers to the primary (or only) node.</summary>
     private bool IsPrimaryNode(Guid? nodeId)
@@ -149,8 +155,8 @@ public class ChatService
         set => GetState(Guid.Empty).ActiveTabKey = value;
     }
 
-    public string GetActiveTabKey(Guid? nodeId) => GetState(nodeId).ActiveTabKey;
-    public void   SetActiveTabKey(Guid? nodeId, string key) => GetState(nodeId).ActiveTabKey = key;
+    public string GetActiveTabKey(Guid? nodeId) => ResolveState(nodeId).ActiveTabKey;
+    public void   SetActiveTabKey(Guid? nodeId, string key) => ResolveState(nodeId).ActiveTabKey = key;
 
     public ChatService(IOptionsMonitor<MeshcomSettings> settings, ILogger<ChatService> logger, IMonitorDataSink sink, WebhookService webhook, QsoSummaryService qsoSummary)
     {
@@ -176,19 +182,20 @@ public class ChatService
     {
         lock (_lock)
         {
-            return GetState(nodeId).Tabs.Values.ToList();
+            return ResolveState(nodeId).Tabs.Values.ToList();
         }
     }
 
     /// <summary>All messages sorted newest-first (legacy/primary node).</summary>
     public IReadOnlyList<MeshcomMessage> AllMessages => GetAllMessages(null);
 
-    /// <summary>All messages sorted newest-first for a specific node.</summary>
+    /// <summary>All messages sorted newest-first for a specific node.
+    /// Passing <c>null</c> resolves to the primary node (same as <see cref="GetPrimaryState"/>).</summary>
     public IReadOnlyList<MeshcomMessage> GetAllMessages(Guid? nodeId)
     {
         lock (_lock)
         {
-            return GetState(nodeId).Messages.OrderByDescending(m => m.Timestamp).ToList();
+            return ResolveState(nodeId).Messages.OrderByDescending(m => m.Timestamp).ToList();
         }
     }
 
@@ -197,7 +204,7 @@ public class ChatService
 
     /// <summary>Most recently heard stations for a specific node, sorted by last heard descending.</summary>
     public IReadOnlyList<HeardStation> GetMhList(Guid? nodeId) =>
-        GetState(nodeId).MhList.Values.OrderByDescending(s => s.LastHeard).ToList();
+        ResolveState(nodeId).MhList.Values.OrderByDescending(s => s.LastHeard).ToList();
 
     /// <summary>
     /// Route an incoming message to the correct tab. Creates tab automatically if needed.
@@ -208,7 +215,7 @@ public class ChatService
     /// <summary>Node-scoped variant: routes the message into the state of <paramref name="nodeId"/>.</summary>
     public void AddIncomingMessage(MeshcomMessage message, Guid? nodeId)
     {
-        var state = GetState(nodeId);
+        var state = ResolveState(nodeId);
 
         // Deduplication: Meshcom 4.0 may deliver the same packet multiple times via different
         // mesh routes. Use the sender-assigned sequence number as the primary key.
@@ -298,7 +305,7 @@ public class ChatService
 
     public void AddOutgoingMessage(MeshcomMessage message, Guid? nodeId)
     {
-        var state = GetState(nodeId);
+        var state = ResolveState(nodeId);
         var tabKey = message.IsBroadcast ? "*" : message.To;
         var tab = GetOrCreateTab(state, tabKey, nodeId);
         lock (_lock)
@@ -314,7 +321,7 @@ public class ChatService
 
     public void AddRawMessage(MeshcomMessage message, Guid? nodeId)
     {
-        lock (_lock) { AppendToMonitor(message, GetState(nodeId)); }
+        lock (_lock) { AppendToMonitor(message, ResolveState(nodeId)); }
         NotifyChange();
     }
 
@@ -323,7 +330,7 @@ public class ChatService
 
     public ChatTab OpenTab(string key, Guid? nodeId)
     {
-        var state = GetState(nodeId);
+        var state = ResolveState(nodeId);
         var tab = GetOrCreateTab(state, key, nodeId);
         state.ActiveTabKey = key;
         // Backward-compat: keep legacy ActiveTabKey in sync when operating on primary node
@@ -370,7 +377,7 @@ public class ChatService
 
     public void CloseTab(string key, Guid? nodeId)
     {
-        GetState(nodeId).Tabs.TryRemove(key, out _);
+        ResolveState(nodeId).Tabs.TryRemove(key, out _);
         NotifyChange();
     }
 
@@ -379,7 +386,7 @@ public class ChatService
 
     public void ClearUnread(string key, Guid? nodeId)
     {
-        if (GetState(nodeId).Tabs.TryGetValue(key, out var tab))
+        if (ResolveState(nodeId).Tabs.TryGetValue(key, out var tab))
             lock (_lock) { tab.UnreadCount = 0; }
     }
 
@@ -392,7 +399,7 @@ public class ChatService
 
     public void AssignOutgoingSequence(string destination, string sequenceNumber, Guid? nodeId)
     {
-        var messages = GetState(nodeId).Messages;
+        var messages = ResolveState(nodeId).Messages;
         lock (_lock)
         {
             var msg = messages.LastOrDefault(m =>
@@ -421,7 +428,7 @@ public class ChatService
 
     public void MarkMessageAcknowledged(string sequenceNumber, Guid? nodeId, string? ackSender = null, bool isGateway = false)
     {
-        var messages = GetState(nodeId).Messages;
+        var messages = ResolveState(nodeId).Messages;
         lock (_lock)
         {
             var msg = messages.FirstOrDefault(m =>
@@ -461,7 +468,7 @@ public class ChatService
             var isGateway = string.Equals(message.SrcType, "udp", StringComparison.OrdinalIgnoreCase);
             MarkMessageAcknowledged(message.SequenceNumber, nodeId, message.From, isGateway);
         }
-        var ackState = GetState(nodeId);
+        var ackState = ResolveState(nodeId);
         bool ackMhChanged = IsPrimaryNode(nodeId) && UpdateMhList(message, GetPrimaryState());
         lock (_lock) { AppendToMonitor(message, ackState); }
         if (ackMhChanged) OnMhChange?.Invoke();
@@ -582,7 +589,7 @@ public class ChatService
 
     public void AddPositionBeacon(MeshcomMessage message, Guid? nodeId)
     {
-        var state = GetState(nodeId);
+        var state = ResolveState(nodeId);
         bool posMhChanged = IsPrimaryNode(nodeId) && UpdateMhList(message, GetPrimaryState());
         lock (_lock) { AppendToMonitor(message, state); }
         if (posMhChanged) OnMhChange?.Invoke();
@@ -600,7 +607,7 @@ public class ChatService
 
     public void AddTelemetry(MeshcomMessage message, Guid? nodeId)
     {
-        var state = GetState(nodeId);
+        var state = ResolveState(nodeId);
         bool telMhChanged = IsPrimaryNode(nodeId) && UpdateMhList(message, GetPrimaryState());
         lock (_lock) { AppendToMonitor(message, state); }
         if (telMhChanged) OnMhChange?.Invoke();
@@ -615,7 +622,7 @@ public class ChatService
 
     public ChatTab? GetTab(string key, Guid? nodeId)
     {
-        GetState(nodeId).Tabs.TryGetValue(key, out var tab);
+        ResolveState(nodeId).Tabs.TryGetValue(key, out var tab);
         return tab;
     }
 
@@ -637,7 +644,7 @@ public class ChatService
 
     public IReadOnlyList<MeshcomMessage> GetTabMessages(string key, Guid? nodeId)
     {
-        if (!GetState(nodeId).Tabs.TryGetValue(key, out var tab))
+        if (!ResolveState(nodeId).Tabs.TryGetValue(key, out var tab))
             return [];
         lock (_lock) { return tab.Messages.ToList(); }
     }
@@ -876,3 +883,4 @@ public class ChatService
         OnChange?.Invoke();
     }
 }
+

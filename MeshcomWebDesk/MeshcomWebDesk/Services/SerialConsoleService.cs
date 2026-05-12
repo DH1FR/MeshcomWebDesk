@@ -28,7 +28,7 @@ public class SerialConsoleService : IConsoleService, IAsyncDisposable
 
     public static string[] GetAvailablePorts() => SerialPort.GetPortNames();
 
-    public async Task ConnectAsync()
+    public async Task ConnectAsync(string? hostOverride = null)
     {
         await _lock.WaitAsync();
         try
