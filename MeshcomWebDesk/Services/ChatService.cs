@@ -235,15 +235,26 @@ public class ChatService
         //   Direct to us                           → tab by sender callsign
         //   Group (any other dst)                  → tab "#<group>"
         //
-        // "Direct to us" means: message.To matches the configured callsign (myCallsign)
-        // OR the node that received this packet is identified (nodeId != null) AND
-        // message.To is not a broadcast/group address – i.e. it is addressed to the
-        // hardware callsign of this node even if NodeProfile.Callsign is configured differently.
+        // "Direct to us" means message.To matches our configured callsign (myCallsign)
+        // OR the node is identified AND message.To looks like a callsign addressed to this node.
+        //
+        // Guard: MeshCom sends group numbers as bare digits (e.g. "26299") without '#'.
+        // These must NOT be treated as direct messages. A real callsign always contains letters.
+        // Additionally only treat as direct-to-node when To matches this node's hardware callsign
+        // (i.e. the callsign the node actually uses on-air, which may differ from NodeProfile.Callsign).
         string tabKey;
-        bool isDirectToNode = nodeId is not null
-            && !message.IsBroadcast
+        bool looksLikeCallsign = !string.IsNullOrEmpty(message.To)
             && message.To != "*"
-            && !message.To.StartsWith('#');
+            && !message.To.StartsWith('#')
+            && message.To.Any(char.IsLetter);   // groups are purely numeric → no letters
+
+        // Only flag as "direct to this node" when the destination callsign matches
+        // the node's configured callsign OR the primary legacy callsign.
+        // This prevents foreign direct messages relayed via LoRa from triggering AutoReply.
+        bool isDirectToNode = nodeId is not null
+            && looksLikeCallsign
+            && (string.Equals(message.To, myCallsign, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(message.To, _settings.MyCallsign, StringComparison.OrdinalIgnoreCase));
 
         if (message.IsBroadcast)
         {
