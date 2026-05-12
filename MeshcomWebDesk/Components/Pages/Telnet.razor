@@ -216,9 +216,9 @@
 
     private async Task ConnectAsync()
     {
-        // Use the IP of the selected node (falls back to settings DeviceIp for legacy/primary)
-        var nodeIp = NodeManager.SelectedNode?.DeviceIp;
-        await Console.ConnectAsync(string.IsNullOrWhiteSpace(nodeIp) ? null : nodeIp);
+        // TelnetService resolves the IP from _settings.DeviceIp directly.
+        // Node-specific IP override is only safe once all NodeProfiles are fully configured.
+        await Console.ConnectAsync();
         await InvokeAsync(StateHasChanged);
     }
 
