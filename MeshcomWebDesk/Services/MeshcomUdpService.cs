@@ -134,13 +134,17 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
 
                     // Resolve which node sent this packet by its source IP.
                     // This is the only reliable way to distinguish nodes when all share the same UDP port.
-                    var sourceIp  = result.RemoteEndPoint.Address;
-                    var myCallsign = _nodeManager.GetCallsignForIp(sourceIp);
+                    var sourceIp   = result.RemoteEndPoint.Address;
+                    var sourceNode = _nodeManager.ResolveNodeByIp(sourceIp);
+                    var myCallsign = sourceNode?.Callsign ?? _settings.MyCallsign;
 
                     var message = ParseMessage(raw);
 
                     if (message != null)
                     {
+                        // Tag the message with the node it arrived from
+                        message.NodeId = sourceNode?.Id;
+
                         // Update signal stats from LoRa metadata
                         if (message.Rssi.HasValue)
                         {

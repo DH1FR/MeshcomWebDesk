@@ -135,8 +135,9 @@ builder.Services.AddRazorComponents()
 var app = builder.Build();
 
 // Break circular dependency: ChatService ← MqttService ← IMeshcomSender ← MeshcomUdpService ← ChatService
-app.Services.GetRequiredService<ChatService>()
-   .SetMqttService(app.Services.GetRequiredService<MqttService>());
+var chatService = app.Services.GetRequiredService<ChatService>();
+chatService.SetMqttService(app.Services.GetRequiredService<MqttService>());
+chatService.SetNodeManager(app.Services.GetRequiredService<NodeManager>());
 
 if (!app.Environment.IsDevelopment())
 {

@@ -123,6 +123,15 @@ public sealed class NodeManager
         return null;
     }
 
+    /// <summary>Returns the own callsign for a node identified by its <see cref="NodeProfile.Id"/>.</summary>
+    public string GetCallsignForNode(Guid? nodeId)
+    {
+        var s = _settingsMonitor.CurrentValue;
+        if (nodeId is null || nodeId == Guid.Empty) return s.MyCallsign;
+        var node = s.Nodes.FirstOrDefault(n => n.Id == nodeId);
+        return node?.Callsign ?? s.MyCallsign;
+    }
+
     /// <summary>
     /// Returns the own callsign that matches the node identified by <paramref name="remoteAddress"/>.
     /// Falls back to <see cref="MeshcomSettings.MyCallsign"/> when:
