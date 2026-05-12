@@ -41,7 +41,7 @@ public class ChatService
     /// <summary>Resolves <paramref name="nodeId"/> to its state bucket:
     /// <c>null</c> → primary node; explicit Guid → that node's bucket.</summary>
     private NodeState ResolveState(Guid? nodeId) =>
-        nodeId is null ? GetPrimaryState() : ResolveState(nodeId);
+        nodeId is null ? GetPrimaryState() : GetState(nodeId);
 
     /// <summary>True when <paramref name="nodeId"/> refers to the primary (or only) node.</summary>
     private bool IsPrimaryNode(Guid? nodeId)
