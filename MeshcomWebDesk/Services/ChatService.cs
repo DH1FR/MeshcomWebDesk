@@ -555,52 +555,102 @@ public class ChatService
         NotifyChange();
     }
 
-    /// <summary>Creates a thread-safe snapshot
+    /// <summary>Creates a thread-safe snapshot of all node states.</summary>
     public PersistenceSnapshot CreateSnapshot()
     {
-        var state = GetPrimaryState();
+        var primaryState = GetPrimaryState();
         lock (_lock)
         {
-            return new PersistenceSnapshot
+            // Build the legacy primary-node fields (backwards compat)
+            var snapshot = new PersistenceSnapshot
             {
-                SavedAt = DateTime.Now,
-                Tabs = state.Tabs.Values
-                    .Select(t => new ChatTab { NodeId = t.NodeId, Key = t.Key, Title = t.Title, Messages = t.Messages.ToList() })
-                    .ToList(),
-                MhList          = state.MhList.Values.ToList(),
-                MonitorMessages = state.Messages.ToList()
+                SavedAt         = DateTime.Now,
+                Tabs            = primaryState.Tabs.Values
+                                    .Select(t => new ChatTab { NodeId = t.NodeId, Key = t.Key, Title = t.Title, Messages = t.Messages.ToList() })
+                                    .ToList(),
+                MhList          = primaryState.MhList.Values.ToList(),
+                MonitorMessages = primaryState.Messages.ToList()
             };
+
+            // Persist every known node state into NodeSnapshots
+            foreach (var (nodeId, state) in _nodeState)
+            {
+                snapshot.NodeSnapshots[nodeId.ToString()] = new NodeSnapshotEntry
+                {
+                    Tabs            = state.Tabs.Values
+                                        .Select(t => new ChatTab { NodeId = t.NodeId, Key = t.Key, Title = t.Title, Messages = t.Messages.ToList() })
+                                        .ToList(),
+                    MonitorMessages = state.Messages.ToList()
+                };
+            }
+
+            return snapshot;
         }
     }
 
-    /// <summary>Restores state from a previously saved snapshot into the primary node's state.</summary>
+    /// <summary>Restores state from a previously saved snapshot into all node states.</summary>
     public void LoadSnapshot(PersistenceSnapshot snapshot)
     {
-        var state = GetPrimaryState();
         lock (_lock)
         {
-            state.Messages.Clear();
-            state.Messages.AddRange(snapshot.MonitorMessages.TakeLast(_settings.MonitorMaxMessages));
-
-            state.Tabs.Clear();
-            foreach (var tab in snapshot.Tabs)
+            // ── Restore per-node data from NodeSnapshots (multi-node format) ──
+            foreach (var (nodeIdStr, entry) in snapshot.NodeSnapshots)
             {
-                bool isGroup = tab.Key.StartsWith('#');
-                bool tabAllowed = !isGroup
-                    || !_settings.GroupFilterEnabled
-                    || _settings.Groups.Contains(tab.Key, StringComparer.OrdinalIgnoreCase);
-                if (tabAllowed)
-                    state.Tabs[tab.Key] = tab;
+                if (!Guid.TryParse(nodeIdStr, out var nodeId)) continue;
+                var state = _nodeState.GetOrAdd(nodeId, _ => new NodeState());
+
+                state.Messages.Clear();
+                state.Messages.AddRange(entry.MonitorMessages.TakeLast(_settings.MonitorMaxMessages));
+
+                state.Tabs.Clear();
+                foreach (var tab in entry.Tabs)
+                {
+                    bool isGroup   = tab.Key.StartsWith('#');
+                    bool tabAllowed = !isGroup
+                        || !_settings.GroupFilterEnabled
+                        || _settings.Groups.Contains(tab.Key, StringComparer.OrdinalIgnoreCase);
+                    if (tabAllowed)
+                        state.Tabs[tab.Key] = tab;
+                }
             }
 
-            state.MhList.Clear();
+            // ── Restore MH list + primary fallback (legacy single-node snapshots) ──
+            var primaryState = GetPrimaryState();
+
+            // MH list is always primary-only
+            primaryState.MhList.Clear();
             foreach (var station in snapshot.MhList)
-                state.MhList[station.Callsign] = station;
+                primaryState.MhList[station.Callsign] = station;
+
+            // If the new NodeSnapshots dict was empty (old snapshot file), fall back to
+            // restoring the legacy Tabs/MonitorMessages into the primary state
+            if (snapshot.NodeSnapshots.Count == 0)
+            {
+                primaryState.Messages.Clear();
+                primaryState.Messages.AddRange(snapshot.MonitorMessages.TakeLast(_settings.MonitorMaxMessages));
+
+                primaryState.Tabs.Clear();
+                foreach (var tab in snapshot.Tabs)
+                {
+                    bool isGroup   = tab.Key.StartsWith('#');
+                    bool tabAllowed = !isGroup
+                        || !_settings.GroupFilterEnabled
+                        || _settings.Groups.Contains(tab.Key, StringComparer.OrdinalIgnoreCase);
+                    if (tabAllowed)
+                        primaryState.Tabs[tab.Key] = tab;
+                }
+            }
         }
+
         NotifyChange();
         PurgeMhListByAge();
-        foreach (var tab in state.Tabs.Values.Where(t => t.Key != "*" && !t.Key.StartsWith('#')))
-            _ = CheckQsoSummaryAsync(tab, tab.Key);
+
+        // Trigger QSO summary for all direct-message tabs across every node
+        foreach (var (_, state) in _nodeState)
+        {
+            foreach (var tab in state.Tabs.Values.Where(t => t.Key != "*" && !t.Key.StartsWith('#')))
+                _ = CheckQsoSummaryAsync(tab, tab.Key);
+        }
     }
 
     /// <summary>
