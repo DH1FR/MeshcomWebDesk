@@ -16,6 +16,7 @@
 @inject MeshcomWebDesk.Services.QsoSummaryService QsoSummaryService
 @inject TelnetService TelnetService
 @inject SerialConsoleService SerialConsoleService
+@inject NodeManager NodeManager
 @implements IDisposable
 
 <PageTitle>MeshCom Web Client</PageTitle>
@@ -23,6 +24,19 @@
 <ErrorBoundary>
     <ChildContent>
 <div class="meshcom-container">
+    @* ===== NODE SWITCHER (only when multi-node is enabled) ===== *@
+    @if (NodeManager.MultiNodeEnabled) {
+    <div class="node-switcher-bar">
+        @foreach (var node in NodeManager.Nodes) {
+            <button class="node-switcher-btn @(NodeManager.SelectedNode?.Id == node.Id ? "active" : "")"
+                    @onclick="() => SelectNode(node.Id)"
+                    title="@node.DeviceIp:@node.DevicePort">
+                @if (node.IsPrimary) { <span>★</span> }
+                @node.Name
+            </button>
+        }
+    </div>
+    }
     @* ===== UPPER AREA: Tabs with conversations ===== *@
     <div class="upper-pane">
         <div class="tab-bar">
@@ -967,6 +981,7 @@
         ChatService.OnDirectMessage += HandleDirectMessage;
         TelnetService.OnChange += OnTelnetChanged;
         SerialConsoleService.OnChange += OnTelnetChanged;
+        NodeManager.OnSelectedNodeChanged += OnNodeChanged;
         // Restore active tab from service memory so the first render already shows the correct tab
         _activeTabKey = ChatService.ActiveTabKey;
         RefreshData();
@@ -1467,7 +1482,12 @@
         ChatService.OnDirectMessage -= HandleDirectMessage;
         TelnetService.OnChange -= OnTelnetChanged;
         SerialConsoleService.OnChange -= OnTelnetChanged;
+        NodeManager.OnSelectedNodeChanged -= OnNodeChanged;
     }
+
+    private void SelectNode(Guid nodeId) => NodeManager.SelectNode(nodeId);
+
+    private void OnNodeChanged() => InvokeAsync(StateHasChanged);
 
     // ── QSO Summary ───────────────────────────────────────────────────────
 

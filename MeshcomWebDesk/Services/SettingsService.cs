@@ -42,6 +42,16 @@ public class SettingsService
         {
             ["Meshcom"] = new JsonObject
             {
+                ["Nodes"] = new JsonArray(s.Nodes.Select(n => (JsonNode?)new JsonObject
+                {
+                    ["Id"]         = n.Id.ToString(),
+                    ["Name"]       = n.Name,
+                    ["DeviceIp"]   = n.DeviceIp,
+                    ["DevicePort"] = n.DevicePort,
+                    ["ListenIp"]   = n.ListenIp,
+                    ["ListenPort"] = n.ListenPort,
+                    ["IsPrimary"]  = n.IsPrimary
+                }).ToArray()),
                 ["ListenIp"]            = s.ListenIp,
                 ["ListenPort"]          = s.ListenPort,
                 ["DeviceIp"]            = s.DeviceIp,
