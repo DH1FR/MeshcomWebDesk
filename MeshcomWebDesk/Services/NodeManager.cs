@@ -1,3 +1,4 @@
+using System.Net;
 using Microsoft.Extensions.Options;
 using MeshcomWebDesk.Models;
 
@@ -94,6 +95,46 @@ public sealed class NodeManager
     {
         _selectedNodeId = null;
         OnSelectedNodeChanged?.Invoke();
+    }
+
+    // ── IP-based node resolution ─────────────────────────────────────────
+
+    /// <summary>
+    /// Resolves a <see cref="NodeProfile"/> by the source IP address of an incoming UDP packet.
+    /// <para>
+    /// This is the primary way to identify <i>which</i> node sent a packet when all nodes share
+    /// the same UDP port (the common MeshCom default of 1799).
+    /// </para>
+    /// Returns <c>null</c> when no configured node matches (e.g. in legacy single-node mode or
+    /// when the IP is not in the node list – callers should fall back to
+    /// <see cref="MeshcomSettings.MyCallsign"/> in that case).
+    /// </summary>
+    public NodeProfile? ResolveNodeByIp(IPAddress remoteAddress)
+    {
+        var nodes = _settingsMonitor.CurrentValue.Nodes;
+        if (nodes.Count == 0) return null;
+
+        foreach (var node in nodes)
+        {
+            if (IPAddress.TryParse(node.DeviceIp, out var nodeAddr) &&
+                nodeAddr.Equals(remoteAddress))
+                return node;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Returns the own callsign that matches the node identified by <paramref name="remoteAddress"/>.
+    /// Falls back to <see cref="MeshcomSettings.MyCallsign"/> when:
+    /// <list type="bullet">
+    ///   <item>no node list is configured (legacy single-node mode), or</item>
+    ///   <item>the remote IP does not match any configured node.</item>
+    /// </list>
+    /// </summary>
+    public string GetCallsignForIp(IPAddress remoteAddress)
+    {
+        var s = _settingsMonitor.CurrentValue;
+        return ResolveNodeByIp(remoteAddress)?.Callsign ?? s.MyCallsign;
     }
 
     // ── Connection helpers ───────────────────────────────────────────────

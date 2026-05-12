@@ -26,6 +26,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     private readonly QrzService  _qrzService;
     private readonly BotCommandService _botCommandService;
     private readonly QsoSummaryService _qsoSummaryService;
+    private readonly NodeManager _nodeManager;
     private MeshcomSettings _settings;
     private UdpClient? _udpClient;
 
@@ -65,13 +66,15 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         ChatService chatService,
         QrzService qrzService,
         BotCommandService botCommandService,
-        QsoSummaryService qsoSummaryService)
+        QsoSummaryService qsoSummaryService,
+        NodeManager nodeManager)
     {
         _logger              = logger;
         _chatService         = chatService;
         _qrzService          = qrzService;
         _botCommandService   = botCommandService;
         _qsoSummaryService   = qsoSummaryService;
+        _nodeManager         = nodeManager;
         _settings            = settings.CurrentValue;
         settings.OnChange(s =>
         {
@@ -128,6 +131,12 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                     _logger.LogDebug("UDP RX [{Remote}]: {Data}", result.RemoteEndPoint, raw);
                     if (_settings.LogUdpTraffic)
                         _logger.LogInformation("[UDP-RX] {Remote} {Data}", result.RemoteEndPoint, raw);
+
+                    // Resolve which node sent this packet by its source IP.
+                    // This is the only reliable way to distinguish nodes when all share the same UDP port.
+                    var sourceIp  = result.RemoteEndPoint.Address;
+                    var myCallsign = _nodeManager.GetCallsignForIp(sourceIp);
+
                     var message = ParseMessage(raw);
 
                     if (message != null)
@@ -141,7 +150,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
 
                         // Skip node echoes of our own sent messages (already recorded as outgoing).
                         // Still extract own GPS position and node metadata from the echo if present.
-                        if (string.Equals(message.From, _settings.MyCallsign, StringComparison.OrdinalIgnoreCase))
+                        if (string.Equals(message.From, myCallsign, StringComparison.OrdinalIgnoreCase))
                         {
                             if (message.Latitude.HasValue && message.Longitude.HasValue)
                             {

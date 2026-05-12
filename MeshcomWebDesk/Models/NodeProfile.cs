@@ -26,7 +26,15 @@ public class NodeProfile
     /// <summary>IP address to bind the local UDP listener to ("0.0.0.0" = all interfaces).</summary>
     public string ListenIp { get; set; } = "0.0.0.0";
 
-    /// <summary>Local UDP port to listen on for packets from this device.</summary>
+    /// <summary>
+    /// Local UDP port to listen on for packets from this device.
+    /// <para>
+    /// MeshCom nodes typically use port 1799 and this <b>cannot be changed</b> on the device.
+    /// When multiple nodes share the same port, incoming packets are distinguished by the
+    /// source IP address of each node (<see cref="DeviceIp"/>) rather than by port number.
+    /// This field is kept for completeness and for setups where port forwarding is used.
+    /// </para>
+    /// </summary>
     public int ListenPort { get; set; } = 1799;
 
     /// <summary>
