@@ -14,6 +14,9 @@ public class NodeProfile
     /// <summary>Human-readable display name shown in the node switcher (e.g. "Balkon", "Auto").</summary>
     public string Name { get; set; } = "Node";
 
+    /// <summary>Own callsign (with SSID) used as sender for this node's outgoing messages (e.g. "OE1ABC-1").</summary>
+    public string Callsign { get; set; } = "NOCALL-1";
+
     /// <summary>IP address of the MeshCom device to send UDP messages to.</summary>
     public string DeviceIp { get; set; } = "192.168.1.60";
 

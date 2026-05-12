@@ -46,6 +46,7 @@ public class SettingsService
                 {
                     ["Id"]         = n.Id.ToString(),
                     ["Name"]       = n.Name,
+                    ["Callsign"]   = n.Callsign,
                     ["DeviceIp"]   = n.DeviceIp,
                     ["DevicePort"] = n.DevicePort,
                     ["ListenIp"]   = n.ListenIp,

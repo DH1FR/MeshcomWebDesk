@@ -114,6 +114,8 @@
                     <div class="settings-grid" style="margin-top:.5rem">
                         <label>@Loc.T("Name", "Name", "Nome", "Nombre")</label>
                         <input type="text" @bind="node.Name" />
+                        <label>@Loc.T("Rufzeichen", "Callsign", "Nominativo", "Indicativo")</label>
+                        <input type="text" @bind="node.Callsign" placeholder="OE1ABC-2" style="text-transform:uppercase" />
                         <label>Device IP</label>
                         <input type="text" @bind="node.DeviceIp" />
                         <label>Device Port</label>
@@ -1806,6 +1808,7 @@
         _model.Nodes.Add(new NodeProfile
         {
             Name       = $"Node {_model.Nodes.Count + 1}",
+            Callsign   = _model.MyCallsign,
             DeviceIp   = _model.DeviceIp,
             DevicePort = _model.DevicePort,
             ListenIp   = _model.ListenIp,
@@ -2315,6 +2318,7 @@
             {
                 Id         = n.Id,
                 Name       = n.Name,
+                Callsign   = n.Callsign,
                 DeviceIp   = n.DeviceIp,
                 DevicePort = n.DevicePort,
                 ListenIp   = n.ListenIp,
@@ -2885,6 +2889,7 @@
                 {
                     Id         = n.Id,
                     Name       = n.Name,
+                    Callsign   = n.Callsign,
                     DeviceIp   = n.DeviceIp,
                     DevicePort = n.DevicePort,
                     ListenIp   = n.ListenIp,

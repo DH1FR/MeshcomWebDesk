@@ -30,9 +30,10 @@
         @foreach (var node in NodeManager.Nodes) {
             <button class="node-switcher-btn @(NodeManager.SelectedNode?.Id == node.Id ? "active" : "")"
                     @onclick="() => SelectNode(node.Id)"
-                    title="@node.DeviceIp:@node.DevicePort">
+                    title="@node.Callsign  |  @node.DeviceIp:@node.DevicePort">
                 @if (node.IsPrimary) { <span>★</span> }
                 @node.Name
+                <small style="opacity:.7;font-size:.75em">@node.Callsign</small>
             </button>
         }
     </div>

@@ -111,6 +111,20 @@ public sealed class NodeManager
             : (s.ListenIp, s.ListenPort, s.DeviceIp, s.DevicePort);
     }
 
+    /// <summary>Returns the own callsign for the primary node.</summary>
+    public string GetPrimaryCallsign()
+    {
+        var s = _settingsMonitor.CurrentValue;
+        return PrimaryNode?.Callsign ?? s.MyCallsign;
+    }
+
+    /// <summary>Returns the own callsign for the currently selected (chat-view) node.</summary>
+    public string GetSelectedCallsign()
+    {
+        var s = _settingsMonitor.CurrentValue;
+        return SelectedNode?.Callsign ?? s.MyCallsign;
+    }
+
     /// <summary>
     /// Returns the effective connection parameters for the selected (chat-view) node,
     /// falling back to the legacy settings when in single-node mode.
