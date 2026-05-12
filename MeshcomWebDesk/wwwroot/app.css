@@ -2866,6 +2866,28 @@ h1:focus {
 .telnet-title{font-weight:600;font-size:.95rem;display:flex;align-items:center;gap:.4rem}
 .telnet-output{flex:1;min-height:0;overflow-y:auto;background:#0d1117;color:#c9d1d9;font-family:'Courier New',Consolas,monospace;font-size:.82rem;line-height:1.4;padding:.5rem .6rem;border:1px solid #30363d;border-radius:4px;white-space:pre-wrap;word-break:break-all}
 .telnet-line{min-height:1.2em}
+
+/* ── LoRa Debug Highlighting ─────────────────────────────────────────── */
+.lora-sm        { color:#79c0ff; }
+.lora-sm-kw     { color:#58a6ff; font-weight:700; }
+.lora-err       { color:#ff6b6b !important; background:rgba(255,80,80,.08); border-radius:2px; }
+.lora-warn      { color:#f0c060; }
+.lora-warn-kw   { color:#e3b341; font-weight:700; }
+.lora-hwm       { color:#d2a8ff; }
+.lora-util      { color:#56d364; }
+.lora-dbg       { color:#8b949e; }
+.lora-dbg-rx    { color:#3fb950; }
+.lora-dbg-tx    { color:#58a6ff; }
+.lora-dbg-ack   { color:#a5d6ff; }
+.lora-dbg-ring  { color:#c8d8e8; }
+.lora-dbg-relay { color:#d2a8ff; }
+.lora-rx-pkt    { color:#3fb950; font-weight:600; }
+.lora-rx        { color:#56d364; }
+.lora-tx        { color:#58a6ff; font-weight:600; }
+.lora-aprs-err  { color:#ff6b6b; }
+.lora-dim       { color:#484f58; }
+.lora-kv-key    { color:#8b949e; }
+.lora-kv-val    { color:#e3b341; font-weight:600; }
 .telnet-input-bar{display:flex;align-items:center;gap:.4rem;flex-shrink:0;padding-bottom:env(safe-area-inset-bottom)}
 .telnet-prompt{color:#58a6ff;font-family:'Courier New',Consolas,monospace;font-weight:bold;flex-shrink:0}
 .telnet-input{flex:1;background:#161b22;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:.35rem .5rem;font-family:'Courier New',Consolas,monospace;font-size:.85rem;outline:none;-webkit-appearance:none}

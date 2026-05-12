@@ -63,6 +63,10 @@
                     title="@(_paused ? Loc.T("Ausgabe fortsetzen (Scroll wieder aktiv)", "Resume output (scroll re-enabled)", "Riprendi output", "Reanudar salida") : Loc.T("Ausgabe pausieren (neue Zeilen kommen weiter rein)", "Pause output (new lines still buffered)", "Pausa output", "Pausar salida"))">
                 @(_paused ? "▶ " + Loc.T("Weiter", "Resume", "Riprendi", "Reanudar") : "⏸ " + Loc.T("Pause", "Pause", "Pausa", "Pausa"))
             </button>
+            <button class="btn-sm @(_loraHighlight ? "btn-primary" : "btn-action")" @onclick="() => _loraHighlight = !_loraHighlight"
+                    title="@Loc.T("LoRa-Debug-Hervorhebung ein/aus", "LoRa debug highlighting on/off", "Evidenziazione LoRa debug on/off", "Resaltado LoRa debug on/off")">
+                📻 @Loc.T("LoRa", "LoRa", "LoRa", "LoRa")
+            </button>
             <button class="btn-action btn-sm" @onclick="ClearLines">
                 @Loc.T("Löschen", "Clear", "Cancella", "Borrar")
             </button>
@@ -108,7 +112,15 @@
         {
             @foreach (var line in Console.Lines)
             {
-                <div class="telnet-line">@line</div>
+                @if (_loraHighlight)
+                {
+                    var cl = ClassifyLine(line);
+                    <div class="telnet-line @cl.Css" title="@cl.Hint">@((MarkupString)cl.Html)</div>
+                }
+                else
+                {
+                    <div class="telnet-line">@line</div>
+                }
             }
         }
     </div>
@@ -150,6 +162,7 @@
     private MeshcomSettings _settings = new();
     private string _inputText = string.Empty;
     private bool _paused = false;
+    private bool _loraHighlight = false;
 
     // Active console service (TLS or Serial)
     private IConsoleService Console => _isSerial ? SerialConsoleService : TelnetService;
@@ -263,5 +276,104 @@
     {
         try { await JS.InvokeVoidAsync("scrollElementToBottom", "telnet-output"); }
         catch { /* JS not ready */ }
+    }
+
+    private record LineInfo(string Css, string Html, string Hint);
+
+    private static LineInfo ClassifyLine(string raw)
+    {
+        if (string.IsNullOrEmpty(raw))
+            return new("", "", "");
+
+        var esc = System.Net.WebUtility.HtmlEncode(raw);
+
+        // ── State Machine ───────────────────────────────────────────────
+        if (raw.StartsWith("[MC-SM]"))
+        {
+            var hint = raw.Contains("rc=0") ? "OK" : raw.Contains("rc=") ? "⚠ Fehler" : "";
+            var hasErr = raw.Contains("rc=") && !raw.Contains("rc=0");
+            return new(hasErr ? "lora-sm lora-err" : "lora-sm", Highlight(esc, "lora-sm-kw", "->", "rc="), hint);
+        }
+
+        // ── Warnings ────────────────────────────────────────────────────
+        if (raw.StartsWith("[MC-WARN]") || raw.Contains("RX_BUF_OVERWRITE") || raw.Contains("ONRXDONE_SLOW"))
+            return new("lora-warn", Highlight(esc, "lora-warn-kw", "WARN", "SLOW", "OVERWRITE"), "⚠ Warnung");
+
+        // ── HWM ─────────────────────────────────────────────────────────
+        if (raw.StartsWith("[MC-HWM]"))
+            return new("lora-hwm", esc, "High-Water-Mark Statistik");
+
+        // ── Channel Util ─────────────────────────────────────────────────
+        if (raw.Contains("CHANNEL_UTIL"))
+            return new("lora-util", HighlightKv(esc), "Kanalauslastung");
+
+        // ── Debug: RX ───────────────────────────────────────────────────
+        if (raw.StartsWith("[MC-DBG]") && (raw.Contains("RX_") || raw.Contains("OnRx") || raw.Contains("CAD")))
+            return new("lora-dbg-rx", HighlightKv(esc), "RX / CAD Debug");
+
+        // ── Debug: TX / CSMA ────────────────────────────────────────────
+        if (raw.StartsWith("[MC-DBG]") && (raw.Contains("TX_") || raw.Contains("CSMA") || raw.Contains("CAD_FREE") || raw.Contains("RADIO_TX") || raw.Contains("RING_TX") || raw.Contains("RETRANSMIT")))
+            return new("lora-dbg-tx", HighlightKv(esc), "TX / CSMA Debug");
+
+        // ── Debug: ACK ──────────────────────────────────────────────────
+        if (raw.StartsWith("[MC-DBG]") && raw.Contains("ACK"))
+            return new("lora-dbg-ack", HighlightKv(esc), "ACK Debug");
+
+        // ── Debug: RING ─────────────────────────────────────────────────
+        if (raw.StartsWith("[MC-DBG]") && raw.Contains("RING"))
+            return new("lora-dbg-ring", HighlightKv(esc), "Ring-Buffer");
+
+        // ── Debug: RELAY ────────────────────────────────────────────────
+        if (raw.StartsWith("[MC-DBG]") && raw.Contains("RELAY"))
+            return new("lora-dbg-relay", HighlightKv(esc), "Relay");
+
+        // ── Generic MC-DBG ──────────────────────────────────────────────
+        if (raw.StartsWith("[MC-DBG]"))
+            return new("lora-dbg", HighlightKv(esc), "Debug");
+
+        // ── Received packet ─────────────────────────────────────────────
+        if (raw.StartsWith("[LoRa]") && raw.Contains("Received"))
+            return new("lora-rx-pkt", HighlightKv(esc), "Empfangenes Paket");
+
+        // ── TX/RX LoRa lines ────────────────────────────────────────────
+        if (raw.StartsWith("TX-LoRa"))
+            return new("lora-tx", esc, "Gesendetes Paket");
+        if (raw.StartsWith("RX-LoRa") || raw.StartsWith("MH-LoRa"))
+            return new("lora-rx", esc, "Empfangenes Paket");
+
+        // ── OnRxDone / OnRxTimeout / OnRxError ──────────────────────────
+        if (raw.StartsWith("OnRxDone"))  return new("lora-dbg-rx", esc, "OnRxDone");
+        if (raw.StartsWith("OnRxTimeout")) return new("lora-dim",  esc, "OnRxTimeout");
+        if (raw.StartsWith("OnRxError"))   return new("lora-warn", esc, "OnRxError – CRC/Header-Fehler");
+
+        // ── APRS errors ─────────────────────────────────────────────────
+        if (raw.StartsWith("APRS decode"))
+            return new("lora-aprs-err", esc, "APRS Protokollfehler");
+
+        // ── CHECK (CAD scan) ────────────────────────────────────────────
+        if (raw.StartsWith("[CHECK]"))
+            return new("lora-dbg-tx", esc, "CAD Scan");
+
+        // ── Dedup ───────────────────────────────────────────────────────
+        if (raw.Contains("RX_DEDUP"))
+            return new(raw.Contains("DUP") ? "lora-dim" : "lora-dbg-rx", HighlightKv(esc),
+                       raw.Contains("DUP") ? "Duplikat verworfen" : "Neues Paket");
+
+        return new("", esc, "");
+    }
+
+    // Bold key=value pairs like rssi=-110, wait=4675, util=15%
+    private static string HighlightKv(string html) =>
+        System.Text.RegularExpressions.Regex.Replace(
+            html,
+            @"(\b\w+=)(-?\d+\w*%?)",
+            "<span class=\"lora-kv-key\">$1</span><span class=\"lora-kv-val\">$2</span>");
+
+    // Bold specific keywords within the line
+    private static string Highlight(string html, string css, params string[] keywords)
+    {
+        foreach (var kw in keywords)
+            html = html.Replace(kw, $"<span class=\"{css}\">{kw}</span>");
+        return html;
     }
 }
