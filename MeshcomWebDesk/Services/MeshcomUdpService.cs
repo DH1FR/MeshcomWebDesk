@@ -44,17 +44,25 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     [GeneratedRegex(@"\{\d+$")]
     private static partial Regex TrailingSequencePattern();
 
-    /// <summary>Matches APRS-style ACK messages, e.g. "NOCALL-2 :ack187" or "NOCALL-2  :ack187" (padded addressee).</summary>
-    [GeneratedRegex(@"^\S+\s+:ack\d+$")]
+    /// <summary>
+    /// Matches ACK messages in two formats:
+    ///   APRS-style  : "NOCALL-2 :ack187"  or "NOCALL-2  :ack187" (space-padded addressee)
+    ///   MeshCom inline: "NOCALL-2:ack187" (callsign immediately followed by :ackNNN, no space)
+    /// </summary>
+    [GeneratedRegex(@"^\S+\s*:ack\d+$", RegexOptions.IgnoreCase)]
     private static partial Regex AckPattern();
 
     /// <summary>Captures the sequence number from a trailing {NNN} marker, e.g. "{034" → "034".</summary>
     [GeneratedRegex(@"\{(\d+)$")]
     private static partial Regex SequenceNumberPattern();
 
-    /// <summary>Captures the sequence number from an APRS ACK text, e.g. "NOCALL-2  :ack034" → "034".</summary>
+    /// <summary>Captures the sequence number from an ACK text, e.g. "NOCALL-2:ack034" or "NOCALL-2  :ack034" → "034".</summary>
     [GeneratedRegex(@":ack(\d+)$", RegexOptions.IgnoreCase)]
     private static partial Regex AckSequencePattern();
+
+    /// <summary>Captures the target callsign from a MeshCom inline ACK, e.g. "DL3DCW-12:ack881" → "DL3DCW-12".</summary>
+    [GeneratedRegex(@"^(\S+?)\s*:ack\d+$", RegexOptions.IgnoreCase)]
+    private static partial Regex AckTargetPattern();
 
     /// <summary>Detects MeshCom network time-sync broadcasts, e.g. "{CET}2026-04-07 18:11:58".</summary>
     [GeneratedRegex(@"^\{[A-Z]{2,5}\}\d{4}-\d{2}-\d{2}")]
@@ -1087,15 +1095,25 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                 msg = TrailingSequencePattern().Replace(msg, string.Empty);
             }
 
-            // Detect APRS-style ACK: "NOCALL-2 :ack187" (callsign may be space-padded to 9 chars)
+            // Detect ACK messages in two formats:
+            //   APRS-style  : "NOCALL-2 :ack187"    (space before colon, padded addressee)
+            //   MeshCom     : "NOCALL-2:ack881"     (no space; callsign directly followed by :ackNNN)
             var isAck = !isPositionBeacon && AckPattern().IsMatch(msg.Trim());
 
-            // For ACK messages extract the sequence number from the :ackNNN part
             if (isAck)
             {
+                // Extract sequence number from the :ackNNN part
                 var ackSeqMatch = AckSequencePattern().Match(msg);
                 if (ackSeqMatch.Success)
                     seqNum = ackSeqMatch.Groups[1].Value;
+
+                // For MeshCom inline ACKs the DST field from the JSON ("*" or group) is not the
+                // real ACK target – the target callsign is encoded inside the msg text itself
+                // (e.g. "DL3DCW-12:ack881").  Override dst so MarkMessageAcknowledged can find
+                // the correct outgoing message tab.
+                var ackTargetMatch = AckTargetPattern().Match(msg.Trim());
+                if (ackTargetMatch.Success)
+                    dst = ackTargetMatch.Groups[1].Value;
             }
 
             // Detect MeshCom time-sync broadcasts: "{CET}2026-04-07 18:11:58"
