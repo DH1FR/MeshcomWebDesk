@@ -547,7 +547,7 @@ public class ChatService
     /// <summary>Creates a thread-safe snapshot
     public PersistenceSnapshot CreateSnapshot()
     {
-        var state = GetState(Guid.Empty);
+        var state = GetPrimaryState();
         lock (_lock)
         {
             return new PersistenceSnapshot
@@ -565,7 +565,7 @@ public class ChatService
     /// <summary>Restores state from a previously saved snapshot into the primary node's state.</summary>
     public void LoadSnapshot(PersistenceSnapshot snapshot)
     {
-        var state = GetState(Guid.Empty);
+        var state = GetPrimaryState();
         lock (_lock)
         {
             state.Messages.Clear();
