@@ -664,14 +664,19 @@ public class ChatService
     /// Returns true when an identical message was already processed within <see cref="DedupWindow"/>.
     /// Registers the message as seen on first encounter.
     /// Priority: msg_id (most reliable) → seq:{From}:{SeqNr} → txt:{From}:{To}:{Text}
+    /// The NodeId is included in the key so the same packet received from two different
+    /// nodes is NOT considered a duplicate (each node relays its own traffic independently).
     /// </summary>
     private bool IsDuplicate(MeshcomMessage message)
     {
+        // Node prefix ensures messages from different nodes are never cross-deduplicated.
+        var nodePrefix = message.NodeId?.ToString("N") ?? "legacy";
+
         string key = !string.IsNullOrEmpty(message.MsgId)
-            ? $"mid:{message.MsgId}"
+            ? $"{nodePrefix}:mid:{message.MsgId}"
             : !string.IsNullOrEmpty(message.SequenceNumber)
-                ? $"seq:{message.From}:{message.SequenceNumber}"
-                : $"txt:{message.From}:{message.To}:{message.Text}";
+                ? $"{nodePrefix}:seq:{message.From}:{message.SequenceNumber}"
+                : $"{nodePrefix}:txt:{message.From}:{message.To}:{message.Text}";
 
         lock (_lock)
         {

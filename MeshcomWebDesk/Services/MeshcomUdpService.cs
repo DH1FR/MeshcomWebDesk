@@ -96,6 +96,10 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         {
             var localEp = new IPEndPoint(IPAddress.Parse(_settings.ListenIp), _settings.ListenPort);
             _udpClient = new UdpClient(localEp);
+            // Disable IPv4-mapped IPv6 (dual-stack) so RemoteEndPoint always returns plain IPv4 addresses.
+            // This ensures ResolveNodeByIp can match NodeProfile.DeviceIp entries reliably.
+            if (_udpClient.Client.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
+                _udpClient.Client.DualMode = false;
         }
         catch (Exception ex)
         {
@@ -137,6 +141,13 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                     var sourceIp   = result.RemoteEndPoint.Address;
                     var sourceNode = _nodeManager.ResolveNodeByIp(sourceIp);
                     var myCallsign = sourceNode?.Callsign ?? _settings.MyCallsign;
+
+                    if (sourceNode is not null)
+                        _logger.LogDebug("UDP RX from node '{NodeName}' ({NodeId}) IP={Ip}",
+                            sourceNode.Name, sourceNode.Id, sourceIp);
+                    else
+                        _logger.LogDebug("UDP RX from unknown node IP={Ip} – using legacy callsign '{Callsign}'",
+                            sourceIp, myCallsign);
 
                     var message = ParseMessage(raw);
 

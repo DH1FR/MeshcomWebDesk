@@ -114,10 +114,16 @@ public sealed class NodeManager
         var nodes = _settingsMonitor.CurrentValue.Nodes;
         if (nodes.Count == 0) return null;
 
+        // Normalize IPv4-mapped IPv6 addresses (e.g. ::ffff:192.168.1.243 → 192.168.1.243)
+        // so that UdpClient results on dual-stack sockets match NodeProfile.DeviceIp entries.
+        var normalized = remoteAddress.IsIPv4MappedToIPv6
+            ? remoteAddress.MapToIPv4()
+            : remoteAddress;
+
         foreach (var node in nodes)
         {
             if (IPAddress.TryParse(node.DeviceIp, out var nodeAddr) &&
-                nodeAddr.Equals(remoteAddress))
+                nodeAddr.Equals(normalized))
                 return node;
         }
         return null;
