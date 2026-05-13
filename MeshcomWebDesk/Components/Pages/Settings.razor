@@ -134,6 +134,29 @@
                         <input type="text" @bind="node.ListenIp" />
                         <label>Listen Port</label>
                         <input type="number" min="1" max="65535" @bind="node.ListenPort" />
+                        @* ── TLS Console ── *@
+                        <label>
+                            @Loc.T("TLS Passwort", "TLS Password", "Password TLS", "Contraseña TLS")<br />
+                            <small>@Loc.T("Leer = kein Passwort (--passwd am Node)", "Empty = no password (--passwd on node)", "Vuoto = nessuna password", "Vacío = sin contraseña")</small>
+                        </label>
+                        <input type="password" @bind="node.TelnetPassword" placeholder="••••••••" autocomplete="new-password" />
+                        <label>
+                            @Loc.T("TLS Zertifikat-Fingerprint", "TLS Certificate Fingerprint", "Impronta certificato TLS", "Huella certificado TLS")<br />
+                            <small>@Loc.T("Leer = beim ersten Verbinden anzeigen", "Empty = show on first connect", "Vuoto = mostra al primo collegamento", "Vacío = mostrar en la primera conexión")</small>
+                        </label>
+                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                            <input type="text" @bind="node.TelnetCertThumbprint"
+                                   placeholder="AA:BB:CC:…"
+                                   style="flex:1;min-width:200px;font-family:monospace;font-size:11px;" />
+                            @if (!string.IsNullOrEmpty(node.TelnetCertThumbprint))
+                            {
+                                <button class="btn-danger" style="padding:2px 8px;font-size:11px;"
+                                        @onclick="() => node.TelnetCertThumbprint = string.Empty"
+                                        title="@Loc.T("Fingerprint löschen (First-Connect-Modus)", "Clear fingerprint (first-connect mode)", "Cancella impronta", "Borrar huella")">
+                                    🗑
+                                </button>
+                            }
+                        </div>
                     </div>
                 </div>
             }
@@ -2326,16 +2349,17 @@
             MyCallsign          = s.MyCallsign,
             Nodes               = s.Nodes.Select(n => new NodeProfile
             {
-                Id         = n.Id,
-                Name       = n.Name,
-                Callsign   = n.Callsign,
-                DeviceIp   = n.DeviceIp,
-                DevicePort = n.DevicePort,
-                ListenIp   = n.ListenIp,
-                ListenPort = n.ListenPort,
-                IsPrimary  = n.IsPrimary
+                Id                    = n.Id,
+                Name                  = n.Name,
+                Callsign              = n.Callsign,
+                DeviceIp              = n.DeviceIp,
+                DevicePort            = n.DevicePort,
+                ListenIp              = n.ListenIp,
+                ListenPort            = n.ListenPort,
+                IsPrimary             = n.IsPrimary,
+                TelnetCertThumbprint  = n.TelnetCertThumbprint,
+                TelnetPassword        = n.TelnetPassword
             }).ToList(),
-            LogPath             = s.LogPath,
             LogRetainDays       = s.LogRetainDays,
             LogUdpTraffic       = s.LogUdpTraffic,
             MonitorMaxMessages  = s.MonitorMaxMessages,
@@ -2897,14 +2921,16 @@
                 MyCallsign          = s.MyCallsign,
                 Nodes               = (s.Nodes ?? []).Select(n => new NodeProfile
                 {
-                    Id         = n.Id,
-                    Name       = n.Name,
-                    Callsign   = n.Callsign,
-                    DeviceIp   = n.DeviceIp,
-                    DevicePort = n.DevicePort,
-                    ListenIp   = n.ListenIp,
-                    ListenPort = n.ListenPort,
-                    IsPrimary  = n.IsPrimary
+                    Id                    = n.Id,
+                    Name                  = n.Name,
+                    Callsign              = n.Callsign,
+                    DeviceIp              = n.DeviceIp,
+                    DevicePort            = n.DevicePort,
+                    ListenIp              = n.ListenIp,
+                    ListenPort            = n.ListenPort,
+                    IsPrimary             = n.IsPrimary,
+                    TelnetCertThumbprint  = n.TelnetCertThumbprint,
+                    TelnetPassword        = n.TelnetPassword
                 }).ToList(),
                 LogPath             = s.LogPath,
                 LogRetainDays       = s.LogRetainDays,

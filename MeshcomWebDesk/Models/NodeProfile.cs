@@ -43,4 +43,21 @@ public class NodeProfile
     /// Exactly one node in the list must be primary.
     /// </summary>
     public bool IsPrimary { get; set; } = false;
+
+    // ── TLS Console ──────────────────────────────────────────────────────
+
+    /// <summary>
+    /// SHA-256 fingerprint (colon-separated hex, e.g. "AA:BB:CC:…") of the node's
+    /// self-signed TLS certificate.  Empty = first-connect mode: accept any cert and
+    /// present the fingerprint for confirmation in the Settings page.
+    /// Each MeshCom node generates its own unique EC P-256 key + cert on first boot,
+    /// so every node will have a different fingerprint.
+    /// </summary>
+    public string TelnetCertThumbprint { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Password sent to the node after the TLS handshake (max. 14 chars, set via
+    /// <c>--passwd</c> on the node console).  Empty = no authentication required.
+    /// </summary>
+    public string TelnetPassword { get; set; } = string.Empty;
 }

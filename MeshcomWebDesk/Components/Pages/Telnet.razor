@@ -6,6 +6,7 @@
 @inject TelnetService TelnetService
 @inject SerialConsoleService SerialConsoleService
 @inject NodeManager NodeManager
+@inject SettingsService SettingsService
 @inject IOptionsMonitor<MeshcomSettings> SettingsMon
 @inject LanguageService Loc
 @inject IJSRuntime JS
@@ -35,7 +36,7 @@
                     @if (_isSerial)
                     { @($"● {Loc.T("Verbunden", "Connected", "Connesso", "Conectado")} {_settings.SerialPortName}") }
                     else
-                    { @($"● {Loc.T("Verbunden", "Connected", "Connesso", "Conectado")} {_settings.DeviceIp}:{_settings.TelnetPort}") }
+                    { @($"● {Loc.T("Verbunden", "Connected", "Connesso", "Conectado")} {ActiveNodeIp}:{_settings.TelnetPort}") }
                 }
                 else
                 {
@@ -46,6 +47,20 @@
                      title="MeshCom Firmware – GitHub" style="font-size:.8rem;opacity:.6;text-decoration:none">📦 Firmware</a>
         </span>
         <div style="display:flex;gap:.4rem">
+            @* ── Node Switcher (TLS only, multi-node mode) ── *@
+            @if (!_isSerial && NodeManager.MultiNodeEnabled)
+            {
+                <select class="node-switcher-select"
+                        value="@_consoleNodeId"
+                        @onchange="OnNodeChanged"
+                        disabled="@Console.IsConnected"
+                        title="@Loc.T("Node wählen", "Select node", "Seleziona nodo", "Seleccionar nodo")">
+                    @foreach (var node in NodeManager.Nodes)
+                    {
+                        <option value="@node.Id">@node.Name (@node.DeviceIp)</option>
+                    }
+                </select>
+            }
             @if (Console.IsConnected)
             {
                 <button class="btn-action btn-sm" title="@Loc.T("OTA-Update starten – sendet --ota-update an den Node und öffnet den OTA-Webserver", "Start OTA update – sends --ota-update to node and opens OTA web server", "Avvia aggiornamento OTA", "Iniciar actualización OTA")"
@@ -103,6 +118,27 @@
                 <div class="ota-progress">
                     <div class="ota-progress-bar" style="width:@((5 - _otaCountdown) * 20)%"></div>
                 </div>
+            </div>
+        </div>
+    }
+
+    @* ── Unbekanntes Zertifikat – First-Connect-Banner ── *@
+    @if (!string.IsNullOrEmpty(_unknownCertThumbprint))
+    {
+        <div class="settings-warn" style="margin:.4rem .6rem">
+            <strong>@Loc.T("Unbekanntes Zertifikat", "Unknown Certificate", "Certificato sconosciuto", "Certificado desconocido")</strong><br />
+            <span style="font-family:monospace;font-size:11px;word-break:break-all">@_unknownCertThumbprint</span><br />
+            <small>@Loc.T("Fingerprint in den Node-Einstellungen speichern, um diesen Node dauerhaft zu vertrauen.",
+                           "Save fingerprint in node settings to permanently trust this node.",
+                           "Salva l'impronta nelle impostazioni del nodo per fidarsi definitivamente.",
+                           "Guarda la huella en la configuración del nodo para confiar permanentemente.")</small>
+            <div style="display:flex;gap:.5rem;margin-top:.4rem">
+                <button class="btn-primary btn-sm" @onclick="TrustCertAsync">
+                    ✅ @Loc.T("Vertrauen & speichern", "Trust & save", "Fidati e salva", "Confiar y guardar")
+                </button>
+                <button class="btn-secondary btn-sm" @onclick="() => _unknownCertThumbprint = null">
+                    ✖ @Loc.T("Abbrechen", "Cancel", "Annulla", "Cancelar")
+                </button>
             </div>
         </div>
     }
@@ -165,17 +201,45 @@
     private bool _paused = false;
     private bool _loraHighlight = false;
 
+    // Selected node for TLS console (independent from chat node selection)
+    private Guid _consoleNodeId = Guid.Empty;
+
+    // Fingerprint of an unknown (first-connect) certificate, shown as a trust banner
+    private string? _unknownCertThumbprint;
+
     // Active console service (TLS or Serial)
     private IConsoleService Console => _isSerial ? SerialConsoleService : TelnetService;
     private bool _isSerial => SettingsMon.CurrentValue.ConsoleMode == "serial";
+
+    /// <summary>IP address of the currently selected console node (or legacy DeviceIp).</summary>
+    private string ActiveNodeIp
+    {
+        get
+        {
+            if (!NodeManager.MultiNodeEnabled) return _settings.DeviceIp;
+            var node = NodeManager.Nodes.FirstOrDefault(n => n.Id == _consoleNodeId);
+            return node?.DeviceIp ?? _settings.DeviceIp;
+        }
+    }
+
+    private NodeProfile? ActiveNodeProfile =>
+        NodeManager.MultiNodeEnabled
+            ? NodeManager.Nodes.FirstOrDefault(n => n.Id == _consoleNodeId)
+            : null;
 
     // ── Lifecycle ─────────────────────────────────────────────────────────
 
     protected override void OnInitialized()
     {
         _settings = SettingsMon.CurrentValue;
+        // Default to primary node for the console
+        if (NodeManager.MultiNodeEnabled)
+            _consoleNodeId = NodeManager.PrimaryNode?.Id ?? NodeManager.Nodes[0].Id;
         TelnetService.OnChange += HandleChange;
         SerialConsoleService.OnChange += HandleChange;
+        // Pick up any fingerprint left from a previous connect attempt
+        if (!string.IsNullOrEmpty(TelnetService.UnknownCertThumbprint))
+            _unknownCertThumbprint = TelnetService.UnknownCertThumbprint;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -187,6 +251,14 @@
     {
         TelnetService.OnChange -= HandleChange;
         SerialConsoleService.OnChange -= HandleChange;
+    }
+
+    // ── Node selection ────────────────────────────────────────────────────
+
+    private void OnNodeChanged(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var id))
+            _consoleNodeId = id;
     }
 
     // ── Input handling ────────────────────────────────────────────────────
@@ -216,15 +288,56 @@
 
     private async Task ConnectAsync()
     {
-        // TelnetService resolves the IP from _settings.DeviceIp directly.
-        // Node-specific IP override is only safe once all NodeProfiles are fully configured.
-        await Console.ConnectAsync();
+        _unknownCertThumbprint = null;
+        TelnetService.UnknownCertThumbprint = null;
+
+        var node = ActiveNodeProfile;
+        if (node is not null)
+        {
+            // Multi-node: pass node-specific host, cert thumbprint and password
+            await TelnetService.ConnectAsync(
+                hostOverride:           node.DeviceIp,
+                certThumbprintOverride: node.TelnetCertThumbprint,
+                passwordOverride:       string.IsNullOrEmpty(node.TelnetPassword) ? null : node.TelnetPassword);
+        }
+        else
+        {
+            // Legacy single-node: use global settings
+            await TelnetService.ConnectAsync();
+        }
+
+        // Show first-connect cert fingerprint if received
+        if (!string.IsNullOrEmpty(TelnetService.UnknownCertThumbprint))
+            _unknownCertThumbprint = TelnetService.UnknownCertThumbprint;
+
         await InvokeAsync(StateHasChanged);
     }
 
     private async Task DisconnectAsync()
     {
         await Console.DisconnectAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>Saves the unknown cert fingerprint into the matching NodeProfile and persists settings.</summary>
+    private async Task TrustCertAsync()
+    {
+        if (string.IsNullOrEmpty(_unknownCertThumbprint)) return;
+
+        var node = ActiveNodeProfile;
+        if (node is not null)
+        {
+            // Update the node's thumbprint in the live settings object and persist
+            var s = SettingsMon.CurrentValue;
+            var idx = s.Nodes.FindIndex(n => n.Id == node.Id);
+            if (idx >= 0)
+            {
+                s.Nodes[idx].TelnetCertThumbprint = _unknownCertThumbprint;
+                await SettingsService.SaveMeshcomSettingsAsync(s);
+            }
+        }
+        TelnetService.UnknownCertThumbprint = null;
+        _unknownCertThumbprint = null;
         await InvokeAsync(StateHasChanged);
     }
 
@@ -244,7 +357,7 @@
     private async Task StartOtaAsync()
     {
         await Console.SendLineAsync("--ota-update");
-        var url = $"http://{SettingsMon.CurrentValue.DeviceIp}/";
+        var url = $"http://{ActiveNodeIp}/";
 
         for (var i = 5; i >= 0; i--)
         {
@@ -267,7 +380,6 @@
         if (_paused) return;
         InvokeAsync(async () => { StateHasChanged(); await ScrollToBottomAsync(); });
     }
-
     private void TogglePause()
     {
         _paused = !_paused;
