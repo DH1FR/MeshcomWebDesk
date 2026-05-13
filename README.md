@@ -500,6 +500,27 @@ Clicking it opens a modal dialog with **four tabs**:
 - **Error handling**: wrong password, corrupted file, invalid JSON and missing fields all produce clear error messages
 - **Filename editable** before export (default: `MeshComWebDesk-settings.enc`)
 - Found in **Settings → 🔐 Datensicherung** at the bottom of the settings page
+- **Complete coverage** – the following settings are included in the backup:
+
+  | Category | What is backed up |
+  |---|---|
+  | **Multi-Node profiles** | All node profiles (`Name`, `Callsign`, `Device IP/Port`, `Listen IP/Port`, `Primary` flag, TLS fingerprint, TLS password) |
+  | **Connection** | Primary `ListenIp`, `ListenPort`, `DeviceIp`, `DevicePort`, `MyCallsign` |
+  | **Console** | `TelnetEnabled`, `ConsoleMode`, `TelnetPort`, `TelnetPassword`, `TelnetCertThumbprint`, `SerialPortName`, `SerialBaudRate` |
+  | **Chat & Groups** | `Groups`, `WatchCallsigns`, watch options, `GroupLabels`, `OwnMessagesAlignLeft`, `TxCooldownSeconds`, `GatewayHighlightEnabled` |
+  | **Auto-Reply** | `AutoReplyEnabled`, `AutoReplyText` |
+  | **Bot** | `BotEnabled`, all user-defined bot commands |
+  | **Quick Texts** | All quick-text entries |
+  | **Beacon** | `BeaconEnabled`, `BeaconGroup`, `BeaconText`, `BeaconIntervalHours` |
+  | **Telemetry** | `TelemetryEnabled`, `TelemetryFilePath`, `TelemetryGroup`, `TelemetryScheduleHours`, `TelemetryMapping`, `TelemetryApiEnabled`, `TelemetryApiKey` |
+  | **Station / RF** | `TxPowerDbm`, `CableType`, `CableLengthM`, `AntennaGainDbi`, `AntennaType`, `AntennaHeightM`, `FrequencyMhz`, `SystemMarginDb` |
+  | **Database** | Provider, MySQL connection string, InfluxDB URL/token/org/bucket, table name, log inserts flag |
+  | **QRZ.com** | `Enabled`, `Username`, `Password`, cache settings |
+  | **AI** | `Enabled`, provider, API key, model, Azure endpoint/version, threshold/summary days, max messages |
+  | **Webhook** | `Enabled`, URL, event flags |
+  | **MQTT** | All broker and topic settings including username/password |
+  | **UI** | `Language`, `MonitorMaxMessages`, `MhMaxAgeHours`, `TimeOffsetHours` |
+  | **Logging** | `LogPath`, `LogRetainDays`, `LogUdpTraffic` |
 
 ### 📱 PWA – Progressive Web App
 - **Installable** on any device via the browser's "Add to Home Screen" / "Install" prompt
