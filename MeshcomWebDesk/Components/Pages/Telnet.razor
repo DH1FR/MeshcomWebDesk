@@ -1,0 +1,505 @@
+﻿@page "/telnet"
+@using MeshcomWebDesk.Models
+@using MeshcomWebDesk.Services
+@using Microsoft.Extensions.Options
+@rendermode InteractiveServer
+@inject TelnetService TelnetService
+@inject SerialConsoleService SerialConsoleService
+@inject NodeManager NodeManager
+@inject SettingsService SettingsService
+@inject IOptionsMonitor<MeshcomSettings> SettingsMon
+@inject LanguageService Loc
+@inject IJSRuntime JS
+@implements IDisposable
+
+<PageTitle>🖥️ Console – MeshCom WebDesk</PageTitle>
+
+<ErrorBoundary>
+<ChildContent>
+<div class="telnet-page">
+
+    @* ── Header ── *@
+    <div class="telnet-header">
+        <span class="telnet-title">
+            @if (_isSerial)
+            {
+                <span>🔌 @Loc.T("Seriell Console", "Serial Console")</span>
+            }
+            else
+            {
+                <span>🖥️ TLS Console</span>
+            }
+            &nbsp;·&nbsp;
+            <span class="status-badge @(Console.IsConnected ? "status-badge-ok" : "status-badge-err")">
+                @if (Console.IsConnected)
+                {
+                    @if (_isSerial)
+                    { @($"● {Loc.T("Verbunden", "Connected")} {_settings.SerialPortName}") }
+                    else
+                    { @($"● {Loc.T("Verbunden", "Connected")} {ActiveNodeIp}:{_settings.TelnetPort}") }
+                }
+                else
+                {
+                    @($"○ {Loc.T("Getrennt", "Disconnected")}")
+                }
+            </span>
+            &nbsp;<a href="https://github.com/icssw-org/MeshCom-Firmware" target="_blank" rel="noopener"
+                     title="MeshCom Firmware – GitHub" style="font-size:.8rem;opacity:.6;text-decoration:none">📦 Firmware</a>
+        </span>
+        <div style="display:flex;gap:.4rem">
+            @* ── Node Switcher (TLS only, multi-node mode) ── *@
+            @if (!_isSerial && NodeManager.MultiNodeEnabled)
+            {
+                <select class="node-switcher-select"
+                        value="@_consoleNodeId"
+                        @onchange="OnNodeChanged"
+                        disabled="@Console.IsConnected"
+                        title="@Loc.T("Node wählen", "Select node")">
+                    @foreach (var node in NodeManager.Nodes)
+                    {
+                        <option value="@node.Id">@node.Name (@node.DeviceIp)</option>
+                    }
+                </select>
+            }
+            @if (Console.IsConnected)
+            {
+                <button class="btn-action btn-sm" title="@Loc.T("OTA-Update starten – sendet --ota-update an den Node und öffnet den OTA-Webserver", "Start OTA update – sends --ota-update to node and opens OTA web server")"
+                        @onclick="StartOtaAsync">
+                    🔄 OTA
+                </button>
+                <button class="btn-warn btn-sm" title="@Loc.T("Node neu starten – sendet --reboot an den Node", "Reboot node – sends --reboot to node")"
+                        @onclick="() => _rebootConfirm = true">
+                    🔁 @Loc.T("Reboot", "Reboot")
+                </button>
+                <button class="btn-danger btn-sm" @onclick="DisconnectAsync">
+                    @Loc.T("Trennen", "Disconnect")
+                </button>
+            }
+            <button class="btn-sm @(_paused ? "btn-primary" : "btn-action")" @onclick="TogglePause"
+                    title="@(_paused ? Loc.T("Ausgabe fortsetzen (Scroll wieder aktiv)", "Resume output (scroll re-enabled)") : Loc.T("Ausgabe pausieren (neue Zeilen kommen weiter rein)", "Pause output (new lines still buffered)"))">
+                @(_paused ? "▶ " + Loc.T("Weiter", "Resume") : "⏸ " + Loc.T("Pause", "Pause"))
+            </button>
+            <button class="btn-sm @(_loraHighlight ? "btn-primary" : "btn-action")" @onclick="() => _loraHighlight = !_loraHighlight"
+                    title="@Loc.T("LoRa-Debug-Hervorhebung ein/aus", "LoRa debug highlighting on/off")">
+                📻 @Loc.T("LoRa", "LoRa")
+            </button>
+            <button class="btn-action btn-sm" @onclick="ClearLines">
+                @Loc.T("Löschen", "Clear")
+            </button>
+        </div>
+    </div>
+
+    @* ── Reboot-Bestätigung ── *@
+    @if (_rebootConfirm)
+    {
+        <div class="ota-overlay">
+            <div class="ota-dialog">
+                <div class="ota-icon">🔁</div>
+                <div class="ota-title">@Loc.T("Node neu starten?", "Reboot node?")</div>
+                <div class="ota-msg">@Loc.T("Der Node wird neu gestartet. Die TLS-Verbindung wird danach getrennt.", "The node will be rebooted. The TLS connection will be disconnected afterwards.")</div>
+                <div style="display:flex;gap:.6rem;justify-content:center;margin-top:.8rem">
+                    <button class="btn-danger btn-sm" @onclick="RebootConfirmedAsync">🔁 @Loc.T("Ja, neu starten", "Yes, reboot")</button>
+                    <button class="btn-action btn-sm" @onclick="() => _rebootConfirm = false">@Loc.T("Abbrechen", "Cancel")</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @* ── OTA-Dialog ── *@
+    @if (_otaCountdown >= 0)
+    {
+        <div class="ota-overlay">
+            <div class="ota-dialog">
+                <div class="ota-icon">🔄</div>
+                <div class="ota-title">@Loc.T("OTA-Update wird gestartet", "Starting OTA Update")</div>
+                <div class="ota-msg">@Loc.T("Der Node startet den OTA-Webserver. Die Seite öffnet sich in", "The node is starting the OTA web server. Page opens in")
+                    <strong>&nbsp;@_otaCountdown @Loc.T("Sekunden", "seconds")</strong> …
+                </div>
+                <div class="ota-progress">
+                    <div class="ota-progress-bar" style="width:@((5 - _otaCountdown) * 20)%"></div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @* ── Unbekanntes Zertifikat – First-Connect-Banner (nur TLS-Modus) ── *@
+    @if (!_isSerial && !string.IsNullOrEmpty(_unknownCertThumbprint))
+    {
+        <div class="settings-warn" style="margin:.4rem .6rem">
+            <strong>@Loc.T("Unbekanntes Zertifikat", "Unknown Certificate")</strong><br />
+            <span style="font-family:monospace;font-size:11px;word-break:break-all">@_unknownCertThumbprint</span><br />
+            <small>@Loc.T("Fingerprint in den Node-Einstellungen speichern, um diesen Node dauerhaft zu vertrauen.",
+                           "Save fingerprint in node settings to permanently trust this node.")</small>
+            <div style="display:flex;gap:.5rem;margin-top:.4rem">
+                <button class="btn-primary btn-sm" @onclick="TrustCertAsync">
+                    ✅ @Loc.T("Vertrauen & speichern", "Trust & save")
+                </button>
+                <button class="btn-secondary btn-sm" @onclick="() => _unknownCertThumbprint = null">
+                    ✖ @Loc.T("Abbrechen", "Cancel")
+                </button>
+            </div>
+        </div>
+    }
+
+    @* ── Output ── *@
+    <div class="telnet-output" id="telnet-output">
+        @lock (Console.Lines)
+        {
+            @foreach (var line in Console.Lines)
+            {
+                @if (_loraHighlight)
+                {
+                    var cl = ClassifyLine(line);
+                    <div class="telnet-line @cl.Css" title="@cl.Hint">@((MarkupString)cl.Html)</div>
+                }
+                else
+                {
+                    <div class="telnet-line">@line</div>
+                }
+            }
+        }
+    </div>
+
+    @* ── Input ── *@
+    <div class="telnet-input-bar">
+        <span class="telnet-prompt">&gt;</span>
+        <input class="telnet-input"
+               @bind="_inputText"
+               @bind:event="oninput"
+               @onkeydown="OnKeyDown"
+               placeholder="@(Console.IsConnected ? Loc.T("Befehl eingeben …", "Enter command …") : Loc.T("Nicht verbunden", "Not connected"))"
+               autocomplete="off"
+               spellcheck="false"
+               disabled="@(!Console.IsConnected)"
+               id="telnet-input" />
+        @if (Console.IsConnected)
+        {
+            <button class="btn-action btn-sm" @onclick="SendInputAsync">
+                @Loc.T("Senden", "Send")
+            </button>
+        }
+        else
+        {
+            <button class="btn-action btn-sm" @onclick="ConnectAsync">
+                @Loc.T("Verbinden", "Connect")
+            </button>
+        }
+    </div>
+
+</div>
+</ChildContent>
+<ErrorContent Context="ex">
+    <div class="alert alert-danger">Console Fehler: @ex.Message</div>
+</ErrorContent>
+</ErrorBoundary>
+
+@code {
+    private MeshcomSettings _settings = new();
+    private string _inputText = string.Empty;
+    private bool _paused = false;
+    private bool _loraHighlight = false;
+
+    // Selected node for TLS console (independent from chat node selection)
+    private Guid _consoleNodeId = Guid.Empty;
+
+    // Fingerprint of an unknown (first-connect) certificate, shown as a trust banner
+    private string? _unknownCertThumbprint;
+
+    // Active console service (TLS or Serial)
+    private IConsoleService Console => _isSerial ? SerialConsoleService : TelnetService;
+    private bool _isSerial => SettingsMon.CurrentValue.ConsoleMode == "serial";
+
+    /// <summary>IP address of the currently selected console node (or legacy DeviceIp).</summary>
+    private string ActiveNodeIp
+    {
+        get
+        {
+            if (!NodeManager.MultiNodeEnabled) return _settings.DeviceIp;
+            var node = NodeManager.Nodes.FirstOrDefault(n => n.Id == _consoleNodeId);
+            return node?.DeviceIp ?? _settings.DeviceIp;
+        }
+    }
+
+    private NodeProfile? ActiveNodeProfile =>
+        NodeManager.MultiNodeEnabled
+            ? NodeManager.Nodes.FirstOrDefault(n => n.Id == _consoleNodeId)
+            : null;
+
+    // ── Lifecycle ─────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        _settings = SettingsMon.CurrentValue;
+        // Default to primary node for the console
+        if (NodeManager.MultiNodeEnabled)
+            _consoleNodeId = NodeManager.PrimaryNode?.Id ?? NodeManager.Nodes[0].Id;
+        TelnetService.OnChange += HandleChange;
+        SerialConsoleService.OnChange += HandleChange;
+        // Pick up any fingerprint left from a previous connect attempt (nur im TLS-Modus relevant)
+        if (!_isSerial && !string.IsNullOrEmpty(TelnetService.UnknownCertThumbprint))
+            _unknownCertThumbprint = TelnetService.UnknownCertThumbprint;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await ScrollToBottomAsync();
+    }
+
+    public void Dispose()
+    {
+        TelnetService.OnChange -= HandleChange;
+        SerialConsoleService.OnChange -= HandleChange;
+    }
+
+    // ── Node selection ────────────────────────────────────────────────────
+
+    private void OnNodeChanged(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var id))
+            _consoleNodeId = id;
+    }
+
+    // ── Input handling ────────────────────────────────────────────────────
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await SendInputAsync();
+    }
+
+    private async Task SendInputAsync()
+    {
+        var text = _inputText.Trim();
+        if (string.IsNullOrEmpty(text)) return;
+
+        _inputText = string.Empty;
+        await Console.SendLineAsync(text);
+        await ScrollToBottomAsync();
+    }
+
+    private void ClearLines()
+    {
+        lock (Console.Lines)
+            Console.Lines.Clear();
+        StateHasChanged();
+    }
+
+    private async Task ConnectAsync()
+    {
+        _unknownCertThumbprint = null;
+        TelnetService.UnknownCertThumbprint = null;
+
+        if (_isSerial)
+        {
+            await SerialConsoleService.ConnectAsync();
+        }
+        else
+        {
+            var node = ActiveNodeProfile;
+            if (node is not null)
+            {
+                // Multi-node: pass node-specific host, cert thumbprint and password.
+                // Use string.Empty (not null) when no thumbprint is stored so the
+                // fallback to the global TelnetCertThumbprint (= Node 1) is NOT triggered.
+                await TelnetService.ConnectAsync(
+                    hostOverride:           node.DeviceIp,
+                    certThumbprintOverride: node.TelnetCertThumbprint,   // "" → first-connect mode
+                    passwordOverride:       string.IsNullOrEmpty(node.TelnetPassword) ? null : node.TelnetPassword);
+            }
+            else
+            {
+                // Legacy single-node: use global settings
+                await TelnetService.ConnectAsync();
+            }
+
+            // Show first-connect cert fingerprint if received (nur TLS-Modus)
+            if (!string.IsNullOrEmpty(TelnetService.UnknownCertThumbprint))
+                _unknownCertThumbprint = TelnetService.UnknownCertThumbprint;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task DisconnectAsync()
+    {
+        await Console.DisconnectAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>Saves the unknown cert fingerprint into the matching NodeProfile and persists settings.</summary>
+    private async Task TrustCertAsync()
+    {
+        if (string.IsNullOrEmpty(_unknownCertThumbprint)) return;
+
+        var node = ActiveNodeProfile;
+        if (node is not null)
+        {
+            // Update the node's thumbprint in the live settings object and persist
+            var s = SettingsMon.CurrentValue;
+            var idx = s.Nodes.FindIndex(n => n.Id == node.Id);
+            if (idx >= 0)
+            {
+                s.Nodes[idx].TelnetCertThumbprint = _unknownCertThumbprint;
+                await SettingsService.SaveMeshcomSettingsAsync(s);
+            }
+        }
+        TelnetService.UnknownCertThumbprint = null;
+        _unknownCertThumbprint = null;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private int _otaCountdown = -1;  // -1 = dialog hidden
+    private bool _rebootConfirm = false;
+
+    private async Task RebootConfirmedAsync()
+    {
+        _rebootConfirm = false;
+        await InvokeAsync(StateHasChanged);
+        await Console.SendLineAsync("--reboot");
+        await Task.Delay(1500);
+        await Console.DisconnectAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task StartOtaAsync()
+    {
+        await Console.SendLineAsync("--ota-update");
+        var url = $"http://{ActiveNodeIp}/";
+
+        for (var i = 5; i >= 0; i--)
+        {
+            _otaCountdown = i;
+            await InvokeAsync(StateHasChanged);
+            if (i > 0) await Task.Delay(1000);
+        }
+
+        await JS.InvokeVoidAsync("open", url, "_blank");
+        _otaCountdown = -1;
+        await InvokeAsync(StateHasChanged);
+        await Console.DisconnectAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // ── Events ────────────────────────────────────────────────────────────
+
+    private void HandleChange()
+    {
+        // Pick up cert fingerprint from TLS first-connect (may arrive via OnChange callback)
+        if (!_isSerial && !string.IsNullOrEmpty(TelnetService.UnknownCertThumbprint))
+            _unknownCertThumbprint = TelnetService.UnknownCertThumbprint;
+
+        if (_paused) return;
+        InvokeAsync(async () => { StateHasChanged(); await ScrollToBottomAsync(); });
+    }
+    private void TogglePause()
+    {
+        _paused = !_paused;
+        if (!_paused)
+            InvokeAsync(async () => { StateHasChanged(); await ScrollToBottomAsync(); });
+    }
+
+    private async Task ScrollToBottomAsync()
+    {
+        try { await JS.InvokeVoidAsync("scrollElementToBottom", "telnet-output"); }
+        catch { /* JS not ready */ }
+    }
+
+    private record LineInfo(string Css, string Html, string Hint);
+
+    private static LineInfo ClassifyLine(string raw)
+    {
+        if (string.IsNullOrEmpty(raw))
+            return new("", "", "");
+
+        var esc = System.Net.WebUtility.HtmlEncode(raw);
+
+        // ── State Machine ───────────────────────────────────────────────
+        if (raw.StartsWith("[MC-SM]"))
+        {
+            var hint = raw.Contains("rc=0") ? "OK" : raw.Contains("rc=") ? "⚠ Fehler" : "";
+            var hasErr = raw.Contains("rc=") && !raw.Contains("rc=0");
+            return new(hasErr ? "lora-sm lora-err" : "lora-sm", Highlight(esc, "lora-sm-kw", "->", "rc="), hint);
+        }
+
+        // ── Warnings ────────────────────────────────────────────────────
+        if (raw.StartsWith("[MC-WARN]") || raw.Contains("RX_BUF_OVERWRITE") || raw.Contains("ONRXDONE_SLOW"))
+            return new("lora-warn", Highlight(esc, "lora-warn-kw", "WARN", "SLOW", "OVERWRITE"), "⚠ Warnung");
+
+        // ── HWM ─────────────────────────────────────────────────────────
+        if (raw.StartsWith("[MC-HWM]"))
+            return new("lora-hwm", esc, "High-Water-Mark Statistik");
+
+        // ── Channel Util ─────────────────────────────────────────────────
+        if (raw.Contains("CHANNEL_UTIL"))
+            return new("lora-util", HighlightKv(esc), "Kanalauslastung");
+
+        // ── Debug: RX ───────────────────────────────────────────────────
+        if (raw.StartsWith("[MC-DBG]") && (raw.Contains("RX_") || raw.Contains("OnRx") || raw.Contains("CAD")))
+            return new("lora-dbg-rx", HighlightKv(esc), "RX / CAD Debug");
+
+        // ── Debug: TX / CSMA ────────────────────────────────────────────
+        if (raw.StartsWith("[MC-DBG]") && (raw.Contains("TX_") || raw.Contains("CSMA") || raw.Contains("CAD_FREE") || raw.Contains("RADIO_TX") || raw.Contains("RING_TX") || raw.Contains("RETRANSMIT")))
+            return new("lora-dbg-tx", HighlightKv(esc), "TX / CSMA Debug");
+
+        // ── Debug: ACK ──────────────────────────────────────────────────
+        if (raw.StartsWith("[MC-DBG]") && raw.Contains("ACK"))
+            return new("lora-dbg-ack", HighlightKv(esc), "ACK Debug");
+
+        // ── Debug: RING ─────────────────────────────────────────────────
+        if (raw.StartsWith("[MC-DBG]") && raw.Contains("RING"))
+            return new("lora-dbg-ring", HighlightKv(esc), "Ring-Buffer");
+
+        // ── Debug: RELAY ────────────────────────────────────────────────
+        if (raw.StartsWith("[MC-DBG]") && raw.Contains("RELAY"))
+            return new("lora-dbg-relay", HighlightKv(esc), "Relay");
+
+        // ── Generic MC-DBG ──────────────────────────────────────────────
+        if (raw.StartsWith("[MC-DBG]"))
+            return new("lora-dbg", HighlightKv(esc), "Debug");
+
+        // ── Received packet ─────────────────────────────────────────────
+        if (raw.StartsWith("[LoRa]") && raw.Contains("Received"))
+            return new("lora-rx-pkt", HighlightKv(esc), "Empfangenes Paket");
+
+        // ── TX/RX LoRa lines ────────────────────────────────────────────
+        if (raw.StartsWith("TX-LoRa"))
+            return new("lora-tx", esc, "Gesendetes Paket");
+        if (raw.StartsWith("RX-LoRa") || raw.StartsWith("MH-LoRa"))
+            return new("lora-rx", esc, "Empfangenes Paket");
+
+        // ── OnRxDone / OnRxTimeout / OnRxError ──────────────────────────
+        if (raw.StartsWith("OnRxDone"))  return new("lora-dbg-rx", esc, "OnRxDone");
+        if (raw.StartsWith("OnRxTimeout")) return new("lora-dim",  esc, "OnRxTimeout");
+        if (raw.StartsWith("OnRxError"))   return new("lora-warn", esc, "OnRxError – CRC/Header-Fehler");
+
+        // ── APRS errors ─────────────────────────────────────────────────
+        if (raw.StartsWith("APRS decode"))
+            return new("lora-aprs-err", esc, "APRS Protokollfehler");
+
+        // ── CHECK (CAD scan) ────────────────────────────────────────────
+        if (raw.StartsWith("[CHECK]"))
+            return new("lora-dbg-tx", esc, "CAD Scan");
+
+        // ── Dedup ───────────────────────────────────────────────────────
+        if (raw.Contains("RX_DEDUP"))
+            return new(raw.Contains("DUP") ? "lora-dim" : "lora-dbg-rx", HighlightKv(esc),
+                       raw.Contains("DUP") ? "Duplikat verworfen" : "Neues Paket");
+
+        return new("", esc, "");
+    }
+
+    // Bold key=value pairs like rssi=-110, wait=4675, util=15%
+    private static string HighlightKv(string html) =>
+        System.Text.RegularExpressions.Regex.Replace(
+            html,
+            @"(\b\w+=)(-?\d+\w*%?)",
+            "<span class=\"lora-kv-key\">$1</span><span class=\"lora-kv-val\">$2</span>");
+
+    // Bold specific keywords within the line
+    private static string Highlight(string html, string css, params string[] keywords)
+    {
+        foreach (var kw in keywords)
+            html = html.Replace(kw, $"<span class=\"{css}\">{kw}</span>");
+        return html;
+    }
+}

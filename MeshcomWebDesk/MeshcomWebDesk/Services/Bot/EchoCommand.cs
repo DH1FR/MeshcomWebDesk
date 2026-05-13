@@ -6,7 +6,7 @@ namespace MeshcomWebDesk.Services.Bot;
 public class EchoCommand(LanguageService lang) : IBotCommand
 {
     public string Name        => "echo";
-    public string Description => lang.T("Text zurücksenden", "Echo text back", "Rimanda il testo", "Devolver texto");
+    public string Description => lang.T("Text zurücksenden", "Echo text back");
 
     public Task<string> ExecuteAsync(string[] args, string senderCallsign)
     {
@@ -14,9 +14,7 @@ public class EchoCommand(LanguageService lang) : IBotCommand
         {
             var hint = lang.T(
                 "Verwendung: --echo <Text>",
-                "Usage: --echo <text>",
-                "Uso: --echo <testo>",
-                "Uso: --echo <texto>");
+                "Usage: --echo <text>");
             return Task.FromResult(hint);
         }
 

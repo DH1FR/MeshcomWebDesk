@@ -4,6 +4,17 @@ public class MeshcomSettings
 {
     public const string SectionName = "Meshcom";
 
+    // ── Multi-Node ────────────────────────────────────────────────────────
+    /// <summary>
+    /// List of configured MeshCom nodes.
+    /// When this list is non-empty it takes precedence over the legacy
+    /// <see cref="DeviceIp"/> / <see cref="DevicePort"/> / <see cref="ListenIp"/> /
+    /// <see cref="ListenPort"/> properties, which are kept for backward compatibility.
+    /// Exactly one entry must have <see cref="NodeProfile.IsPrimary"/> = true.
+    /// </summary>
+    public List<NodeProfile> Nodes { get; set; } = [];
+
+    // ── Legacy / Primary node connection (used when Nodes list is empty) ──
     /// <summary>IP address to bind the UDP listener to (e.g. "0.0.0.0" for all interfaces).</summary>
     public string ListenIp { get; set; } = "0.0.0.0";
 
@@ -270,4 +281,42 @@ public class MeshcomSettings
     /// instead of the default right-aligned layout.
     /// </summary>
     public bool OwnMessagesAlignLeft { get; set; } = false;
+
+    /// <summary>
+    /// Minimum wait time between two transmissions in seconds.
+    /// 0 = disabled. Valid range when enabled: 5–60 s.
+    /// </summary>
+    public int TxCooldownSeconds { get; set; } = 5;
+
+    /// <summary>
+    /// When true, gateway stations (fetched from meshcom.oevsv.at) are highlighted
+    /// with a special colour and 🌐 symbol in the MH list and on the map.
+    /// </summary>
+    public bool GatewayHighlightEnabled { get; set; } = true;
+
+    // ── Telnet / Console ─────────────────────────────────────────────────
+
+    /// <summary>When true, a Console tab is shown.</summary>
+    public bool TelnetEnabled { get; set; } = false;
+
+    /// <summary>Console mode: "tls" (default) or "serial".</summary>
+    public string ConsoleMode { get; set; } = "tls";
+
+    /// <summary>TCP port for the TLS Telnet connection. Default: 2323.</summary>
+    public int TelnetPort { get; set; } = 2323;
+
+    /// <summary>Password sent after the TLS handshake. Stored encrypted (dp: prefix).</summary>
+    public string TelnetPassword { get; set; } = string.Empty;
+
+    /// <summary>
+    /// SHA-256 fingerprint of the trusted node certificate (hex, no colons).
+    /// Empty = first-connect mode: accept any cert and expose fingerprint for user confirmation.
+    /// </summary>
+    public string TelnetCertThumbprint { get; set; } = string.Empty;
+
+    /// <summary>Serial port name for serial console mode, e.g. COM3 or /dev/ttyUSB0.</summary>
+    public string SerialPortName { get; set; } = string.Empty;
+
+    /// <summary>Baud rate for serial console mode. Default: 115200.</summary>
+    public int SerialBaudRate { get; set; } = 115200;
 }

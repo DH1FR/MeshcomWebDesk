@@ -115,7 +115,14 @@ builder.Services.AddSingleton<QrzService>();
 builder.Services.AddSingleton<MqttService>();
 builder.Services.AddSingleton<UpdateCheckService>();
 builder.Services.AddSingleton<ElevationService>();
+builder.Services.AddSingleton<TelnetService>();
+builder.Services.AddSingleton<SerialConsoleService>();
+builder.Services.AddHttpClient("MeshcomGateway").ConfigurePrimaryHttpMessageHandler(
+    () => new HttpClientHandler { AllowAutoRedirect = true });
+builder.Services.AddSingleton<GatewayService>();
+builder.Services.AddSingleton<NodeManager>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<UpdateCheckService>());
+builder.Services.AddHostedService(sp => sp.GetRequiredService<GatewayService>());
 builder.Services.AddSingleton<IMeshcomSender>(sp => sp.GetRequiredService<MeshcomUdpService>());
 builder.Services.AddSingleton<IMeshcomVariableExpander>(sp => sp.GetRequiredService<MeshcomUdpService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<MeshcomUdpService>());
@@ -128,8 +135,9 @@ builder.Services.AddRazorComponents()
 var app = builder.Build();
 
 // Break circular dependency: ChatService ← MqttService ← IMeshcomSender ← MeshcomUdpService ← ChatService
-app.Services.GetRequiredService<ChatService>()
-   .SetMqttService(app.Services.GetRequiredService<MqttService>());
+var chatService = app.Services.GetRequiredService<ChatService>();
+chatService.SetMqttService(app.Services.GetRequiredService<MqttService>());
+chatService.SetNodeManager(app.Services.GetRequiredService<NodeManager>());
 
 if (!app.Environment.IsDevelopment())
 {

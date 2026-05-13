@@ -1,4 +1,4 @@
-@rendermode InteractiveServer
+﻿@rendermode InteractiveServer
 @inject MeshcomWebDesk.Services.UpdateCheckService UpdateCheck
 @inject MeshcomWebDesk.Services.LanguageService Loc
 @implements IDisposable
@@ -8,14 +8,12 @@
     <div class="update-banner">
         <span>🚀 @Loc.T(
             $"Neue Version verfügbar: {UpdateCheck.LatestVersion}",
-            $"New version available: {UpdateCheck.LatestVersion}",
-            $"Nuova versione disponibile: {UpdateCheck.LatestVersion}",
-            $"Nueva versión disponible: {UpdateCheck.LatestVersion}")</span>
+            $"New version available: {UpdateCheck.LatestVersion}")</span>
         <a href="@UpdateCheck.ReleasePageUrl" target="_blank" rel="noopener" class="update-banner-link">
-            @Loc.T("Zum Release", "View Release", "Vedi Release", "Ver Release") ↗
+            @Loc.T("Zum Release", "View Release") ↗
         </a>
         <button class="update-banner-dismiss" @onclick="Dismiss" @onclick:stopPropagation="true"
-                title="@Loc.T("Schließen", "Dismiss", "Chiudi", "Cerrar")">✕</button>
+                title="@Loc.T("Schließen", "Dismiss")">✕</button>
     </div>
 }
 

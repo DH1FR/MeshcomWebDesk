@@ -1,9 +1,10 @@
-@using Microsoft.Extensions.Options
+﻿@using Microsoft.Extensions.Options
 @using MeshcomWebDesk.Models
 @using MeshcomWebDesk.Services
 @inject IOptionsMonitor<MeshcomSettings> SettingsMonitor
 @inject MeshcomUdpService UdpService
 @inject SettingsService SettingsSvc
+@inject ChatService ChatService
 
 <div class="send-bar-wrap">
     @if (_flyoutOpen && _quickTexts.Count > 0)
@@ -18,7 +19,7 @@
                     @qt.Label
                 </button>
             }
-            <button class="quicktext-close" @onclick="() => _flyoutOpen = false" title="@Loc.T("Schließen", "Close", "Chiudi", "Cerrar")">✕</button>
+            <button class="quicktext-close" @onclick="() => _flyoutOpen = false" title="@Loc.T("Schließen", "Close")">✕</button>
         </div>
     }
     <div class="send-bar">
@@ -26,18 +27,27 @@
         {
             <button class="btn-quicktext @(_flyoutOpen ? "btn-quicktext-active" : "")"
                     @onclick="ToggleFlyout"
-                    title="@Loc.T("Schnelltexte", "Quick Texts", "Testi rapidi", "Textos rápidos")">⚡</button>
+                    title="@Loc.T("Schnelltexte", "Quick Texts")">⚡</button>
         }
         <textarea id="send-bar-input"
-                  placeholder="@Loc.T("Nachricht eingeben...", "Enter message...", "Inserisci messaggio...", "Escribe un mensaje...")"
+                  placeholder="@Loc.T("Nachricht eingeben...", "Enter message...")"
                   maxlength="149"
                   spellcheck="true"
                   autocomplete="on"
                   lang="de"
                   rows="1"></textarea>
         <span class="char-counter">0/149</span>
-        <button class="btn-send" @onclick="SendAsync">
-            @Loc.T("Senden", "Send", "Invia", "Enviar")
+        <button class="btn-send @(ChatService.TxCooldownRemaining > 0 ? "btn-send-cooldown" : "")"
+                disabled="@(ChatService.TxCooldownRemaining > 0 ? "disabled" : null)"
+                @onclick="SendAsync">
+            @if (ChatService.TxCooldownRemaining > 0)
+            {
+                <span>⏳ @ChatService.TxCooldownRemaining s</span>
+            }
+            else
+            {
+                @Loc.T("Senden", "Send")
+            }
         </button>
     </div>
 </div>
@@ -58,12 +68,11 @@
     private const int MaxLength = 149;
     private DotNetObjectReference<SendBar>? _dotNetRef;
     private IDisposable? _settingsListener;
-
-    private bool CanSend => true; // Validierung erfolgt beim Senden via JS
+    private CancellationTokenSource? _cooldownCts;
 
     protected override void OnInitialized()
     {
-        Loc.OnChange += ForceRerender;
+        Loc.OnChange += OnLocChange;
         LoadQuickTextsFromSettings();
         _settingsListener = SettingsMonitor.OnChange(_ => { LoadQuickTextsFromSettings(); InvokeAsync(ForceRerender); });
     }
@@ -72,6 +81,7 @@
 
     protected override bool ShouldRender()
     {
+        if (ChatService.TxCooldownRemaining > 0) { _rendered = false; return true; }
         if (!_rendered) { _rendered = true; return true; }
         return false;
     }
@@ -91,9 +101,12 @@
         }
     }
 
+    private void OnLocChange() => _ = InvokeAsync(StateHasChanged);
+
     public void Dispose()
     {
-        Loc.OnChange -= ForceRerender;
+        _cooldownCts?.Cancel();
+        Loc.OnChange -= OnLocChange;
         _settingsListener?.Dispose();
         _dotNetRef?.Dispose();
     }
@@ -160,6 +173,7 @@
     [JSInvokable]
     public async Task JsSendAsync()
     {
+        if (ChatService.TxCooldownRemaining > 0) return;
         _text = await JS.InvokeAsync<string>("meshcomChat.getSendBarValue", "send-bar-input");
         if (string.IsNullOrWhiteSpace(_text) || _text.Length > MaxLength) return;
         var expanded = await UdpService.ExpandVariablesAsync(_text, Callsign);
@@ -167,6 +181,25 @@
         _text = string.Empty;
         await JS.InvokeVoidAsync("meshcomChat.setSendBarValue", "send-bar-input", string.Empty);
         await OnSend.InvokeAsync(text);
+        _ = StartCooldownTimerAsync();
+    }
+
+    private async Task StartCooldownTimerAsync()
+    {
+        _cooldownCts?.Cancel();
+        _cooldownCts = new CancellationTokenSource();
+        var token = _cooldownCts.Token;
+        try
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+            while (!token.IsCancellationRequested && ChatService.TxCooldownRemaining > 0)
+            {
+                await timer.WaitForNextTickAsync(token);
+                await InvokeAsync(StateHasChanged);
+            }
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (OperationCanceledException) { }
     }
 
     [JSInvokable]

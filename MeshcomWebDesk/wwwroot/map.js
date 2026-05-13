@@ -36,7 +36,7 @@ window.meshcomMap = (function () {
     }
 
     // APRS-style marker: filled circle (signal colour) + optional relay ring + callsign label
-    function stationIcon(callsign, rssi, hopCount, hasTelem) {
+    function stationIcon(callsign, rssi, hopCount, hasTelem, isGateway) {
         var sigClass = rssi == null ? 'sig-none'
                      : rssi > -90  ? 'sig-good'
                      : rssi > -105 ? 'sig-ok'
@@ -44,20 +44,24 @@ window.meshcomMap = (function () {
         var relayClass = hopCount > 1 ? ' aprs-relay-2'
                        : hopCount > 0 ? ' aprs-relay-1'
                        :                '';
+        var gwClass   = isGateway ? ' aprs-gateway' : '';
+        var gwIcon    = isGateway ? '<span class="aprs-gw-icon">\uD83C\uDF10</span>' : '';
         var telemIcon = hasTelem ? '<span class="aprs-telem-icon">\uD83C\uDF21\uFE0F</span>' : '';
         var html = '<div class="aprs-wrap">'
-                 + '<div class="aprs-dot ' + sigClass + relayClass + '"></div>'
-                 + '<div class="aprs-label">' + esc(callsign) + telemIcon + '</div>'
+                 + '<div class="aprs-dot ' + sigClass + relayClass + gwClass + '"></div>'
+                 + '<div class="aprs-label' + (isGateway ? ' aprs-label-gateway' : '') + '">' + gwIcon + esc(callsign) + telemIcon + '</div>'
                  + '</div>';
         return L.divIcon({ className: '', html: html, iconAnchor: [6, 6] });
     }
 
-    // Own position: gold diamond + label
-    function ownIcon(callsign, hasTelem) {
+    // Own position: gold diamond + label (+ green gateway ring when isGateway)
+    function ownIcon(callsign, hasTelem, isGateway) {
         var telemIcon = hasTelem ? '<span class="aprs-telem-icon">\uD83C\uDF21\uFE0F</span>' : '';
+        var gwIcon    = isGateway ? '<span class="aprs-gw-icon">\uD83C\uDF10</span>' : '';
+        var gwRing    = isGateway ? ' aprs-own-gateway' : '';
         var html = '<div class="aprs-wrap">'
-                 + '<div class="aprs-dot aprs-own"></div>'
-                 + '<div class="aprs-label aprs-own-label">' + esc(callsign) + telemIcon + '</div>'
+                 + '<div class="aprs-dot aprs-own' + gwRing + '"></div>'
+                 + '<div class="aprs-label aprs-own-label' + (isGateway ? ' aprs-label-gateway' : '') + '">' + gwIcon + esc(callsign) + telemIcon + '</div>'
                  + '</div>';
         return L.divIcon({ className: '', html: html, iconAnchor: [7, 7] });
     }
@@ -192,7 +196,7 @@ window.meshcomMap = (function () {
                     + 'id="ai-btn-' + esc(s.callsign.replace(/[^a-zA-Z0-9]/g,'-')) + '" '
                     + 'style="margin-top:5px;font-size:11px;background:#1a3a5c;color:#79c0ff;border:1px solid #3a6a8a;border-radius:4px;padding:2px 8px;cursor:pointer">🤖 KI-Info</button>'
                     + '<div id="ai-result-' + esc(s.callsign.replace(/[^a-zA-Z0-9]/g,'-')) + '" style="font-size:11px;margin-top:4px;color:#c9d1d9;max-width:260px;white-space:pre-wrap"></div>';
-                var popup = '<b>' + esc(s.callsign) + '</b>' + qrzLine + badgeLine + relayLine + telemLine
+                var popup = '<b>' + esc(s.callsign) + '</b>' + (s.isGateway ? ' <span style="font-size:10px;font-weight:700;background:#0d2b1a;color:#3fb950;border-radius:3px;padding:1px 5px;margin-left:4px">GW</span>' : '') + qrzLine + badgeLine + relayLine + telemLine
                     + (s.text     ? '<br><span style="font-size:12px">' + esc(s.text) + '</span>' : '')
                     + (s.rssi     != null ? '<br>RSSI: ' + s.rssi + ' dBm' : '')
                     + (s.battery  != null ? '&nbsp;🔋 ' + s.battery + '%' : '')
@@ -203,7 +207,7 @@ window.meshcomMap = (function () {
                     + aprsLink
                     + aiBtn;
 
-                var _m = L.marker([s.lat, s.lon], { icon: stationIcon(s.callsign, s.rssi, s.hopCount, s.temp != null || s.humidity != null || s.pressure != null) })
+                var _m = L.marker([s.lat, s.lon], { icon: stationIcon(s.callsign, s.rssi, s.hopCount, s.temp != null || s.humidity != null || s.pressure != null, s.isGateway) })
                     .bindPopup(popup)
                     .addTo(_stationLayer);
                 _stationMarkers[s.callsign.toUpperCase()] = _m;
@@ -214,7 +218,9 @@ window.meshcomMap = (function () {
                 var info = ownInfo || {};
                 var ownPopup = '<b>' + esc(ownCallsign) + '</b>';
                 if (info.posSource)
-                    ownPopup += '<br><span style="font-size:11px;color:#aaa">' + esc(info.posSource) + '</span>';
+                    ownPopup += '<br><span style="font-size:11px;color:#aaa">' + esc(info.isGateway && info.posSource === 'Node' ? 'GW' : info.posSource) + '</span>';
+                if (info.isGateway)
+                    ownPopup += ' <span style="font-size:10px;font-weight:700;background:#0d2b1a;color:#3fb950;border-radius:3px;padding:1px 5px;margin-left:4px">GW</span>';
                 if (info.alt      != null)
                     ownPopup += '<br>Alt: ' + info.alt + ' m';
                 if (info.rssi     != null) {
@@ -242,7 +248,7 @@ window.meshcomMap = (function () {
                     ownPopup += '<br><a href="https://aprs.fi/info/a/' + encodeURIComponent(ownCallsign)
                               + '" target="_blank" rel="noopener" style="font-size:11px;color:#58a6ff">🔗 aprs.fi</a>';
 
-                var _ownM = L.marker([ownLat, ownLon], { icon: ownIcon(ownCallsign, info.temp != null || info.humidity != null || info.pressure != null) })
+                var _ownM = L.marker([ownLat, ownLon], { icon: ownIcon(ownCallsign, info.temp != null || info.humidity != null || info.pressure != null, info.isGateway) })
                     .bindPopup(ownPopup)
                     .addTo(_ownLayer);
                 if (ownCallsign)

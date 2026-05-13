@@ -42,6 +42,19 @@ public class SettingsService
         {
             ["Meshcom"] = new JsonObject
             {
+                ["Nodes"] = new JsonArray(s.Nodes.Select(n => (JsonNode?)new JsonObject
+                {
+                    ["Id"]                   = n.Id.ToString(),
+                    ["Name"]                 = n.Name,
+                    ["Callsign"]             = n.Callsign,
+                    ["DeviceIp"]             = n.DeviceIp,
+                    ["DevicePort"]           = n.DevicePort,
+                    ["ListenIp"]             = n.ListenIp,
+                    ["ListenPort"]           = n.ListenPort,
+                    ["IsPrimary"]            = n.IsPrimary,
+                    ["TelnetCertThumbprint"] = n.TelnetCertThumbprint,
+                    ["TelnetPassword"]       = Encrypt(n.TelnetPassword)
+                }).ToArray()),
                 ["ListenIp"]            = s.ListenIp,
                 ["ListenPort"]          = s.ListenPort,
                 ["DeviceIp"]            = s.DeviceIp,
@@ -166,7 +179,16 @@ public class SettingsService
                 ["AntennaHeightM"]          = s.AntennaHeightM,
                 ["FrequencyMhz"]            = s.FrequencyMhz,
                 ["SystemMarginDb"]          = s.SystemMarginDb,
-                ["OwnMessagesAlignLeft"]    = s.OwnMessagesAlignLeft
+                ["OwnMessagesAlignLeft"]    = s.OwnMessagesAlignLeft,
+                ["TxCooldownSeconds"]       = s.TxCooldownSeconds,
+                ["GatewayHighlightEnabled"] = s.GatewayHighlightEnabled,
+                ["TelnetEnabled"]           = s.TelnetEnabled,
+                ["ConsoleMode"]             = s.ConsoleMode,
+                ["TelnetPort"]              = s.TelnetPort,
+                ["TelnetPassword"]          = Encrypt(s.TelnetPassword),
+                ["TelnetCertThumbprint"]    = s.TelnetCertThumbprint,
+                ["SerialPortName"]          = s.SerialPortName,
+                ["SerialBaudRate"]          = s.SerialBaudRate
             }
         };
 

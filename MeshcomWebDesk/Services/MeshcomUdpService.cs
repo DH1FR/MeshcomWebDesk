@@ -26,6 +26,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     private readonly QrzService  _qrzService;
     private readonly BotCommandService _botCommandService;
     private readonly QsoSummaryService _qsoSummaryService;
+    private readonly NodeManager _nodeManager;
     private MeshcomSettings _settings;
     private UdpClient? _udpClient;
 
@@ -43,17 +44,25 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     [GeneratedRegex(@"\{\d+$")]
     private static partial Regex TrailingSequencePattern();
 
-    /// <summary>Matches APRS-style ACK messages, e.g. "NOCALL-2 :ack187" or "NOCALL-2  :ack187" (padded addressee).</summary>
-    [GeneratedRegex(@"^\S+\s+:ack\d+$")]
+    /// <summary>
+    /// Matches ACK messages in two formats:
+    ///   APRS-style  : "NOCALL-2 :ack187"  or "NOCALL-2  :ack187" (space-padded addressee)
+    ///   MeshCom inline: "NOCALL-2:ack187" (callsign immediately followed by :ackNNN, no space)
+    /// </summary>
+    [GeneratedRegex(@"^\S+\s*:ack\d+$", RegexOptions.IgnoreCase)]
     private static partial Regex AckPattern();
 
     /// <summary>Captures the sequence number from a trailing {NNN} marker, e.g. "{034" → "034".</summary>
     [GeneratedRegex(@"\{(\d+)$")]
     private static partial Regex SequenceNumberPattern();
 
-    /// <summary>Captures the sequence number from an APRS ACK text, e.g. "NOCALL-2  :ack034" → "034".</summary>
+    /// <summary>Captures the sequence number from an ACK text, e.g. "NOCALL-2:ack034" or "NOCALL-2  :ack034" → "034".</summary>
     [GeneratedRegex(@":ack(\d+)$", RegexOptions.IgnoreCase)]
     private static partial Regex AckSequencePattern();
+
+    /// <summary>Captures the target callsign from a MeshCom inline ACK, e.g. "DL3DCW-12:ack881" → "DL3DCW-12".</summary>
+    [GeneratedRegex(@"^(\S+?)\s*:ack\d+$", RegexOptions.IgnoreCase)]
+    private static partial Regex AckTargetPattern();
 
     /// <summary>Detects MeshCom network time-sync broadcasts, e.g. "{CET}2026-04-07 18:11:58".</summary>
     [GeneratedRegex(@"^\{[A-Z]{2,5}\}\d{4}-\d{2}-\d{2}")]
@@ -65,13 +74,15 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         ChatService chatService,
         QrzService qrzService,
         BotCommandService botCommandService,
-        QsoSummaryService qsoSummaryService)
+        QsoSummaryService qsoSummaryService,
+        NodeManager nodeManager)
     {
         _logger              = logger;
         _chatService         = chatService;
         _qrzService          = qrzService;
         _botCommandService   = botCommandService;
         _qsoSummaryService   = qsoSummaryService;
+        _nodeManager         = nodeManager;
         _settings            = settings.CurrentValue;
         settings.OnChange(s =>
         {
@@ -79,7 +90,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             _logger.LogInformation("Settings reloaded from appsettings.json.");
         });
 
-        _chatService.OnNewDirectTab += callsign => _ = SendAutoReplyAsync(callsign);
+        _chatService.OnNewDirectTab += (callsign, msg) => _ = SendAutoReplyAsync(callsign, msg.Timestamp, msg.NodeId);
         _chatService.OnBotCommand   += msg      => _ = HandleBotCommandAsync(msg);
     }
 
@@ -93,6 +104,10 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         {
             var localEp = new IPEndPoint(IPAddress.Parse(_settings.ListenIp), _settings.ListenPort);
             _udpClient = new UdpClient(localEp);
+            // Disable IPv4-mapped IPv6 (dual-stack) so RemoteEndPoint always returns plain IPv4 addresses.
+            // This ensures ResolveNodeByIp can match NodeProfile.DeviceIp entries reliably.
+            if (_udpClient.Client.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
+                _udpClient.Client.DualMode = false;
         }
         catch (Exception ex)
         {
@@ -128,10 +143,31 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                     _logger.LogDebug("UDP RX [{Remote}]: {Data}", result.RemoteEndPoint, raw);
                     if (_settings.LogUdpTraffic)
                         _logger.LogInformation("[UDP-RX] {Remote} {Data}", result.RemoteEndPoint, raw);
+
+                    // Resolve which node sent this packet by its source IP.
+                    // This is the only reliable way to distinguish nodes when all share the same UDP port.
+                    var sourceIp   = result.RemoteEndPoint.Address;
+                    var sourceNode = _nodeManager.ResolveNodeByIp(sourceIp);
+                    var myCallsign = sourceNode?.Callsign ?? _settings.MyCallsign;
+
+                    // Update last-seen timestamp so the UI can show online status
+                    if (sourceNode is not null)
+                        _nodeManager.MarkNodeSeen(sourceNode.Id);
+
+                    if (sourceNode is not null)
+                        _logger.LogDebug("UDP RX from node '{NodeName}' ({NodeId}) IP={Ip}",
+                            sourceNode.Name, sourceNode.Id, sourceIp);
+                    else
+                        _logger.LogDebug("UDP RX from unknown node IP={Ip} – using legacy callsign '{Callsign}'",
+                            sourceIp, myCallsign);
+
                     var message = ParseMessage(raw);
 
                     if (message != null)
                     {
+                        // Tag the message with the node it arrived from
+                        message.NodeId = sourceNode?.Id;
+
                         // Update signal stats from LoRa metadata
                         if (message.Rssi.HasValue)
                         {
@@ -141,7 +177,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
 
                         // Skip node echoes of our own sent messages (already recorded as outgoing).
                         // Still extract own GPS position and node metadata from the echo if present.
-                        if (string.Equals(message.From, _settings.MyCallsign, StringComparison.OrdinalIgnoreCase))
+                        if (string.Equals(message.From, myCallsign, StringComparison.OrdinalIgnoreCase))
                         {
                             if (message.Latitude.HasValue && message.Longitude.HasValue)
                             {
@@ -219,8 +255,9 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                         // Unparseable data (status, telemetry, etc.) – raw feed only, no tab
                         _chatService.AddRawMessage(new MeshcomMessage
                         {
-                            Text = raw,
-                            RawData = raw
+                            Text   = raw,
+                            RawData = raw,
+                            NodeId = sourceNode?.Id
                         });
                     }
                 }
@@ -248,36 +285,54 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
 
     /// <summary>
     /// Send a registration packet to the MeshCom device so it adds this client
-    /// to its UDP sender list and starts delivering data.
+    /// <summary>
+    /// Send a registration packet to every configured MeshCom device so each one adds
+    /// this client to its UDP sender list and starts delivering data.
+    /// In legacy single-node mode only the primary device is registered.
     /// </summary>
     private async Task RegisterWithDeviceAsync()
     {
         if (_udpClient == null) return;
 
-        try
-        {
-            var json = JsonSerializer.Serialize(new { type = "info", src = _settings.MyCallsign });
-            var bytes = Encoding.UTF8.GetBytes(json);
-            var remoteEp = new IPEndPoint(IPAddress.Parse(_settings.DeviceIp), _settings.DevicePort);
+        // Build the list of (ip, port, callsign) tuples to register with.
+        // Multi-node: one entry per NodeProfile.
+        // Legacy: single entry from top-level settings.
+        var targets = _nodeManager.Nodes.Count > 0
+            ? _nodeManager.Nodes.Select(n => (n.DeviceIp, n.DevicePort, n.Callsign, n.Id as Guid?)).ToList()
+            : new List<(string, int, string, Guid?)>
+              { (_settings.DeviceIp, _settings.DevicePort, _settings.MyCallsign, (Guid?)null) };
 
-            await _udpClient.SendAsync(bytes, bytes.Length, remoteEp);
-            _logger.LogInformation("UDP registration packet sent to {DeviceIp}:{DevicePort}", _settings.DeviceIp, _settings.DevicePort);
-            if (_settings.LogUdpTraffic)
-                _logger.LogInformation("[UDP-TX] {Remote} {Data}", remoteEp, json);
-            Status.IsRegistered = true;
-            NotifyStatusChange();
-            _chatService.AddRawMessage(new MeshcomMessage
-            {
-                From      = _settings.MyCallsign,
-                IsOutgoing = true,
-                Text      = json,
-                RawData   = json
-            });
-        }
-        catch (Exception ex)
+        foreach (var (ip, port, callsign, nodeId) in targets)
         {
-            _logger.LogError(ex, "Failed to send UDP registration packet to {DeviceIp}:{DevicePort}", _settings.DeviceIp, _settings.DevicePort);
+            try
+            {
+                var json  = JsonSerializer.Serialize(new { type = "info", src = callsign });
+                var bytes = Encoding.UTF8.GetBytes(json);
+                var remoteEp = new IPEndPoint(IPAddress.Parse(ip), port);
+
+                await _udpClient.SendAsync(bytes, bytes.Length, remoteEp);
+                _logger.LogInformation("UDP registration packet sent to {DeviceIp}:{DevicePort} as {Callsign}",
+                    ip, port, callsign);
+                if (_settings.LogUdpTraffic)
+                    _logger.LogInformation("[UDP-TX] {Remote} {Data}", remoteEp, json);
+
+                _chatService.AddRawMessage(new MeshcomMessage
+                {
+                    From       = callsign,
+                    IsOutgoing = true,
+                    Text       = json,
+                    RawData    = json,
+                    NodeId     = nodeId
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send UDP registration packet to {DeviceIp}:{DevicePort}", ip, port);
+            }
         }
+
+        Status.IsRegistered = true;
+        NotifyStatusChange();
     }
 
     /// <summary>
@@ -307,7 +362,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         return ("#" + stripped).ToLowerInvariant();
     }
 
-    private async Task SendAutoReplyAsync(string callsign)
+    private async Task SendAutoReplyAsync(string callsign, DateTime triggerTimestamp, Guid? nodeId = null)
     {
         if (!_settings.AutoReplyEnabled || string.IsNullOrWhiteSpace(_settings.AutoReplyText))
             return;
@@ -320,9 +375,11 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             catch (Exception ex) { _logger.LogDebug(ex, "QRZ pre-lookup for auto-reply failed for {Callsign}", callsign); }
         }
 
-        var text = await ExpandVariablesAsync(_settings.AutoReplyText, callsign, before: DateTime.Now);
-        _logger.LogInformation("Auto-reply to new contact {Callsign}", callsign);
-        await SendMessageAsync(callsign, text);
+        // Subtract 1 minute so {last-qso} only shows QSOs clearly before the current exchange,
+        // not messages from the same session/minute window.
+        var text = await ExpandVariablesAsync(_settings.AutoReplyText, callsign, before: triggerTimestamp);
+        _logger.LogInformation("Auto-reply to new contact {Callsign} via node {NodeId}", callsign, nodeId);
+        await SendMessageAsync(callsign, text, sourceNodeId: nodeId);
     }
 
     private async Task HandleBotCommandAsync(MeshcomMessage message)
@@ -340,12 +397,13 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             reply = await ExpandVariablesAsync(reply, message.From, before: message.Timestamp);
 
             var parts = SplitMessage(reply);
-            _logger.LogInformation("Bot reply to {From} ({Parts} part(s)): {Preview}",
-                message.From, parts.Count, reply.Length > 80 ? reply[..80] + "…" : reply);
+            _logger.LogInformation("Bot reply to {From} via node {NodeId} ({Parts} part(s)): {Preview}",
+                message.From, message.NodeId, parts.Count, reply.Length > 80 ? reply[..80] + "…" : reply);
 
             for (var i = 0; i < parts.Count; i++)
             {
-                await SendMessageAsync(message.From, parts[i]);
+                // Reply via the same node that received the command
+                await SendMessageAsync(message.From, parts[i], sourceNodeId: message.NodeId);
                 if (i < parts.Count - 1)
                     await Task.Delay(TimeSpan.FromSeconds(2));
             }
@@ -507,19 +565,26 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         {
             // 1. Try MySQL DB (full history)
             var callsignBase = callsign.Contains('-') ? callsign[..callsign.IndexOf('-')] : callsign;
-            var dbTime = await _qsoSummaryService.GetLastQsoTimeDbOnlyAsync(callsignBase, before, ct);
+            var dbTime = await _qsoSummaryService.GetLastQsoTimeDbOnlyAsync(callsignBase, before, sessionGapMinutes: 10, ct);
             if (dbTime.HasValue)
             {
                 lastQsoStr = dbTime.Value.ToString("dd.MM.yyyy HH:mm");
             }
             else
             {
-                // 2. Fallback: most recent in-memory message for this tab (excluding current trigger)
-                var lastMsg = _chatService.GetTabMessages(callsign)
+                // 2. Fallback: find last message before a session gap of >= 10 min in memory
+                var msgs = _chatService.GetTabMessages(callsign)
+                    .Where(m => before == null || m.Timestamp < before.Value)
                     .OrderByDescending(m => m.Timestamp)
-                    .FirstOrDefault(m => before == null || m.Timestamp < before.Value);
-                if (lastMsg != null)
-                    lastQsoStr = lastMsg.Timestamp.ToString("dd.MM.yyyy HH:mm");
+                    .ToList();
+                for (int i = 0; i < msgs.Count - 1; i++)
+                {
+                    if ((msgs[i].Timestamp - msgs[i + 1].Timestamp).TotalMinutes >= 10)
+                    {
+                        lastQsoStr = msgs[i + 1].Timestamp.ToString("dd.MM.yyyy HH:mm");
+                        break;
+                    }
+                }
             }
         }
 
@@ -605,8 +670,10 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     /// </summary>
     private async Task RunTelemetryAsync(CancellationToken stoppingToken)
     {
-        // Track the (date, hour) slot already sent to avoid double-firing in the same hour
-        var lastSentSlot = (Date: DateOnly.MinValue, Hour: -1);
+        // On startup, pre-fill lastSentSlot with the current slot so that a restart
+        // during a scheduled hour does not immediately re-send the telemetry message.
+        var startupNow   = DateTime.Now;
+        var lastSentSlot = (Date: DateOnly.FromDateTime(startupNow), Hour: startupNow.Hour);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -879,7 +946,9 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     /// <param name="text">Message text.</param>
     /// <param name="tabKey">Original chat-tab key (e.g. "#9", "*"). Used for local tab routing only.
     /// When null, <paramref name="destination"/> is used for both wire and tab routing.</param>
-    public async Task SendMessageAsync(string destination, string text, string? tabKey = null)
+    /// <param name="sourceNodeId">When set, overrides the selected node and sends via this node instead.
+    /// Used by AutoReply and Bot to reply on the same node that received the incoming message.</param>
+    public async Task SendMessageAsync(string destination, string text, string? tabKey = null, Guid? sourceNodeId = null)
     {
         if (_udpClient == null)
         {
@@ -897,12 +966,24 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
 
         try
         {
+            // Resolve sending node:
+            // 1. sourceNodeId (AutoReply/Bot – same node that received the message)
+            // 2. SelectedNode (manual send from UI)
+            // 3. Legacy fallback to top-level settings
+            var sendingNode = sourceNodeId is not null
+                ? _nodeManager.Nodes.FirstOrDefault(n => n.Id == sourceNodeId) ?? _nodeManager.SelectedNode
+                : _nodeManager.SelectedNode;
+            var selectedNodeId = sendingNode?.Id;
+            var fromCallsign   = sendingNode?.Callsign ?? _settings.MyCallsign;
+            var deviceIp       = sendingNode?.DeviceIp  ?? _settings.DeviceIp;
+            var devicePort     = sendingNode?.DevicePort ?? _settings.DevicePort;
+
             var json = JsonSerializer.Serialize(new { type = "msg", dst = destination, msg = text });
             var bytes = Encoding.UTF8.GetBytes(json);
-            var remoteEp = new IPEndPoint(IPAddress.Parse(_settings.DeviceIp), _settings.DevicePort);
+            var remoteEp = new IPEndPoint(IPAddress.Parse(deviceIp), devicePort);
 
             await _udpClient.SendAsync(bytes, bytes.Length, remoteEp);
-            _logger.LogDebug("UDP TX [{Remote}]: {Data}", remoteEp, json);
+            _logger.LogDebug("UDP TX [{Remote}] as {From}: {Data}", remoteEp, fromCallsign, json);
             if (_settings.LogUdpTraffic)
                 _logger.LogInformation("[UDP-TX] {Remote} {Data}", remoteEp, json);
 
@@ -910,21 +991,16 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             Status.LastTxTime = DateTime.Now;
             NotifyStatusChange();
 
-            // The MeshCom firmware (extudp_functions.cpp / getExtern) NEVER sends an echo
-            // back to the EXTUDP client after queuing a message for LoRa TX.
-            // Therefore ⏳ → ✓ via node-echo is impossible for any message type.
-            // Mark all outgoing messages as "transmitted" immediately (✓).
-            // Direct messages may still reach ✓✓ when the recipient sends an APRS ACK.
-            // Pass the tab key as-is; ChatService._tabs uses OrdinalIgnoreCase so casing does not matter.
             var resolvedTabKey = tabKey ?? destination;
             _chatService.AddOutgoingMessage(new MeshcomMessage
             {
-                From           = _settings.MyCallsign,
+                From           = fromCallsign,
                 To             = resolvedTabKey,
                 Text           = text,
                 IsOutgoing     = true,
                 RawData        = json,
-                SequenceNumber = "TX"
+                SequenceNumber = "TX",
+                NodeId         = selectedNodeId
             });
         }
         catch (Exception ex)
@@ -1023,15 +1099,25 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                 msg = TrailingSequencePattern().Replace(msg, string.Empty);
             }
 
-            // Detect APRS-style ACK: "NOCALL-2 :ack187" (callsign may be space-padded to 9 chars)
+            // Detect ACK messages in two formats:
+            //   APRS-style  : "NOCALL-2 :ack187"    (space before colon, padded addressee)
+            //   MeshCom     : "NOCALL-2:ack881"     (no space; callsign directly followed by :ackNNN)
             var isAck = !isPositionBeacon && AckPattern().IsMatch(msg.Trim());
 
-            // For ACK messages extract the sequence number from the :ackNNN part
             if (isAck)
             {
+                // Extract sequence number from the :ackNNN part
                 var ackSeqMatch = AckSequencePattern().Match(msg);
                 if (ackSeqMatch.Success)
                     seqNum = ackSeqMatch.Groups[1].Value;
+
+                // For MeshCom inline ACKs the DST field from the JSON ("*" or group) is not the
+                // real ACK target – the target callsign is encoded inside the msg text itself
+                // (e.g. "DL3DCW-12:ack881").  Override dst so MarkMessageAcknowledged can find
+                // the correct outgoing message tab.
+                var ackTargetMatch = AckTargetPattern().Match(msg.Trim());
+                if (ackTargetMatch.Success)
+                    dst = ackTargetMatch.Groups[1].Value;
             }
 
             // Detect MeshCom time-sync broadcasts: "{CET}2026-04-07 18:11:58"

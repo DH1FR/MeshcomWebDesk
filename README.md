@@ -92,8 +92,48 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 - **📋 Copy message to clipboard** – hovering over a message in a direct chat tab reveals a 📋 button; clicking it copies the message text to the clipboard (JS Clipboard API)
 - **{last-qso} variable** – expands to the date and time of the **previous** direct QSO with the current callsign (the contact that triggered the expansion is excluded); `kein QSO` / `no QSO` if no prior QSO exists; database-first with in-memory fallback; available in Auto-Reply, Bot commands, Beacon and Quick Texts
 
+---
+
+### 🖧 Multi-Node Support
+
+MeshCom WebDesk can connect to **multiple MeshCom nodes simultaneously**.
+Each node has its own UDP connection, callsign, chat tabs, monitor feed and console credentials.
+
+#### Node profiles (Settings → Further Nodes)
+
+Each node profile contains:
+
+| Field | Description |
+|---|---|
+| **Name** | Display name shown in the node switcher (e.g. `Balkon`, `Auto`) |
+| **Callsign** | Own callsign used for outgoing messages on this node (e.g. `OE1ABC-2`) |
+| **Device IP** | IP address of the MeshCom node |
+| **Device Port** | UDP port on the node (default `1799`) |
+| **Listen IP** | Local bind address (`0.0.0.0` = all interfaces) |
+| **Listen Port** | Local UDP port to receive packets from this node (default `1799`) |
+| **Primary** | Exactly one node must be marked primary – only the primary node drives MH list, Live Map, beacons, telemetry, bot and OTA/reboot |
+| **TLS Certificate Fingerprint** | SHA-256 fingerprint of this node's self-signed TLS certificate; filled automatically via *Trust & Save* on first connect |
+| **TLS Password** | Console password for this node (encrypted at rest with DPAPI) |
+
+> 💡 When multiple nodes share the same UDP port (`1799`), incoming packets are routed to the correct node by the **sender's IP address** – no port forwarding required.
+
+#### Node behaviour
+
+- **Chat tabs and monitor** are scoped per node – each node has its own independent set of tabs and monitor messages
+- **Incoming messages** are routed to the correct node by source IP address
+- **Outgoing messages** are sent via the node that owns the active chat tab
+- **Auto-replies and bot replies** are sent back through the same node that received the triggering message
+- **MH list, Live Map, beacon, bot, telemetry, OTA and reboot** only operate on the **primary node**
+- A **node switcher** dropdown appears in the Chat header whenever more than one node is configured; switching changes the visible chat tabs and monitor without reconnecting UDP
+
+#### State persistence
+
+- All node states (tabs, monitor messages) are saved and restored independently per node on restart
+- The primary node's MH list is saved separately
+
+---
+
 ### 📻 MH – Most Recently Heard
-- Live table of all heard stations with last message, timestamp and message count
 - **GPS position** parsed from EXTUDP position packets (`lat_dir` / `long_dir` APRS format)
 - **QTH Locator** – Maidenhead locator (e.g. `JN48qn`) calculated from GPS coordinates; shown below the GPS position in the MH table and in the station card popup; also available as `{locator}` placeholder in Auto-Reply, Bot commands and Quick Texts
 - **Station card popup** – hovering (desktop) or tapping (mobile) a callsign shows a rich card with QRZ name/QTH, RSSI/SNR, battery, distance, QTH locator, GPS coordinates (as OSM link) and firmware; buttons: **💬 Open Chat** and **🔗 aprs.fi**
@@ -157,13 +197,60 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 - **Encrypted sensitive fields** – `MySqlConnectionString`, `InfluxToken`, `Qrz.Password` and `TelemetryApiKey` are encrypted with the ASP.NET Core Data Protection API before being written to `appsettings.override.json` (prefix `dp:`); existing plain-text values continue to work and are encrypted on the next save
 
 ### 🌐 UI Language
-- Full bilingual interface: **Deutsch 🇩🇪** and **English 🇬🇧**
+- Full multilingual interface: **Deutsch 🇩🇪**, **English 🇬🇧**, **Français 🇫🇷**, **Italiano 🇮🇹**, **Español 🇪🇸**
 - Language is selected in **Settings → Language** and persisted in `appsettings.override.json`
 - Switching applies **instantly** across all pages without any page reload or restart
 
+### 🖥️ Console (TLS & Serial)
+
+> ⚠️ **Firmware requirement:** The TLS Console feature requires **MeshCom firmware v4.35p.05.13 or later**. Serial Console (USB) works with all firmware versions.
+
+The **Console** page (`/telnet`) provides direct command-line access to the MeshCom node.
+The TLS Console **replaces the classic Telnet connection** – all node communication that was previously only accessible via serial USB is now also available **over the network, encrypted via TLS**.
+Two connection modes are supported, selectable in **Settings → 🖥️ Console**:
+
+#### TLS Console
+
+The TLS Console transmits the same input/output that is available on the node's serial interface – but **over the network**, encrypted via TLS.
+This is particularly useful when the node is **not physically accessible** via USB (e.g. mounted outdoors or inside an enclosure).
+
+**Node setup (one-time, via the node's serial console or web interface):**
+
+1. **Enable TLS Console** on the node:
+   - Via serial command: `--tlsconsole on`
+   - Or via the node's web interface: **Settings → IP Network Settings → TLS Console**
+2. **Set a password** on the node (strongly recommended):
+   - Via serial command: `--passwd <your-password>`
+
+**WebDesk setup (Settings → 🖥️ Console):**
+- Enable **TLS Console**
+- Enter the **Device IP** (same IP as configured for UDP)
+- Enter the **password** set on the node – it is stored encrypted (DPAPI) in `appsettings.override.json`
+- On first connect, the node's self-signed TLS certificate is shown – click **Trust & Save** to accept and store the fingerprint
+
+> ⚠️ **Firmware requirement:** TLS Console requires **MeshCom firmware v4.35p.05.13 or later**.
+
+**Features:**
+- **Pause** – freeze the visible output; new lines continue to buffer
+- **Clear** – clear the visible output
+- **OTA Update** – sends `--ota-update`; a 5-second countdown dialog appears; the OTA page opens automatically in a new browser tab
+- **Reboot** – sends `--reboot` with a confirmation dialog
+- **Firmware link** – direct link to the [MeshCom Firmware releases](https://github.com/icssw-org/MeshCom-Firmware) in the console header
+
+#### Serial Console (USB)
+
+- Direct connection to a MeshCom node via USB/serial (CP210x or similar)
+- Select the COM port and baud rate in **Settings → 🖥️ Console → Serial Console**
+- On **Windows**: plain `COMx` names are used – do **not** add `\\.\` prefix
+- On **Linux/Docker**: pass the device through (`/dev/ttyUSB0`) and add the container user to the `dialout` group (see Docker section)
+- **DTR/RTS are explicitly held low** after opening the port so the ESP32 reset pin is not asserted and the node does **not** reboot on connect
+- The serial console does not use certificates; the TLS certificate banner is suppressed in serial mode
+
+---
+
 ### 📡 Beacon (Bake)
 - **Periodic beacon** – sends a configurable text to a configurable group at a fixed interval
-- Interval is configurable in whole hours (minimum 1 h); first transmission after **one full interval** (no send on every restart)
+- Interval is configurable in whole hours (minimum **8 h**); existing values below 8 h are automatically corrected on load; first transmission after **one full interval** (no send on every restart)
 - Enabled / disabled via `BeaconEnabled` flag – applies **live** without restart
 - **Supported placeholders** in `BeaconText`: `{version}`, `{mycall}`, `{mylocator}`, `{date}`, `{time}`, `{telemetry}` – shown as inline hint in Settings
 - **Status indicator** in the status bar: pulsing `●` dot with next scheduled send time; turns yellow when < 10 min away
@@ -413,6 +500,27 @@ Clicking it opens a modal dialog with **four tabs**:
 - **Error handling**: wrong password, corrupted file, invalid JSON and missing fields all produce clear error messages
 - **Filename editable** before export (default: `MeshComWebDesk-settings.enc`)
 - Found in **Settings → 🔐 Datensicherung** at the bottom of the settings page
+- **Complete coverage** – the following settings are included in the backup:
+
+  | Category | What is backed up |
+  |---|---|
+  | **Multi-Node profiles** | All node profiles (`Name`, `Callsign`, `Device IP/Port`, `Listen IP/Port`, `Primary` flag, TLS fingerprint, TLS password) |
+  | **Connection** | Primary `ListenIp`, `ListenPort`, `DeviceIp`, `DevicePort`, `MyCallsign` |
+  | **Console** | `TelnetEnabled`, `ConsoleMode`, `TelnetPort`, `TelnetPassword`, `TelnetCertThumbprint`, `SerialPortName`, `SerialBaudRate` |
+  | **Chat & Groups** | `Groups`, `WatchCallsigns`, watch options, `GroupLabels`, `OwnMessagesAlignLeft`, `TxCooldownSeconds`, `GatewayHighlightEnabled` |
+  | **Auto-Reply** | `AutoReplyEnabled`, `AutoReplyText` |
+  | **Bot** | `BotEnabled`, all user-defined bot commands |
+  | **Quick Texts** | All quick-text entries |
+  | **Beacon** | `BeaconEnabled`, `BeaconGroup`, `BeaconText`, `BeaconIntervalHours` |
+  | **Telemetry** | `TelemetryEnabled`, `TelemetryFilePath`, `TelemetryGroup`, `TelemetryScheduleHours`, `TelemetryMapping`, `TelemetryApiEnabled`, `TelemetryApiKey` |
+  | **Station / RF** | `TxPowerDbm`, `CableType`, `CableLengthM`, `AntennaGainDbi`, `AntennaType`, `AntennaHeightM`, `FrequencyMhz`, `SystemMarginDb` |
+  | **Database** | Provider, MySQL connection string, InfluxDB URL/token/org/bucket, table name, log inserts flag |
+  | **QRZ.com** | `Enabled`, `Username`, `Password`, cache settings |
+  | **AI** | `Enabled`, provider, API key, model, Azure endpoint/version, threshold/summary days, max messages |
+  | **Webhook** | `Enabled`, URL, event flags |
+  | **MQTT** | All broker and topic settings including username/password |
+  | **UI** | `Language`, `MonitorMaxMessages`, `MhMaxAgeHours`, `TimeOffsetHours` |
+  | **Logging** | `LogPath`, `LogRetainDays`, `LogUdpTraffic` |
 
 ### 📱 PWA – Progressive Web App
 - **Installable** on any device via the browser's "Add to Home Screen" / "Install" prompt
@@ -448,6 +556,21 @@ Clicking it opens a modal dialog with **four tabs**:
 - `appsettings.LanHttps.json` – Kestrel HTTPS endpoint configuration (loaded via `ASPNETCORE_ENVIRONMENT=LanHttps`)
 - HTTP on port 5162 **stays active** – existing bookmarks and Docker deployments are unaffected
 - HTTPS is only needed for PWA installation on Android / iPad / iPhone over LAN
+
+### ⚡ Optimisations & Bugfixes (selected)
+
+- **QRZ race condition** – in-flight deduplication (`ConcurrentDictionary`) prevents parallel duplicate lookups for the same callsign
+- **Direct tab visibility** – newly created direct-message tabs appear immediately in the UI even when voice announcements are disabled
+- **Bot false-positive** – decoration strings like `---===` are no longer misidentified as bot commands; `IsCommand()` checks that `--` or `—` is immediately followed by a letter
+- **{last-qso} accuracy** – the variable returns the *previous* QSO (the triggering message is excluded); no previous QSO → `kein QSO` / `no QSO`
+- **Telemetry double-send** – the telemetry scheduler now initialises `lastSentSlot` to the current hour on startup, preventing a duplicate send within the first hour after a restart
+- **TLS password transmission** – the encrypted `dp:` prefix string is now decrypted before being sent to the node; plain-text password is transmitted correctly
+- **TelnetEnabled persistence** – the setting is now correctly written to and read from `appsettings.override.json`; no longer lost after restart or backup restore
+- **Multi-node first-connect cert** – `certThumbprintOverride` is passed as `string.Empty` (not `null`) for nodes without a stored fingerprint, preventing Node-1's fingerprint from being applied to Node-2
+- **Serial connect – no ESP32 reboot** – DTR and RTS are explicitly held low after `SerialPort.Open()` to prevent the hardware reset that Windows triggers via the DTR pin
+- **Speaker icon persists** – the speaker toggle in the status bar remains visible immediately after chat page reloads (state stored like the bell icon)
+- **PBKDF2 on thread-pool** – CPU-intensive key derivation for backup encryption runs on `Task.Run()` to keep the SignalR heartbeat alive
+- **Backup import via Blazor InputFile** – replaces the JS-interop `int[]` file-read that exceeded the 32 KB SignalR message limit
 
 ---
 
@@ -565,14 +688,14 @@ All settings in `MeshcomWebDesk/appsettings.json`:
   "BeaconEnabled":      false,           // send periodic beacon (Bake)
   "BeaconGroup":        "#262",          // target group for beacon
   "BeaconText":         "...",           // beacon text; {version} → app version
-  "BeaconIntervalHours": 1,              // beacon interval in hours (minimum 1)
+  "BeaconIntervalHours": 8,              // beacon interval in hours (minimum 8)
   "TelemetryEnabled":      false,        // send periodic telemetry message
   "TelemetryFilePath":     "/data/telemetry.json", // source JSON file (written by HA, script etc.)
   "TelemetryGroup":        "#262",       // destination: group (#262), broadcast (*), or callsign
   "TelemetryScheduleHours":   "11,15",      // send at 11:00 and 15:00 (comma-separated hours 0–23)
   "TelemetryApiEnabled":   false,        // enable POST /api/telemetry HTTP endpoint
   "TelemetryApiKey":       "",           // optional X-Api-Key for the endpoint (empty = no auth)
-  "Language":              "de",         // UI language: "de" (German) or "en" (English)
+  "Language":              "de",         // UI language: "de", "en", "fr", "it", "es"
   "Database": {                          // optional database sink
     "Provider":              "none",     // "none" | "mysql" | "influxdb2"
     "MySqlConnectionString": "",         // e.g. "Server=localhost;Database=meshcom;User=mc;Password=secret;"
@@ -1213,6 +1336,16 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 ---
 
  ## 📋 Changelog
+
+### v1.10.0 *(dev)*
+- **feat:** 🌐 **Multi-language UI** – interface now available in **Français 🇫🇷**, **Italiano 🇮🇹** and **Español 🇪🇸** in addition to Deutsch and English; language is switched in **Settings → Language** and takes effect instantly without a page reload
+- **feat:** 🖧 **Multi-Node support** – configure multiple MeshCom nodes simultaneously; each node has its own UDP connection, callsign, chat tabs, monitor feed, and console credentials; node profiles are managed under **Settings → Further Nodes**
+- **feat:** 🖥️ **TLS Console / Serial Console** – console page now supports direct USB serial access (CP210x); COM port and baud rate configurable in **Settings → 🖥️ Console → Serial Console**; console mode switchable between TLS and Serial without restart; TLS Console requires **MeshCom firmware v4.35p.05.13 or later**
+- **feat:** 🔄 **OTA-Update via console** – button sends `--ota-update` to the node; 5-second countdown dialog; OTA page opens automatically in a new tab
+- **feat:** 🔁 **Reboot via console** – `--reboot` command shows a confirmation dialog; connection is closed after a short delay
+- **feat:** 📡 **Beacon interval minimum 8 h** – the beacon interval can no longer be set below 8 hours; existing values < 8 h are automatically corrected to 8 h on load
+- **feat:** 📊 **Telemetry mapping limit** – maximum of 3 telemetry mapping entries; the add button is disabled when the limit is reached
+- **fix:** 🔊 **Speaker icon persists** – the speaker icon in the status bar now persists across chat page reloads
 
 ### v1.9.5
 - **feat:** 💬 **MsgId im Monitor** – eingehende Nachrichten zeigen die Nachrichten-ID (msg_id) im Monitor an; erleichtert Diagnose und ACK-Zuordnung

@@ -1,67 +1,67 @@
-# Home Assistant – Telemetrie-Integration
+ï»¿# Home Assistant â€“ Telemetry Integration
 
-Diese Anleitung zeigt, wie du Wetterdaten (oder beliebige andere Sensordaten) aus **Home Assistant** als Telemetrienachrichten über den MeshCom WebClient ins LoRa-Netzwerk sendest.
+This guide explains how to send weather data (or any other sensor data) from **Home Assistant** as telemetry messages via MeshCom WebDesk into the LoRa network.
 
-## Funktionsweise
+## How it works
 
 ```
-Home Assistant                WebClient                   MeshCom Node
+Home Assistant                WebDesk                     MeshCom Node
 ---------------------        ------------------          -------------
-Sensordaten               ?  liest JSON-Datei         ?  sendet Textnachricht
-schreibt/postet Daten        alle X Stunden              ins LoRa-Netz
+Sensor data               â†’  reads JSON file          â†’  sends text message
+writes / posts data          every X hours               into the LoRa network
 ```
 
 ---
 
-## Variante A – HTTP POST *(empfohlen bei getrennten Hosts)*
+## Option A â€“ HTTP POST *(recommended for separate hosts)*
 
-Home Assistant sendet die Daten per HTTP POST direkt an den WebClient.
-Keine Netzwerkfreigaben oder SSH-Konfiguration erforderlich.
+Home Assistant sends data directly to WebDesk via HTTP POST.
+No network shares or SSH configuration required.
 
-### Schritt 1 – WebClient Settings aktivieren
+### Step 1 â€“ Enable WebDesk settings
 
-Aktiviere in den WebClient-Einstellungen (`/settings`, Abschnitt **Telemetrie**):
+Enable the following in the WebDesk settings (`/settings`, section **Telemetry**):
 
-| Einstellung | Wert |
-|-------------|------|
-| Telemetrie aktiv | ? |
-| JSON-Datei | `/app/data/meshcom_telemetry.json` |
-| Ziel | `#262` (Gruppe), `*` (alle) oder Rufzeichen |
-| HTTP-API aktiv | ? |
-| API-Key | z.B. `mein-geheimer-schluessel` (leer = keine Authentifizierung) |
+| Setting | Value |
+|---------|-------|
+| Telemetry active | âœ” |
+| JSON file | `/app/data/meshcom_telemetry.json` |
+| Target | `#262` (group), `*` (all) or a callsign |
+| HTTP API active | âœ” |
+| API key | e.g. `my-secret-key` (empty = no authentication) |
 
-> ?? **Tipp:** Mit dem Button **?? Telemetrie jetzt senden** kannst du nach dem Speichern sofort einen Probeversand auslösen, ohne eine Stunde zu warten.
-> Mit **?? Datei lesen & Vorschau** siehst du die aktuellen Werte aus der JSON-Datei und die exakten LoRa-Nachrichten.
+> ðŸ’¡ **Tip:** Use the **â–¶ Send telemetry now** button to trigger a test transmission immediately after saving, without waiting an hour.
+> Use **ðŸ“„ Read file & preview** to see the current values from the JSON file and the exact LoRa messages.
 
-### Schritt 2 – `configuration.yaml` in Home Assistant
+### Step 2 â€“ `configuration.yaml` in Home Assistant
 
 ```yaml
 rest_command:
   post_meshcom_telemetry:
-    url: "http://192.168.1.100:5162/api/telemetry"   # WebClient-IP anpassen
+    url: "http://192.168.1.100:5162/api/telemetry"   # adjust to your WebDesk IP
     method: POST
     headers:
       Content-Type: application/json
-      X-Api-Key: "mein-geheimer-schluessel"           # muss mit API-Key im WebClient übereinstimmen
+      X-Api-Key: "my-secret-key"                      # must match the API key in WebDesk
     payload: >-
       {
-        "timestamp": "{{ now().isoformat() }}",
-        "aussentemp":        {{ states('sensor.tempoutside_2')                              | float(0) }},
-        "luftdruck":         {{ states('sensor.weatherstation_rel_pressure')                | float(0) }},
-        "luftfeuchtigkeit":  {{ states('sensor.weatherstation_rel_humidity_outside')        | float(0) }},
-        "wind_speed":        {{ states('sensor.weatherstation_wind_speed')                  | float(0) }},
-        "wind_gust":         {{ states('sensor.weatherstation_wind_gust_2')                 | float(0) }},
-        "wind_dir":          {{ states('sensor.weatherstation_wind_dir')                    | float(0) }},
-        "regen_24h":         {{ states('sensor.weatherstation_rain_24h')                    | float(0) }},
-        "regen_gesamt":      {{ states('sensor.weatherstation_rain_total')                  | float(0) }}
+        "timestamp":    "{{ now().isoformat() }}",
+        "outside_temp": {{ states('sensor.tempoutside_2')                              | float(0) }},
+        "pressure":     {{ states('sensor.weatherstation_rel_pressure')                | float(0) }},
+        "humidity":     {{ states('sensor.weatherstation_rel_humidity_outside')        | float(0) }},
+        "wind_speed":   {{ states('sensor.weatherstation_wind_speed')                  | float(0) }},
+        "wind_gust":    {{ states('sensor.weatherstation_wind_gust_2')                 | float(0) }},
+        "wind_dir":     {{ states('sensor.weatherstation_wind_dir')                    | float(0) }},
+        "rain_24h":     {{ states('sensor.weatherstation_rain_24h')                    | float(0) }},
+        "rain_total":   {{ states('sensor.weatherstation_rain_total')                  | float(0) }}
       }
 ```
 
-### Schritt 3 – Automatisierung in Home Assistant
+### Step 3 â€“ Automation in Home Assistant
 
 ```yaml
-- alias: "MeshCom Telemetrie senden (HTTP POST)"
-  description: "Wetterdaten jede Stunde per HTTP POST an MeshCom WebClient senden"
+- alias: "MeshCom Telemetry send (HTTP POST)"
+  description: "Send weather data every hour via HTTP POST to MeshCom WebDesk"
   trigger:
     - platform: time_pattern
       minutes: "0"
@@ -70,30 +70,30 @@ rest_command:
   mode: single
 ```
 
-### Antwort des Endpoints
+### Endpoint response
 
-| HTTP-Status | Bedeutung |
-|-------------|-----------|
-| `200 OK` | Datei geschrieben, Telemetrie wird beim nächsten Intervall gesendet |
-| `401 Unauthorized` | API-Key fehlt oder stimmt nicht überein |
-| `404 Not Found` | Endpoint ist in den WebClient-Settings deaktiviert |
-| `400 Bad Request` | Body ist kein gültiges JSON oder `TelemetryFilePath` nicht konfiguriert |
+| HTTP status | Meaning |
+|-------------|---------|
+| `200 OK` | File written; telemetry will be sent at the next scheduled interval |
+| `401 Unauthorized` | API key missing or incorrect |
+| `404 Not Found` | Endpoint is disabled in WebDesk settings |
+| `400 Bad Request` | Body is not valid JSON, or `TelemetryFilePath` is not configured |
 
-Beispiel-Antwort bei Erfolg:
+Example response on success:
 ```json
 { "written": "/app/data/meshcom_telemetry.json", "timestamp": "2026-04-04T10:00:00Z" }
 ```
 
 ---
 
-## Variante B – JSON-Datei per Shell Command *(gleicher Host)*
+## Option B â€“ JSON file via Shell Command *(same host)*
 
-Wenn HA und WebClient-Docker auf **demselben Host** laufen, kann HA
-direkt in das gemountete Data-Volume schreiben.
+If Home Assistant and WebDesk Docker run on the **same host**, HA can write directly
+into the mounted data volume.
 
-### Schritt 1 – Shell Command in Home Assistant
+### Step 1 â€“ Shell Command in Home Assistant
 
-Füge folgenden Block in deine `configuration.yaml` ein:
+Add the following block to your `configuration.yaml`:
 
 ```yaml
 shell_command:
@@ -101,28 +101,28 @@ shell_command:
     python3 -c "
     import json, datetime;
     data = {
-      'timestamp':        datetime.datetime.now(datetime.timezone.utc).isoformat(),
-      'aussentemp':        {{ states('sensor.tempoutside_2')                              | float(0) }},
-      'luftdruck':         {{ states('sensor.weatherstation_rel_pressure')                | float(0) }},
-      'luftfeuchtigkeit':  {{ states('sensor.weatherstation_rel_humidity_outside')        | float(0) }},
-      'wind_speed':        {{ states('sensor.weatherstation_wind_speed')                  | float(0) }},
-      'wind_gust':         {{ states('sensor.weatherstation_wind_gust_2')                 | float(0) }},
-      'wind_dir':          {{ states('sensor.weatherstation_wind_dir')                    | float(0) }},
-      'regen_24h':         {{ states('sensor.weatherstation_rain_24h')                    | float(0) }},
-      'regen_gesamt':      {{ states('sensor.weatherstation_rain_total')                  | float(0) }}
+      'timestamp':    datetime.datetime.now(datetime.timezone.utc).isoformat(),
+      'outside_temp': {{ states('sensor.tempoutside_2')                              | float(0) }},
+      'pressure':     {{ states('sensor.weatherstation_rel_pressure')                | float(0) }},
+      'humidity':     {{ states('sensor.weatherstation_rel_humidity_outside')        | float(0) }},
+      'wind_speed':   {{ states('sensor.weatherstation_wind_speed')                  | float(0) }},
+      'wind_gust':    {{ states('sensor.weatherstation_wind_gust_2')                 | float(0) }},
+      'wind_dir':     {{ states('sensor.weatherstation_wind_dir')                    | float(0) }},
+      'rain_24h':     {{ states('sensor.weatherstation_rain_24h')                    | float(0) }},
+      'rain_total':   {{ states('sensor.weatherstation_rain_total')                  | float(0) }}
     };
     open('/opt/meshcom/data/meshcom_telemetry.json', 'w').write(json.dumps(data, indent=2))
     "
 ```
 
-> **Pfadhinweis:** `/opt/meshcom/data/` ist das auf dem Docker-Host gemountete `./data`-Volume
-> des WebClients (`./data:/app/data` in `docker-compose.yml`). Passe den Pfad an deinen Host an.
+> **Path note:** `/opt/meshcom/data/` is the host-mounted `./data` volume of WebDesk
+> (`./data:/app/data` in `docker-compose.yml`). Adjust the path to match your host setup.
 
-### Schritt 2 – Automatisierung
+### Step 2 â€“ Automation
 
 ```yaml
-- alias: "MeshCom Telemetrie exportieren (Datei)"
-  description: "Wetterdaten jede Stunde als JSON-Datei für MeshCom WebClient schreiben"
+- alias: "MeshCom Telemetry export (file)"
+  description: "Write weather data every hour as JSON file for MeshCom WebDesk"
   trigger:
     - platform: time_pattern
       minutes: "0"
@@ -133,97 +133,95 @@ shell_command:
 
 ---
 
-## Erzeugte JSON-Datei (Beispiel)
+## Generated JSON file (example)
 
 ```json
 {
-  "timestamp": "2026-04-04T10:00:00+00:00",
-  "aussentemp":       10.7,
-  "luftdruck":        1022.3,
-  "luftfeuchtigkeit": 86.0,
-  "wind_speed":       0.0,
-  "wind_gust":        0.0,
-  "wind_dir":         180.0,
-  "regen_24h":        0.9,
-  "regen_gesamt":     0.0
+  "timestamp":    "2026-04-04T10:00:00+00:00",
+  "outside_temp": 10.7,
+  "pressure":     1022.3,
+  "humidity":     86.0,
+  "wind_speed":   0.0,
+  "wind_gust":    0.0,
+  "wind_dir":     180.0,
+  "rain_24h":     0.9,
+  "rain_total":   0.0
 }
 ```
 
-Die Datei enthält **alle** Messwerte. Im WebClient konfigurierst du, welche davon
-(maximal 5) gesendet werden.
+The file can contain **any number** of values. In WebDesk you configure which ones (maximum 3) are sent.
 
 ---
 
-## WebClient Settings – TelemetryMapping
+## WebDesk Settings â€“ TelemetryMapping
 
-Da MeshCom maximal **5 Telemetriewerte** pro Nachricht unterstützt, wähle die für dich
-relevanten Werte aus. Zwei fertige Varianten:
+Since MeshCom supports a maximum of **5 telemetry values** per message, select the values most relevant to you.
 
-### Variante A – Temperatur, Druck, Feuchte, Wind
+### Variant A â€“ Temperature, Pressure, Humidity, Wind
 
 ```json
 "TelemetryEnabled":       true,
 "TelemetryFilePath":      "/app/data/meshcom_telemetry.json",
 "TelemetryGroup":         "#262",
-"TelemetryScheduleHours":    "11,15",       // Sendezeiten: 11:00 und 15:00 Uhr
+"TelemetryScheduleHours": "11,15",
 "TelemetryApiEnabled":    true,
-"TelemetryApiKey":        "mein-geheimer-schluessel",
+"TelemetryApiKey":        "my-secret-key",
 "TelemetryMapping": [
-  { "JsonKey": "aussentemp",       "Label": "temp.out", "Unit": "C",   "Decimals": 1 },
-  { "JsonKey": "luftdruck",        "Label": "luftdr",   "Unit": "hPa", "Decimals": 1 },
-  { "JsonKey": "luftfeuchtigkeit", "Label": "humid",    "Unit": "%",   "Decimals": 0 },
-  { "JsonKey": "wind_speed",       "Label": "wind",     "Unit": "m/s", "Decimals": 1 },
-  { "JsonKey": "wind_gust",        "Label": "boe",      "Unit": "m/s", "Decimals": 1 }
+  { "JsonKey": "outside_temp", "Label": "temp.out", "Unit": "C",   "Decimals": 1 },
+  { "JsonKey": "pressure",     "Label": "pressure", "Unit": "hPa", "Decimals": 1 },
+  { "JsonKey": "humidity",     "Label": "humid",    "Unit": "%",   "Decimals": 0 },
+  { "JsonKey": "wind_speed",   "Label": "wind",     "Unit": "m/s", "Decimals": 1 },
+  { "JsonKey": "wind_gust",    "Label": "gust",     "Unit": "m/s", "Decimals": 1 }
 ]
 ```
 
-**Gesendete Nachricht:** `TM: temp.out=10.7C luftdr=1022.3hPa humid=86% wind=0.0m/s boe=0.0m/s`
+**Sent message:** `TM: temp.out=10.7C pressure=1022.3hPa humid=86% wind=0.0m/s gust=0.0m/s`
 
 ---
 
-### Variante B – Temperatur, Druck, Feuchte, Regen, Windrichtung
+### Variant B â€“ Temperature, Pressure, Humidity, Rain, Wind direction
 
 ```json
 "TelemetryMapping": [
-  { "JsonKey": "aussentemp",       "Label": "temp.out",  "Unit": "C",    "Decimals": 1 },
-  { "JsonKey": "luftdruck",        "Label": "luftdr",    "Unit": "hPa",  "Decimals": 1 },
-  { "JsonKey": "luftfeuchtigkeit", "Label": "humid",     "Unit": "%",    "Decimals": 0 },
-  { "JsonKey": "regen_24h",        "Label": "rain.24h",  "Unit": "l/m2", "Decimals": 1 },
-  { "JsonKey": "wind_dir",         "Label": "wind.dir",  "Unit": "°",    "Decimals": 0 }
+  { "JsonKey": "outside_temp", "Label": "temp.out",  "Unit": "C",    "Decimals": 1 },
+  { "JsonKey": "pressure",     "Label": "pressure",  "Unit": "hPa",  "Decimals": 1 },
+  { "JsonKey": "humidity",     "Label": "humid",     "Unit": "%",    "Decimals": 0 },
+  { "JsonKey": "rain_24h",     "Label": "rain.24h",  "Unit": "l/m2", "Decimals": 1 },
+  { "JsonKey": "wind_dir",     "Label": "wind.dir",  "Unit": "deg",  "Decimals": 0 }
 ]
 ```
 
-**Gesendete Nachricht:** `TM: temp.out=10.7C luftdr=1022.3hPa humid=86% rain.24h=0.9l/m2 wind.dir=180°`
+**Sent message:** `TM: temp.out=10.7C pressure=1022.3hPa humid=86% rain.24h=0.9l/m2 wind.dir=180deg`
 
 ---
 
-## Sensor-Referenz (verwendete Entity-IDs)
+## Sensor reference (used Entity IDs)
 
-| JSON-Key | HA Entity-ID | Einheit | Beschreibung |
-|----------|-------------|---------|-------------|
-| `aussentemp` | `sensor.tempoutside_2` | °C | Außentemperatur |
-| `luftdruck` | `sensor.weatherstation_rel_pressure` | hPa | Relativer Luftdruck |
-| `luftfeuchtigkeit` | `sensor.weatherstation_rel_humidity_outside` | % | Außenluftfeuchtigkeit |
-| `wind_speed` | `sensor.weatherstation_wind_speed` | m/s | Windgeschwindigkeit |
-| `wind_gust` | `sensor.weatherstation_wind_gust_2` | m/s | Windböen |
-| `wind_dir` | `sensor.weatherstation_wind_dir` | ° | Windrichtung |
-| `regen_24h` | `sensor.weatherstation_rain_24h` | l/m² | Regen letzte 24h |
-| `regen_gesamt` | `sensor.weatherstation_rain_total` | l/m² | Regen gesamt |
+| JSON key | HA Entity ID | Unit | Description |
+|----------|-------------|------|-------------|
+| `outside_temp` | `sensor.tempoutside_2` | Â°C | Outside temperature |
+| `pressure` | `sensor.weatherstation_rel_pressure` | hPa | Relative air pressure |
+| `humidity` | `sensor.weatherstation_rel_humidity_outside` | % | Outside humidity |
+| `wind_speed` | `sensor.weatherstation_wind_speed` | m/s | Wind speed |
+| `wind_gust` | `sensor.weatherstation_wind_gust_2` | m/s | Wind gust |
+| `wind_dir` | `sensor.weatherstation_wind_dir` | Â° | Wind direction |
+| `rain_24h` | `sensor.weatherstation_rain_24h` | l/mÂ² | Rain last 24 h |
+| `rain_total` | `sensor.weatherstation_rain_total` | l/mÂ² | Total rain |
 
 ---
 
-## Weitere Sensoren hinzufügen
+## Adding more sensors
 
-Die JSON-Datei kann beliebig viele Werte enthalten. Du musst **keinen WebClient-Code ändern** –
-füge einfach neue Felder hinzu und konfiguriere das Mapping in den WebClient-Settings unter `/settings`.
+The JSON file can contain any number of values. You do **not need to change any WebDesk code** â€“
+simply add new fields and configure the mapping in the WebDesk settings under `/settings`.
 
-Beispiel PV-Anlage zusätzlich in `rest_command` oder `shell_command`:
+Example â€“ PV system added to `rest_command` or `shell_command`:
 
 ```yaml
-"pv_leistung": {{ states('sensor.pv_power') | float(0) }},
-"batt_soc":    {{ states('sensor.battery_soc') | float(0) }}
+"pv_power": {{ states('sensor.pv_power') | float(0) }},
+"batt_soc":  {{ states('sensor.battery_soc') | float(0) }}
 ```
 
 ```json
-{ "JsonKey": "pv_leistung", "Label": "PV", "Unit": "kW", "Decimals": 2 }
+{ "JsonKey": "pv_power", "Label": "PV", "Unit": "kW", "Decimals": 2 }
 ```

@@ -1,10 +1,10 @@
-@page "/about"
+﻿@page "/about"
 @rendermode InteractiveServer
 @using System.Reflection
 @inject MeshcomWebDesk.Services.LanguageService Loc
 @implements IDisposable
 
-<PageTitle>@Loc.T("Über", "About", "Info", "Acerca de") – MeshCom WebDesk</PageTitle>
+<PageTitle>@Loc.T("Über", "About") – MeshCom WebDesk</PageTitle>
 
 <div class="about-page">
     <div class="about-card">
@@ -23,9 +23,9 @@
         </p>
 
         <p class="about-description">
-            @Loc.T("Webbasierter Client für die Kommunikation mit MeshCom-Nodes", "Web-based client for communicating with MeshCom nodes", "Client web per la comunicazione con i nodi MeshCom", "Cliente web para la comunicación con nodos MeshCom")<br />
-            @Loc.T("über das EXTUDP JSON-Protokoll.", "via the EXTUDP JSON protocol.", "tramite il protocollo EXTUDP JSON.", "mediante el protocolo EXTUDP JSON.")<br />
-            @Loc.T("Empfangen und senden von LoRa-Nachrichten direkt im Browser.", "Receive and send LoRa messages directly in the browser.", "Ricevi e invia messaggi LoRa direttamente nel browser.", "Recibe y envía mensajes LoRa directamente en el navegador.")
+            @Loc.T("Webbasierter Client für die Kommunikation mit MeshCom-Nodes", "Web-based client for communicating with MeshCom nodes")<br />
+            @Loc.T("über das EXTUDP JSON-Protokoll.", "via the EXTUDP JSON protocol.")<br />
+            @Loc.T("Empfangen und senden von LoRa-Nachrichten direkt im Browser.", "Receive and send LoRa messages directly in the browser.")
         </p>
 
         <div class="about-divider"></div>
@@ -49,9 +49,7 @@
             <p class="about-coffee-text">
                 ☕ @Loc.T(
                     "Gefällt dir meine Arbeit? Dann spendier mir einen Kaffee!",
-                    "Do you like my work? Then buy me a coffee!",
-                    "Ti piace il mio lavoro? Offrimi un caffè!",
-                    "¿Te gusta mi trabajo? ¡Invítame un café!")
+                    "Do you like my work? Then buy me a coffee!")
             </p>
             <a class="about-coffee-btn" href="https://paypal.me/DH1FR" target="_blank" rel="noopener">
                 ☕ PayPal · paypal.me/DH1FR
@@ -61,8 +59,10 @@
 </div>
 
 @code {
-    protected override void OnInitialized() => Loc.OnChange += StateHasChanged;
-    public void Dispose() => Loc.OnChange -= StateHasChanged;
+    private void OnLocChange() => _ = InvokeAsync(StateHasChanged);
+
+    protected override void OnInitialized() => Loc.OnChange += OnLocChange;
+    public void Dispose() => Loc.OnChange -= OnLocChange;
 
     private static readonly string _version =
         typeof(About).Assembly.GetName().Version is { } v

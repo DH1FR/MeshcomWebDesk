@@ -643,6 +643,13 @@ h1:focus {
     cursor: not-allowed;
 }
 
+.btn-send-cooldown {
+    background: #5c4a00 !important;
+    color: #ffc107 !important;
+    font-variant-numeric: tabular-nums;
+    min-width: 5rem;
+}
+
 .char-counter {
     align-self: center;
     font-size: 11px;
@@ -1074,6 +1081,9 @@ h1:focus {
 .mh-row { border-bottom: 1px solid #21262d; transition: background 0.1s; }
 .mh-row:hover { background: #161b22; }
 .mh-row:last-child { border-bottom: none; }
+.mh-row-gateway { background: #0d2b1a !important; border-left: 3px solid #3fb950; }
+.mh-row-gateway:hover { background: #143622 !important; }
+.mh-gw-icon { margin-right: 3px; font-size: .9em; }
 
 .mh-table td { padding: 6px 10px; vertical-align: middle; }
 
@@ -1502,6 +1512,18 @@ h1:focus {
     transition: background 0.15s;
 }
 .btn-danger:hover { background: #a32a2a; }
+.btn-warn {
+    background: #5a3e00;
+    color: #fff;
+    border: 1px solid #d29922;
+    border-radius: 6px;
+    padding: 8px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.btn-warn:hover { background: #7a5500; }
 
 /* ===== Status Bar ===== */
 .status-bar {
@@ -2258,6 +2280,7 @@ h1:focus {
 }
 .leg-dot.aprs-relay-1 { box-shadow: 0 0 0 3px rgba(86,211,100,0.40), 0 0 3px rgba(0,0,0,0.7); }
 .leg-dot.aprs-relay-2 { box-shadow: 0 0 0 3px rgba(227,179,65,0.50), 0 0 0 6px rgba(227,179,65,0.22), 0 0 3px rgba(0,0,0,0.7); }
+.leg-dot.aprs-gateway { background: #3fb950; border: 2px solid #3fb950; box-shadow: 0 0 0 3px rgba(63,185,80,0.45), 0 0 5px rgba(63,185,80,0.30); }
 
 .leg-dot-own {
     width: 10px;
@@ -2384,6 +2407,12 @@ h1:focus {
 }
 
 .aprs-own-label { color: #ffd97d; background: rgba(0, 0, 0, 0.75); }
+
+/* Gateway station marker */
+.aprs-dot.aprs-gateway { border: 2px solid #3fb950; box-shadow: 0 0 0 3px rgba(63,185,80,0.45), 0 0 6px 2px rgba(63,185,80,0.30); }
+.aprs-dot.aprs-own-gateway { border: 2px solid #3fb950; box-shadow: 0 0 0 3px rgba(63,185,80,0.55), 0 0 8px 3px rgba(63,185,80,0.35); }
+.aprs-label-gateway { color: #3fb950 !important; }
+.aprs-gw-icon { margin-right: 2px; font-size: .85em; }
 
 /* "No positions" overlay */
 .map-no-data {
@@ -2829,4 +2858,73 @@ h1:focus {
     background: #0d1117;
     border-top: 1px solid #21262d;
 }
+
+
+/* Telnet Page */
+.telnet-page{display:flex;flex-direction:column;height:calc(100vh - 56px);height:calc(100dvh - 56px);padding:.5rem;padding-bottom:calc(.5rem + env(safe-area-inset-bottom));gap:.4rem;box-sizing:border-box;position:relative}
+.telnet-header{display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-shrink:0}
+.telnet-title{font-weight:600;font-size:.95rem;display:flex;align-items:center;gap:.4rem}
+.telnet-output{flex:1;min-height:0;overflow-y:auto;background:#0d1117;color:#c9d1d9;font-family:'Courier New',Consolas,monospace;font-size:.82rem;line-height:1.4;padding:.5rem .6rem;border:1px solid #30363d;border-radius:4px;white-space:pre-wrap;word-break:break-all}
+.telnet-line{min-height:1.2em}
+
+/* ── LoRa Debug Highlighting ─────────────────────────────────────────── */
+.lora-sm        { color:#79c0ff; }
+.lora-sm-kw     { color:#58a6ff; font-weight:700; }
+.lora-err       { color:#ff6b6b !important; background:rgba(255,80,80,.08); border-radius:2px; }
+.lora-warn      { color:#f0c060; }
+.lora-warn-kw   { color:#e3b341; font-weight:700; }
+.lora-hwm       { color:#d2a8ff; }
+.lora-util      { color:#56d364; }
+.lora-dbg       { color:#8b949e; }
+.lora-dbg-rx    { color:#3fb950; }
+.lora-dbg-tx    { color:#58a6ff; }
+.lora-dbg-ack   { color:#a5d6ff; }
+.lora-dbg-ring  { color:#c8d8e8; }
+.lora-dbg-relay { color:#d2a8ff; }
+.lora-rx-pkt    { color:#3fb950; font-weight:600; }
+.lora-rx        { color:#56d364; }
+.lora-tx        { color:#58a6ff; font-weight:600; }
+.lora-aprs-err  { color:#ff6b6b; }
+.lora-dim       { color:#484f58; }
+.lora-kv-key    { color:#8b949e; }
+.lora-kv-val    { color:#e3b341; font-weight:600; }
+.telnet-input-bar{display:flex;align-items:center;gap:.4rem;flex-shrink:0;padding-bottom:env(safe-area-inset-bottom)}
+.telnet-prompt{color:#58a6ff;font-family:'Courier New',Consolas,monospace;font-weight:bold;flex-shrink:0}
+.telnet-input{flex:1;background:#161b22;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:.35rem .5rem;font-family:'Courier New',Consolas,monospace;font-size:.85rem;outline:none;-webkit-appearance:none}
+.telnet-input:focus{border-color:#58a6ff}
+/* OTA countdown dialog */
+.ota-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:200;border-radius:4px}
+.ota-dialog{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:1.5rem 2rem;max-width:360px;width:90%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.6)}
+.ota-icon{font-size:2.2rem;margin-bottom:.5rem;animation:ota-spin 1s linear infinite}
+@keyframes ota-spin{to{transform:rotate(360deg)}}
+.ota-title{font-weight:700;font-size:1rem;margin-bottom:.6rem;color:#e6edf3}
+.ota-msg{font-size:.88rem;color:#8b949e;margin-bottom:1rem;line-height:1.5}
+.ota-msg strong{color:#58a6ff}
+.ota-progress{height:6px;background:#30363d;border-radius:3px;overflow:hidden}
+.ota-progress-bar{height:100%;background:linear-gradient(90deg,#238636,#58a6ff);border-radius:3px;transition:width .9s linear}
+
+/* ── Node switcher bar (Chat.razor) ───────────────────────────────────── */
+.node-switcher-bar{display:flex;gap:.4rem;padding:.35rem .75rem;background:#0d1117;border-bottom:1px solid #21262d;flex-wrap:wrap}
+.node-switcher-btn{font-size:.8em;padding:2px 12px;border-radius:12px;border:1px solid #30363d;background:#21262d;color:#8b949e;cursor:pointer;transition:background .15s,color .15s;display:inline-flex;align-items:center;gap:5px}
+.node-switcher-btn:hover{background:#30363d;color:#c9d1d9}
+.node-switcher-btn.active{background:#1f6feb;border-color:#1f6feb;color:#fff;font-weight:600}
+.node-switcher-btn span{margin-right:3px;color:#f0c040}
+/* Online status dot */
+.node-status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.node-status-dot.online{background:#3fb950}
+.node-status-dot.stale{background:#d29922}
+.node-status-dot.offline{background:#f85149}
+.node-status-dot.unknown{background:#484f58}
+
+/* ── Multi-node settings cards ────────────────────────────────────────── */
+.settings-node-card{background:#161b22;border:1px solid #30363d;border-radius:6px;padding:.75rem 1rem;margin-bottom:.6rem}
+.settings-node-header{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+.settings-node-primary-badge{font-size:.75em;background:#238636;color:#fff;border-radius:4px;padding:1px 7px;font-weight:600}
+.settings-node-actions{margin-left:auto;display:flex;gap:.4rem}
+.btn-small{font-size:.78em;padding:2px 9px;border-radius:4px;border:1px solid #30363d;background:#21262d;color:#c9d1d9;cursor:pointer}
+.btn-small:hover{background:#30363d}
+.btn-small.btn-danger{border-color:#da3633;color:#ff7b72}
+.btn-small.btn-danger:hover{background:#da3633;color:#fff}
+.btn-secondary{background:#21262d;color:#c9d1d9;border:1px solid #30363d;border-radius:6px;padding:5px 14px;cursor:pointer;font-size:.875rem}
+.btn-secondary:hover{background:#30363d}
 

@@ -12,9 +12,50 @@ namespace MeshcomWebDesk.Services;
 /// </summary>
 public class ChatService
 {
-    private readonly ConcurrentDictionary<string, ChatTab> _tabs = new(StringComparer.OrdinalIgnoreCase);
-    private readonly ConcurrentDictionary<string, HeardStation> _mhList = new(StringComparer.OrdinalIgnoreCase);
-    private readonly List<MeshcomMessage> _allMessages = [];
+    // ── Per-node state ────────────────────────────────────────────────────
+    /// <summary>
+    /// Holds all mutable state that is scoped per Node.
+    /// Key = NodeProfile.Id, or <see cref="Guid.Empty"/> for legacy single-node mode.
+    /// </summary>
+    private sealed class NodeState
+    {
+        public ConcurrentDictionary<string, ChatTab>      Tabs       { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public ConcurrentDictionary<string, HeardStation> MhList     { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public List<MeshcomMessage>                        Messages   { get; } = [];
+        public string                                      ActiveTabKey { get; set; } = string.Empty;
+    }
+
+    private readonly ConcurrentDictionary<Guid, NodeState> _nodeState = new();
+
+    /// <summary>Returns (or lazily creates) the state bucket for a concrete <paramref name="nodeId"/>.
+    /// Passing <c>null</c> uses <see cref="Guid.Empty"/> (legacy single-node fallback).</summary>
+    private NodeState GetState(Guid? nodeId) => _nodeState.GetOrAdd(nodeId ?? Guid.Empty, _ => new NodeState());
+
+    /// <summary>Returns the state for the primary node (or Guid.Empty in legacy mode).</summary>
+    private NodeState GetPrimaryState()
+    {
+        var primaryId = _nodeManager?.PrimaryNode?.Id;
+        return GetState(primaryId);
+    }
+
+    /// <summary>Resolves <paramref name="nodeId"/> to its state bucket:
+    /// <c>null</c> → primary node; explicit Guid → that node's bucket.</summary>
+    private NodeState ResolveState(Guid? nodeId) =>
+        nodeId is null ? GetPrimaryState() : GetState(nodeId);
+
+    /// <summary>True when <paramref name="nodeId"/> refers to the primary (or only) node.</summary>
+    private bool IsPrimaryNode(Guid? nodeId)
+    {
+        if (nodeId is null || nodeId == Guid.Empty) return true;   // legacy single-node mode
+        var primaryId = _nodeManager?.PrimaryNode?.Id;
+        return primaryId is null || primaryId == nodeId;
+    }
+
+    // ── Shortcuts to the legacy/primary state (Guid.Empty) ───────────────
+    private ConcurrentDictionary<string, ChatTab>      _tabs    => GetState(Guid.Empty).Tabs;
+    private ConcurrentDictionary<string, HeardStation> _mhList  => GetState(Guid.Empty).MhList;
+    private List<MeshcomMessage>                        _allMessages => GetState(Guid.Empty).Messages;
+
     private readonly object _lock = new();
     private MeshcomSettings _settings;
     private readonly ILogger<ChatService> _logger;
@@ -22,6 +63,7 @@ public class ChatService
     private readonly WebhookService   _webhook;
     private readonly QsoSummaryService _qsoSummary;
     private MqttService?      _mqtt;
+    private NodeManager?      _nodeManager;
 
     /// <summary>
     /// Rolling deduplication cache.
@@ -47,7 +89,7 @@ public class ChatService
     /// The argument is the remote callsign. Not raised for broadcast (*) or group (#) tabs,
     /// and not raised when tabs are restored from a snapshot or opened manually.
     /// </summary>
-    public event Action<string>? OnNewDirectTab;
+    public event Action<string, MeshcomMessage>? OnNewDirectTab;
 
     /// <summary>
     /// Raised for every incoming direct message addressed to our own callsign,
@@ -80,6 +122,21 @@ public class ChatService
     /// </summary>
     public event Action<string, string, string>? OnCqHeard;
 
+    /// <summary>UTC timestamp of the last outgoing transmission. Null if no message has been sent yet.</summary>
+    public DateTime? LastTxTime { get; private set; }
+
+    /// <summary>
+    /// Remaining cooldown in seconds (0 when ready to transmit).
+    /// Calculated from <see cref="LastTxTime"/> and <c>TxCooldownSeconds</c> in settings.
+    /// </summary>
+    public int TxCooldownRemaining =>
+        LastTxTime is { } t && _settings.TxCooldownSeconds > 0
+            ? Math.Max(0, Math.Max(5, _settings.TxCooldownSeconds) - (int)(DateTime.UtcNow - t).TotalSeconds)
+            : 0;
+
+    /// <summary>Records the current UTC time as the last transmission time.</summary>
+    public void RecordTx() => LastTxTime = DateTime.UtcNow;
+
     // Compiled regex: matches messages that contain "CQ" as a standalone word/abbreviation.
     // Examples matched: "CQ de OE6TZD", "cq cq de DF7AX", "IY6GM CQ 144300", "cQ DO7PAW".
     private static readonly Regex CqRegex = new(
@@ -90,8 +147,16 @@ public class ChatService
     /// The key of the last tab the user actively selected.
     /// Persisted in memory (singleton lifetime) so Chat.razor can restore it
     /// immediately in OnInitialized without requiring JS interop.
+    /// Use <see cref="GetActiveTabKey"/> / <see cref="SetActiveTabKey"/> for node-scoped access.
     /// </summary>
-    public string ActiveTabKey { get; set; } = string.Empty;
+    public string ActiveTabKey
+    {
+        get => GetState(Guid.Empty).ActiveTabKey;
+        set => GetState(Guid.Empty).ActiveTabKey = value;
+    }
+
+    public string GetActiveTabKey(Guid? nodeId) => ResolveState(nodeId).ActiveTabKey;
+    public void   SetActiveTabKey(Guid? nodeId, string key) => ResolveState(nodeId).ActiveTabKey = key;
 
     public ChatService(IOptionsMonitor<MeshcomSettings> settings, ILogger<ChatService> logger, IMonitorDataSink sink, WebhookService webhook, QsoSummaryService qsoSummary)
     {
@@ -106,40 +171,52 @@ public class ChatService
     /// <summary>Injects MqttService after construction to break the circular dependency.</summary>
     public void SetMqttService(MqttService mqtt) => _mqtt = mqtt;
 
-    /// <summary>All open tabs.</summary>
-    public IReadOnlyList<ChatTab> Tabs
+    /// <summary>Injects NodeManager after construction to break the circular dependency.</summary>
+    public void SetNodeManager(NodeManager nodeManager) => _nodeManager = nodeManager;
+
+    /// <summary>All open tabs (legacy/primary node).</summary>
+    public IReadOnlyList<ChatTab> Tabs => GetTabs(null);
+
+    /// <summary>All open tabs for a specific node.</summary>
+    public IReadOnlyList<ChatTab> GetTabs(Guid? nodeId)
     {
-        get
+        lock (_lock)
         {
-            lock (_lock)
-            {
-                return _tabs.Values.ToList();
-            }
+            return ResolveState(nodeId).Tabs.Values.ToList();
         }
     }
 
-    /// <summary>All messages sorted newest-first (for the bottom pane).</summary>
-    public IReadOnlyList<MeshcomMessage> AllMessages
+    /// <summary>All messages sorted newest-first (legacy/primary node).</summary>
+    public IReadOnlyList<MeshcomMessage> AllMessages => GetAllMessages(null);
+
+    /// <summary>All messages sorted newest-first for a specific node.
+    /// Passing <c>null</c> resolves to the primary node (same as <see cref="GetPrimaryState"/>).</summary>
+    public IReadOnlyList<MeshcomMessage> GetAllMessages(Guid? nodeId)
     {
-        get
+        lock (_lock)
         {
-            lock (_lock)
-            {
-                return _allMessages.OrderByDescending(m => m.Timestamp).ToList();
-            }
+            return ResolveState(nodeId).Messages.OrderByDescending(m => m.Timestamp).ToList();
         }
     }
 
-    /// <summary>Most recently heard stations, sorted by last heard descending.</summary>
-    public IReadOnlyList<HeardStation> MhList =>
-        _mhList.Values.OrderByDescending(s => s.LastHeard).ToList();
+    /// <summary>Most recently heard stations (primary node only), sorted by last heard descending.</summary>
+    public IReadOnlyList<HeardStation> MhList => GetPrimaryState().MhList.Values.OrderByDescending(s => s.LastHeard).ToList();
+
+    /// <summary>Most recently heard stations for a specific node, sorted by last heard descending.</summary>
+    public IReadOnlyList<HeardStation> GetMhList(Guid? nodeId) =>
+        ResolveState(nodeId).MhList.Values.OrderByDescending(s => s.LastHeard).ToList();
 
     /// <summary>
     /// Route an incoming message to the correct tab. Creates tab automatically if needed.
     /// Duplicate packets (same sender + sequence number within <see cref="DedupWindow"/>) are silently dropped.
     /// </summary>
-    public void AddIncomingMessage(MeshcomMessage message)
+    public void AddIncomingMessage(MeshcomMessage message) => AddIncomingMessage(message, message.NodeId);
+
+    /// <summary>Node-scoped variant: routes the message into the state of <paramref name="nodeId"/>.</summary>
+    public void AddIncomingMessage(MeshcomMessage message, Guid? nodeId)
     {
+        var state = ResolveState(nodeId);
+
         // Deduplication: Meshcom 4.0 may deliver the same packet multiple times via different
         // mesh routes. Use the sender-assigned sequence number as the primary key.
         if (IsDuplicate(message))
@@ -149,25 +226,46 @@ public class ChatService
             return;
         }
 
+        // Resolve the own callsign for this node
+        var myCallsign = _nodeManager?.GetCallsignForNode(nodeId) ?? _settings.MyCallsign;
+
         // Determine tab key based on destination:
         //   Broadcast from known correspondent     → sender's direct tab
         //   Broadcast from unknown station         → tab "*" ("Alle")
-        //   Direct to us (MyCallsign)              → tab by sender callsign
+        //   Direct to us                           → tab by sender callsign
         //   Group (any other dst)                  → tab "#<group>"
+        //
+        // "Direct to us" means message.To matches our configured callsign (myCallsign)
+        // OR the node is identified AND message.To looks like a callsign addressed to this node.
+        //
+        // Guard: MeshCom sends group numbers as bare digits (e.g. "26299") without '#'.
+        // These must NOT be treated as direct messages. A real callsign always contains letters.
+        // Additionally only treat as direct-to-node when To matches this node's hardware callsign
+        // (i.e. the callsign the node actually uses on-air, which may differ from NodeProfile.Callsign).
         string tabKey;
+        bool looksLikeCallsign = !string.IsNullOrEmpty(message.To)
+            && message.To != "*"
+            && !message.To.StartsWith('#')
+            && message.To.Any(char.IsLetter);   // groups are purely numeric → no letters
+
+        // Only flag as "direct to this node" when the destination callsign matches
+        // the node's configured callsign OR the primary legacy callsign.
+        // This prevents foreign direct messages relayed via LoRa from triggering AutoReply.
+        bool isDirectToNode = nodeId is not null
+            && looksLikeCallsign
+            && (string.Equals(message.To, myCallsign, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(message.To, _settings.MyCallsign, StringComparison.OrdinalIgnoreCase));
+
         if (message.IsBroadcast)
         {
-            // Only route to the sender's DM tab when the message is actually addressed to us.
-            // MeshCom propagates direct messages as broadcasts over the mesh, but message.To
-            // still contains the intended recipient. Messages from A to C must NOT appear in
-            // the DM tab with A – they belong in the broadcast ("*") tab.
-            bool addressedToUs = string.Equals(message.To, _settings.MyCallsign, StringComparison.OrdinalIgnoreCase);
-            tabKey = addressedToUs && !string.IsNullOrEmpty(message.From) && _tabs.ContainsKey(message.From)
+            bool addressedToUs = string.Equals(message.To, myCallsign, StringComparison.OrdinalIgnoreCase);
+            tabKey = addressedToUs && !string.IsNullOrEmpty(message.From) && state.Tabs.ContainsKey(message.From)
                 ? message.From
                 : "*";
         }
-        else if (string.Equals(message.To, _settings.MyCallsign, StringComparison.OrdinalIgnoreCase))
+        else if (string.Equals(message.To, myCallsign, StringComparison.OrdinalIgnoreCase) || isDirectToNode)
         {
+            // Direct message to this node (regardless of whether NodeProfile.Callsign matches exactly)
             tabKey = message.From;
         }
         else
@@ -176,23 +274,22 @@ public class ChatService
         }
 
         // For group messages, only auto-create a tab if the filter is disabled or the group is whitelisted.
-        // Manually opened tabs (via OpenTab) are not affected by this restriction.
         bool isGroup = tabKey.StartsWith('#');
         bool tabAllowed = !isGroup
             || !_settings.GroupFilterEnabled
             || _settings.Groups.Contains(tabKey, StringComparer.OrdinalIgnoreCase);
 
-        // Update MH list BEFORE triggering the auto-reply so that RSSI, relay path and
-        // hardware data from this message are available to ExpandVariables immediately.
-        bool mhChanged = UpdateMhList(message);
+        // MH-Liste und Karte werden ausschließlich vom Primary-Node befüllt.
+        var primaryState = GetPrimaryState();
+        bool mhChanged = IsPrimaryNode(nodeId) && UpdateMhList(message, primaryState);
 
         ChatTab? tab = null;
         bool wasNewDirect = false;
         if (tabAllowed)
-            tab = GetOrCreateTab(tabKey, out wasNewDirect);
+            tab = GetOrCreateTab(state, tabKey, nodeId, out wasNewDirect);
         lock (_lock)
         {
-            AppendToMonitor(message);
+            AppendToMonitor(message, state);
             if (tab != null)
             {
                 tab.Messages.Add(message);
@@ -200,20 +297,15 @@ public class ChatService
             }
         }
 
-        // Fire OnNewDirectTab AFTER the incoming message is in the tab so the auto-reply
-        // (AddOutgoingMessage) appears after it in the conversation, not before.
         if (wasNewDirect)
-            OnNewDirectTab?.Invoke(message.From);
+            OnNewDirectTab?.Invoke(message.From, message);
 
-        // Fire OnDirectMessage for every direct MSG to own callsign (tab new or existing).
-        // This allows voice announcements even for follow-up messages.
         bool isDirectToUs = !message.IsBroadcast &&
             !message.IsAck && !message.IsPositionBeacon && !message.IsTelemetry &&
-            string.Equals(message.To, _settings.MyCallsign, StringComparison.OrdinalIgnoreCase);
+            (string.Equals(message.To, myCallsign, StringComparison.OrdinalIgnoreCase) || isDirectToNode);
         if (isDirectToUs && !wasNewDirect)
             OnDirectMessage?.Invoke(message.From, message);
 
-        // Check QSO summary for new direct tabs created by incoming messages
         if (wasNewDirect && tab != null)
             _ = CheckQsoSummaryAsync(tab, tabKey);
 
@@ -222,58 +314,52 @@ public class ChatService
         _ = _webhook.SendAsync(message, "message");
         _ = _mqtt?.PublishAsync(message, "message");
         CheckWatchlist(message);
-        CheckCq(message, tabKey);
+        CheckCq(message, tabKey, myCallsign);
 
-        // Fire bot command event for direct messages
         if (!message.IsBroadcast &&
-            string.Equals(message.To, _settings.MyCallsign, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(message.To, myCallsign, StringComparison.OrdinalIgnoreCase) &&
             MeshcomWebDesk.Services.Bot.BotCommandService.IsCommand(message.Text))
             OnBotCommand?.Invoke(message);
     }
 
-    /// <summary>
-    /// Add an outgoing message to the correct tab.
-    /// </summary>
-    public void AddOutgoingMessage(MeshcomMessage message)
+    /// <summary>Add an outgoing message to the correct tab.</summary>
+    public void AddOutgoingMessage(MeshcomMessage message) => AddOutgoingMessage(message, message.NodeId);
+
+    public void AddOutgoingMessage(MeshcomMessage message, Guid? nodeId)
     {
-        // Determine tab key: for broadcast ("*") use the "*" tab, otherwise use message.To directly.
-        // "#alle" is stored in message.To as-is (the tab key) – do NOT remap it to "*".
+        var state = ResolveState(nodeId);
         var tabKey = message.IsBroadcast ? "*" : message.To;
-        var tab = GetOrCreateTab(tabKey);
+        var tab = GetOrCreateTab(state, tabKey, nodeId);
         lock (_lock)
         {
-            AppendToMonitor(message);
+            AppendToMonitor(message, state);
             tab.Messages.Add(message);
         }
-
         NotifyChange();
     }
 
-    /// <summary>
-    /// Add a message to the raw feed only, without routing it to any tab.
-    /// Used for unparseable device data (status, telemetry, etc.).
-    /// </summary>
-    public void AddRawMessage(MeshcomMessage message)
-    {
-        lock (_lock)
-        {
-            AppendToMonitor(message);
-        }
+    /// <summary>Add a message to the raw feed only, without routing it to any tab.</summary>
+    public void AddRawMessage(MeshcomMessage message) => AddRawMessage(message, message.NodeId);
 
+    public void AddRawMessage(MeshcomMessage message, Guid? nodeId)
+    {
+        lock (_lock) { AppendToMonitor(message, ResolveState(nodeId)); }
         NotifyChange();
     }
 
     /// <summary>Open a new tab manually.</summary>
-    public ChatTab OpenTab(string key)
-    {
-        var tab = GetOrCreateTab(key);
-        ActiveTabKey = key;
-        NotifyChange();
+    public ChatTab OpenTab(string key) => OpenTab(key, null);
 
-        // Async fire-and-forget: check if a QSO summary exists for this direct tab
+    public ChatTab OpenTab(string key, Guid? nodeId)
+    {
+        var state = ResolveState(nodeId);
+        var tab = GetOrCreateTab(state, key, nodeId);
+        state.ActiveTabKey = key;
+        // Backward-compat: keep legacy ActiveTabKey in sync when operating on primary node
+        if (nodeId is null || nodeId == Guid.Empty) ActiveTabKey = key;
+        NotifyChange();
         if (key != "*" && !key.StartsWith('#'))
             _ = CheckQsoSummaryAsync(tab, key);
-
         return tab;
     }
 
@@ -309,16 +395,20 @@ public class ChatService
     }
 
     /// <summary>Close a tab.</summary>
-    public void CloseTab(string key)
+    public void CloseTab(string key) => CloseTab(key, null);
+
+    public void CloseTab(string key, Guid? nodeId)
     {
-        _tabs.TryRemove(key, out _);
+        ResolveState(nodeId).Tabs.TryRemove(key, out _);
         NotifyChange();
     }
 
-    /// <summary>Resets the unread counter for the given tab (call when user switches to it).</summary>
-    public void ClearUnread(string key)
+    /// <summary>Resets the unread counter for the given tab.</summary>
+    public void ClearUnread(string key) => ClearUnread(key, null);
+
+    public void ClearUnread(string key, Guid? nodeId)
     {
-        if (_tabs.TryGetValue(key, out var tab))
+        if (ResolveState(nodeId).Tabs.TryGetValue(key, out var tab))
             lock (_lock) { tab.UnreadCount = 0; }
     }
 
@@ -326,15 +416,15 @@ public class ChatService
     /// Assigns the node sequence number (from the echo packet) to the most recent
     /// outgoing message sent to <paramref name="destination"/> that has no sequence yet.
     /// </summary>
-    public void AssignOutgoingSequence(string destination, string sequenceNumber)
+    public void AssignOutgoingSequence(string destination, string sequenceNumber) =>
+        AssignOutgoingSequence(destination, sequenceNumber, null);
+
+    public void AssignOutgoingSequence(string destination, string sequenceNumber, Guid? nodeId)
     {
+        var messages = ResolveState(nodeId).Messages;
         lock (_lock)
         {
-            // m.To may carry the '#' prefix (e.g. "#9") while the node echo uses the raw
-            // group number (e.g. "9") – strip '#' on both sides before comparing.
-            // SequenceNumber is set to "TX" immediately on send (node never echoes back
-            // in EXTUDP mode), so match both null and "TX".
-            var msg = _allMessages.LastOrDefault(m =>
+            var msg = messages.LastOrDefault(m =>
                 m.IsOutgoing &&
                 (m.SequenceNumber == null || m.SequenceNumber == "TX") &&
                 string.Equals(m.To.TrimStart('#'), destination.TrimStart('#'), StringComparison.OrdinalIgnoreCase));
@@ -355,23 +445,21 @@ public class ChatService
     /// in the correct order.
     /// </para>
     /// </summary>
-    public void MarkMessageAcknowledged(string sequenceNumber, string? ackSender = null, bool isGateway = false)
+    public void MarkMessageAcknowledged(string sequenceNumber, string? ackSender = null, bool isGateway = false) =>
+        MarkMessageAcknowledged(sequenceNumber, null, ackSender, isGateway);
+
+    public void MarkMessageAcknowledged(string sequenceNumber, Guid? nodeId, string? ackSender = null, bool isGateway = false)
     {
+        var messages = ResolveState(nodeId).Messages;
         lock (_lock)
         {
-            // Primary match: exact sequence number
-            var msg = _allMessages.FirstOrDefault(m =>
+            var msg = messages.FirstOrDefault(m =>
                 m.IsOutgoing && m.SequenceNumber == sequenceNumber);
 
-            // Fallback: match oldest unacknowledged outgoing message to the ACK sender.
-            // This covers the case where the node never sent a {NNN} echo so the
-            // outgoing message still has SequenceNumber = "TX".
-            // Time-limited to 10 minutes to prevent stale messages loaded from disk
-            // (from a previous session) from consuming ACKs for new messages.
             if (msg == null && ackSender != null)
             {
                 var cutoff = DateTime.Now.AddMinutes(-10);
-                msg = _allMessages.FirstOrDefault(m =>
+                msg = messages.FirstOrDefault(m =>
                     m.IsOutgoing &&
                     !m.IsAcknowledged &&
                     m.Timestamp >= cutoff &&
@@ -380,7 +468,7 @@ public class ChatService
 
             if (msg != null)
             {
-                msg.SequenceNumber    = sequenceNumber;   // assign real seq# if available
+                msg.SequenceNumber    = sequenceNumber;
                 msg.IsAcknowledged    = true;
                 msg.IsGatewayDelivered = isGateway;
             }
@@ -393,28 +481,28 @@ public class ChatService
     /// updates the relay path and signal data for the sending station in the MH list
     /// (so the connection appears on the map), and appends the ACK to the monitor feed.
     /// </summary>
-    public void AddAck(MeshcomMessage message)
+    public void AddAck(MeshcomMessage message) => AddAck(message, message.NodeId);
+
+    public void AddAck(MeshcomMessage message, Guid? nodeId)
     {
         if (message.SequenceNumber != null)
         {
-            // src_type "udp" means the ACK arrived via the Internet Gateway, not direct LoRa
             var isGateway = string.Equals(message.SrcType, "udp", StringComparison.OrdinalIgnoreCase);
-            MarkMessageAcknowledged(message.SequenceNumber, message.From, isGateway);
+            MarkMessageAcknowledged(message.SequenceNumber, nodeId, message.From, isGateway);
         }
-
-        // Update relay path / RSSI for this station so the map shows the connection
-        bool ackMhChanged = UpdateMhList(message);
-
-        lock (_lock) { AppendToMonitor(message); }
+        var ackState = ResolveState(nodeId);
+        bool ackMhChanged = IsPrimaryNode(nodeId) && UpdateMhList(message, GetPrimaryState());
+        lock (_lock) { AppendToMonitor(message, ackState); }
         if (ackMhChanged) OnMhChange?.Invoke();
         NotifyChange();
         CheckWatchlist(message);
     }
 
-    /// <summary>Remove all entries from the MH list.</summary>
+    /// <summary>Remove all entries from the MH list (primary node only).</summary>
     public void ClearMhList()
     {
-        _mhList.Clear();
+        foreach (var state in _nodeState.Values)
+            state.MhList.Clear();
         OnMhChange?.Invoke();
         OnChange?.Invoke();
     }
@@ -431,105 +519,151 @@ public class ChatService
         if (maxAgeHours <= 0) return 0;
 
         var cutoff = DateTime.Now.AddHours(-maxAgeHours);
-        var toRemove = _mhList.Where(kv => kv.Value.LastHeard < cutoff).Select(kv => kv.Key).ToList();
-        foreach (var key in toRemove)
-            _mhList.TryRemove(key, out _);
-
-        if (toRemove.Count > 0)
+        int total = 0;
+        foreach (var state in _nodeState.Values)
         {
-            OnMhChange?.Invoke();
-            OnChange?.Invoke();
+            var toRemove = state.MhList.Where(kv => kv.Value.LastHeard < cutoff).Select(kv => kv.Key).ToList();
+            foreach (var key in toRemove) state.MhList.TryRemove(key, out _);
+            total += toRemove.Count;
         }
 
-        return toRemove.Count;
+        if (total > 0) { OnMhChange?.Invoke(); OnChange?.Invoke(); }
+        return total;
     }
 
     public void RemoveFromMhList(string callsign)
     {
-        _mhList.TryRemove(callsign, out _);
+        foreach (var state in _nodeState.Values)
+            state.MhList.TryRemove(callsign, out _);
         OnMhChange?.Invoke();
         OnChange?.Invoke();
     }
 
-    /// <summary>
-    /// Clears all chat tabs, MH list and monitor entries.
-    /// Called from the UI "Daten löschen" page.
-    /// </summary>
+    /// <summary>Clears all chat tabs, MH list and monitor entries across all nodes.</summary>
     public void ClearAllData()
     {
         lock (_lock)
         {
-            _tabs.Clear();
-            _mhList.Clear();
-            _allMessages.Clear();
+            foreach (var state in _nodeState.Values)
+            {
+                state.Tabs.Clear();
+                state.MhList.Clear();
+                state.Messages.Clear();
+            }
             _seenMessageKeys.Clear();
         }
         NotifyChange();
     }
 
-    /// <summary>Creates a thread-safe snapshot of the current state for persistence.</summary>
+    /// <summary>Creates a thread-safe snapshot of all node states.</summary>
     public PersistenceSnapshot CreateSnapshot()
     {
+        var primaryState = GetPrimaryState();
         lock (_lock)
         {
-            return new PersistenceSnapshot
+            // Build the legacy primary-node fields (backwards compat)
+            var snapshot = new PersistenceSnapshot
             {
-                SavedAt = DateTime.Now,
-                Tabs = _tabs.Values
-                    .Select(t => new ChatTab
-                    {
-                        Key      = t.Key,
-                        Title    = t.Title,
-                        Messages = t.Messages.ToList()
-                    })
-                    .ToList(),
-                MhList          = _mhList.Values.ToList(),
-                MonitorMessages = _allMessages.ToList()
+                SavedAt         = DateTime.Now,
+                Tabs            = primaryState.Tabs.Values
+                                    .Select(t => new ChatTab { NodeId = t.NodeId, Key = t.Key, Title = t.Title, Messages = t.Messages.ToList() })
+                                    .ToList(),
+                MhList          = primaryState.MhList.Values.ToList(),
+                MonitorMessages = primaryState.Messages.ToList()
             };
+
+            // Persist every known node state into NodeSnapshots
+            foreach (var (nodeId, state) in _nodeState)
+            {
+                snapshot.NodeSnapshots[nodeId.ToString()] = new NodeSnapshotEntry
+                {
+                    Tabs            = state.Tabs.Values
+                                        .Select(t => new ChatTab { NodeId = t.NodeId, Key = t.Key, Title = t.Title, Messages = t.Messages.ToList() })
+                                        .ToList(),
+                    MonitorMessages = state.Messages.ToList()
+                };
+            }
+
+            return snapshot;
         }
     }
 
-    /// <summary>Restores state from a previously saved snapshot.</summary>
+    /// <summary>Restores state from a previously saved snapshot into all node states.</summary>
     public void LoadSnapshot(PersistenceSnapshot snapshot)
     {
         lock (_lock)
         {
-            _allMessages.Clear();
-            _allMessages.AddRange(snapshot.MonitorMessages.TakeLast(_settings.MonitorMaxMessages));
-
-            _tabs.Clear();
-            foreach (var tab in snapshot.Tabs)
+            // ── Restore per-node data from NodeSnapshots (multi-node format) ──
+            foreach (var (nodeIdStr, entry) in snapshot.NodeSnapshots)
             {
-                bool isGroup = tab.Key.StartsWith('#');
-                bool tabAllowed = !isGroup
-                    || !_settings.GroupFilterEnabled
-                    || _settings.Groups.Contains(tab.Key, StringComparer.OrdinalIgnoreCase);
-                if (tabAllowed)
-                    _tabs[tab.Key] = tab;
+                if (!Guid.TryParse(nodeIdStr, out var nodeId)) continue;
+                var state = _nodeState.GetOrAdd(nodeId, _ => new NodeState());
+
+                state.Messages.Clear();
+                state.Messages.AddRange(entry.MonitorMessages.TakeLast(_settings.MonitorMaxMessages));
+
+                state.Tabs.Clear();
+                foreach (var tab in entry.Tabs)
+                {
+                    bool isGroup   = tab.Key.StartsWith('#');
+                    bool tabAllowed = !isGroup
+                        || !_settings.GroupFilterEnabled
+                        || _settings.Groups.Contains(tab.Key, StringComparer.OrdinalIgnoreCase);
+                    if (tabAllowed)
+                        state.Tabs[tab.Key] = tab;
+                }
             }
 
-            _mhList.Clear();
-            foreach (var station in snapshot.MhList)
-                _mhList[station.Callsign] = station;
-        }
-        NotifyChange();
+            // ── Restore MH list + primary fallback (legacy single-node snapshots) ──
+            var primaryState = GetPrimaryState();
 
-        // Remove stale MH entries loaded from snapshot
+            // MH list is always primary-only
+            primaryState.MhList.Clear();
+            foreach (var station in snapshot.MhList)
+                primaryState.MhList[station.Callsign] = station;
+
+            // If the new NodeSnapshots dict was empty (old snapshot file), fall back to
+            // restoring the legacy Tabs/MonitorMessages into the primary state
+            if (snapshot.NodeSnapshots.Count == 0)
+            {
+                primaryState.Messages.Clear();
+                primaryState.Messages.AddRange(snapshot.MonitorMessages.TakeLast(_settings.MonitorMaxMessages));
+
+                primaryState.Tabs.Clear();
+                foreach (var tab in snapshot.Tabs)
+                {
+                    bool isGroup   = tab.Key.StartsWith('#');
+                    bool tabAllowed = !isGroup
+                        || !_settings.GroupFilterEnabled
+                        || _settings.Groups.Contains(tab.Key, StringComparer.OrdinalIgnoreCase);
+                    if (tabAllowed)
+                        primaryState.Tabs[tab.Key] = tab;
+                }
+            }
+        }
+
+        NotifyChange();
         PurgeMhListByAge();
 
-        // Async: check QSO summary for all restored direct tabs
-        foreach (var tab in _tabs.Values.Where(t => t.Key != "*" && !t.Key.StartsWith('#')))
-            _ = CheckQsoSummaryAsync(tab, tab.Key);
+        // Trigger QSO summary for all direct-message tabs across every node
+        foreach (var (_, state) in _nodeState)
+        {
+            foreach (var tab in state.Tabs.Values.Where(t => t.Key != "*" && !t.Key.StartsWith('#')))
+                _ = CheckQsoSummaryAsync(tab, tab.Key);
+        }
     }
 
     /// <summary>
     /// Process a pure position beacon: update MH position data and add to raw feed.
     /// Does NOT open or update any chat tab.
     /// </summary>
-    public void AddPositionBeacon(MeshcomMessage message)
+    public void AddPositionBeacon(MeshcomMessage message) => AddPositionBeacon(message, message.NodeId);
+
+    public void AddPositionBeacon(MeshcomMessage message, Guid? nodeId)
     {
-        bool posMhChanged = UpdateMhList(message);
-        lock (_lock) { AppendToMonitor(message); }
+        var state = ResolveState(nodeId);
+        bool posMhChanged = IsPrimaryNode(nodeId) && UpdateMhList(message, GetPrimaryState());
+        lock (_lock) { AppendToMonitor(message, state); }
         if (posMhChanged) OnMhChange?.Invoke();
         NotifyChange();
         _ = _webhook.SendAsync(message, "position");
@@ -541,10 +675,13 @@ public class ChatService
     /// Process a telemetry packet
     /// Does NOT open or update any chat tab.
     /// </summary>
-    public void AddTelemetry(MeshcomMessage message)
+    public void AddTelemetry(MeshcomMessage message) => AddTelemetry(message, message.NodeId);
+
+    public void AddTelemetry(MeshcomMessage message, Guid? nodeId)
     {
-        bool telMhChanged = UpdateMhList(message);
-        lock (_lock) { AppendToMonitor(message); }
+        var state = ResolveState(nodeId);
+        bool telMhChanged = IsPrimaryNode(nodeId) && UpdateMhList(message, GetPrimaryState());
+        lock (_lock) { AppendToMonitor(message, state); }
         if (telMhChanged) OnMhChange?.Invoke();
         NotifyChange();
         _ = _webhook.SendAsync(message, "telemetry");
@@ -552,10 +689,12 @@ public class ChatService
         CheckWatchlist(message);
     }
 
-    /// <summary>Get a specific tab.
-    public ChatTab? GetTab(string key)
+    /// <summary>Get a specific tab.</summary>
+    public ChatTab? GetTab(string key) => GetTab(key, null);
+
+    public ChatTab? GetTab(string key, Guid? nodeId)
     {
-        _tabs.TryGetValue(key, out var tab);
+        ResolveState(nodeId).Tabs.TryGetValue(key, out var tab);
         return tab;
     }
 
@@ -573,29 +712,32 @@ public class ChatService
     }
 
     /// <summary>Get a thread-safe snapshot of a tab's messages.</summary>
-    public IReadOnlyList<MeshcomMessage> GetTabMessages(string key)
-    {
-        if (!_tabs.TryGetValue(key, out var tab))
-            return [];
+    public IReadOnlyList<MeshcomMessage> GetTabMessages(string key) => GetTabMessages(key, null);
 
-        lock (_lock)
-        {
-            return tab.Messages.ToList();
-        }
+    public IReadOnlyList<MeshcomMessage> GetTabMessages(string key, Guid? nodeId)
+    {
+        if (!ResolveState(nodeId).Tabs.TryGetValue(key, out var tab))
+            return [];
+        lock (_lock) { return tab.Messages.ToList(); }
     }
 
     /// <summary>
     /// Returns true when an identical message was already processed within <see cref="DedupWindow"/>.
     /// Registers the message as seen on first encounter.
     /// Priority: msg_id (most reliable) → seq:{From}:{SeqNr} → txt:{From}:{To}:{Text}
+    /// The NodeId is included in the key so the same packet received from two different
+    /// nodes is NOT considered a duplicate (each node relays its own traffic independently).
     /// </summary>
     private bool IsDuplicate(MeshcomMessage message)
     {
+        // Node prefix ensures messages from different nodes are never cross-deduplicated.
+        var nodePrefix = message.NodeId?.ToString("N") ?? "legacy";
+
         string key = !string.IsNullOrEmpty(message.MsgId)
-            ? $"mid:{message.MsgId}"
+            ? $"{nodePrefix}:mid:{message.MsgId}"
             : !string.IsNullOrEmpty(message.SequenceNumber)
-                ? $"seq:{message.From}:{message.SequenceNumber}"
-                : $"txt:{message.From}:{message.To}:{message.Text}";
+                ? $"{nodePrefix}:seq:{message.From}:{message.SequenceNumber}"
+                : $"{nodePrefix}:txt:{message.From}:{message.To}:{message.Text}";
 
         lock (_lock)
         {
@@ -623,14 +765,11 @@ public class ChatService
     /// Returns <c>true</c> when the map/MH view should be refreshed:
     /// new station, position change, telemetry update, relay path change, or RSSI update.
     /// </summary>
-    private bool UpdateMhList(MeshcomMessage message)
+    private bool UpdateMhList(MeshcomMessage message, NodeState state)
     {
-        if (string.IsNullOrEmpty(message.From))
-            return false;
-
+        if (string.IsNullOrEmpty(message.From)) return false;
         bool mhChanged = false;
-
-        _mhList.AddOrUpdate(
+        state.MhList.AddOrUpdate(
             message.From,
             _ =>
             {
@@ -717,42 +856,30 @@ public class ChatService
         return mhChanged;
     }
 
-    /// <summary>
-    /// Appends a message to the monitor feed and trims to <see cref="MonitorMaxMessages"/>.
-    /// Must be called while holding <see cref="_lock"/>.
-    /// </summary>
-    private void AppendToMonitor(MeshcomMessage message)
+    private void AppendToMonitor(MeshcomMessage message, NodeState state)
     {
-        _allMessages.Add(message);
-        if (_allMessages.Count > _settings.MonitorMaxMessages)
-            _allMessages.RemoveRange(0, _allMessages.Count - _settings.MonitorMaxMessages);
+        state.Messages.Add(message);
+        if (state.Messages.Count > _settings.MonitorMaxMessages)
+            state.Messages.RemoveRange(0, state.Messages.Count - _settings.MonitorMaxMessages);
         _ = _sink.WriteAsync(message);
     }
 
-    private ChatTab GetOrCreateTab(string key, out bool wasNewDirect)
+    private ChatTab GetOrCreateTab(NodeState state, string key, Guid? nodeId, out bool wasNewDirect)
     {
         var newTab = new ChatTab
         {
-            Key   = key,
-            Title = key switch
-            {
-                "*"              => "Alle",
-                _ when key.StartsWith('#') => key,
-                _                => key
-            }
+            NodeId = nodeId,
+            Key    = key,
+            Title  = key switch { "*" => "Alle", _ => key }
         };
-
-        var tab = _tabs.GetOrAdd(key, newTab);
+        var tab = state.Tabs.GetOrAdd(key, newTab);
         wasNewDirect = ReferenceEquals(tab, newTab) && key != "*" && !key.StartsWith('#');
-
-        if (wasNewDirect)
-            OnNewTab?.Invoke(key);
-
+        if (wasNewDirect) OnNewTab?.Invoke(key);
         return tab;
     }
 
-    // Convenience overload for callers that don't need the wasNewDirect flag.
-    private ChatTab GetOrCreateTab(string key) => GetOrCreateTab(key, out _);
+    private ChatTab GetOrCreateTab(NodeState state, string key, Guid? nodeId) =>
+        GetOrCreateTab(state, key, nodeId, out _);
 
     /// <summary>
     /// Checks <paramref name="message"/>.From against every entry in <see cref="MeshcomSettings.WatchCallsigns"/>.
@@ -806,14 +933,12 @@ public class ChatService
     ///  - Message text must contain "CQ" as a standalone token (case-insensitive).
     ///  - Own callsign is suppressed.
     /// </summary>
-    private void CheckCq(MeshcomMessage message, string tabKey)
+    private void CheckCq(MeshcomMessage message, string tabKey, string myCallsign)
     {
         if (!tabKey.StartsWith('#')) return;
         if (string.IsNullOrWhiteSpace(message.Text)) return;
         if (string.IsNullOrWhiteSpace(message.From)) return;
-
-        // Suppress own callsign
-        if (string.Equals(message.From, _settings.MyCallsign, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(message.From, myCallsign, StringComparison.OrdinalIgnoreCase))
             return;
 
         // Group filter: only whitelisted groups (same logic as tab routing)
@@ -835,3 +960,4 @@ public class ChatService
         OnChange?.Invoke();
     }
 }
+

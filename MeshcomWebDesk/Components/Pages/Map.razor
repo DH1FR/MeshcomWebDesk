@@ -1,4 +1,4 @@
-@page "/map"
+﻿@page "/map"
 @rendermode InteractiveServer
 @using MeshcomWebDesk.Models
 @using MeshcomWebDesk.Services
@@ -13,38 +13,39 @@
 @inject QsoSummaryService QsoSummaryService
 @inject ElevationService ElevationService
 @inject ILogger<Map> Logger
+@inject GatewayService GatewayService
 @implements IDisposable
 
-<PageTitle>🗺️ @Loc.T("Karte", "Map", "Mappa", "Mapa") – MeshCom WebDesk</PageTitle>
+<PageTitle>🗺️ @Loc.T("Karte", "Map") – MeshCom WebDesk</PageTitle>
 
 <div class="map-page">
     <div class="map-controls-bar">
         <button class="map-ctrl-btn" @onclick='() => JS.InvokeVoidAsync("meshcomMap.fitAll")'>
-            📡 @Loc.T("Alle", "All", "Tutti", "Todos")
+            📡 @Loc.T("Alle", "All")
         </button>
         <button class="map-ctrl-btn" @onclick='() => JS.InvokeVoidAsync("meshcomMap.fitEurope")'>
-            🌍 @Loc.T("Europa", "Europe", "Europa", "Europa")
+            🌍 @Loc.T("Europa", "Europe")
         </button>
         <button class="map-ctrl-btn" @onclick="FitOwnAsync"
                 disabled="@(!UdpService.Status.OwnLatitude.HasValue)"
-                title="@Loc.T("50 km Radius um eigene Position", "50 km radius around own position", "50 km raggio intorno alla propria posizione", "Radio de 50 km alrededor de la propia posición")">
+                title="@Loc.T("50 km Radius um eigene Position", "50 km radius around own position")">
             📍 50 km
         </button>
         <button class="map-ctrl-btn" @onclick="FitOwn25Async"
                 disabled="@(!UdpService.Status.OwnLatitude.HasValue)"
-                title="@Loc.T("25 km Radius um eigene Position", "25 km radius around own position", "25 km raggio intorno alla propria posizione", "Radio de 25 km alrededor de la propia posición")">
+                title="@Loc.T("25 km Radius um eigene Position", "25 km radius around own position")">
             📍 25 km
         </button>
         <button class="map-ctrl-btn @(_showRelayLines ? "map-ctrl-active" : "")"
                 @onclick="ToggleRelayLines"
-                title="@Loc.T("Weiterleitungspfade ein/ausblenden", "Toggle relay paths", "Mostra/nascondi percorsi relay", "Mostrar/ocultar rutas de relé")">
-            🔗 @Loc.T("Pfade", "Paths", "Percorsi", "Rutas")
+                title="@Loc.T("Weiterleitungspfade ein/ausblenden", "Toggle relay paths")">
+            🔗 @Loc.T("Pfade", "Paths")
         </button>
         <button class="map-ctrl-btn @(_showCoverage ? "map-ctrl-active" : "")"
                 @onclick="ToggleCoverageAsync"
-                title="@Loc.T("Reichweiten-Wolke ein/ausblenden", "Toggle coverage cloud", "Mostra/nascondi copertura", "Mostrar/ocultar cobertura")">
+                title="@Loc.T("Reichweiten-Wolke ein/ausblenden", "Toggle coverage cloud")">
             <span>📶</span>
-            @Loc.T("Reichweite", "Coverage", "Copertura", "Cobertura")
+            @Loc.T("Reichweite", "Coverage")
         </button>
         <span class="map-ctrl-sep"></span>
         <div class="map-search-wrap-ctrl">
@@ -52,9 +53,9 @@
                    value="@_searchCallsign"
                    @oninput="OnSearchInput"
                    @onkeyup="OnSearchKeyUp"
-                   placeholder="@Loc.T("Rufzeichen...", "Callsign...", "Nominativo...", "Indicativo...")" />
+                   placeholder="@Loc.T("Rufzeichen...", "Callsign...")" />
             <button class="map-ctrl-btn" @onclick="SearchCallsignAsync"
-                    title="@Loc.T("Rufzeichen suchen", "Search callsign", "Cerca nominativo", "Buscar indicativo")">
+                    title="@Loc.T("Rufzeichen suchen", "Search callsign")">
                 🔍
             </button>
             @if (_showSearchResults && _searchResults.Count > 0)
@@ -72,7 +73,7 @@
         </div>
         @if (_searchNotFound)
         {
-            <span class="map-search-notfound">@Loc.T("Nicht gefunden", "Not found", "Non trovato", "No encontrado")</span>
+            <span class="map-search-notfound">@Loc.T("Nicht gefunden", "Not found")</span>
         }
     </div>
     <div class="map-wrapper">
@@ -81,44 +82,51 @@
         @* ===== Floating legend ===== *@
         <div class="map-legend @(_showLegend ? "" : "map-legend-collapsed")">
             <button class="map-legend-toggle" @onclick="() => _showLegend = !_showLegend"
-                    title="@Loc.T("Legende ein/ausblenden", "Toggle legend", "Mostra/nascondi legenda", "Mostrar/ocultar leyenda")">
-                @(_showLegend ? "▼" : "▲") @Loc.T("Legende", "Legend", "Legenda", "Leyenda")
+                    title="@Loc.T("Legende ein/ausblenden", "Toggle legend")">
+                @(_showLegend ? "▼" : "▲") @Loc.T("Legende", "Legend")
             </button>
             @if (_showLegend)
             {
                 <div class="map-legend-body">
-                    <div class="map-legend-section">@Loc.T("Stationen", "Stations", "Stazioni", "Estaciones")</div>
+                    <div class="map-legend-section">@Loc.T("Stationen", "Stations")</div>
                     <div class="map-legend-row">
                         <span class="leg-dot"></span>
-                        <span>@Loc.T("Direkt empfangen", "Directly heard", "Ricezione diretta", "Recepción directa")</span>
+                        <span>@Loc.T("Direkt empfangen", "Directly heard")</span>
                     </div>
                     <div class="map-legend-row">
                         <span class="leg-dot aprs-relay-1"></span>
-                        <span>@Loc.T("1 Relay-Hop", "1 relay hop", "1 hop relay", "1 salto relay")</span>
+                        <span>@Loc.T("1 Relay-Hop", "1 relay hop")</span>
                     </div>
                     <div class="map-legend-row">
                         <span class="leg-dot aprs-relay-2"></span>
-                        <span>@Loc.T("2+ Relay-Hops", "2+ relay hops", "2+ hop relay", "2+ saltos relay")</span>
+                        <span>@Loc.T("2+ Relay-Hops", "2+ relay hops")</span>
                     </div>
                     <div class="map-legend-row">
                         <span class="leg-dot-own"></span>
-                        <span>@Loc.T("Eigene Position", "Own position", "Posizione propria", "Posición propia")</span>
+                        <span>@Loc.T("Eigene Position", "Own position")</span>
                     </div>
+                    @if (SettingsMonitor.CurrentValue.GatewayHighlightEnabled)
+                    {
+                        <div class="map-legend-row">
+                            <span class="leg-dot aprs-gateway"></span>
+                            <span>🌐 @Loc.T("Gateway (Internet)", "Gateway (Internet)")</span>
+                        </div>
+                    }
                     @if (_showCoverage)
                     {
-                        <div class="map-legend-section">@Loc.T("Reichweite", "Coverage", "Copertura", "Cobertura")</div>
+                        <div class="map-legend-section">@Loc.T("Reichweite", "Coverage")</div>
                         <div class="map-legend-row">
                             <div style="display:inline-block;width:28px;height:14px;min-width:28px;border-radius:3px;background:rgba(77,171,247,0.35);border:2px dashed rgba(77,171,247,0.95);flex-shrink:0"></div>
-                            <span>📡 @Loc.T("Gemessen (Convex Hull)", "Measured (convex hull)", "Misurata (hull)", "Medida (hull)")</span>
+                            <span>📡 @Loc.T("Gemessen (Convex Hull)", "Measured (convex hull)")</span>
                         </div>
                         <div class="map-legend-row">
                             <div style="display:inline-block;width:28px;height:14px;min-width:28px;border-radius:3px;background:rgba(227,179,65,0.12);border:2px dashed rgba(227,179,65,0.85);flex-shrink:0"></div>
-                            <span>📻 @Loc.T("FSPL-Reichweite (theor.)", "FSPL range (theor.)", "Portata FSPL (teor.)", "Alcance FSPL (teór.)")</span>
+                            <span>📻 @Loc.T("FSPL-Reichweite (theor.)", "FSPL range (theor.)")</span>
                         </div>
                     }
                     @if (_showRelayLines)
                     {
-                        <div class="map-legend-section">@Loc.T("Relay-Pfade", "Relay paths", "Percorsi relay", "Rutas relay")</div>
+                        <div class="map-legend-section">@Loc.T("Relay-Pfade", "Relay paths")</div>
                         <div class="map-legend-row">
                             <span class="leg-line leg-line-good"></span>
                             <span>RSSI &gt; −90 dBm</span>
@@ -133,11 +141,11 @@
                         </div>
                         <div class="map-legend-row">
                             <span class="leg-line leg-line-partial"></span>
-                            <span>@Loc.T("Unvollst. Pfad", "Partial path", "Percorso parziale", "Ruta parcial")</span>
+                            <span>@Loc.T("Unvollst. Pfad", "Partial path")</span>
                         </div>
                         <div class="map-legend-row">
                             <span class="leg-line-weight"></span>
-                            <span>@Loc.T("= Häufigkeit", "= frequency", "= frequenza", "= frecuencia")</span>
+                            <span>@Loc.T("= Häufigkeit", "= frequency")</span>
                         </div>
                     }
                 </div>
@@ -148,8 +156,7 @@
     @if (!_hasPositions)
     {
         <div class="map-no-data">
-            📡 @Loc.T("Noch keine GPS-Positionen empfangen.", "No GPS positions received yet.",
-                       "Nessuna posizione GPS ricevuta.", "Aún no se han recibido posiciones GPS.")
+            📡 @Loc.T("Noch keine GPS-Positionen empfangen.", "No GPS positions received yet.")
         </div>
     }
 
@@ -160,7 +167,7 @@
     @if (withGps.Count > 0 || ownStatus.OwnLatitude.HasValue)
     {
         <div class="map-info-bar">
-            <span>📡 @withGps.Count @Loc.T("Station(en) auf der Karte", "station(s) on map", "stazione/i sulla mappa", "estación/es en el mapa")</span>
+            <span>📡 @withGps.Count @Loc.T("Station(en) auf der Karte", "station(s) on map")</span>
             @if (ownStatus.OwnLatitude.HasValue)
             {
                 <span class="map-info-sep"> · </span>
@@ -189,7 +196,7 @@
 
     protected override void OnInitialized()
     {
-        Loc.OnChange              += StateHasChanged;
+        Loc.OnChange              += OnLocChange;
         ChatService.OnMhChange    += OnMhDataChanged;
         UdpService.OnStatusChange += OnMhDataChanged;
     }
@@ -285,7 +292,8 @@
                     pressure  = s.Pressure,
                     telemMins = s.LastTelemetryTime.HasValue
                         ? (int)(DateTime.UtcNow - s.LastTelemetryTime.Value).TotalMinutes
-                        : (int?)null
+                        : (int?)null,
+                    isGateway = SettingsMonitor.CurrentValue.GatewayHighlightEnabled && GatewayService.IsGateway(s.Callsign)
                 };
             })
             .ToArray();
@@ -379,7 +387,8 @@
             pressure   = ownPressure,
             telemMins  = ownTelemTime.HasValue
                 ? (int)(DateTime.UtcNow - ownTelemTime.Value).TotalMinutes
-                : (int?)null
+                : (int?)null,
+            isGateway  = SettingsMonitor.CurrentValue.GatewayHighlightEnabled && GatewayService.IsGateway(cfg.MyCallsign)
         };
 
         await JS.InvokeVoidAsync("meshcomMap.updateMarkers",
@@ -527,12 +536,14 @@
         CloseSearchResults();
     }
 
+    private void OnLocChange() => _ = InvokeAsync(StateHasChanged);
+
     public void Dispose()
     {
         _disposed = true;
         _markerDebounce?.Cancel();
         _dotNetRef?.Dispose();
-        Loc.OnChange              -= StateHasChanged;
+        Loc.OnChange              -= OnLocChange;
         ChatService.OnMhChange    -= OnMhDataChanged;
         UdpService.OnStatusChange -= OnMhDataChanged;
     }

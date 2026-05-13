@@ -514,3 +514,9 @@ window.meshcomChat = (function () {
         }
     }, true /* capture */);
 }());
+
+// Scroll a named element to its bottom (used by Telnet page)
+window.scrollElementToBottom = function (elementId) {
+    var el = document.getElementById(elementId);
+    if (el) el.scrollTop = el.scrollHeight;
+};
