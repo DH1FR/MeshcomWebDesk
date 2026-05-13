@@ -1,4 +1,4 @@
-@page "/telnet"
+﻿@page "/telnet"
 @using MeshcomWebDesk.Models
 @using MeshcomWebDesk.Services
 @using Microsoft.Extensions.Options
@@ -23,7 +23,7 @@
         <span class="telnet-title">
             @if (_isSerial)
             {
-                <span>🔌 @Loc.T("Seriell Console", "Serial Console", "Console seriale", "Consola serie")</span>
+                <span>🔌 @Loc.T("Seriell Console", "Serial Console")</span>
             }
             else
             {
@@ -34,13 +34,13 @@
                 @if (Console.IsConnected)
                 {
                     @if (_isSerial)
-                    { @($"● {Loc.T("Verbunden", "Connected", "Connesso", "Conectado")} {_settings.SerialPortName}") }
+                    { @($"● {Loc.T("Verbunden", "Connected")} {_settings.SerialPortName}") }
                     else
-                    { @($"● {Loc.T("Verbunden", "Connected", "Connesso", "Conectado")} {ActiveNodeIp}:{_settings.TelnetPort}") }
+                    { @($"● {Loc.T("Verbunden", "Connected")} {ActiveNodeIp}:{_settings.TelnetPort}") }
                 }
                 else
                 {
-                    @($"○ {Loc.T("Getrennt", "Disconnected", "Disconnesso", "Desconectado")}")
+                    @($"○ {Loc.T("Getrennt", "Disconnected")}")
                 }
             </span>
             &nbsp;<a href="https://github.com/icssw-org/MeshCom-Firmware" target="_blank" rel="noopener"
@@ -54,7 +54,7 @@
                         value="@_consoleNodeId"
                         @onchange="OnNodeChanged"
                         disabled="@Console.IsConnected"
-                        title="@Loc.T("Node wählen", "Select node", "Seleziona nodo", "Seleccionar nodo")">
+                        title="@Loc.T("Node wählen", "Select node")">
                     @foreach (var node in NodeManager.Nodes)
                     {
                         <option value="@node.Id">@node.Name (@node.DeviceIp)</option>
@@ -63,28 +63,28 @@
             }
             @if (Console.IsConnected)
             {
-                <button class="btn-action btn-sm" title="@Loc.T("OTA-Update starten – sendet --ota-update an den Node und öffnet den OTA-Webserver", "Start OTA update – sends --ota-update to node and opens OTA web server", "Avvia aggiornamento OTA", "Iniciar actualización OTA")"
+                <button class="btn-action btn-sm" title="@Loc.T("OTA-Update starten – sendet --ota-update an den Node und öffnet den OTA-Webserver", "Start OTA update – sends --ota-update to node and opens OTA web server")"
                         @onclick="StartOtaAsync">
                     🔄 OTA
                 </button>
-                <button class="btn-warn btn-sm" title="@Loc.T("Node neu starten – sendet --reboot an den Node", "Reboot node – sends --reboot to node", "Riavvia il nodo", "Reiniciar nodo")"
+                <button class="btn-warn btn-sm" title="@Loc.T("Node neu starten – sendet --reboot an den Node", "Reboot node – sends --reboot to node")"
                         @onclick="() => _rebootConfirm = true">
-                    🔁 @Loc.T("Reboot", "Reboot", "Riavvio", "Reiniciar")
+                    🔁 @Loc.T("Reboot", "Reboot")
                 </button>
                 <button class="btn-danger btn-sm" @onclick="DisconnectAsync">
-                    @Loc.T("Trennen", "Disconnect", "Disconnetti", "Desconectar")
+                    @Loc.T("Trennen", "Disconnect")
                 </button>
             }
             <button class="btn-sm @(_paused ? "btn-primary" : "btn-action")" @onclick="TogglePause"
-                    title="@(_paused ? Loc.T("Ausgabe fortsetzen (Scroll wieder aktiv)", "Resume output (scroll re-enabled)", "Riprendi output", "Reanudar salida") : Loc.T("Ausgabe pausieren (neue Zeilen kommen weiter rein)", "Pause output (new lines still buffered)", "Pausa output", "Pausar salida"))">
-                @(_paused ? "▶ " + Loc.T("Weiter", "Resume", "Riprendi", "Reanudar") : "⏸ " + Loc.T("Pause", "Pause", "Pausa", "Pausa"))
+                    title="@(_paused ? Loc.T("Ausgabe fortsetzen (Scroll wieder aktiv)", "Resume output (scroll re-enabled)") : Loc.T("Ausgabe pausieren (neue Zeilen kommen weiter rein)", "Pause output (new lines still buffered)"))">
+                @(_paused ? "▶ " + Loc.T("Weiter", "Resume") : "⏸ " + Loc.T("Pause", "Pause"))
             </button>
             <button class="btn-sm @(_loraHighlight ? "btn-primary" : "btn-action")" @onclick="() => _loraHighlight = !_loraHighlight"
-                    title="@Loc.T("LoRa-Debug-Hervorhebung ein/aus", "LoRa debug highlighting on/off", "Evidenziazione LoRa debug on/off", "Resaltado LoRa debug on/off")">
-                📻 @Loc.T("LoRa", "LoRa", "LoRa", "LoRa")
+                    title="@Loc.T("LoRa-Debug-Hervorhebung ein/aus", "LoRa debug highlighting on/off")">
+                📻 @Loc.T("LoRa", "LoRa")
             </button>
             <button class="btn-action btn-sm" @onclick="ClearLines">
-                @Loc.T("Löschen", "Clear", "Cancella", "Borrar")
+                @Loc.T("Löschen", "Clear")
             </button>
         </div>
     </div>
@@ -95,11 +95,11 @@
         <div class="ota-overlay">
             <div class="ota-dialog">
                 <div class="ota-icon">🔁</div>
-                <div class="ota-title">@Loc.T("Node neu starten?", "Reboot node?", "Riavviare il nodo?", "¿Reiniciar el nodo?")</div>
-                <div class="ota-msg">@Loc.T("Der Node wird neu gestartet. Die TLS-Verbindung wird danach getrennt.", "The node will be rebooted. The TLS connection will be disconnected afterwards.", "Il nodo verrà riavviato. La connessione TLS verrà disconnessa.", "El nodo se reiniciará. La conexión TLS se desconectará.")</div>
+                <div class="ota-title">@Loc.T("Node neu starten?", "Reboot node?")</div>
+                <div class="ota-msg">@Loc.T("Der Node wird neu gestartet. Die TLS-Verbindung wird danach getrennt.", "The node will be rebooted. The TLS connection will be disconnected afterwards.")</div>
                 <div style="display:flex;gap:.6rem;justify-content:center;margin-top:.8rem">
-                    <button class="btn-danger btn-sm" @onclick="RebootConfirmedAsync">🔁 @Loc.T("Ja, neu starten", "Yes, reboot", "Sì, riavvia", "Sí, reiniciar")</button>
-                    <button class="btn-action btn-sm" @onclick="() => _rebootConfirm = false">@Loc.T("Abbrechen", "Cancel", "Annulla", "Cancelar")</button>
+                    <button class="btn-danger btn-sm" @onclick="RebootConfirmedAsync">🔁 @Loc.T("Ja, neu starten", "Yes, reboot")</button>
+                    <button class="btn-action btn-sm" @onclick="() => _rebootConfirm = false">@Loc.T("Abbrechen", "Cancel")</button>
                 </div>
             </div>
         </div>
@@ -111,9 +111,9 @@
         <div class="ota-overlay">
             <div class="ota-dialog">
                 <div class="ota-icon">🔄</div>
-                <div class="ota-title">@Loc.T("OTA-Update wird gestartet", "Starting OTA Update", "Avvio aggiornamento OTA", "Iniciando actualización OTA")</div>
-                <div class="ota-msg">@Loc.T("Der Node startet den OTA-Webserver. Die Seite öffnet sich in", "The node is starting the OTA web server. Page opens in", "Il nodo sta avviando il server OTA. La pagina si apre tra", "El nodo está iniciando el servidor OTA. La página se abrirá en")
-                    <strong>&nbsp;@_otaCountdown @Loc.T("Sekunden", "seconds", "secondi", "segundos")</strong> …
+                <div class="ota-title">@Loc.T("OTA-Update wird gestartet", "Starting OTA Update")</div>
+                <div class="ota-msg">@Loc.T("Der Node startet den OTA-Webserver. Die Seite öffnet sich in", "The node is starting the OTA web server. Page opens in")
+                    <strong>&nbsp;@_otaCountdown @Loc.T("Sekunden", "seconds")</strong> …
                 </div>
                 <div class="ota-progress">
                     <div class="ota-progress-bar" style="width:@((5 - _otaCountdown) * 20)%"></div>
@@ -126,18 +126,16 @@
     @if (!_isSerial && !string.IsNullOrEmpty(_unknownCertThumbprint))
     {
         <div class="settings-warn" style="margin:.4rem .6rem">
-            <strong>@Loc.T("Unbekanntes Zertifikat", "Unknown Certificate", "Certificato sconosciuto", "Certificado desconocido")</strong><br />
+            <strong>@Loc.T("Unbekanntes Zertifikat", "Unknown Certificate")</strong><br />
             <span style="font-family:monospace;font-size:11px;word-break:break-all">@_unknownCertThumbprint</span><br />
             <small>@Loc.T("Fingerprint in den Node-Einstellungen speichern, um diesen Node dauerhaft zu vertrauen.",
-                           "Save fingerprint in node settings to permanently trust this node.",
-                           "Salva l'impronta nelle impostazioni del nodo per fidarsi definitivamente.",
-                           "Guarda la huella en la configuración del nodo para confiar permanentemente.")</small>
+                           "Save fingerprint in node settings to permanently trust this node.")</small>
             <div style="display:flex;gap:.5rem;margin-top:.4rem">
                 <button class="btn-primary btn-sm" @onclick="TrustCertAsync">
-                    ✅ @Loc.T("Vertrauen & speichern", "Trust & save", "Fidati e salva", "Confiar y guardar")
+                    ✅ @Loc.T("Vertrauen & speichern", "Trust & save")
                 </button>
                 <button class="btn-secondary btn-sm" @onclick="() => _unknownCertThumbprint = null">
-                    ✖ @Loc.T("Abbrechen", "Cancel", "Annulla", "Cancelar")
+                    ✖ @Loc.T("Abbrechen", "Cancel")
                 </button>
             </div>
         </div>
@@ -169,7 +167,7 @@
                @bind="_inputText"
                @bind:event="oninput"
                @onkeydown="OnKeyDown"
-               placeholder="@(Console.IsConnected ? Loc.T("Befehl eingeben …", "Enter command …", "Inserisci comando …", "Introduce comando …") : Loc.T("Nicht verbunden", "Not connected", "Non connesso", "No conectado"))"
+               placeholder="@(Console.IsConnected ? Loc.T("Befehl eingeben …", "Enter command …") : Loc.T("Nicht verbunden", "Not connected"))"
                autocomplete="off"
                spellcheck="false"
                disabled="@(!Console.IsConnected)"
@@ -177,13 +175,13 @@
         @if (Console.IsConnected)
         {
             <button class="btn-action btn-sm" @onclick="SendInputAsync">
-                @Loc.T("Senden", "Send", "Invia", "Enviar")
+                @Loc.T("Senden", "Send")
             </button>
         }
         else
         {
             <button class="btn-action btn-sm" @onclick="ConnectAsync">
-                @Loc.T("Verbinden", "Connect", "Connetti", "Conectar")
+                @Loc.T("Verbinden", "Connect")
             </button>
         }
     </div>

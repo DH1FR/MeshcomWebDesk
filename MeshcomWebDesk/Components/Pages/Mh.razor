@@ -1,4 +1,4 @@
-@page "/mh"
+﻿@page "/mh"
 @rendermode InteractiveServer
 @using MeshcomWebDesk.Models
 @using MeshcomWebDesk.Services
@@ -13,13 +13,13 @@
 @inject NavigationManager Nav
 @inject GatewayService GatewayService
 
-<PageTitle>MH – @Loc.T("Zuletzt gehört", "Most Recently Heard", "Più recenti", "Más recientes")</PageTitle>
+<PageTitle>MH – @Loc.T("Zuletzt gehört", "Most Recently Heard")</PageTitle>
 
 <div class="mh-page">
 
     @* ── Own position bar ── *@
     <div class="mh-ownpos @(HasOwnPos ? "mh-ownpos-ok" : "mh-ownpos-unknown")">
-        <span class="mh-ownpos-label">📍 @Loc.T("Eigene Position:", "Own Position:", "Posizione propria:", "Posición propia:")</span>
+        <span class="mh-ownpos-label">📍 @Loc.T("Eigene Position:", "Own Position:")</span>
         @if (HasOwnPos)
         {
             <span class="mh-ownpos-val">
@@ -29,11 +29,11 @@
             </span>
             <span class="mh-ownpos-src">[Node]</span>
             <a class="mh-osm-link" href="@GeoHelper.OsmUrl(_status.OwnLatitude!.Value, _status.OwnLongitude!.Value)"
-               target="_blank" title="@Loc.T("Auf Karte anzeigen", "Show on map", "Mostra sulla mappa", "Mostrar en el mapa")">&#x1f5fa;&#xfe0f;</a>
+               target="_blank" title="@Loc.T("Auf Karte anzeigen", "Show on map")">&#x1f5fa;&#xfe0f;</a>
         }
         else
         {
-            <span class="mh-ownpos-unknown-txt">⏳ @Loc.T($"Warte auf Positionsdaten vom Node ({_myCallsign})…", $"Waiting for position data from node ({_myCallsign})…", $"In attesa di dati di posizione dal nodo ({_myCallsign})…", $"Esperando datos de posición del nodo ({_myCallsign})…")</span>
+            <span class="mh-ownpos-unknown-txt">⏳ @Loc.T($"Warte auf Positionsdaten vom Node ({_myCallsign})…", $"Waiting for position data from node ({_myCallsign})…")</span>
         }
     </div>
 
@@ -49,24 +49,24 @@
             <span class="mh-subtitle">
                 @filteredList.Count
                 @if (!string.IsNullOrWhiteSpace(_searchText)) { <span class="mh-search-total"> / @_stations.Count</span> }
-                @Loc.T("Station", "Station", "Station", "Station")@(filteredList.Count != 1 ? Loc.T("en", "s", "s", "s") : "")
+                @Loc.T("Station", "Station")@(filteredList.Count != 1 ? Loc.T("en", "s") : "")
             </span>
         </div>
         @if (_stations.Count > 0)
         {
             <div class="mh-search-wrap">
                 <input class="mh-search" type="search"
-                       placeholder="@Loc.T("Suchen…", "Search…", "Cerca…", "Buscar…")"
+                       placeholder="@Loc.T("Suchen…", "Search…")"
                        value="@_searchText"
                        @oninput="OnSearchInput"
                        @onkeydown="OnSearchKeyDown" />
                 @if (!string.IsNullOrEmpty(_searchText))
                 {
                     <button class="mh-search-clear" @onclick="ClearSearch"
-                            title="@Loc.T("Suche löschen", "Clear search", "Cancella ricerca", "Limpiar búsqueda")">&#xd7;</button>
+                            title="@Loc.T("Suche löschen", "Clear search")">&#xd7;</button>
                 }
             </div>
-            <button class="mh-clear-btn" @onclick="ClearList">🗑️ @Loc.T("Liste leeren", "Clear List", "Svuota lista", "Vaciar lista")</button>
+            <button class="mh-clear-btn" @onclick="ClearList">🗑️ @Loc.T("Liste leeren", "Clear List")</button>
         }
     </div>
 
@@ -74,8 +74,8 @@
     @if (_stations.Count == 0)
     {
         <div class="mh-empty">
-            <p>@Loc.T("Noch keine Stationen gehört.", "No stations heard yet.", "Nessuna stazione ricevuta.", "Ninguna estación escuchada aún.")</p>
-            <p class="mh-empty-hint">@Loc.T("Empfangene LoRa-Nachrichten erscheinen hier automatisch.", "Received LoRa messages will appear here automatically.", "I messaggi LoRa ricevuti appariranno qui automaticamente.", "Los mensajes LoRa recibidos aparecerán aquí automáticamente.")</p>
+            <p>@Loc.T("Noch keine Stationen gehört.", "No stations heard yet.")</p>
+            <p class="mh-empty-hint">@Loc.T("Empfangene LoRa-Nachrichten erscheinen hier automatisch.", "Received LoRa messages will appear here automatically.")</p>
         </div>
     }
     else
@@ -84,17 +84,17 @@
             <table class="mh-table">
                 <thead>
                     <tr>
-                        <th>@Loc.T("Rufzeichen", "Callsign", "Nominativo", "Indicativo")</th>
+                        <th>@Loc.T("Rufzeichen", "Callsign")</th>
                         @if (SettingsOptions.Value.Qrz.Enabled)
                         {
-                            <th>@Loc.T("Name / Ort", "Name / Location", "Nome / Luogo", "Nombre / Lugar")</th>
+                            <th>@Loc.T("Name / Ort", "Name / Location")</th>
                         }
-                        <th>@Loc.T("Zuletzt gehört", "Last Heard", "Ultima ricezione", "último recibido")</th>
-                        <th class="col-center">@Loc.T("Anz.", "Cnt.", "N.", "N.")</th>
-                        <th>@Loc.T("Letzte Nachricht", "Last Message", "Ultimo messaggio", "último mensaje")</th>
-                        <th>@Loc.T("GPS-Position", "GPS Position", "Posizione GPS", "Posición GPS")</th>
-                        <th class="col-center">@Loc.T("Höhe", "Alt.", "Alt.", "Alt.")</th>
-                        <th class="col-center">@Loc.T("Entfernung", "Distance", "Distanza", "Distancia")</th>
+                        <th>@Loc.T("Zuletzt gehört", "Last Heard")</th>
+                        <th class="col-center">@Loc.T("Anz.", "Cnt.")</th>
+                        <th>@Loc.T("Letzte Nachricht", "Last Message")</th>
+                        <th>@Loc.T("GPS-Position", "GPS Position")</th>
+                        <th class="col-center">@Loc.T("Höhe", "Alt.")</th>
+                        <th class="col-center">@Loc.T("Entfernung", "Distance")</th>
                         <th class="col-center">🔋</th>
                         <th class="col-center">RSSI</th>
                         <th class="col-center">SNR</th>
@@ -113,7 +113,7 @@
                                      @onmouseenter="() => _cardCallsign = s.Callsign"
                                      @onmouseleave="() => { if (_cardCallsign == s.Callsign) _cardCallsign = null; }">
                                     <span class="mh-cs-label" @onclick="() => ToggleCard(s.Callsign)">
-                                        @if (isGw) { <span class="mh-gw-icon" title="@Loc.T("Gateway", "Gateway", "Gateway", "Gateway")">🌐</span> }
+                                        @if (isGw) { <span class="mh-gw-icon" title="@Loc.T("Gateway", "Gateway")">🌐</span> }
                                         @s.Callsign
                                     </span>
                                     @if (!string.IsNullOrEmpty(MeshcomLookup.HwName(s.HwId)))
@@ -191,7 +191,7 @@
                                             <button class="mh-sc-btn mh-sc-btn-chat"
                                                     @onclick="() => OpenChat(s.Callsign)"
                                                     @onclick:stopPropagation="true">
-                                                💬 @Loc.T("Chat öffnen", "Open Chat", "Apri chat", "Abrir chat")
+                                                💬 @Loc.T("Chat öffnen", "Open Chat")
                                             </button>
                                             <a class="mh-sc-btn mh-sc-btn-aprs"
                                                href="https://aprs.fi/#!call=a/@(Uri.EscapeDataString(s.Callsign))"
@@ -236,7 +236,7 @@
                                     <a class="mh-coord-link"
                                        href="@GeoHelper.OsmUrl(s.Latitude.Value, s.Longitude.Value)"
                                           target="_blank"
-                                          title="@Loc.T("Auf Karte anzeigen", "Show on map", "Mostra sulla mappa", "Mostrar en el mapa")">
+                                          title="@Loc.T("Auf Karte anzeigen", "Show on map")">
                                         @($"{s.Latitude.Value:F4}°{(s.Latitude >= 0 ? "N" : "S")}")
                                         <br />
                                         @($"{s.Longitude.Value:F4}°{(s.Longitude >= 0 ? "E" : "W")}")
@@ -257,7 +257,7 @@
                             <td class="col-center mh-batt">
                                 @if (s.Battery.HasValue)
                                 {
-                                    <span class="@BattClass(s.Battery.Value)" title="@Loc.T($"Akku {s.Battery}%", $"Battery {s.Battery}%", $"Batteria {s.Battery}%", $"Bateriía {s.Battery}%")">@s.Battery%</span>
+                                    <span class="@BattClass(s.Battery.Value)" title="@Loc.T($"Akku {s.Battery}%", $"Battery {s.Battery}%")">@s.Battery%</span>
                                 }
                                 else
                                 {
@@ -286,9 +286,9 @@
                             </td>
                             <td>
                                 <button class="mh-chat-btn"
-                                        title="@Loc.T($"Chat mit {s.Callsign} öffnen", $"Open chat with {s.Callsign}", $"Apri chat con {s.Callsign}", $"Abrir chat con {s.Callsign}")">&#x1f4ac;</button>
+                                        title="@Loc.T($"Chat mit {s.Callsign} öffnen", $"Open chat with {s.Callsign}")">&#x1f4ac;</button>
                                 <button class="mh-remove-btn" @onclick="() => RemoveStation(s.Callsign)"
-                                        title="@Loc.T($"{s.Callsign} aus Liste entfernen", $"Remove {s.Callsign} from list", $"Rimuovi {s.Callsign} dalla lista", $"Eliminar {s.Callsign} de la lista")">✕</button>
+                                        title="@Loc.T($"{s.Callsign} aus Liste entfernen", $"Remove {s.Callsign} from list")">✕</button>
                             </td>
                         </tr>
                     }
@@ -297,9 +297,7 @@
                         <tr>
                             <td colspan="99" class="mh-no-results">
                                 🔍 @Loc.T($"Keine Ergebnisse für \u201e{_searchText}\u201c",
-                                          $"No results for \"{_searchText}\"",
-                                          $"Nessun risultato per \"{_searchText}\"",
-                                          $"Sin resultados para \"{_searchText}\"")
+                                          $"No results for \"{_searchText}\"")
                             </td>
                         </tr>
                     }
@@ -386,7 +384,7 @@
 
     protected override void OnInitialized()
     {
-        Loc.OnChange += StateHasChanged;
+        Loc.OnChange += OnLocChange;
         _myCallsign = SettingsOptions.Value.MyCallsign;
         _status     = UdpService.Status;
         _stations   = ChatService.MhList;
@@ -534,10 +532,12 @@
 
     private DateTime LT(DateTime dt) => dt.AddHours(SettingsOptions.Value.TimeOffsetHours);
 
+    private void OnLocChange() => _ = InvokeAsync(StateHasChanged);
+
     public void Dispose()
     {
         _disposed = true;
-        Loc.OnChange              -= StateHasChanged;
+        Loc.OnChange              -= OnLocChange;
         ChatService.OnMhChange    -= OnChanged;
         UdpService.OnStatusChange -= OnStatusChanged;
     }

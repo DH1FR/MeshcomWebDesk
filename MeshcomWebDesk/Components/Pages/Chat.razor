@@ -1,4 +1,4 @@
-@page "/"
+﻿@page "/"
 @using MeshcomWebDesk.Models
 @using MeshcomWebDesk.Services
 @using MeshcomWebDesk.Helpers
@@ -37,8 +37,8 @@
             };
             var lastSeen = NodeManager.GetLastSeen(node.Id);
             var tooltip  = lastSeen.HasValue
-                ? $"{node.Callsign}  |  {node.DeviceIp}:{node.DevicePort}  |  {Loc.T("Zuletzt", "Last seen", "Visto", "Visto")}: {FormatLastSeen(lastSeen.Value)}"
-                : $"{node.Callsign}  |  {node.DeviceIp}:{node.DevicePort}  |  {Loc.T("Noch kein Paket", "No packet yet", "Nessun pacchetto", "Sin paquete")}";
+                ? $"{node.Callsign}  |  {node.DeviceIp}:{node.DevicePort}  |  {Loc.T("Zuletzt", "Last seen")}: {FormatLastSeen(lastSeen.Value)}"
+                : $"{node.Callsign}  |  {node.DeviceIp}:{node.DevicePort}  |  {Loc.T("Noch kein Paket", "No packet yet")}";
             <button class="node-switcher-btn @(NodeManager.SelectedNode?.Id == node.Id ? "active" : "")"
                     @onclick="() => SelectNode(node.Id)"
                     title="@tooltip">
@@ -58,10 +58,10 @@
                 {
                     <button class="tab-button tab-recent-btn @(_showRecentPartners ? "active" : "")"
                             @onclick="ToggleRecentPartnersAsync"
-                            title="@Loc.T("Letzte QSO-Partner", "Recent QSO partners", "Partner QSO recenti", "Socios QSO recientes")">📋</button>
+                            title="@Loc.T("Letzte QSO-Partner", "Recent QSO partners")">📋</button>
                     <button class="tab-button tab-recent-btn @(_globalSearchMode && _qsoSummaryVisible ? "active" : "")"
                             @onclick="OpenGlobalSearchAsync"
-                            title="@Loc.T("Alle Direkt-Nachrichten durchsuchen", "Search all direct messages", "Cerca tutti i messaggi diretti", "Buscar todos los mensajes directos")">🔍</button>
+                            title="@Loc.T("Alle Direkt-Nachrichten durchsuchen", "Search all direct messages")">🔍</button>
                 }
             </div>
             @foreach (var tab in _tabs)
@@ -72,7 +72,7 @@
                         @onclick="() => SelectTab(tab.Key)"
                         title="@(tab.Key != "*" && !tab.Key.StartsWith('#') ? tab.Title + QrzSuffix(tab.Key) : tab.Key.StartsWith('#') ? ChatService.GetGroupLabel(tab.Key)?.Label : null)">
                     <span class="tab-label-wrap">
-                        <span>@(tab.Key == "*" ? Loc.T("Alle", "All", "Tutti", "Todos") : tab.Title)</span>
+                        <span>@(tab.Key == "*" ? Loc.T("Alle", "All") : tab.Title)</span>
                         @if (tab.Key != "*" && !tab.Key.StartsWith('#') && QrzFirstName(tab.Key) is { } tabFn)
                         {
                             <span class="tab-qrz-name">@tabFn</span>
@@ -83,7 +83,7 @@
                         }
                         @if (tab.Messages.Count > 0)
                         {
-                            <span class="tab-msg-count" title="@Loc.T($"{tab.Messages.Count} Nachrichten", $"{tab.Messages.Count} messages", $"{tab.Messages.Count} messaggi", $"{tab.Messages.Count} mensajes")">Msg.:&nbsp;@tab.Messages.Count</span>
+                            <span class="tab-msg-count" title="@Loc.T($"{tab.Messages.Count} Nachrichten", $"{tab.Messages.Count} messages")">Msg.:&nbsp;@tab.Messages.Count</span>
                         }
                     </span>
                     @if (tab.UnreadCount > 0)
@@ -92,14 +92,14 @@
                     }
                     @if (QsoSummaryService.IsDbReady && tab.Key != "*" && !tab.Key.StartsWith('#'))
                     {
-                        <span class="tab-ai-icon" title="@(tab.HasQsoSummary ? Loc.T("QSO-Zusammenfassung verfügbar", "QSO summary available", "Riepilogo QSO disponibile", "Resumen QSO disponible") : Loc.T("QSO-Verlauf & Suche", "QSO History & Search", "Cronologia & ricerca QSO", "Historial & búsqueda QSO"))"
+                        <span class="tab-ai-icon" title="@(tab.HasQsoSummary ? Loc.T("QSO-Zusammenfassung verfügbar", "QSO summary available") : Loc.T("QSO-Verlauf & Suche", "QSO History & Search"))"
                               @onclick="() => OpenQsoSummary(tab)" @onclick:stopPropagation="true">🔎</span>
                     }
                     <span class="tab-close" @onclick="() => ConfirmCloseTab(tab.Key)" @onclick:stopPropagation="true">&times;</span>
                 </button>
             }
             <div class="tab-new-wrap">
-                <button class="tab-button tab-new" @onclick="ShowNewTabDialog" title="@Loc.T("Neuen Tab öffnen", "Open new tab", "Apri nuova scheda", "Abrir nueva pestaña")">+</button>
+                <button class="tab-button tab-new" @onclick="ShowNewTabDialog" title="@Loc.T("Neuen Tab öffnen", "Open new tab")">+</button>
             </div>
         </div>
 
@@ -107,10 +107,10 @@
         {
             <div class="new-tab-dialog">
                 <input @bind="_newTabCallsign" @bind:event="oninput"
-                       placeholder="@Loc.T("Rufzeichen oder Gruppe (z.B. OE1KBC, #gruppe, *)", "Callsign or group (e.g. OE1KBC, #group, *)", "Nominativo o gruppo (es. OE1KBC, #gruppo, *)", "Indicativo o grupo (p.ej. OE1KBC, #grupo, *)") "
+                       placeholder="@Loc.T("Rufzeichen oder Gruppe (z.B. OE1KBC, #gruppe, *)", "Callsign or group (e.g. OE1KBC, #group, *)") "
                        @onkeydown="OnNewTabKeyDown" />
-                <button class="btn-action" @onclick="CreateNewTab">@Loc.T("\u00d6ffnen", "Open", "Apri", "Abrir")</button>
-                <button class="btn-cancel" @onclick="() => _showNewTabInput = false">@Loc.T("Abbrechen", "Cancel", "Annulla", "Cancelar")</button>
+                <button class="btn-action" @onclick="CreateNewTab">@Loc.T("\u00d6ffnen", "Open")</button>
+                <button class="btn-cancel" @onclick="() => _showNewTabInput = false">@Loc.T("Abbrechen", "Cancel")</button>
             </div>
         }
 
@@ -118,12 +118,12 @@
         {
             <div class="recent-partners-flyout">
                 <div class="recent-partners-header">
-                    📡 @Loc.T("Letzte QSO-Partner", "Recent QSO partners", "Partner QSO recenti", "Socios QSO recientes")
+                    📡 @Loc.T("Letzte QSO-Partner", "Recent QSO partners")
                     <button class="recent-partners-close" @onclick="() => _showRecentPartners = false">✕</button>
                 </div>
                 @if (_recentPartners.Count == 0)
                 {
-                    <div class="recent-partners-empty">@Loc.T("Keine Daten gefunden.", "No data found.", "Nessun dato trovato.", "Sin datos encontrados.")</div>
+                    <div class="recent-partners-empty">@Loc.T("Keine Daten gefunden.", "No data found.")</div>
                 }
                 else
                 {
@@ -161,12 +161,12 @@
                                 <span class="msg-call-group">
                                     <span class="msg-call msg-call-link"
                                           @onclick="() => OpenTabFromMonitor(msg.From)"
-                                          title="@(Loc.T($"Chat mit {msg.From} öffnen", $"Open chat with {msg.From}", $"Apri chat con {msg.From}", $"Abrir chat con {msg.From}") + QrzSuffix(msg.From))">@msg.From@if (msgFn is not null){<span class="qrz-badge"> · @msgFn</span>}:</span>
+                                          title="@(Loc.T($"Chat mit {msg.From} öffnen", $"Open chat with {msg.From}") + QrzSuffix(msg.From))">@msg.From@if (msgFn is not null){<span class="qrz-badge"> · @msgFn</span>}:</span>
                                     <button class="btn-mention" @onclick="() => InsertMentionAsync(msg.From)" title="@MentionTitle(msg.From)">&#64;</button>
                                 </span>
                             }
                             <span class="msg-text">@FormatMessageWithLinks(msg.Text)</span>
-                            <button class="btn-copy-msg" title="@Loc.T("Text kopieren", "Copy text", "Copia testo", "Copiar texto")" @onclick="() => CopyMessageAsync(msg.Text)">📋</button>
+                            <button class="btn-copy-msg" title="@Loc.T("Text kopieren", "Copy text")" @onclick="() => CopyMessageAsync(msg.Text)">📋</button>
                             @if (msg.IsOutgoing)
                             {
                                 <span class="@AckCssClass(msg)" title="@AckTooltip(msg)">@AckIcon(msg)</span>
@@ -180,7 +180,7 @@
             else
             {
                 <div class="no-tab-selected">
-                    <p>@Loc.T("Kein Tab ausgewählt. Klicke", "No tab selected. Click", "Nessuna scheda selezionata. Fai clic su", "Ninguna pestaña seleccionada. Haz clic en") <strong>+</strong> @Loc.T("um einen neuen Chat zu öffnen, oder warte auf eine eingehende Nachricht.", "to open a new chat, or wait for an incoming message.", "per aprire una nuova chat, o attendi un messaggio in arrivo.", "para abrir un nuevo chat, o espera un mensaje entrante.")</p>
+                    <p>@Loc.T("Kein Tab ausgewählt. Klicke", "No tab selected. Click") <strong>+</strong> @Loc.T("um einen neuen Chat zu öffnen, oder warte auf eine eingehende Nachricht.", "to open a new chat, or wait for an incoming message.")</p>
                 </div>
             }
         </div>
@@ -198,24 +198,24 @@
                        value="@_monitorFilter"
                        @oninput="OnMonitorFilterInput"
                        @onkeydown="OnMonitorFilterKeyDown"
-                       placeholder="@Loc.T("Rufzeichen oder Text…", "Callsign or text…", "Nominativo o testo…", "Indicativo o texto…")" />
+                       placeholder="@Loc.T("Rufzeichen oder Text…", "Callsign or text…")" />
                 @if (!string.IsNullOrEmpty(_monitorFilter))
                 {
-                    <button class="mon-filter-clear" @onclick="ClearMonitorFilter" title="@Loc.T("Filter löschen", "Clear filter", "Cancella filtro", "Borrar filtro")">×</button>
+                    <button class="mon-filter-clear" @onclick="ClearMonitorFilter" title="@Loc.T("Filter löschen", "Clear filter")">×</button>
                 }
             </span>
             <span class="msg-count">
                 @if (string.IsNullOrEmpty(_monitorFilter))
                 {
-                    @($"{_allMessages.Count} {Loc.T("Einträge", "Entries", "Voci", "Entradas")}")
+                    @($"{_allMessages.Count} {Loc.T("Einträge", "Entries")}")
                 }
                 else
                 {
-                    @($"{_cachedFilteredMessages.Count} / {_allMessages.Count} {Loc.T("Einträge", "Entries", "Voci", "Entradas")}")
+                    @($"{_cachedFilteredMessages.Count} / {_allMessages.Count} {Loc.T("Einträge", "Entries")}")
                 }
             </span>
             <button class="mon-toggle-btn" @onclick="ToggleMonitorAsync"
-                    title="@(_showMonitor ? Loc.T("Monitor ausblenden", "Hide Monitor", "Nascondi monitor", "Ocultar monitor") : Loc.T("Monitor einblenden", "Show Monitor", "Mostra monitor", "Mostrar monitor"))">
+                    title="@(_showMonitor ? Loc.T("Monitor ausblenden", "Hide Monitor") : Loc.T("Monitor einblenden", "Show Monitor"))">
                 @(_showMonitor ? "▼" : "▲")
             </button>
         </div>
@@ -249,7 +249,7 @@
                                 var monFn = QrzFirstName(m.From);
                                 <span class="mon-call-group">
                                     <span class="mon-call mon-call-link" @onclick="() => OpenTabFromMonitor(m.From)"
-                                          title="@(Loc.T($"Chat mit {m.From} öffnen", $"Open chat with {m.From}", $"Apri chat con {m.From}", $"Abrir chat con {m.From}") + QrzSuffix(m.From))">@m.From@if (monFn is not null){<span class="qrz-badge"> · @monFn</span>}</span>
+                                          title="@(Loc.T($"Chat mit {m.From} öffnen", $"Open chat with {m.From}") + QrzSuffix(m.From))">@m.From@if (monFn is not null){<span class="qrz-badge"> · @monFn</span>}</span>
                                     <button class="btn-mention" @onclick="() => InsertMentionAsync(m.From)" title="@MentionTitle(m.From)">&#64;</button>
                                 </span>
                             }
@@ -271,14 +271,14 @@
                                 <span class="mon-arrow">→</span>
                                 if (m.IsBroadcast)
                                 {
-                                    <span class="mon-call mon-bcast">@Loc.T("alle", "all", "tutti", "todos")</span>
+                                    <span class="mon-call mon-bcast">@Loc.T("alle", "all")</span>
                                 }
                                 else if (!string.Equals(m.To, _myCallsign, StringComparison.OrdinalIgnoreCase))
                                 {
                                     var grpLabel = ChatService.GetGroupLabel(m.To);
                                     var destDisplay = FormatDest(m.To);
                                     <span class="mon-call mon-call-link" @onclick="() => OpenTabFromMonitor(m.To)"
-                                          title="@(grpLabel is not null ? grpLabel.Label : Loc.T($"Chat mit {m.To} öffnen", $"Open chat with {m.To}", $"Apri chat con {m.To}", $"Abrir chat con {m.To}") + QrzSuffix(m.To))">@destDisplay@if (grpLabel is not null){<span class="qrz-badge"> · @grpLabel.ShortLabel</span>}</span>
+                                          title="@(grpLabel is not null ? grpLabel.Label : Loc.T($"Chat mit {m.To} öffnen", $"Open chat with {m.To}") + QrzSuffix(m.To))">@destDisplay@if (grpLabel is not null){<span class="qrz-badge"> · @grpLabel.ShortLabel</span>}</span>
                                 }
                                 else
                                 {
@@ -339,14 +339,14 @@
                     @if (m.IsOutgoing && !m.IsAck && !m.IsPositionBeacon && !m.IsTelemetry &&
                          m.SequenceNumber != null && m.SequenceNumber != "TX")
                     {
-                        <span class="mon-seq" title="@Loc.T("Sequenznummer", "Sequence number", "Numero di sequenza", "Número de secuencia")">{@m.SequenceNumber}</span>
+                        <span class="mon-seq" title="@Loc.T("Sequenznummer", "Sequence number")">{@m.SequenceNumber}</span>
                     }
 
                     @* MsgId for incoming messages *@
                     @if (!m.IsOutgoing && !m.IsAck && !m.IsPositionBeacon && !m.IsTelemetry &&
                          !string.IsNullOrEmpty(m.MsgId))
                     {
-                        <span class="mon-msgid" title="@Loc.T("Message-ID", "Message ID", "ID messaggio", "ID de mensaje")">@m.MsgId</span>
+                        <span class="mon-msgid" title="@Loc.T("Message-ID", "Message ID")">@m.MsgId</span>
                     }
 
                     @* Signal *@
@@ -373,7 +373,7 @@
             {
                 <div class="watchlist-toast">
                     <div class="watchlist-toast-header">
-                        <span>📻 @Loc.T("Rufzeichen empfangen", "Callsign received", "Nominativo ricevuto", "Indicativo recibido")</span>
+                        <span>📻 @Loc.T("Rufzeichen empfangen", "Callsign received")</span>
                         <button class="watchlist-toast-close" @onclick="() => _watchlistAlerts.Clear()">✕</button>
                     </div>
                     @foreach (var alert in _watchlistAlerts)
@@ -390,7 +390,7 @@
             {
                 <div class="watchlist-toast" style="border-color:#e3b341">
                     <div class="watchlist-toast-header" style="background:#2a1e00;color:#e3b341">
-                        <span>📡 @Loc.T("CQ empfangen", "CQ received", "CQ ricevuto", "CQ recibido")</span>
+                        <span>📡 @Loc.T("CQ empfangen", "CQ received")</span>
                         <button class="watchlist-toast-close" @onclick="() => _cqAlerts.Clear()">✕</button>
                     </div>
                     @foreach (var cq in _cqAlerts)
@@ -410,13 +410,13 @@
     <div class="status-bar">
         <button class="status-mute-btn @(_soundEnabled ? "" : "status-mute-off")"
                 @onclick="() => _soundEnabled = !_soundEnabled"
-                title="@(_soundEnabled ? Loc.T("Ton ausschalten", "Mute sound", "Disattiva audio", "Silenciar") : Loc.T("Ton einschalten", "Unmute sound", "Attiva audio", "Activar sonido"))">
+                title="@(_soundEnabled ? Loc.T("Ton ausschalten", "Mute sound") : Loc.T("Ton einschalten", "Unmute sound"))">
             <span class="status-badge @(_soundEnabled ? "status-badge-neutral" : "status-badge-err")">@(_soundEnabled ? "🔔" : "🔕")</span>
         </button>
         <button class="status-mute-btn @(_voiceEnabled == true ? "" : "status-mute-off")"
                 @onclick="ToggleVoiceAsync"
                 style="@(_voiceEnabled is null ? "visibility:hidden" : "")"
-                title="@(_voiceEnabled == true ? Loc.T("Sprachansagen ausschalten", "Disable voice announcements", "Disattiva annunci vocali", "Desactivar anuncios de voz") : Loc.T("Sprachansagen einschalten", "Enable voice announcements", "Attiva annunci vocali", "Activar anuncios de voz"))">
+                title="@(_voiceEnabled == true ? Loc.T("Sprachansagen ausschalten", "Disable voice announcements") : Loc.T("Sprachansagen einschalten", "Enable voice announcements"))">
             <span class="status-badge @(_voiceEnabled == true ? "status-badge-neutral" : "status-badge-err")">@(_voiceEnabled == true ? "🔊" : "🔇")</span>
         </button>
         @if (TelnetService.IsEnabled)
@@ -427,7 +427,7 @@
             var consoleIcon = _settings.ConsoleMode == "serial" ? "🔌" : "🖥️";
             <button class="status-mute-btn @(consoleConnected ? "" : "status-mute-off")"
                     @onclick="ToggleTelnetAsync"
-                    title="@(consoleConnected ? Loc.T("Console verbunden – klicken zum Trennen", "Console connected – click to disconnect", "Console connessa – clic per disconnettersi", "Consola conectada – clic para desconectar") : Loc.T("Console getrennt – klicken zum Verbinden", "Console disconnected – click to connect", "Console disconnessa – clic per connettersi", "Consola desconectada – clic para conectar"))">
+                    title="@(consoleConnected ? Loc.T("Console verbunden – klicken zum Trennen", "Console connected – click to disconnect") : Loc.T("Console getrennt – klicken zum Verbinden", "Console disconnected – click to connect"))">
                 <span class="status-badge @(consoleConnected ? "status-badge-ok" : "status-badge-err")">@(consoleConnected ? consoleIcon : consoleIcon + "✗")</span>
             </button>
         }
@@ -460,7 +460,7 @@
         @if (!string.IsNullOrEmpty(MeshcomLookup.HwName(_status.NodeHwId)))
         {
             <span class="status-sep status-medium">|</span>
-            <span class="status-item status-medium" title="@Loc.T($"Node Hardware · Firmware: {_status.NodeFirmware}", $"Node hardware · Firmware: {_status.NodeFirmware}", $"Hardware node · Firmware: {_status.NodeFirmware}", $"Hardware del nodo · Firmware: {_status.NodeFirmware}")">
+            <span class="status-item status-medium" title="@Loc.T($"Node Hardware · Firmware: {_status.NodeFirmware}", $"Node hardware · Firmware: {_status.NodeFirmware}")">
                 <span class="status-badge status-badge-info">⚙️ @MeshcomLookup.HwName(_status.NodeHwId)@if (!string.IsNullOrEmpty(_status.NodeFirmware)) {<text>&nbsp;·&nbsp;@_status.NodeFirmware</text>}</span>
             </span>
         }
@@ -478,15 +478,15 @@
         @if (_status.BeaconActive)
         {
             <span class="status-sep status-detail">|</span>
-            <span class="status-item status-detail" title="@Loc.T($"Bake aktiv · Gruppe {_settings.BeaconGroup} · alle {_settings.BeaconIntervalHours} h", $"Beacon active · Group {_settings.BeaconGroup} · every {_settings.BeaconIntervalHours} h", $"Beacon attivo · Gruppo {_settings.BeaconGroup} · ogni {_settings.BeaconIntervalHours} h", $"Baliza activa · Grupo {_settings.BeaconGroup} · cada {_settings.BeaconIntervalHours} h")">
-                <span class="status-badge status-badge-warn">●&nbsp;@Loc.T("Bake", "Beacon", "Beacon", "Baliza")@if (_status.BeaconNextSend.HasValue) {<text>&nbsp;·&nbsp;@_status.BeaconNextSend.Value.ToString("HH:mm")</text>}</span>
+            <span class="status-item status-detail" title="@Loc.T($"Bake aktiv · Gruppe {_settings.BeaconGroup} · alle {_settings.BeaconIntervalHours} h", $"Beacon active · Group {_settings.BeaconGroup} · every {_settings.BeaconIntervalHours} h")">
+                <span class="status-badge status-badge-warn">●&nbsp;@Loc.T("Bake", "Beacon")@if (_status.BeaconNextSend.HasValue) {<text>&nbsp;·&nbsp;@_status.BeaconNextSend.Value.ToString("HH:mm")</text>}</span>
             </span>
         }
         @if (_status.LastRxTime.HasValue)
         {
             <span class="status-sep status-detail">|</span>
             <span class="status-item status-detail">
-                <span class="status-badge status-badge-neutral">⏱️ @LT(_status.LastRxTime.Value).ToString("HH:mm:ss") @Loc.T("von", "from", "da", "de") @_status.LastRxFrom</span>
+                <span class="status-badge status-badge-neutral">⏱️ @LT(_status.LastRxTime.Value).ToString("HH:mm:ss") @Loc.T("von", "from") @_status.LastRxFrom</span>
             </span>
         }
         @if (_status.LastRssi.HasValue)
@@ -516,7 +516,7 @@
             <div class="qso-summary-header">
                 @if (_globalSearchMode)
                 {
-                    <span>🔍 @Loc.T("Alle Direkt-Nachrichten durchsuchen", "Search all direct messages", "Cerca tutti i messaggi diretti", "Buscar todos los mensajes directos")</span>
+                    <span>🔍 @Loc.T("Alle Direkt-Nachrichten durchsuchen", "Search all direct messages")</span>
                 }
                 else
                 {
@@ -529,16 +529,16 @@
             @if (_qsoSummaryRecord != null)
             {
             <div class="qso-summary-meta">
-                📅 @Loc.T("Letztes QSO:", "Last QSO:", "Ultimo QSO:", "Último QSO:")
+                📅 @Loc.T("Letztes QSO:", "Last QSO:")
                 <strong>@_qsoSummaryRecord.LastQsoAt.ToString("dd.MM.yyyy HH:mm")</strong>
                 &nbsp;|&nbsp;
-                @Loc.T("Nachrichten in DB:", "Messages in DB:", "Messaggi nel DB:", "Mensajes en DB:")
+                @Loc.T("Nachrichten in DB:", "Messages in DB:")
                 <strong>@_qsoSummaryRecord.MessageCount</strong>
                 @if (_qsoSummaryRecord.CreatedAt != DateTime.MinValue)
                 {
                     <span>
                         &nbsp;|&nbsp;
-                        @Loc.T("Zusammenfassung:", "Summary:", "Riepilogo:", "Resumen:")
+                        @Loc.T("Zusammenfassung:", "Summary:")
                         <strong>@_qsoSummaryRecord.CreatedAt.ToString("dd.MM.yyyy HH:mm")</strong>
                     </span>
                 }
@@ -551,20 +551,20 @@
                 {
                 <button class="qso-modal-tab @(_qsoModalTab == 0 ? "active" : "")" @onclick='() => SwitchModalTab(0)'
                         disabled="@(!IsAiActive)"
-                        title="@(!IsAiActive ? Loc.T("KI nicht aktiv – API-Key in den Einstellungen hinterlegen", "AI not active – add API key in settings", "IA non attiva – aggiungere API key", "IA no activa – añade API key") : null)">
-                    📋 @Loc.T("KI-Zusammenfassung", "AI Summary", "Riepilogo IA", "Resumen IA")
+                        title="@(!IsAiActive ? Loc.T("KI nicht aktiv – API-Key in den Einstellungen hinterlegen", "AI not active – add API key in settings") : null)">
+                    📋 @Loc.T("KI-Zusammenfassung", "AI Summary")
                 </button>
                 <button class="qso-modal-tab @(_qsoModalTab == 1 ? "active" : "")" @onclick='() => SwitchModalTab(1)'>
-                    📜 @Loc.T("Verlauf", "History", "Cronologia", "Historial")
+                    📜 @Loc.T("Verlauf", "History")
                 </button>
                 }
                 <button class="qso-modal-tab @(_qsoModalTab == 2 ? "active" : "")" @onclick='() => SwitchModalTab(2)'>
-                    🔎 @Loc.T("Suche", "Search", "Cerca", "Buscar")
+                    🔎 @Loc.T("Suche", "Search")
                 </button>
                 <button class="qso-modal-tab @(_qsoModalTab == 3 ? "active" : "")" @onclick='() => SwitchModalTab(3)'
                         disabled="@(!IsAiActive)"
-                        title="@(!IsAiActive ? Loc.T("KI nicht aktiv – API-Key in den Einstellungen hinterlegen", "AI not active – add API key in settings", "IA non attiva – aggiungere API key", "IA no activa – añade API key") : null)">
-                    🔎 @Loc.T("KI-Suche", "AI Search", "Ricerca IA", "Búsqueda IA")
+                        title="@(!IsAiActive ? Loc.T("KI nicht aktiv – API-Key in den Einstellungen hinterlegen", "AI not active – add API key in settings") : null)">
+                    🔎 @Loc.T("KI-Suche", "AI Search")
                 </button>
             </div>
 
@@ -573,11 +573,11 @@
             {
                 @if (_qsoSummaryLoading)
                 {
-                    <div class="qso-summary-body"><div class="qso-summary-hint">⏳ @Loc.T("Lade…", "Loading…", "Caricamento…", "Cargando…")</div></div>
+                    <div class="qso-summary-body"><div class="qso-summary-hint">⏳ @Loc.T("Lade…", "Loading…")</div></div>
                 }
                 else if (_qsoSummaryRecord == null)
                 {
-                    <div class="qso-summary-body"><div class="qso-summary-hint">⚠️ @Loc.T("Keine Daten verfügbar.", "No data available.", "Nessun dato disponibile.", "Sin datos disponibles.")</div></div>
+                    <div class="qso-summary-body"><div class="qso-summary-hint">⚠️ @Loc.T("Keine Daten verfügbar.", "No data available.")</div></div>
                 }
                 else
                 {
@@ -587,9 +587,7 @@
                         <div class="qso-summary-hint">
                             ℹ️ @Loc.T(
                                 "Noch keine Zusammenfassung vorhanden. Klicke auf 'Generieren' um die QSO-Daten aus der Datenbank auszuwerten.",
-                                "No summary yet. Click 'Generate' to analyse the QSO data from the database.",
-                                "Nessun riepilogo ancora. Fai clic su 'Genera' per analizzare i dati QSO dal database.",
-                                "Aun no hay resumen. Haz clic en 'Generar' para analizar los datos QSO de la base de datos.")
+                                "No summary yet. Click 'Generate' to analyse the QSO data from the database.")
                         </div>
                     }
                     else
@@ -599,21 +597,21 @@
                 </div>
                 <div class="qso-summary-footer">
                     <button class="btn-action" @onclick="RegenerateQsoSummaryAsync" disabled="@(_qsoSummaryLoading || !IsAiActive)"
-                            title="@(!IsAiActive ? Loc.T("KI nicht aktiv – API-Key in den Einstellungen hinterlegen", "AI not active – add API key in settings", "IA non attiva – aggiungere API key", "IA no activa – añade API key") : null)">
+                            title="@(!IsAiActive ? Loc.T("KI nicht aktiv – API-Key in den Einstellungen hinterlegen", "AI not active – add API key in settings") : null)">
                         @if (_qsoSummaryLoading)
                         {
-                            <span>⏳ @Loc.T("Wird generiert…", "Generating…", "Generazione…", "Generando…")</span>
+                            <span>⏳ @Loc.T("Wird generiert…", "Generating…")</span>
                         }
                         else if (string.IsNullOrEmpty(_qsoSummaryRecord?.SummaryText))
                         {
-                            <span>✨ @Loc.T("Generieren", "Generate", "Genera", "Generar")</span>
+                            <span>✨ @Loc.T("Generieren", "Generate")</span>
                         }
                         else
                         {
-                            <span>🔄 @Loc.T("Neu generieren", "Regenerate", "Rigenera", "Regenerar")</span>
+                            <span>🔄 @Loc.T("Neu generieren", "Regenerate")</span>
                         }
                     </button>
-                    <button class="btn-cancel" @onclick="CloseQsoSummary">@Loc.T("Schließen", "Close", "Chiudi", "Cerrar")</button>
+                    <button class="btn-cancel" @onclick="CloseQsoSummary">@Loc.T("Schließen", "Close")</button>
                 </div>
                 } @* end else (record != null) *@
             }
@@ -622,32 +620,32 @@
             @if (_qsoModalTab == 1)
             {
                 <div class="qso-history-filter">
-                    <input type="date" @bind="_historyFrom" title="@Loc.T("Von", "From", "Da", "Desde")" />
+                    <input type="date" @bind="_historyFrom" title="@Loc.T("Von", "From")" />
                     <span>–</span>
-                    <input type="date" @bind="_historyTo" title="@Loc.T("Bis", "To", "A", "Hasta")" />
+                    <input type="date" @bind="_historyTo" title="@Loc.T("Bis", "To")" />
                     <input type="text" @bind="_historyTextFilter" @bind:event="oninput"
-                           placeholder="@Loc.T("Suchbegriff…", "Search term…", "Termine…", "Término…")" />
+                           placeholder="@Loc.T("Suchbegriff…", "Search term…")" />
                     <button class="btn-action" @onclick="LoadHistoryAsync">🔎</button>
                     <button class="btn-cancel" @onclick="ResetHistoryFilter">✕</button>
                 </div>
                 <div class="qso-summary-body" style="padding:0">
                     @if (_historyLoading)
                     {
-                        <div class="qso-summary-hint">⏳ @Loc.T("Lade…", "Loading…", "Caricamento…", "Cargando…")</div>
+                        <div class="qso-summary-hint">⏳ @Loc.T("Lade…", "Loading…")</div>
                     }
                     else if (_historyMessages.Count == 0)
                     {
-                        <div class="qso-summary-hint">ℹ️ @Loc.T("Keine Nachrichten gefunden.", "No messages found.", "Nessun messaggio trovato.", "No se encontraron mensajes.")</div>
+                        <div class="qso-summary-hint">ℹ️ @Loc.T("Keine Nachrichten gefunden.", "No messages found.")</div>
                     }
                     else
                     {
                         <table class="qso-history-table">
                             <thead>
                                 <tr>
-                                    <th>@Loc.T("Datum/Zeit", "Date/Time", "Data/Ora", "Fecha/Hora")</th>
-                                    <th>@Loc.T("Von", "From", "Da", "De")</th>
-                                    <th>@Loc.T("An", "To", "A", "Para")</th>
-                                    <th>@Loc.T("Nachricht", "Message", "Messaggio", "Mensaje")</th>
+                                    <th>@Loc.T("Datum/Zeit", "Date/Time")</th>
+                                    <th>@Loc.T("Von", "From")</th>
+                                    <th>@Loc.T("An", "To")</th>
+                                    <th>@Loc.T("Nachricht", "Message")</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -664,13 +662,13 @@
                         </table>
                         <div class="qso-history-pager">
                             <button class="btn-action" @onclick="HistoryPrevPage" disabled="@(_historyPage <= 1)">◀</button>
-                            <span>@Loc.T("Seite", "Page", "Pagina", "Página") @_historyPage / @_historyTotalPages &nbsp;(@_historyTotal @Loc.T("gesamt", "total", "totale", "total"))</span>
+                            <span>@Loc.T("Seite", "Page") @_historyPage / @_historyTotalPages &nbsp;(@_historyTotal @Loc.T("gesamt", "total"))</span>
                             <button class="btn-action" @onclick="HistoryNextPage" disabled="@(_historyPage >= _historyTotalPages)">▶</button>
                         </div>
                     }
                 </div>
                 <div class="qso-summary-footer">
-                    <button class="btn-cancel" @onclick="CloseQsoSummary">@Loc.T("Schließen", "Close", "Chiudi", "Cerrar")</button>
+                    <button class="btn-cancel" @onclick="CloseQsoSummary">@Loc.T("Schließen", "Close")</button>
                 </div>
             }
 
@@ -678,33 +676,33 @@
             @if (_qsoModalTab == 2)
             {
                 <div class="qso-history-filter">
-                    <input type="date" @bind="_textSearchFrom" title="@Loc.T("Von", "From", "Da", "Desde")" />
+                    <input type="date" @bind="_textSearchFrom" title="@Loc.T("Von", "From")" />
                     <span>–</span>
-                    <input type="date" @bind="_textSearchTo" title="@Loc.T("Bis", "To", "A", "Hasta")" />
+                    <input type="date" @bind="_textSearchTo" title="@Loc.T("Bis", "To")" />
                     <input type="text" @bind="_textSearchTerm" @bind:event="oninput"
                            @onkeydown="OnTextSearchKeyDown"
-                           placeholder="@Loc.T("Suchbegriff eingeben und Enter", "Enter search term and press Enter", "Inserisci e premi Invio", "Introduce y pulsa Enter")" />
+                           placeholder="@Loc.T("Suchbegriff eingeben und Enter", "Enter search term and press Enter")" />
                     <button class="btn-action" @onclick="RunTextSearchAsync" disabled="@(_textSearchLoading || string.IsNullOrWhiteSpace(_textSearchTerm))">🔎</button>
                     <button class="btn-cancel" @onclick="ResetTextSearch">✕</button>
                 </div>
                 <div class="qso-summary-body" style="padding:0">
                     @if (_textSearchLoading)
                     {
-                        <div class="qso-summary-hint">⏳ @Loc.T("Suche…", "Searching…", "Ricerca…", "Buscando…")</div>
+                        <div class="qso-summary-hint">⏳ @Loc.T("Suche…", "Searching…")</div>
                     }
                     else if (_textSearchMessages.Count == 0 && _textSearchTerm != string.Empty)
                     {
-                        <div class="qso-summary-hint">ℹ️ @Loc.T("Keine Treffer.", "No results.", "Nessun risultato.", "Sin resultados.")</div>
+                        <div class="qso-summary-hint">ℹ️ @Loc.T("Keine Treffer.", "No results.")</div>
                     }
                     else if (_textSearchMessages.Count > 0)
                     {
                         <table class="qso-history-table">
                             <thead>
                                 <tr>
-                                    <th>@Loc.T("Datum/Zeit", "Date/Time", "Data/Ora", "Fecha/Hora")</th>
-                                    <th>@Loc.T("Von", "From", "Da", "De")</th>
-                                    <th>@Loc.T("An", "To", "A", "Para")</th>
-                                    <th>@Loc.T("Nachricht", "Message", "Messaggio", "Mensaje")</th>
+                                    <th>@Loc.T("Datum/Zeit", "Date/Time")</th>
+                                    <th>@Loc.T("Von", "From")</th>
+                                    <th>@Loc.T("An", "To")</th>
+                                    <th>@Loc.T("Nachricht", "Message")</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -721,17 +719,17 @@
                         </table>
                         <div class="qso-history-pager">
                             <button class="btn-action" @onclick="TextSearchPrevPage" disabled="@(_textSearchPage <= 1)">◀</button>
-                            <span>@Loc.T("Seite", "Page", "Pagina", "P\u00e1gina") @_textSearchPage / @_textSearchTotalPages &nbsp;(@_textSearchTotal @Loc.T("Treffer", "results", "risultati", "resultados"))</span>
+                            <span>@Loc.T("Seite", "Page") @_textSearchPage / @_textSearchTotalPages &nbsp;(@_textSearchTotal @Loc.T("Treffer", "results"))</span>
                             <button class="btn-action" @onclick="TextSearchNextPage" disabled="@(_textSearchPage >= _textSearchTotalPages)">▶</button>
                         </div>
                     }
                     else
                     {
-                        <div class="qso-summary-hint">💡 @Loc.T("Suchbegriff eingeben und auf 🔎 klicken oder Enter drücken.", "Enter a search term and click 🔎 or press Enter.", "Inserisci un termine e premi Invio.", "Introduce un término y pulsa Enter.")</div>
+                        <div class="qso-summary-hint">💡 @Loc.T("Suchbegriff eingeben und auf 🔎 klicken oder Enter drücken.", "Enter a search term and click 🔎 or press Enter.")</div>
                     }
                 </div>
                 <div class="qso-summary-footer">
-                    <button class="btn-cancel" @onclick="CloseQsoSummary">@Loc.T("Schließen", "Close", "Chiudi", "Cerrar")</button>
+                    <button class="btn-cancel" @onclick="CloseQsoSummary">@Loc.T("Schließen", "Close")</button>
                 </div>
             }
 
@@ -739,10 +737,10 @@
             @if (_qsoModalTab == 3 && IsAiActive)
             {
                 <div class="qso-history-filter">
-                    <span style="color:#8b949e;font-size:11px">@Loc.T("Zeitraum (optional):", "Period (optional):", "Periodo (opz.):", "Período (opc.):")</span>
-                    <input type="date" @bind="_searchFrom" title="@Loc.T("Von", "From", "Da", "Desde")" />
+                    <span style="color:#8b949e;font-size:11px">@Loc.T("Zeitraum (optional):", "Period (optional):")</span>
+                    <input type="date" @bind="_searchFrom" title="@Loc.T("Von", "From")" />
                     <span>–</span>
-                    <input type="date" @bind="_searchTo" title="@Loc.T("Bis", "To", "A", "Hasta")" />
+                    <input type="date" @bind="_searchTo" title="@Loc.T("Bis", "To")" />
                     @if (_searchFrom.HasValue || _searchTo.HasValue)
                     {
                         <button class="btn-cancel" @onclick="() => { _searchFrom = null; _searchTo = null; }">✕</button>
@@ -751,23 +749,23 @@
                 <div style="padding:4px 14px 2px 14px;display:flex;align-items:center;gap:8px">
                     <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#8b949e;cursor:pointer;user-select:none">
                         <input type="checkbox" @bind="_aiSearchAllContacts" style="cursor:pointer" disabled="@_globalSearchMode" />
-                        @Loc.T("Alle Direkt-QSOs durchsuchen", "Search all direct QSOs", "Cerca tutti i QSO diretti", "Buscar todos los QSO directos")
+                        @Loc.T("Alle Direkt-QSOs durchsuchen", "Search all direct QSOs")
                     </label>
                 </div>
                 <div style="padding:4px 14px 8px 14px;display:flex;gap:8px">
                     <input type="text" id="ai-search-input"
                            @bind="_searchQuery" @bind:event="onchange"
                            @onkeydown="OnSearchKeyDown"
-                           placeholder="@Loc.T("Frage stellen z.B. 'Was hat mir Jürgen empfohlen?'", "Ask e.g. 'What did Jürgen recommend to me?'", "Domanda es. 'Cosa mi ha consigliato?'", "Pregunta p.ej. '¿Qué me recomendó?'")"
+                           placeholder="@Loc.T("Frage stellen z.B. 'Was hat mir Jürgen empfohlen?'", "Ask e.g. 'What did Jürgen recommend to me?'")"
                            style="flex:1" />
                     <button class="btn-action" @onclick="RunAiSearchAsync" disabled="@(_aiSearchLoading || string.IsNullOrWhiteSpace(_searchQuery))">
-                        @if (_aiSearchLoading) { <span>⏳</span> } else { <span>🔍 @Loc.T("Suchen", "Search", "Cerca", "Buscar")</span> }
+                        @if (_aiSearchLoading) { <span>⏳</span> } else { <span>🔍 @Loc.T("Suchen", "Search")</span> }
                     </button>
                 </div>
                 <div class="qso-summary-body">
                     @if (_aiSearchLoading)
                     {
-                        <div class="qso-summary-hint">⏳ @Loc.T("KI durchsucht Nachrichten…", "AI is searching messages…", "IA sta cercando…", "IA buscando…")</div>
+                        <div class="qso-summary-hint">⏳ @Loc.T("KI durchsucht Nachrichten…", "AI is searching messages…")</div>
                     }
                     else if (_aiSearchResult != null)
                     {
@@ -782,17 +780,13 @@
                                 {
                                     @Loc.T(
                                         "Alle Direkt-QSOs werden durchsucht. Stelle eine Frage zu beliebigen Gesprächen. Die KI nennt Rufzeichen, Datum und Originaltext.",
-                                        "All direct QSOs will be searched. Ask a question about any conversation. The AI cites callsign, date and original text.",
-                                        "Verranno cercati tutti i QSO diretti. L'IA cita nominativo, data e testo originale.",
-                                        "Se buscarán todos los QSO directos. La IA cita indicativo, fecha y texto original.")
+                                        "All direct QSOs will be searched. Ask a question about any conversation. The AI cites callsign, date and original text.")
                                 }
                                 else
                                 {
                                     @Loc.T(
                                         "Stelle eine Frage zum Gesprächsverlauf. Die KI durchsucht alle Nachrichten und nennt dir genaue Zeitstempel.",
-                                        "Ask a question about the conversation. The AI searches all messages and cites exact timestamps.",
-                                        "Fai una domanda sulla conversazione. L'IA cerca tutti i messaggi e cita i timestamp.",
-                                        "Haz una pregunta sobre la conversacion. La IA busca todos los mensajes y cita las marcas de tiempo.")
+                                        "Ask a question about the conversation. The AI searches all messages and cites exact timestamps.")
                                 }
                             </span>
                         </div>
@@ -803,7 +797,7 @@
                     }
                 </div>
                 <div class="qso-summary-footer">
-                    <button class="btn-cancel" @onclick="CloseQsoSummary">@Loc.T("Schließen", "Close", "Chiudi", "Cerrar")</button>
+                    <button class="btn-cancel" @onclick="CloseQsoSummary">@Loc.T("Schließen", "Close")</button>
                 </div>
             }
 
@@ -818,7 +812,7 @@
     </ChildContent>
     <ErrorContent Context="ex">
         <div style="padding:1rem;color:#ff6b6b;background:#1a1a2e;border:1px solid #ff6b6b;border-radius:6px;margin:1rem">
-            <strong>@Loc.T("Fehler:", "Error:", "Errore:", "Error:")</strong> @ex.Message
+            <strong>@Loc.T("Fehler:", "Error:")</strong> @ex.Message
         </div>
     </ErrorContent>
 </ErrorBoundary>
@@ -985,7 +979,7 @@
 
     protected override void OnInitialized()
     {
-        Loc.OnChange += StateHasChanged;
+        Loc.OnChange += OnLocChange;
         _settings = SettingsOptions.CurrentValue;
         _myCallsign = _settings.MyCallsign;
         _status = UdpService.Status;
@@ -1099,11 +1093,9 @@
                     await Task.Delay(3000);
                     var txtQuestion = Loc.T(
                         "Gefällt dir MeshComWebDesk? Dann spendier mir für die viele Arbeit einen Kaffee! 😊",
-                        "Do you like MeshComWebDesk? Then buy me a coffee for all the hard work! 😊",
-                        "Ti piace MeshComWebDesk? Offrimi un caffè per tutto il lavoro! 😊",
-                        "¿Te gusta MeshComWebDesk? ¡Invítame un café por todo el trabajo! 😊");
-                    var txtYes = Loc.T("Ja, gerne!", "Yes, with pleasure!", "Sì, volentieri!", "¡Sí, con gusto!");
-                    var txtNo = Loc.T("Nein, so gut ist es auch nicht", "No, it's not that good", "No, non è così buono", "No, no es tan bueno");
+                        "Do you like MeshComWebDesk? Then buy me a coffee for all the hard work! 😊");
+                    var txtYes = Loc.T("Ja, gerne!", "Yes, with pleasure!");
+                    var txtNo = Loc.T("Nein, so gut ist es auch nicht", "No, it's not that good");
                     var author = "© Ralf Altenbrand (DH1FR) · dh1fr@darc.de";
                     await JS.InvokeVoidAsync("meshcomChat.showWelcomeDialog", _appVersion, majorKey, txtQuestion, txtYes, txtNo, author);
                 }
@@ -1293,9 +1285,7 @@
         var firstName = QrzFirstName(callsign);
         var text = Loc.T(
             $"Nachricht von {phonetic}{(firstName != null ? ". " + firstName : "")}",
-            $"Message from {phonetic}{(firstName != null ? ". " + firstName : "")}",
-            $"Messaggio da {phonetic}{(firstName != null ? ". " + firstName : "")}",
-            $"Mensaje de {phonetic}{(firstName != null ? ". " + firstName : "")}");
+            $"Message from {phonetic}{(firstName != null ? ". " + firstName : "")}");
         // Direct message has highest priority – prepend before any watchlist entries
         var existing = _pendingSpeech.ToArray();
         _pendingSpeech.Clear();
@@ -1324,9 +1314,7 @@
         var label = tab?.Title ?? key;
         var msg = Loc.T(
             $"Tab \"{label}\" wirklich schließen?",
-            $"Close tab \"{label}\"?",
-            $"Chiudere la scheda \"{label}\"?",
-            $"¿Cerrar la pestaña \"{label}\"?");
+            $"Close tab \"{label}\"?");
         var confirmed = await JS.InvokeAsync<bool>("confirm", msg);
         if (confirmed)
             CloseTab(key);
@@ -1383,7 +1371,7 @@
     }
 
     private string MentionTitle(string callsign) =>
-        "@" + callsign + Loc.T(" in Nachricht einfügen", " insert into message", " inserisci nel messaggio", " insertar en mensaje");
+        "@" + callsign + Loc.T(" in Nachricht einfügen", " insert into message");
 
     private async Task CopyMessageAsync(string text)
     {
@@ -1488,7 +1476,7 @@
     {
         _disposed = true;
         _dotNetRef?.Dispose();
-        Loc.OnChange -= StateHasChanged;
+        Loc.OnChange -= OnLocChange;
         ChatService.OnChange -= OnChatChanged;
         UdpService.OnStatusChange -= OnStatusChanged;
         ChatService.OnWatchlistHit -= HandleWatchlistHit;
@@ -1505,9 +1493,9 @@
     private string FormatLastSeen(DateTime utc)
     {
         var age = DateTime.UtcNow - utc;
-        if (age.TotalSeconds < 60)  return Loc.T($"vor {(int)age.TotalSeconds}s", $"{(int)age.TotalSeconds}s ago", $"{(int)age.TotalSeconds}s fa", $"hace {(int)age.TotalSeconds}s");
-        if (age.TotalMinutes < 60)  return Loc.T($"vor {(int)age.TotalMinutes}min", $"{(int)age.TotalMinutes}min ago", $"{(int)age.TotalMinutes}min fa", $"hace {(int)age.TotalMinutes}min");
-        return Loc.T($"vor {(int)age.TotalHours}h", $"{(int)age.TotalHours}h ago", $"{(int)age.TotalHours}h fa", $"hace {(int)age.TotalHours}h");
+        if (age.TotalSeconds < 60)  return Loc.T($"vor {(int)age.TotalSeconds}s", $"{(int)age.TotalSeconds}s ago");
+        if (age.TotalMinutes < 60)  return Loc.T($"vor {(int)age.TotalMinutes}min", $"{(int)age.TotalMinutes}min ago");
+        return Loc.T($"vor {(int)age.TotalHours}h", $"{(int)age.TotalHours}h ago");
     }
 
     private void OnNodeChanged()
@@ -1586,9 +1574,7 @@
         if (_qsoSummaryRecord is null)
             _qsoSummaryError = Loc.T(
                 "Zusammenfassung konnte nicht generiert werden. Bitte API-Key und DB-Konfiguration prüfen.",
-                "Could not generate summary. Please check API key and DB configuration.",
-                "Impossibile generare il riepilogo. Verificare la chiave API e la configurazione DB.",
-                "No se pudo generar el resumen. Comprueba la clave API y la configuración de DB.");
+                "Could not generate summary. Please check API key and DB configuration.");
         else if (_qsoSummaryTab != null)
             _qsoSummaryTab.HasQsoSummary = true;
 
@@ -1745,9 +1731,7 @@
         if (result is null)
             _aiSearchError = Loc.T(
                 "Suche fehlgeschlagen. Bitte API-Key und Konfiguration prüfen.",
-                "Search failed. Please check API key and configuration.",
-                "Ricerca fallita. Verificare la chiave API.",
-                "Búsqueda fallida. Comprueba la clave API.");
+                "Search failed. Please check API key and configuration.");
         else
             _aiSearchResult = result;
 
@@ -1826,9 +1810,7 @@
                         var phonetic = PhoneticAlphabetHelper.Spell(callsign, Loc.Current);
                         _pendingSpeech.Enqueue(Loc.T(
                             $"{phonetic} ist aktiv",
-                            $"{phonetic} received",
-                            $"{phonetic} ascoltato",
-                            $"{phonetic} escuchado"));
+                            $"{phonetic} received"));
                     }
                 }
                 StateHasChanged();
@@ -1867,9 +1849,7 @@
                     var groupSpelled = string.Join(" ", group.ToCharArray());
                     _pendingSpeech.Enqueue(Loc.T(
                         $"C Q C Q von {phonetic} in Gruppe {groupSpelled}",
-                        $"C Q C Q from {phonetic} in group {groupSpelled}",
-                        $"C Q C Q da {phonetic} nel gruppo {groupSpelled}",
-                        $"C Q C Q de {phonetic} en grupo {groupSpelled}"));
+                        $"C Q C Q from {phonetic} in group {groupSpelled}"));
                 }
                 StateHasChanged();
             });
@@ -1889,11 +1869,11 @@
         var local = LT(t);
         var diff  = DateTime.Now - local;
         if (diff.TotalMinutes < 60)
-            return Loc.T($"vor {(int)diff.TotalMinutes} min", $"{(int)diff.TotalMinutes} min ago", $"{(int)diff.TotalMinutes} min fa", $"hace {(int)diff.TotalMinutes} min");
+            return Loc.T($"vor {(int)diff.TotalMinutes} min", $"{(int)diff.TotalMinutes} min ago");
         if (diff.TotalHours < 24)
-            return Loc.T($"vor {(int)diff.TotalHours} h", $"{(int)diff.TotalHours} h ago", $"{(int)diff.TotalHours} h fa", $"hace {(int)diff.TotalHours} h");
+            return Loc.T($"vor {(int)diff.TotalHours} h", $"{(int)diff.TotalHours} h ago");
         if (diff.TotalDays < 7)
-            return Loc.T($"vor {(int)diff.TotalDays} d", $"{(int)diff.TotalDays} d ago", $"{(int)diff.TotalDays} g fa", $"hace {(int)diff.TotalDays} d");
+            return Loc.T($"vor {(int)diff.TotalDays} d", $"{(int)diff.TotalDays} d ago");
         return local.ToString("dd.MM.yy");
     }
 
@@ -1901,8 +1881,8 @@
     {
         var s = (int)(DateTime.Now - t).TotalSeconds;
         return s < 60
-            ? Loc.T($"vor {s}\u00a0s", $"{s}\u00a0s ago", $"{s}\u00a0s fa", $"hace {s}\u00a0s")
-            : Loc.T($"vor {s / 60}\u00a0min", $"{s / 60}\u00a0min ago", $"{s / 60}\u00a0min fa", $"hace {s / 60}\u00a0min");
+            ? Loc.T($"vor {s}\u00a0s", $"{s}\u00a0s ago")
+            : Loc.T($"vor {s / 60}\u00a0min", $"{s / 60}\u00a0min ago");
     }
 
     private static string SrcTypeCss(string src) => src.ToLowerInvariant() switch
@@ -1973,9 +1953,7 @@
 
         var confirmMsg = System.Net.WebUtility.HtmlEncode(Loc.T(
             "Externer Link – diese Seite wird außerhalb von MeshCom WebDesk geöffnet.\nFortfahren?",
-            "External link – this page opens outside MeshCom WebDesk.\nContinue?",
-            "Link esterno – questa pagina si aprirà fuori da MeshCom WebDesk.\nContinuare?",
-            "Enlace externo – esta página se abrirá fuera de MeshCom WebDesk.\n¿Continuar?"));
+            "External link – this page opens outside MeshCom WebDesk.\nContinue?"));
 
         var sb = new System.Text.StringBuilder();
         var lastIndex = 0;
@@ -2066,16 +2044,16 @@
         : "status-badge-warn";
 
     private string UdpStatusLabel => !_status.IsListening
-        ? Loc.T("Kein Socket", "No socket", "Nessun socket", "Sin socket")
+        ? Loc.T("Kein Socket", "No socket")
         : _status.HasReceivedData
-            ? Loc.T("Empfang OK", "Receiving", "Ricezione OK", "Recibiendo")
-            : Loc.T("Warte auf Signal", "Waiting for signal", "Attesa segnale", "Esperando señal");
+            ? Loc.T("Empfang OK", "Receiving")
+            : Loc.T("Warte auf Signal", "Waiting for signal");
 
     private string UdpStatusTooltip => !_status.IsListening
-        ? Loc.T("UDP: Kein Socket – Port nicht geöffnet", "UDP: No socket – port not open", "UDP: Nessun socket – porta non aperta", "UDP: Sin socket – puerto no abierto")
+        ? Loc.T("UDP: Kein Socket – Port nicht geöffnet", "UDP: No socket – port not open")
         : _status.HasReceivedData
-            ? Loc.T("UDP: Empfang OK", "UDP: Receiving OK", "UDP: Ricezione OK", "UDP: Recibiendo OK")
-            : Loc.T("UDP: Warte auf Signal", "UDP: Waiting for signal", "UDP: Attesa segnale", "UDP: Esperando señal");
+            ? Loc.T("UDP: Empfang OK", "UDP: Receiving OK")
+            : Loc.T("UDP: Warte auf Signal", "UDP: Waiting for signal");
 
     private static string RssiStatusBadgeCss(int rssi) => rssi switch
     {
@@ -2089,18 +2067,18 @@
     private string DbStatusBadgeCss   => MonitorSink.LastWriteOk == null ? "status-badge-warn"
         : MonitorSink.LastWriteOk.Value ? "status-badge-ok" : "status-badge-err";
     private string DbStatusTooltip    => MonitorSink.LastWriteOk == null
-        ? Loc.T("Datenbank: noch kein Schreibvorgang", "Database: no write yet", "Database: nessuna scrittura", "Base de datos: sin escritura aún")
+        ? Loc.T("Datenbank: noch kein Schreibvorgang", "Database: no write yet")
         : MonitorSink.LastWriteOk.Value
-            ? Loc.T("Datenbank: letzter Schreibvorgang OK", "Database: last write OK", "Database: ultima scrittura OK", "Base de datos: última escritura OK")
+            ? Loc.T("Datenbank: letzter Schreibvorgang OK", "Database: last write OK")
               + (MonitorSink.LastWriteAt.HasValue ? " · " + MonitorSink.LastWriteAt.Value.ToLocalTime().ToString("HH:mm:ss") : "")
-            : Loc.T("Datenbank: letzter Schreibvorgang fehlgeschlagen", "Database: last write failed", "Database: ultima scrittura fallita", "Base de datos: última escritura fallida")
+            : Loc.T("Datenbank: letzter Schreibvorgang fehlgeschlagen", "Database: last write failed")
               + (MonitorSink.LastWriteAt.HasValue ? " · " + MonitorSink.LastWriteAt.Value.ToLocalTime().ToString("HH:mm:ss") : "");
 
     private string MqttStatusIcon     => MqttService.IsConnected ? "🟢" : "🔴";
     private string MqttStatusBadgeCss => MqttService.IsConnected ? "status-badge-ok" : "status-badge-err";
     private string MqttStatusTooltip  => MqttService.IsConnected
-        ? Loc.T("MQTT: verbunden", "MQTT: connected", "MQTT: connesso", "MQTT: conectado")
-        : Loc.T("MQTT: nicht verbunden", "MQTT: not connected", "MQTT: non connesso", "MQTT: no conectado");
+        ? Loc.T("MQTT: verbunden", "MQTT: connected")
+        : Loc.T("MQTT: nicht verbunden", "MQTT: not connected");
 
     private DateTime LT(DateTime dt) => dt.AddHours(SettingsOptions.CurrentValue.TimeOffsetHours);
 
@@ -2108,6 +2086,8 @@
     /// Returns the date prefix "dd.MM." when <paramref name="dt"/> is not today, otherwise null.
     /// Used to show a compact date line above the time only for older entries.
     /// </summary>
+    private void OnLocChange() => _ = InvokeAsync(StateHasChanged);
+
     private static string? TsDate(DateTime dt) =>
         dt.Date == DateTime.Today ? null : dt.ToString("dd.MM.yy");
 }

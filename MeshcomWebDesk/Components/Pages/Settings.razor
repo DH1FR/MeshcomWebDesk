@@ -1,4 +1,4 @@
-@page "/settings"
+﻿@page "/settings"
 @rendermode InteractiveServer
 @using Microsoft.Extensions.Options
 @using MeshcomWebDesk.Services.Database
@@ -18,35 +18,35 @@
 @inject SerialConsoleService SerialConsoleService
 @implements IDisposable
 
-<PageTitle>@Loc.T("Einstellungen", "Settings", "Impostazioni", "Configuración") – MeshCom WebDesk</PageTitle>
+<PageTitle>@Loc.T("Einstellungen", "Settings") – MeshCom WebDesk</PageTitle>
 
 <div class="settings-page">
     <div class="settings-container">
 
         <div class="settings-header">
             <span class="settings-icon">⚙️</span>
-            <h1 class="settings-title">@Loc.T("Einstellungen", "Settings", "Impostazioni", "Configuración")</h1>
+            <h1 class="settings-title">@Loc.T("Einstellungen", "Settings")</h1>
         </div>
 
         <div class="settings-notice">
-            ℹ️ @Loc.T("Die meisten Einstellungen werden", "Most settings are applied", "La maggior parte delle impostazioni vengono", "La mayoría de los ajustes se aplican")
-            <strong>@Loc.T("sofort", "immediately", "immediatamente", "inmediatamente")</strong>
-            @Loc.T("übernommen, ohne Neustart.", "without a restart.", "applicate senza riavvio.", "sin reiniciar.")<br />
-            @Loc.T("Ausnahmen:", "Exceptions:", "Eccezioni:", "Excepciones:")
+            ℹ️ @Loc.T("Die meisten Einstellungen werden", "Most settings are applied")
+            <strong>@Loc.T("sofort", "immediately")</strong>
+            @Loc.T("übernommen, ohne Neustart.", "without a restart.")<br />
+            @Loc.T("Ausnahmen:", "Exceptions:")
             <strong>Listen-IP / Listen-Port</strong>
-            @Loc.T("(Socket-Binding) und", "(socket binding) and", "(binding socket) e", "(binding de socket) y")
-            <strong>@Loc.T("Log-Pfad / Log-Aufbewahrung", "Log Path / Log Retention", "Percorso / Conservazione Log", "Ruta / Retención de Log")</strong>
-            @Loc.T("(Serilog) erfordern einen Neustart der Anwendung.", "(Serilog) require an application restart.", "(Serilog) richiedono il riavvio dell'app.", "(Serilog) requieren reiniciar la aplicación.")
+            @Loc.T("(Socket-Binding) und", "(socket binding) and")
+            <strong>@Loc.T("Log-Pfad / Log-Aufbewahrung", "Log Path / Log Retention")</strong>
+            @Loc.T("(Serilog) erfordern einen Neustart der Anwendung.", "(Serilog) require an application restart.")
         </div>
 
         @if (_errorMessage != null)
         {
-            <div class="settings-error">❌ @Loc.T("Fehler:", "Error:", "Errore:", "Error:") @_errorMessage</div>
+            <div class="settings-error">❌ @Loc.T("Fehler:", "Error:") @_errorMessage</div>
         }
 
         <!-- Verbindung / Connection -->
         <div class="settings-section @(IsOpen("conn") ? "" : "settings-section-collapsed")">
-            <h2 class="settings-section-title" @onclick='() => Toggle("conn")'>🔌 @Loc.T("Verbindung", "Connection", "Connessione", "Conexión") <span class="section-chevron">@(IsOpen("conn") ? "▲" : "▼")</span></h2>
+            <h2 class="settings-section-title" @onclick='() => Toggle("conn")'>🔌 @Loc.T("Verbindung", "Connection") <span class="section-chevron">@(IsOpen("conn") ? "▲" : "▼")</span></h2>
             @if (IsOpen("conn")) {
             <div class="settings-grid">
                 <label>Listen IP</label>
@@ -61,7 +61,7 @@
                 <label>Device Port</label>
                 <input type="number" min="1" max="65535" @bind="_model.DevicePort" />
 
-                <label>@Loc.T("Eigenes Rufzeichen", "Own Callsign", "Nominativo", "Indicativo propio")</label>
+                <label>@Loc.T("Eigenes Rufzeichen", "Own Callsign")</label>
                 <input type="text" @bind="_model.MyCallsign" />
             </div>
             <a class="settings-help-banner"
@@ -69,9 +69,7 @@
                target="_blank" rel="noopener">
                 ❓ @Loc.T(
                     "Wie konfiguriere ich meinen MeshCom-Node für WebDesk?",
-                    "How do I configure my MeshCom node for WebDesk?",
-                    "Come configuro il mio nodo MeshCom per WebDesk?",
-                    "¿Cómo configuro mi nodo MeshCom para WebDesk?")
+                    "How do I configure my MeshCom node for WebDesk?")
                 <span class="settings-help-banner-arrow">→</span>
             </a>
             }
@@ -79,22 +77,18 @@
 
         <!-- Multi-Node -->
         <div class="settings-section @(IsOpen("nodes") ? "" : "settings-section-collapsed")">
-            <h2 class="settings-section-title" @onclick='() => Toggle("nodes")'>🖧 @Loc.T("Weitere Nodes", "Additional Nodes", "Nodi aggiuntivi", "Nodos adicionales") <span class="section-chevron">@(IsOpen("nodes") ? "▲" : "▼")</span></h2>
+            <h2 class="settings-section-title" @onclick='() => Toggle("nodes")'>🖧 @Loc.T("Weitere Nodes", "Additional Nodes") <span class="section-chevron">@(IsOpen("nodes") ? "▲" : "▼")</span></h2>
             @if (IsOpen("nodes")) {
             <p style="color:#8b949e;font-size:.85em;margin:0 0 .5rem 0">
                 @Loc.T(
                     "Konfiguriere mehrere MeshCom-Nodes. Der Primär-Node treibt alle globalen Funktionen (Karte, MH, Bot, Telemetrie …). Weitere Nodes sind im Chat auswählbar.",
-                    "Configure multiple MeshCom nodes. The primary node drives all global features (map, MH, bot, telemetry …). Additional nodes are selectable in the chat view.",
-                    "Configura più nodi MeshCom. Il nodo primario gestisce tutte le funzioni globali.",
-                    "Configura varios nodos MeshCom. El nodo primario gestiona todas las funciones globales.")
+                    "Configure multiple MeshCom nodes. The primary node drives all global features (map, MH, bot, telemetry …). Additional nodes are selectable in the chat view.")
             </p>
             @if (_model.Nodes.Count == 0) {
                 <p style="color:#8b949e;font-size:.85em">
                     @Loc.T(
                         "Kein weiterer Node konfiguriert. Die Verbindungseinstellungen oben gelten für den einzigen (Primär-)Node.",
-                        "No additional nodes configured. The connection settings above apply to the single (primary) node.",
-                        "Nessun nodo aggiuntivo configurato.",
-                        "Ningún nodo adicional configurado.")
+                        "No additional nodes configured. The connection settings above apply to the single (primary) node.")
                 </p>
             }
             @foreach (var node in _model.Nodes) {
@@ -102,28 +96,28 @@
                     <div class="settings-node-header">
                         <strong>@node.Name</strong>
                         @if (node.IsPrimary) {
-                            <span class="settings-node-primary-badge">★ @Loc.T("Primär", "Primary", "Primario", "Primario")</span>
+                            <span class="settings-node-primary-badge">★ @Loc.T("Primär", "Primary")</span>
                         }
                         <div class="settings-node-actions">
                             @if (!node.IsPrimary) {
-                                <button class="btn-small" @onclick="() => SetPrimaryNode(node)">@Loc.T("Als Primär", "Set Primary", "Imposta primario", "Establecer primario")</button>
+                                <button class="btn-small" @onclick="() => SetPrimaryNode(node)">@Loc.T("Als Primär", "Set Primary")</button>
                             }
                             <button class="btn-small btn-danger" @onclick="() => RemoveNode(node)">✕</button>
                         </div>
                     </div>
                     <div class="settings-grid" style="margin-top:.5rem">
-                        <label>@Loc.T("Name", "Name", "Nome", "Nombre")</label>
+                        <label>@Loc.T("Name", "Name")</label>
                         <input type="text" @bind="node.Name" />
-                        <label>@Loc.T("Rufzeichen", "Callsign", "Nominativo", "Indicativo")</label>
+                        <label>@Loc.T("Rufzeichen", "Callsign")</label>
                         <div>
                             <input type="text" @bind="node.Callsign" placeholder="OE1ABC-2" style="text-transform:uppercase;width:100%" />
                             @if (string.IsNullOrWhiteSpace(node.Callsign))
                             {
-                                <small style="color:#f85149">⚠️ @Loc.T("Rufzeichen darf nicht leer sein.", "Callsign must not be empty.", "Il nominativo non può essere vuoto.", "El indicativo no puede estar vacío.")</small>
+                                <small style="color:#f85149">⚠️ @Loc.T("Rufzeichen darf nicht leer sein.", "Callsign must not be empty.")</small>
                             }
                             else if (_model.Nodes.Count(n => string.Equals(n.Callsign, node.Callsign, StringComparison.OrdinalIgnoreCase)) > 1)
                             {
-                                <small style="color:#f85149">⚠️ @Loc.T("Rufzeichen wird von mehreren Nodes verwendet – Echo-Erkennung schlägt fehl!", "Callsign used by multiple nodes – echo detection will fail!", "Nominativo usato da più nodi – il rilevamento eco fallirà!", "Indicativo usado por varios nodos – ¡la detección de eco fallará!")</small>
+                                <small style="color:#f85149">⚠️ @Loc.T("Rufzeichen wird von mehreren Nodes verwendet – Echo-Erkennung schlägt fehl!", "Callsign used by multiple nodes – echo detection will fail!")</small>
                             }
                         </div>
                         <label>Device IP</label>
@@ -136,13 +130,13 @@
                         <input type="number" min="1" max="65535" @bind="node.ListenPort" />
                         @* ── TLS Console ── *@
                         <label>
-                            @Loc.T("TLS Passwort", "TLS Password", "Password TLS", "Contraseña TLS")<br />
-                            <small>@Loc.T("Leer = kein Passwort (--passwd am Node)", "Empty = no password (--passwd on node)", "Vuoto = nessuna password", "Vacío = sin contraseña")</small>
+                            @Loc.T("TLS Passwort", "TLS Password")<br />
+                            <small>@Loc.T("Leer = kein Passwort (--passwd am Node)", "Empty = no password (--passwd on node)")</small>
                         </label>
                         <input type="password" @bind="node.TelnetPassword" placeholder="••••••••" autocomplete="new-password" />
                         <label>
-                            @Loc.T("TLS Zertifikat-Fingerprint", "TLS Certificate Fingerprint", "Impronta certificato TLS", "Huella certificado TLS")<br />
-                            <small>@Loc.T("Leer = beim ersten Verbinden anzeigen", "Empty = show on first connect", "Vuoto = mostra al primo collegamento", "Vacío = mostrar en la primera conexión")</small>
+                            @Loc.T("TLS Zertifikat-Fingerprint", "TLS Certificate Fingerprint")<br />
+                            <small>@Loc.T("Leer = beim ersten Verbinden anzeigen", "Empty = show on first connect")</small>
                         </label>
                         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                             <input type="text" @bind="node.TelnetCertThumbprint"
@@ -152,7 +146,7 @@
                             {
                                 <button class="btn-danger" style="padding:2px 8px;font-size:11px;"
                                         @onclick="() => node.TelnetCertThumbprint = string.Empty"
-                                        title="@Loc.T("Fingerprint löschen (First-Connect-Modus)", "Clear fingerprint (first-connect mode)", "Cancella impronta", "Borrar huella")">
+                                        title="@Loc.T("Fingerprint löschen (First-Connect-Modus)", "Clear fingerprint (first-connect mode)")">
                                     🗑
                                 </button>
                             }
@@ -160,13 +154,13 @@
                     </div>
                 </div>
             }
-            <button class="btn-secondary" style="margin-top:.5rem" @onclick="AddNode">+ @Loc.T("Node hinzufügen", "Add Node", "Aggiungi nodo", "Agregar nodo")</button>
+            <button class="btn-secondary" style="margin-top:.5rem" @onclick="AddNode">+ @Loc.T("Node hinzufügen", "Add Node")</button>
             }
         </div>
 
         <!-- Station / RF -->
         <div class="settings-section @(IsOpen("station") ? "" : "settings-section-collapsed")">
-            <h2 class="settings-section-title" @onclick='() => Toggle("station")'>📻 @Loc.T("Station / HF-Parameter", "Station / RF Parameters", "Stazione / Parametri RF", "Estación / Parámetros RF") <span class="section-chevron">@(IsOpen("station") ? "▲" : "▼")</span></h2>
+            <h2 class="settings-section-title" @onclick='() => Toggle("station")'>📻 @Loc.T("Station / HF-Parameter", "Station / RF Parameters") <span class="section-chevron">@(IsOpen("station") ? "▲" : "▼")</span></h2>
             @if (IsOpen("station")) {
             var cableLossMap = new Dictionary<string, double> { ["none"]=0.0,["rg174"]=5.0,["rg58"]=2.5,["rg8x"]=3.0,["rg8"]=1.8,["rg213"]=1.2,["h155"]=0.8,["aircell7"]=0.6,["lmr200"]=1.0,["lmr240"]=0.75,["lmr400"]=0.4,["lmr600"]=0.25,["ecoflex10"]=0.55,["ecoflex15"]=0.37,["h2000flex"]=0.33,["cfd400"]=0.45,["custom"]=_model.CustomCableLossDbPer10m };
             var lossPerM     = cableLossMap.TryGetValue(_model.CableType, out var lpm) ? lpm / 10.0 : 0.0;
@@ -175,15 +169,15 @@
             var linkBudget   = eirp - (-120) - _model.SystemMarginDb;
             var fsplKm       = Math.Pow(10, (linkBudget - 20 * Math.Log10(_model.FrequencyMhz) - 32.44) / 20);
             <div class="settings-grid">
-                <label>@Loc.T("TX-Leistung", "TX Power", "Potenza TX", "Potencia TX") (dBm)</label>
+                <label>@Loc.T("TX-Leistung", "TX Power") (dBm)</label>
                 <div style="display:flex;align-items:center;gap:8px">
                     <input type="number" min="-10" max="40" step="1" @bind="_model.TxPowerDbm" style="width:80px" />
                     <small style="color:#8b949e">@(Math.Round(Math.Pow(10, _model.TxPowerDbm / 10.0), 0).ToString("F0")) mW</small>
                 </div>
 
-                <label>@Loc.T("Kabeltyp", "Cable Type", "Tipo cavo", "Tipo de cable")</label>
+                <label>@Loc.T("Kabeltyp", "Cable Type")</label>
                 <select @bind="_model.CableType">
-                    <option value="none">@Loc.T("Direktmontage / &lt; 0,5 m (0,0 dB/10m)", "Direct mount / &lt; 0.5 m (0.0 dB/10m)", "Montaggio diretto (0,0 dB/10m)", "Montaje directo (0,0 dB/10m)")</option>
+                    <option value="none">@Loc.T("Direktmontage / &lt; 0,5 m (0,0 dB/10m)", "Direct mount / &lt; 0.5 m (0.0 dB/10m)")</option>
                     <optgroup label="Niedrige Dämpfung">
                         <option value="lmr600">LMR-600 (0,25 dB/10m)</option>
                         <option value="lmr400">LMR-400 (0,40 dB/10m)</option>
@@ -206,52 +200,50 @@
                         <option value="rg174">RG-174 (5,00 dB/10m)</option>
                     </optgroup>
                     <optgroup label="Manuell">
-                        <option value="custom">@Loc.T("Manuell eingeben …", "Enter manually …", "Inserire manualmente …", "Ingresar manualmente …")</option>
+                        <option value="custom">@Loc.T("Manuell eingeben …", "Enter manually …")</option>
                     </optgroup>
                 </select>
 
                 @if (_model.CableType == "custom") {
-                <label>@Loc.T("Dämpfung manuell", "Manual Loss", "Attenuazione manuale", "Pérdida manual") (dB/10m)</label>
+                <label>@Loc.T("Dämpfung manuell", "Manual Loss") (dB/10m)</label>
                 <div style="display:flex;align-items:center;gap:8px">
                     <input type="number" min="0" max="30" step="0.05" @bind="_model.CustomCableLossDbPer10m" style="width:90px" />
-                    <small style="color:#8b949e">@Loc.T("z.B. 1,5 für Ihr Spezialverlust", "e.g. 1.5 for your special cable", "es. 1,5 per il vostro cavo", "p.ej. 1,5 para su cable")</small>
+                    <small style="color:#8b949e">@Loc.T("z.B. 1,5 für Ihr Spezialverlust", "e.g. 1.5 for your special cable")</small>
                 </div>
                 }
-                <label>@Loc.T("Kabellänge", "Cable Length", "Lunghezza cavo", "Longitud cable") (m)</label>
+                <label>@Loc.T("Kabellänge", "Cable Length") (m)</label>
                 <div style="display:flex;align-items:center;gap:8px">
                     <input type="number" min="0" max="500" step="0.5" @bind="_model.CableLengthM" style="width:80px" />
-                    <small style="color:#8b949e">@Loc.T("Verlust", "Loss", "Perdita", "Pérdida"): @cableLossDb.ToString("F2") dB</small>
+                    <small style="color:#8b949e">@Loc.T("Verlust", "Loss"): @cableLossDb.ToString("F2") dB</small>
                 </div>
 
-                <label>@Loc.T("Antennengewinn", "Antenna Gain", "Guadagno antenna", "Ganancia antena") (dBi)</label>
+                <label>@Loc.T("Antennengewinn", "Antenna Gain") (dBi)</label>
                 <input type="number" min="-5" max="30" step="0.1" @bind="_model.AntennaGainDbi" style="width:80px" />
 
-                <label>@Loc.T("Antennentyp", "Antenna Type", "Tipo antenna", "Tipo de antena")</label>
-                <input type="text" maxlength="80" placeholder="@Loc.T("z.B. Dipol, Yagi 3-El., Groundplane …", "e.g. Dipole, 3-el. Yagi, Ground plane …", "es. Dipolo, Yagi 3 el., Piano di terra …", "p.ej. Dipolo, Yagi 3-el., Plano de tierra …")" @bind="_model.AntennaType" style="max-width:300px" />
+                <label>@Loc.T("Antennentyp", "Antenna Type")</label>
+                <input type="text" maxlength="80" placeholder="@Loc.T("z.B. Dipol, Yagi 3-El., Groundplane …", "e.g. Dipole, 3-el. Yagi, Ground plane …")" @bind="_model.AntennaType" style="max-width:300px" />
 
-                <label>@Loc.T("Antennenhöhe (ü. Boden)", "Antenna Height (AGL)", "Altezza antenna (AGL)", "Altura antena (AGL)") (m)</label>
+                <label>@Loc.T("Antennenhöhe (ü. Boden)", "Antenna Height (AGL)") (m)</label>
                 <input type="number" min="0" max="500" step="0.5" @bind="_model.AntennaHeightM" style="width:80px" />
 
-                <label>@Loc.T("Frequenz", "Frequency", "Frequenza", "Frecuencia") (MHz)</label>
+                <label>@Loc.T("Frequenz", "Frequency") (MHz)</label>
                 <input type="number" min="300" max="1000" step="0.025" @bind="_model.FrequencyMhz" style="width:100px" />
 
-                <label>@Loc.T("Systemreserve", "System Margin", "Margine di sistema", "Margen de sistema") (dB)</label>
+                <label>@Loc.T("Systemreserve", "System Margin") (dB)</label>
                 <div style="display:flex;align-items:center;gap:8px">
                     <input type="number" min="0" max="60" step="1" @bind="_model.SystemMarginDb" style="width:80px" />
-                    <small style="color:#8b949e">@Loc.T("Geländeverluste etc. (Standard: 30 dB → realistischere Reichweite)", "Terrain loss etc. (default: 30 dB → more realistic range)", "Perdite terreno ecc. (default: 30 dB)", "Pérdidas terreno etc. (defecto: 30 dB)")</small>
+                    <small style="color:#8b949e">@Loc.T("Geländeverluste etc. (Standard: 30 dB → realistischere Reichweite)", "Terrain loss etc. (default: 30 dB → more realistic range)")</small>
                 </div>
             </div>
             <div style="margin-top:0.75rem;padding:0.5rem 0.75rem;background:#161b22;border:1px solid #30363d;border-radius:6px;display:flex;gap:1.5rem;flex-wrap:wrap">
                 <span>⚡ EIRP: <strong style="color:@(eirp >= 20 ? "#3fb950" : eirp >= 10 ? "#e3b341" : "#f85149")">@eirp.ToString("F2") dBm</strong> (@(Math.Round(Math.Pow(10, eirp / 10.0), 0).ToString("F0")) mW)</span>
-                <span>📻 @Loc.T("Reichweite (theor.):", "Range (theor.):", "Portata (teor.):", "Alcance (teor.):"): <strong style="color:#e3b341">@(fsplKm >= 1 ? fsplKm.ToString("F0") + " km" : (fsplKm * 1000).ToString("F0") + " m")</strong></span>
+                <span>📻 @Loc.T("Reichweite (theor.):", "Range (theor.):"): <strong style="color:#e3b341">@(fsplKm >= 1 ? fsplKm.ToString("F0") + " km" : (fsplKm * 1000).ToString("F0") + " m")</strong></span>
                 <small style="color:#8b949e;align-self:center">= TX @_model.TxPowerDbm dBm − Kabel @cableLossDb.ToString("F2") dB + Antenne @_model.AntennaGainDbi dBi − Reserve @_model.SystemMarginDb dB</small>
             </div>
             <div style="margin-top:0.4rem">
                 <small style="color:#8b949e">💡 @Loc.T(
                     "EIRP-Kreis auf der Karte zeigt die theoretische Freiraumreichweite (ohne Geländeberücksichtigung).",
-                    "EIRP circle on the map shows the theoretical free-space range (no terrain considered).",
-                    "Il cerchio EIRP sulla mappa mostra la portata teorica in spazio libero (senza rilievo del terreno).",
-                    "El círculo EIRP en el mapa muestra el alcance teórico en espacio libre (sin considerar el terreno).")</small>
+                    "EIRP circle on the map shows the theoretical free-space range (no terrain considered).")</small>
             </div>
             }
         </div>
@@ -261,18 +253,18 @@
             <h2 class="settings-section-title" @onclick='() => Toggle("log")'>📝 Logging <span class="section-chevron">@(IsOpen("log") ? "▲" : "▼")</span></h2>
             @if (IsOpen("log")) {
             <div class="settings-grid">
-                <label>@Loc.T("Log-Pfad", "Log Path", "Percorso Log", "Ruta de Log")</label>
+                <label>@Loc.T("Log-Pfad", "Log Path")</label>
                 <input type="text" @bind="_model.LogPath" />
 
-                <label>@Loc.T("Log-Aufbewahrung (Tage)", "Log Retention (Days)", "Conservazione Log (giorni)", "Retención de Log (días)")</label>
+                <label>@Loc.T("Log-Aufbewahrung (Tage)", "Log Retention (Days)")</label>
                 <input type="number" min="1" @bind="_model.LogRetainDays" />
 
                 <label>
-                    @Loc.T("UDP-Traffic loggen", "Log UDP Traffic", "Registra traffico UDP", "Registrar tráfico UDP")
+                    @Loc.T("UDP-Traffic loggen", "Log UDP Traffic")
                 </label>
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.LogUdpTraffic" />
-                    <span>@(_model.LogUdpTraffic ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                    <span>@(_model.LogUdpTraffic ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                 </label>
             </div>
             }
@@ -283,45 +275,45 @@
             <h2 class="settings-section-title" @onclick='() => Toggle("chat")'>💬 Chat &amp; Monitor <span class="section-chevron">@(IsOpen("chat") ? "▲" : "▼")</span></h2>
             @if (IsOpen("chat")) {
             <div class="settings-grid">
-                <label>@Loc.T("Monitor-Limit (Einträge)", "Monitor Limit (Entries)", "Limite monitor (voci)", "Límite monitor (entradas)")</label>
+                <label>@Loc.T("Monitor-Limit (Einträge)", "Monitor Limit (Entries)")</label>
                 <input type="number" min="10" @bind="_model.MonitorMaxMessages" />
 
                 <label>
-                    @Loc.T("MH-Liste: Max. Alter (Stunden)", "MH List: Max. Age (Hours)", "Lista MH: Età max. (ore)", "Lista MH: Edad máx. (horas)")<br />
-                    <small>@Loc.T("Einträge älter als x Stunden werden automatisch gelöscht. 0 = deaktiviert. (z. B. 24 = 1 Tag, 168 = 1 Woche)", "Entries older than x hours are automatically removed. 0 = disabled. (e.g. 24 = 1 day, 168 = 1 week)", "Voci più vecchie di x ore vengono rimosse automaticamente. 0 = disattivato. (es. 24 = 1 giorno)", "Las entradas más antiguas que x horas se eliminan automáticamente. 0 = desactivado. (p.ej. 24 = 1 día)")</small>
+                    @Loc.T("MH-Liste: Max. Alter (Stunden)", "MH List: Max. Age (Hours)")<br />
+                    <small>@Loc.T("Einträge älter als x Stunden werden automatisch gelöscht. 0 = deaktiviert. (z. B. 24 = 1 Tag, 168 = 1 Woche)", "Entries older than x hours are automatically removed. 0 = disabled. (e.g. 24 = 1 day, 168 = 1 week)")</small>
                 </label>
                 <input type="number" min="0" @bind="_model.MhMaxAgeHours" />
 
                 <label>
-                    @Loc.T("Zeitversatz (Stunden)", "Time Offset (Hours)", "Offset orario (ore)", "Desfase horario (horas)")<br />
-                    <small>@Loc.T("UTC-Korrektur für Zeitanzeige, z.\u00a0B. 1 für MEZ, 2 für MESZ, 0 wenn Zeitzone bereits korrekt", "UTC offset for time display, e.\u00a0g. 1 for CET, 2 for CEST, 0 if timezone already correct", "Offset UTC per visualizzazione, es. 1 per CET, 2 per CEST", "Desfase UTC para visualización, p.ej. 1 para CET, 2 para CEST")</small>
+                    @Loc.T("Zeitversatz (Stunden)", "Time Offset (Hours)")<br />
+                    <small>@Loc.T("UTC-Korrektur für Zeitanzeige, z.\u00a0B. 1 für MEZ, 2 für MESZ, 0 wenn Zeitzone bereits korrekt", "UTC offset for time display, e.\u00a0g. 1 for CET, 2 for CEST, 0 if timezone already correct")</small>
                 </label>
                 <input type="number" step="0.5" @bind="_model.TimeOffsetHours" />
 
-                <label>@Loc.T("Gruppenfilter aktiv", "Group Filter Active", "Filtro gruppi attivo", "Filtro de grupos activo")</label>
+                <label>@Loc.T("Gruppenfilter aktiv", "Group Filter Active")</label>
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.GroupFilterEnabled" />
-                    <span>@(_model.GroupFilterEnabled ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                    <span>@(_model.GroupFilterEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                 </label>
 
                 <label>
-                    @Loc.T("Gruppen-Whitelist", "Group Whitelist", "Whitelist gruppi", "Lista blanca de grupos")<br />
-                    <small>@Loc.T("(eine pro Zeile, z.\u00a0B. #262)", "(one per line, e.\u00a0g. #262)", "(uno per riga, es. #262)", "(uno por línea, p.ej. #262)")</small>
+                    @Loc.T("Gruppen-Whitelist", "Group Whitelist")<br />
+                    <small>@Loc.T("(eine pro Zeile, z.\u00a0B. #262)", "(one per line, e.\u00a0g. #262)")</small>
                 </label>
                 <textarea rows="4" @bind="_model.GroupsText"></textarea>
 
                 <label>
-                    @Loc.T("Eigene Nachrichten linksbündig", "Own messages left-aligned", "Messaggi propri allineati a sinistra", "Mensajes propios alineados a la izquierda")<br />
-                    <small>@Loc.T("Eigene gesendete Nachrichten werden links statt rechts angezeigt", "Own sent messages are displayed on the left instead of the right", "I propri messaggi inviati vengono visualizzati a sinistra invece che a destra", "Los mensajes enviados propios se muestran a la izquierda en lugar de a la derecha")</small>
+                    @Loc.T("Eigene Nachrichten linksbündig", "Own messages left-aligned")<br />
+                    <small>@Loc.T("Eigene gesendete Nachrichten werden links statt rechts angezeigt", "Own sent messages are displayed on the left instead of the right")</small>
                 </label>
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.OwnMessagesAlignLeft" />
-                    <span>@(_model.OwnMessagesAlignLeft ? Loc.T("Linksbündig", "Left-aligned", "Allineato a sinistra", "Alineado a la izquierda") : Loc.T("Rechtsbündig (Standard)", "Right-aligned (default)", "Allineato a destra (predefinito)", "Alineado a la derecha (predeterminado)"))</span>
+                    <span>@(_model.OwnMessagesAlignLeft ? Loc.T("Linksbündig", "Left-aligned") : Loc.T("Rechtsbündig (Standard)", "Right-aligned (default)"))</span>
                 </label>
 
                 <label>
-                    @Loc.T("Sendepause (Sekunden)", "TX Cooldown (seconds)", "Pausa TX (secondi)", "Pausa TX (segundos)")<br />
-                    <small>@Loc.T("Mindestwartezeit zwischen zwei Sendungen (5–60 Sek.).", "Minimum wait time between two transmissions (5–60 s).", "Tempo minimo tra due trasmissioni (5–60 s).", "Tiempo mínimo entre dos transmisiones (5–60 s).")</small>
+                    @Loc.T("Sendepause (Sekunden)", "TX Cooldown (seconds)")<br />
+                    <small>@Loc.T("Mindestwartezeit zwischen zwei Sendungen (5–60 Sek.).", "Minimum wait time between two transmissions (5–60 s).")</small>
                 </label>
                 <div style="display:flex; gap:.75rem; align-items:center;">
                     <input type="range" min="5" max="60" step="1"
@@ -332,12 +324,12 @@
                 </div>
 
                 <label>
-                    @Loc.T("Gateway-Hervorhebung", "Gateway Highlight", "Evidenziazione gateway", "Resaltado de gateway")<br />
-                    <small>@Loc.T("Gateway-Stationen (von meshcom.oevsv.at) mit 🌐-Symbol und Farbe hervorheben.", "Highlight gateway stations (from meshcom.oevsv.at) with a 🌐 symbol and colour.", "Evidenzia le stazioni gateway (da meshcom.oevsv.at) con il simbolo 🌐 e un colore.", "Resalta las estaciones gateway (de meshcom.oevsv.at) con el símbolo 🌐 y color.")</small>
+                    @Loc.T("Gateway-Hervorhebung", "Gateway Highlight")<br />
+                    <small>@Loc.T("Gateway-Stationen (von meshcom.oevsv.at) mit 🌐-Symbol und Farbe hervorheben.", "Highlight gateway stations (from meshcom.oevsv.at) with a 🌐 symbol and colour.")</small>
                 </label>
                 <label>
                     <input type="checkbox" @bind="_model.GatewayHighlightEnabled" />
-                    <span>@(_model.GatewayHighlightEnabled ? Loc.T("Aktiviert", "Enabled", "Attivato", "Activado") : Loc.T("Deaktiviert", "Disabled", "Disattivato", "Desactivado"))</span>
+                    <span>@(_model.GatewayHighlightEnabled ? Loc.T("Aktiviert", "Enabled") : Loc.T("Deaktiviert", "Disabled"))</span>
                 </label>
             </div>
             }
@@ -345,10 +337,10 @@
 
         <!-- Datenspeicherung / Data Storage -->
         <div class="settings-section @(IsOpen("data") ? "" : "settings-section-collapsed")">
-            <h2 class="settings-section-title" @onclick='() => Toggle("data")'>💾 @Loc.T("Datenspeicherung", "Data Storage", "Archiviazione dati", "Almacenamiento de datos") <span class="section-chevron">@(IsOpen("data") ? "▲" : "▼")</span></h2>
+            <h2 class="settings-section-title" @onclick='() => Toggle("data")'>💾 @Loc.T("Datenspeicherung", "Data Storage") <span class="section-chevron">@(IsOpen("data") ? "▲" : "▼")</span></h2>
             @if (IsOpen("data")) {
             <div class="settings-grid">
-                <label>@Loc.T("Datenpfad", "Data Path", "Percorso dati", "Ruta de datos")</label>
+                <label>@Loc.T("Datenpfad", "Data Path")</label>
                 <input type="text" @bind="_model.DataPath" />
             </div>
             }
@@ -356,19 +348,19 @@
 
         <!-- Console -->
         <div class="settings-section @(IsOpen("telnet") ? "" : "settings-section-collapsed")">
-            <h2 class="settings-section-title" @onclick='() => Toggle("telnet")'>🖥️ @Loc.T("Console", "Console", "Console", "Consola") <span class="section-chevron">@(IsOpen("telnet") ? "▲" : "▼")</span></h2>
+            <h2 class="settings-section-title" @onclick='() => Toggle("telnet")'>🖥️ @Loc.T("Console", "Console") <span class="section-chevron">@(IsOpen("telnet") ? "▲" : "▼")</span></h2>
             @if (IsOpen("telnet")) {
             <div class="settings-grid">
                 <label>
-                    @Loc.T("Console aktivieren", "Enable Console", "Abilita Console", "Activar Consola")<br />
-                    <small>@Loc.T("Öffnet den Console-Tab (TLS oder Seriell).", "Opens the Console tab (TLS or Serial).", "Apre la scheda Console (TLS o seriale).", "Abre la pestaña Consola (TLS o serie).")</small>
+                    @Loc.T("Console aktivieren", "Enable Console")<br />
+                    <small>@Loc.T("Öffnet den Console-Tab (TLS oder Seriell).", "Opens the Console tab (TLS or Serial).")</small>
                 </label>
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.TelnetEnabled" />
-                    <span>@(_model.TelnetEnabled ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                    <span>@(_model.TelnetEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                 </label>
 
-                <label>@Loc.T("Modus", "Mode", "Modalità", "Modo")</label>
+                <label>@Loc.T("Modus", "Mode")</label>
                 <div style="display:flex; gap:1rem; align-items:center;">
                     <label style="display:flex; gap:.3rem; align-items:center; cursor:pointer;">
                         <input type="radio" name="consoleMode" value="tls"
@@ -380,21 +372,21 @@
                         <input type="radio" name="consoleMode" value="serial"
                                checked="@(_model.ConsoleMode == "serial")"
                                @onchange="@(() => _model.ConsoleMode = "serial")" />
-                        🔌 @Loc.T("Seriell Console", "Serial Console", "Console seriale", "Consola serie")
+                        🔌 @Loc.T("Seriell Console", "Serial Console")
                     </label>
                 </div>
 
                 @if (_model.ConsoleMode == "tls")
                 {
-                    <label>@Loc.T("Port", "Port", "Porta", "Puerto")</label>
+                    <label>@Loc.T("Port", "Port")</label>
                     <input type="number" @bind="_model.TelnetPort" min="1" max="65535" />
 
-                    <label>@Loc.T("Passwort", "Password", "Password", "Contraseña")</label>
+                    <label>@Loc.T("Passwort", "Password")</label>
                     <input type="password" @bind="_model.TelnetPassword" placeholder="••••••••" autocomplete="new-password" />
 
                     <label>
-                        @Loc.T("Zertifikat-Fingerprint (SHA-256)", "Certificate Fingerprint (SHA-256)", "Impronta certificato (SHA-256)", "Huella del certificado (SHA-256)")<br />
-                        <small>@Loc.T("Leer = beim ersten Verbinden anzeigen und bestätigen", "Empty = show and confirm on first connect", "Vuoto = mostra e conferma al primo collegamento", "Vacío = mostrar y confirmar en la primera conexión")</small>
+                        @Loc.T("Zertifikat-Fingerprint (SHA-256)", "Certificate Fingerprint (SHA-256)")<br />
+                        <small>@Loc.T("Leer = beim ersten Verbinden anzeigen und bestätigen", "Empty = show and confirm on first connect")</small>
                     </label>
                     <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                         <input type="text" @bind="_model.TelnetCertThumbprint"
@@ -404,7 +396,7 @@
                         {
                             <button class="btn-danger" style="padding:2px 8px; font-size:11px;"
                                     @onclick="() => _model.TelnetCertThumbprint = string.Empty"
-                                    title="@Loc.T("Fingerprint löschen (nächster Connect = First-Connect-Modus)", "Clear fingerprint (next connect = first-connect mode)", "Cancella impronta", "Borrar huella")">
+                                    title="@Loc.T("Fingerprint löschen (nächster Connect = First-Connect-Modus)", "Clear fingerprint (next connect = first-connect mode)")">
                                 🗑
                             </button>
                         }
@@ -414,14 +406,14 @@
                     {
                         <span></span>
                         <div class="settings-warn" style="margin-top:0">
-                            <strong>@Loc.T("Unbekanntes Zertifikat", "Unknown Certificate", "Certificato sconosciuto", "Certificado desconocido")</strong><br />
+                            <strong>@Loc.T("Unbekanntes Zertifikat", "Unknown Certificate")</strong><br />
                             <span style="font-family:monospace; font-size:11px; word-break:break-all;">@_telnetUnknownCert</span><br />
                             <div style="display:flex; gap:8px; margin-top:6px;">
                                 <button class="btn-primary" @onclick="TrustTelnetCertAsync">
-                                    ✅ @Loc.T("Vertrauen & speichern", "Trust & save", "Fidati e salva", "Confiar y guardar")
+                                    ✅ @Loc.T("Vertrauen & speichern", "Trust & save")
                                 </button>
                                 <button class="btn-secondary" @onclick="() => _telnetUnknownCert = null">
-                                    ✖ @Loc.T("Abbrechen", "Cancel", "Annulla", "Cancelar")
+                                    ✖ @Loc.T("Abbrechen", "Cancel")
                                 </button>
                             </div>
                         </div>
@@ -430,17 +422,15 @@
                     <span></span>
                     <div style="font-size:.8rem; color:#8b949e;">
                         @Loc.T("Voraussetzung: Auf dem Node muss 'enable Telnet console' (Port 2323) aktiviert sein.",
-                               "Requirement: The node must have 'enable Telnet console' (port 2323) enabled.",
-                               "Requisito: Il nodo deve avere 'enable Telnet console' (porta 2323) abilitato.",
-                               "Requisito: El nodo debe tener 'enable Telnet console' (puerto 2323) activado.")
+                               "Requirement: The node must have 'enable Telnet console' (port 2323) enabled.")
                     </div>
                 }
                 else
                 {
-                    <label>@Loc.T("COM-Port", "COM Port", "Porta COM", "Puerto COM")</label>
+                    <label>@Loc.T("COM-Port", "COM Port")</label>
                     <div style="display:flex; gap:.5rem; align-items:center;">
                         <select @bind="_model.SerialPortName" style="flex:1">
-                            <option value="">– @Loc.T("Bitte wählen", "Please select", "Selezionare", "Seleccionar") –</option>
+                            <option value="">– @Loc.T("Bitte wählen", "Please select") –</option>
                             @foreach (var p in _availableSerialPorts)
                             {
                                 <option value="@p">@p</option>
@@ -449,15 +439,13 @@
                         <button class="btn-action" style="padding:4px 10px; font-size:12px;" @onclick="RefreshSerialPorts">🔄</button>
                     </div>
 
-                    <label>@Loc.T("Baudrate", "Baud Rate", "Baud rate", "Velocidad en baudios")</label>
+                    <label>@Loc.T("Baudrate", "Baud Rate")</label>
                     <input type="number" @bind="_model.SerialBaudRate" min="300" max="921600" step="100" />
 
                     <span></span>
                     <div style="font-size:.8rem; color:#8b949e;">
                         @Loc.T("Standard: 115200 Baud. Node über USB direkt anschließen.",
-                               "Default: 115200 baud. Connect node directly via USB.",
-                               "Predefinito: 115200 baud. Collegare il nodo direttamente via USB.",
-                               "Por defecto: 115200 baudios. Conectar el nodo directamente por USB.")
+                               "Default: 115200 baud. Connect node directly via USB.")
                     </div>
                 }
             </div>
@@ -470,22 +458,22 @@
             <h2 class="settings-section-title" @onclick='() => Toggle("autoreply")'>↩️ Auto-Reply <span class="section-chevron">@(IsOpen("autoreply") ? "▲" : "▼")</span></h2>
             @if (IsOpen("autoreply")) {
             <div class="settings-grid">
-                <label>@Loc.T("Auto-Reply aktiv", "Auto-Reply Active", "Auto-risposta attiva", "Auto-respuesta activa")</label>
+                <label>@Loc.T("Auto-Reply aktiv", "Auto-Reply Active")</label>
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.AutoReplyEnabled" />
-                    <span>@(_model.AutoReplyEnabled ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                    <span>@(_model.AutoReplyEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                 </label>
 
                 <label>Auto-Reply Text</label>
                 <div class="settings-input-hint">
                     <input type="text" @bind="_model.AutoReplyText" />
                     <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
-                        <span class="settings-hint">@Loc.T("Variablen verfügbar:", "Variables available:", "Variabili disponibili:", "Variables disponibles:")</span>
+                        <span class="settings-hint">@Loc.T("Variablen verfügbar:", "Variables available:")</span>
                         <button type="button" class="btn-add" style="padding:2px 10px;font-size:12px"
                                 @onclick="() => _showAutoReplyVars = !_showAutoReplyVars">
                             📋 @(_showAutoReplyVars
-                                ? Loc.T("Ausblenden", "Hide", "Nascondi", "Ocultar")
-                                : Loc.T("Anzeigen", "Show", "Mostra", "Mostrar"))
+                                ? Loc.T("Ausblenden", "Hide")
+                                : Loc.T("Anzeigen", "Show"))
                         </button>
                     </div>
                     @if (_showAutoReplyVars)
@@ -495,61 +483,59 @@
                         <table class="telemetry-mapping-table" style="margin-top:0.5rem;font-size:12px">
                             <thead>
                                 <tr>
-                                    <th>@Loc.T("Variable", "Variable", "Variabile", "Variable")</th>
-                                    <th>@Loc.T("Bedeutung", "Meaning", "Significato", "Significado")</th>
-                                    <th>@Loc.T("Beispiel", "Example", "Esempio", "Ejemplo")</th>
+                                    <th>@Loc.T("Variable", "Variable")</th>
+                                    <th>@Loc.T("Bedeutung", "Meaning")</th>
+                                    <th>@Loc.T("Beispiel", "Example")</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr><td><code>{version}</code></td>  <td>@Loc.T("App-Version",           "App version",          "Versione app",           "Versión app")</td>          <td style="font-family:monospace">@ver</td></tr>
-                                <tr><td><code>{mycall}</code></td>   <td>@Loc.T("Eigenes Rufzeichen",   "Own callsign",          "Nominativo proprio",     "Indicativo propio")</td>    <td style="font-family:monospace">@_model.MyCallsign</td></tr>
-                                <tr><td><code>{node-firmware}</code></td><td>@Loc.T("Node-Firmware", "Node firmware", "Firmware del nodo", "Firmware del nodo")</td><td style="font-family:monospace">4.35</td></tr>
-                                <tr><td><code>{node-hw}</code></td>  <td>@Loc.T("Node-Hardware",        "Node hardware",         "Hardware del nodo",      "Hardware del nodo")</td>   <td style="font-family:monospace">T-BEAM</td></tr>
-                                <tr><td><code>{callsign}</code></td> <td>@Loc.T("Anrufendes Rufzeichen","Caller's callsign",    "Nominativo chiamante",   "Indicativo llamante")</td>  <td style="font-family:monospace">OE1KBC-1</td></tr>
-                                <tr><td><code>{mylocator}</code></td> <td>@Loc.T("Eigener QTH-Locator", "Own QTH Locator", "Locatore QTH proprio", "Localizador QTH propio")</td>         <td style="font-family:monospace">JN48qn</td></tr>
-                                <tr><td><code>{dest-name}</code></td><td>@Loc.T("QRZ-Vorname",          "QRZ first name",        "Nome QRZ",               "Nombre QRZ")</td>           <td style="font-family:monospace;color:#7ee787">@Loc.T("Max ⚠️ nur wenn gecacht","Max ⚠️ if cached","Max ⚠️ se in cache","Max ⚠️ si en caché")</td></tr>
-                                <tr><td><code>{dest-loc}</code></td> <td>@Loc.T("QRZ-Ort",              "QRZ location",          "Luogo QRZ",              "Lugar QRZ")</td>            <td style="font-family:monospace;color:#7ee787">@Loc.T("Wien ⚠️ nur wenn gecacht","Wien ⚠️ if cached","Wien ⚠️ se in cache","Wien ⚠️ si en caché")</td></tr>
-                                <tr><td><code>{locator}</code></td>  <td>@Loc.T("QTH-Locator (Gesprächspartner)", "QTH Locator (partner)", "Locatore QTH (partner)", "Localizador QTH (interlocutor)")</td> <td style="font-family:monospace">JN48qn</td></tr>
-                                <tr><td><code>{rssi}</code></td>     <td>@Loc.T("RSSI (dBm)",           "RSSI (dBm)",            "RSSI (dBm)",             "RSSI (dBm)")</td>           <td style="font-family:monospace">-85</td></tr>
-                                <tr><td><code>{snr}</code></td>      <td>@Loc.T("SNR (dB)",             "SNR (dB)",              "SNR (dB)",               "SNR (dB)")</td>             <td style="font-family:monospace">9.5</td></tr>
-                                <tr><td><code>{hw}</code></td>       <td>@Loc.T("Hardware-Name",        "Hardware name",         "Nome hardware",          "Nombre hardware")</td>      <td style="font-family:monospace">T-BEAM</td></tr>
-                                <tr><td><code>{route}</code></td>    <td>@Loc.T("Relay-Pfad (leer = direkt)","Relay path (empty = direct)","Percorso relay (vuoto = diretto)","Ruta relay (vacío = directo)")</td> <td style="font-family:monospace">OE1KBC → DB0TAW</td></tr>
-                                <tr><td><code>{hops}</code></td>     <td>@Loc.T("Anzahl Relay-Hops (0 = direkt)","Relay hop count (0 = direct)","Numero hop relay (0 = diretto)","Número saltos relay (0 = directo)")</td> <td style="font-family:monospace">1</td></tr>
-                                <tr><td><code>{srctype}</code></td>  <td>@Loc.T("Verbindungstyp (roh)","Connection type (raw)","Tipo connessione (raw)","Tipo conexión (raw)")</td> <td style="font-family:monospace">lora</td></tr>
-                                <tr><td><code>{srctype-label}</code></td><td>@Loc.T("Verbindungstyp (lesbar)","Connection type (readable)","Tipo connessione (leggibile)","Tipo conexión (legible)")</td><td style="font-family:monospace">LoRa / UDP/Gateway</td></tr>
-                                <tr><td><code>{date}</code></td>     <td>@Loc.T("Aktuelles Datum",      "Current date",          "Data corrente",          "Fecha actual")</td>         <td style="font-family:monospace">@now.ToString("dd.MM.yyyy")</td></tr>
-                                <tr><td><code>{time}</code></td>     <td>@Loc.T("Aktuelle Uhrzeit",     "Current time",          "Ora corrente",           "Hora actual")</td>          <td style="font-family:monospace">@now.ToString("HH:mm")</td></tr>
-                                <tr><td><code>{telemetry}</code></td><td>@Loc.T("Telemetrie-String (aus JSON-Datei)", "Telemetry string (from JSON file)", "Stringa telemetria (da file JSON)", "Cadena telemetría (desde archivo JSON)")</td><td style="font-family:monospace">Temp=22.5°C Hum=60%</td></tr>
-                                <tr><td><code>{last-qso}</code></td> <td>@Loc.T("Letztes QSO mit diesem Rufzeichen (Datum+Uhrzeit)", "Last QSO with this callsign (date+time)", "Ultimo QSO con questo nominativo (data+ora)", "Último QSO con este indicativo (fecha+hora)")</td><td style="font-family:monospace">@DateTime.Now.ToString("dd.MM.yyyy HH:mm")</td></tr>
-                                <tr><td><code>{my-tx-power}</code></td><td>@Loc.T("Sendeleistung der eigenen Station","Own station TX power","Potenza TX stazione","Potencia TX propia estación")</td><td style="font-family:monospace">22 dBm</td></tr>
-                                <tr><td><code>{my-eirp}</code></td>    <td>@Loc.T("Effektive Strahlungsleistung (EIRP)","Effective isotropic radiated power (EIRP)","EIRP stazione","EIRP estación")</td><td style="font-family:monospace">23.50 dBm</td></tr>
-                                <tr><td><code>{my-antenna}</code></td> <td>@Loc.T("Antennengewinn der eigenen Station","Own station antenna gain","Guadagno antenna stazione","Ganancia antena propia")</td><td style="font-family:monospace">2.5 dBi</td></tr>
-                                <tr><td><code>{my-antenna-type}</code></td><td>@Loc.T("Antennentyp der eigenen Station","Own station antenna type","Tipo antenna stazione","Tipo antena propia")</td><td style="font-family:monospace">Dipol</td></tr>
-                                <tr><td><code>{my-antenna-height}</code></td><td>@Loc.T("Antennenhöhe der eigenen Station","Own station antenna height","Altezza antenna stazione","Altura antena propia")</td><td style="font-family:monospace">10 m</td></tr>
-                                <tr><td><code>{my-freq}</code></td>    <td>@Loc.T("Sendefrequenz der eigenen Station","Own station frequency","Frequenza stazione","Frecuencia propia estación")</td><td style="font-family:monospace">433.175 MHz</td></tr>
+                                <tr><td><code>{version}</code></td>  <td>@Loc.T("App-Version",           "App version")</td>          <td style="font-family:monospace">@ver</td></tr>
+                                <tr><td><code>{mycall}</code></td>   <td>@Loc.T("Eigenes Rufzeichen",   "Own callsign")</td>    <td style="font-family:monospace">@_model.MyCallsign</td></tr>
+                                <tr><td><code>{node-firmware}</code></td><td>@Loc.T("Node-Firmware", "Node firmware")</td><td style="font-family:monospace">4.35</td></tr>
+                                <tr><td><code>{node-hw}</code></td>  <td>@Loc.T("Node-Hardware",        "Node hardware")</td>   <td style="font-family:monospace">T-BEAM</td></tr>
+                                <tr><td><code>{callsign}</code></td> <td>@Loc.T("Anrufendes Rufzeichen","Caller's callsign")</td>  <td style="font-family:monospace">OE1KBC-1</td></tr>
+                                <tr><td><code>{mylocator}</code></td> <td>@Loc.T("Eigener QTH-Locator", "Own QTH Locator")</td>         <td style="font-family:monospace">JN48qn</td></tr>
+                                <tr><td><code>{dest-name}</code></td><td>@Loc.T("QRZ-Vorname",          "QRZ first name")</td>           <td style="font-family:monospace;color:#7ee787">@Loc.T("Max ⚠️ nur wenn gecacht","Max ⚠️ if cached")</td></tr>
+                                <tr><td><code>{dest-loc}</code></td> <td>@Loc.T("QRZ-Ort",              "QRZ location")</td>            <td style="font-family:monospace;color:#7ee787">@Loc.T("Wien ⚠️ nur wenn gecacht","Wien ⚠️ if cached")</td></tr>
+                                <tr><td><code>{locator}</code></td>  <td>@Loc.T("QTH-Locator (Gesprächspartner)", "QTH Locator (partner)")</td> <td style="font-family:monospace">JN48qn</td></tr>
+                                <tr><td><code>{rssi}</code></td>     <td>@Loc.T("RSSI (dBm)",           "RSSI (dBm)")</td>           <td style="font-family:monospace">-85</td></tr>
+                                <tr><td><code>{snr}</code></td>      <td>@Loc.T("SNR (dB)",             "SNR (dB)")</td>             <td style="font-family:monospace">9.5</td></tr>
+                                <tr><td><code>{hw}</code></td>       <td>@Loc.T("Hardware-Name",        "Hardware name")</td>      <td style="font-family:monospace">T-BEAM</td></tr>
+                                <tr><td><code>{route}</code></td>    <td>@Loc.T("Relay-Pfad (leer = direkt)","Relay path (empty = direct)")</td> <td style="font-family:monospace">OE1KBC → DB0TAW</td></tr>
+                                <tr><td><code>{hops}</code></td>     <td>@Loc.T("Anzahl Relay-Hops (0 = direkt)","Relay hop count (0 = direct)")</td> <td style="font-family:monospace">1</td></tr>
+                                <tr><td><code>{srctype}</code></td>  <td>@Loc.T("Verbindungstyp (roh)","Connection type (raw)")</td> <td style="font-family:monospace">lora</td></tr>
+                                <tr><td><code>{srctype-label}</code></td><td>@Loc.T("Verbindungstyp (lesbar)","Connection type (readable)")</td><td style="font-family:monospace">LoRa / UDP/Gateway</td></tr>
+                                <tr><td><code>{date}</code></td>     <td>@Loc.T("Aktuelles Datum",      "Current date")</td>         <td style="font-family:monospace">@now.ToString("dd.MM.yyyy")</td></tr>
+                                <tr><td><code>{time}</code></td>     <td>@Loc.T("Aktuelle Uhrzeit",     "Current time")</td>          <td style="font-family:monospace">@now.ToString("HH:mm")</td></tr>
+                                <tr><td><code>{telemetry}</code></td><td>@Loc.T("Telemetrie-String (aus JSON-Datei)", "Telemetry string (from JSON file)")</td><td style="font-family:monospace">Temp=22.5°C Hum=60%</td></tr>
+                                <tr><td><code>{last-qso}</code></td> <td>@Loc.T("Letztes QSO mit diesem Rufzeichen (Datum+Uhrzeit)", "Last QSO with this callsign (date+time)")</td><td style="font-family:monospace">@DateTime.Now.ToString("dd.MM.yyyy HH:mm")</td></tr>
+                                <tr><td><code>{my-tx-power}</code></td><td>@Loc.T("Sendeleistung der eigenen Station","Own station TX power")</td><td style="font-family:monospace">22 dBm</td></tr>
+                                <tr><td><code>{my-eirp}</code></td>    <td>@Loc.T("Effektive Strahlungsleistung (EIRP)","Effective isotropic radiated power (EIRP)")</td><td style="font-family:monospace">23.50 dBm</td></tr>
+                                <tr><td><code>{my-antenna}</code></td> <td>@Loc.T("Antennengewinn der eigenen Station","Own station antenna gain")</td><td style="font-family:monospace">2.5 dBi</td></tr>
+                                <tr><td><code>{my-antenna-type}</code></td><td>@Loc.T("Antennentyp der eigenen Station","Own station antenna type")</td><td style="font-family:monospace">Dipol</td></tr>
+                                <tr><td><code>{my-antenna-height}</code></td><td>@Loc.T("Antennenhöhe der eigenen Station","Own station antenna height")</td><td style="font-family:monospace">10 m</td></tr>
+                                <tr><td><code>{my-freq}</code></td>    <td>@Loc.T("Sendefrequenz der eigenen Station","Own station frequency")</td><td style="font-family:monospace">433.175 MHz</td></tr>
                             </tbody>
                         </table>
                         <p style="font-size:11px;color:#8b949e;margin-top:4px">
                             ⚠️ @Loc.T(
                                 "{dest-name} und {dest-loc} sind nur verfügbar, wenn das Rufzeichen bereits im QRZ-Cache liegt.",
-                                "{dest-name} and {dest-loc} are only available if the callsign is already in the QRZ cache.",
-                                "{dest-name} e {dest-loc} sono disponibili solo se il nominativo è già nella cache QRZ.",
-                                "{dest-name} y {dest-loc} solo están disponibles si el indicativo ya está en la caché QRZ.")
+                                "{dest-name} and {dest-loc} are only available if the callsign is already in the QRZ cache.")
                         </p>
                     }
                 </div>
 
-                <label>@Loc.T("Test-Rufzeichen", "Test Callsign", "Nominativo di test", "Indicativo de prueba")</label>
+                <label>@Loc.T("Test-Rufzeichen", "Test Callsign")</label>
                 <div style="display:flex; gap:8px; align-items:center;">
                     <input type="text" @bind="_autoReplyTestCallsign" placeholder="z.B. DH1FR-2" style="flex:1" />
                     <button class="btn-send-now" @onclick="SendAutoReplyTestAsync" disabled="@(_autoReplySending || string.IsNullOrWhiteSpace(_autoReplyTestCallsign))">
                         @if (_autoReplySending)
                         {
-                            <span>⏳ @Loc.T("Wird gesendet…", "Sending…", "Invio in corso…", "Enviando…")</span>
+                            <span>⏳ @Loc.T("Wird gesendet…", "Sending…")</span>
                         }
                         else
                         {
-                            <span>📤 @Loc.T("Auto-Reply testen", "Test Auto-Reply", "Testa auto-risposta", "Probar auto-respuesta")</span>
+                            <span>📤 @Loc.T("Auto-Reply testen", "Test Auto-Reply")</span>
                         }
                     </button>
                 </div>
@@ -571,32 +557,28 @@
                             <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
                                 ℹ️ @Loc.T(
                                     "Eingehende Direkt-Nachrichten, die mit -- beginnen, werden als Befehle interpretiert. Eingebaut: --version, --time, --mh, --ping, --echo, --help.",
-                                    "Incoming direct messages starting with -- are interpreted as commands. Built-in: --version, --time, --mh, --ping, --echo, --help.",
-                                    "Messaggi diretti con -- vengono interpretati come comandi. Integrati: --version, --time, --mh, --ping, --echo, --help.",
-                                    "Los mensajes directos que comienzan con -- se interpretan como comandos. Integrados: --version, --time, --mh, --ping, --echo, --help.")
+                                    "Incoming direct messages starting with -- are interpreted as commands. Built-in: --version, --time, --mh, --ping, --echo, --help.")
                             </div>
                             <div class="settings-grid">
-                                <label>@Loc.T("Bot aktiv", "Bot Active", "Bot attivo", "Bot activo")</label>
+                                <label>@Loc.T("Bot aktiv", "Bot Active")</label>
                                 <label class="settings-toggle">
                                     <input type="checkbox" @bind="_model.BotEnabled" />
-                                    <span>@(_model.BotEnabled ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                                    <span>@(_model.BotEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                                 </label>
                             </div>
 
                             <div style="margin-top:1rem">
-                                <h3 style="font-size:1rem;margin-bottom:0.25rem">@Loc.T("Eigene Befehle", "Custom Commands", "Comandi personalizzati", "Comandos personalizados")</h3>
+                                <h3 style="font-size:1rem;margin-bottom:0.25rem">@Loc.T("Eigene Befehle", "Custom Commands")</h3>
                                 <p style="margin:0 0 0.5rem"><small>@Loc.T(
                                     "Name: Befehlsname ohne -- (z.\u00a0B. info). Antwort: Text oder {Variablen}. Beschreibung: erscheint in --help.",
-                                    "Name: command name without -- (e.\u00a0g. info). Response: text or {variables}. Description: shown in --help.",
-                                    "Nome: senza -- (es. info). Risposta: testo o {variabili}. Descrizione: mostrata in --help.",
-                                    "Nombre: sin -- (p.ej. info). Respuesta: texto o {variables}. Descripción: aparece en --help.")</small>
+                                    "Name: command name without -- (e.\u00a0g. info). Response: text or {variables}. Description: shown in --help.")</small>
                                 </p>
                                 <table class="telemetry-mapping-table">
                                     <thead>
                                         <tr>
-                                            <th>@Loc.T("Name (--…)", "Name (--…)", "Nome (--…)", "Nombre (--…)")</th>
-                                            <th>@Loc.T("Antwort", "Response", "Risposta", "Respuesta")</th>
-                                            <th>@Loc.T("Beschreibung (--help)", "Description (--help)", "Descrizione (--help)", "Descripción (--help)")</th>
+                                            <th>@Loc.T("Name (--…)", "Name (--…)")</th>
+                                            <th>@Loc.T("Antwort", "Response")</th>
+                                            <th>@Loc.T("Beschreibung (--help)", "Description (--help)")</th>
                                             <th></th>
                                         </tr>
                                     </thead>
@@ -606,7 +588,7 @@
                                             <tr>
                                                 <td><input type="text" @bind="cmd.Name" placeholder="info" style="width:100%;font-family:monospace" /></td>
                                                 <td><input type="text" @bind="cmd.Response" placeholder="QTH: Wien, 73 de {mycall}" style="width:100%" /></td>
-                                                <td><input type="text" @bind="cmd.Description" placeholder="@Loc.T("Stationsinfo", "Station info", "Info stazione", "Info estación")" style="width:100%" /></td>
+                                                <td><input type="text" @bind="cmd.Description" placeholder="@Loc.T("Stationsinfo", "Station info")" style="width:100%" /></td>
                                                 <td><button type="button" class="btn-remove" @onclick="() => _model.BotCommands.Remove(cmd)">✕</button></td>
                                             </tr>
                                         }
@@ -615,21 +597,21 @@
                                 <div style="margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
                                     <button type="button" class="btn-add"
                                             @onclick="() => _model.BotCommands.Add(new BotCommandEntry())">
-                                        + @Loc.T("Befehl hinzufügen", "Add Command", "Aggiungi comando", "Añadir comando")
+                                        + @Loc.T("Befehl hinzufügen", "Add Command")
                                     </button>
                                     <button type="button" class="btn-add" style="padding:2px 10px;font-size:12px"
                                             @onclick="() => _showBotVars = !_showBotVars">
                                         📋 @(_showBotVars
-                                            ? Loc.T("Variablen ausblenden", "Hide Variables", "Nascondi variabili", "Ocultar variables")
-                                            : Loc.T("Variablen anzeigen", "Show Variables", "Mostra variabili", "Mostrar variables"))
+                                            ? Loc.T("Variablen ausblenden", "Hide Variables")
+                                            : Loc.T("Variablen anzeigen", "Show Variables"))
                                     </button>
                                     <input type="text" @bind="_filenameBotCommands" style="width:220px;font-size:12px;padding:2px 6px" />
                                     <button type="button" class="btn-add" style="padding:2px 10px;font-size:12px" @onclick="ExportBotCommandsAsync">
-                                        📤 @Loc.T("Exportieren", "Export", "Esporta", "Exportar")
+                                        📤 @Loc.T("Exportieren", "Export")
                                     </button>
                                     <label class="btn-add" style="padding:2px 10px;font-size:12px;cursor:pointer"
-                                           title="@Loc.T("JSON-Datei importieren (ersetzt vorhandene Einträge)", "Import JSON file (replaces existing entries)", "Importa file JSON (sostituisce le voci esistenti)", "Importar archivo JSON (reemplaza entradas existentes)")">
-                                        📥 @Loc.T("Importieren", "Import", "Importa", "Importar")
+                                           title="@Loc.T("JSON-Datei importieren (ersetzt vorhandene Einträge)", "Import JSON file (replaces existing entries)")">
+                                        📥 @Loc.T("Importieren", "Import")
                                         <InputFile accept=".json" style="display:none" OnChange="ImportBotCommandsAsync" />
                                     </label>
                                 </div>
@@ -644,61 +626,61 @@
                                     <table class="telemetry-mapping-table" style="margin-top:0.5rem;font-size:12px">
                                         <thead>
                                             <tr>
-                                                <th>@Loc.T("Variable", "Variable", "Variabile", "Variable")</th>
-                                                <th>@Loc.T("Bedeutung", "Meaning", "Significato", "Significado")</th>
-                                                <th>@Loc.T("Beispiel", "Example", "Esempio", "Ejemplo")</th>
+                                                <th>@Loc.T("Variable", "Variable")</th>
+                                                <th>@Loc.T("Bedeutung", "Meaning")</th>
+                                                <th>@Loc.T("Beispiel", "Example")</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr><td><code>{version}</code></td>  <td>@Loc.T("App-Version",           "App version",       "Versione app",         "Versión app")</td>       <td style="font-family:monospace">@ver</td></tr>
-                                            <tr><td><code>{mycall}</code></td>   <td>@Loc.T("Eigenes Rufzeichen",     "Own callsign",      "Nominativo proprio",   "Indicativo propio")</td> <td style="font-family:monospace">@_model.MyCallsign</td></tr>
-                                            <tr><td><code>{node-firmware}</code></td><td>@Loc.T("Node-Firmware",     "Node firmware",     "Firmware del nodo",    "Firmware del nodo")</td> <td style="font-family:monospace">4.35</td></tr>
-                                            <tr><td><code>{node-hw}</code></td>  <td>@Loc.T("Node-Hardware",         "Node hardware",     "Hardware del nodo",    "Hardware del nodo")</td> <td style="font-family:monospace">T-BEAM</td></tr>
-                                            <tr><td><code>{callsign}</code></td>  <td>@Loc.T("Anrufendes Rufzeichen",       "Caller's callsign",    "Nominativo chiamante",  "Indicativo llamante")</td> <td style="font-family:monospace">OE1KBC-1</td></tr>
-                                            <tr><td><code>{mylocator}</code></td>   <td>@Loc.T("Eigener QTH-Locator", "Own QTH Locator", "Locatore QTH proprio", "Localizador QTH propio")</td> <td style="font-family:monospace">JN48qn</td></tr>
-                                            <tr><td><code>{dest-name}</code></td><td>@Loc.T("Vorname (QRZ, Anrufer)",    "First name (QRZ, caller)", "Nome (QRZ, chiamante)", "Nombre (QRZ, llamante)")</td><td style="font-family:monospace">Max</td></tr>
-                                            <tr><td><code>{dest-loc}</code></td> <td>@Loc.T("Standort (QRZ, Anrufer)",   "Location (QRZ, caller)",   "Luogo (QRZ, chiamante)","Lugar (QRZ, llamante)")</td> <td style="font-family:monospace">Wien</td></tr>
-                                            <tr><td><code>{locator}</code></td>   <td>@Loc.T("QTH-Locator (Gesprächspartner)", "QTH Locator (partner)", "Locatore QTH (partner)",   "Localizador QTH (interlocutor)")</td> <td style="font-family:monospace">JN48qn</td></tr>
-                                            <tr><td><code>{rssi}</code></td>     <td>@Loc.T("RSSI (dBm)",                "RSSI (dBm)",               "RSSI (dBm)",            "RSSI (dBm)")</td>           <td style="font-family:monospace">-85</td></tr>
-                                            <tr><td><code>{snr}</code></td>      <td>@Loc.T("SNR (dB)",               "SNR (dB)",          "SNR (dB)",             "SNR (dB)")</td>          <td style="font-family:monospace">9.5</td></tr>
-                                            <tr><td><code>{hw}</code></td>       <td>@Loc.T("Hardware-Name",          "Hardware name",     "Nome hardware",        "Nombre hardware")</td>   <td style="font-family:monospace">T-BEAM</td></tr>
-                                            <tr><td><code>{route}</code></td>    <td>@Loc.T("Relay-Pfad",             "Relay path",        "Percorso relay",       "Ruta relay")</td>        <td style="font-family:monospace">OE1KBC → DB0TAW</td></tr>
-                                            <tr><td><code>{hops}</code></td>     <td>@Loc.T("Anzahl Relay-Hops",      "Relay hop count",   "Numero hop relay",     "Número saltos")</td>     <td style="font-family:monospace">1</td></tr>
-                                            <tr><td><code>{srctype}</code></td>  <td>@Loc.T("Verbindungstyp (roh)",   "Connection type (raw)", "Tipo connessione (raw)", "Tipo conexión (raw)")</td> <td style="font-family:monospace">lora</td></tr>
-                                            <tr><td><code>{srctype-label}</code></td><td>@Loc.T("Verbindungstyp (lesbar)", "Connection type (readable)", "Tipo connessione (leggibile)", "Tipo conexión (legible)")</td><td style="font-family:monospace">LoRa / UDP/Gateway</td></tr>
-                                            <tr><td><code>{date}</code></td>     <td>@Loc.T("Aktuelles Datum",        "Current date",      "Data corrente",        "Fecha actual")</td>      <td style="font-family:monospace">@now.ToString("dd.MM.yyyy")</td></tr>
-                                            <tr><td><code>{time}</code></td>     <td>@Loc.T("Aktuelle Uhrzeit",       "Current time",      "Ora corrente",         "Hora actual")</td>       <td style="font-family:monospace">@now.ToString("HH:mm")</td></tr>
-                                            <tr><td><code>{telemetry}</code></td><td>@Loc.T("Telemetrie-String (aus JSON-Datei)", "Telemetry string (from JSON file)", "Stringa telemetria (da file JSON)", "Cadena telemetría (desde archivo JSON)")</td><td style="font-family:monospace">Temp=22.5°C Hum=60%</td></tr>
-                                            <tr><td><code>{last-qso}</code></td> <td>@Loc.T("Letztes QSO mit diesem Rufzeichen", "Last QSO with this callsign", "Ultimo QSO con questo nominativo", "Último QSO con este indicativo")</td><td style="font-family:monospace">@now.ToString("dd.MM.yyyy HH:mm")</td></tr>
-                                            <tr><td><code>{my-tx-power}</code></td><td>@Loc.T("Sendeleistung der eigenen Station","Own station TX power","Potenza TX stazione","Potencia TX propia estación")</td><td style="font-family:monospace">22 dBm</td></tr>
-                                            <tr><td><code>{my-eirp}</code></td>    <td>@Loc.T("Effektive Strahlungsleistung (EIRP)","Effective isotropic radiated power (EIRP)","EIRP stazione","EIRP estación")</td><td style="font-family:monospace">23.50 dBm</td></tr>
-                                            <tr><td><code>{my-antenna}</code></td> <td>@Loc.T("Antennengewinn der eigenen Station","Own station antenna gain","Guadagno antenna stazione","Ganancia antena propia")</td><td style="font-family:monospace">2.5 dBi</td></tr>
-                                            <tr><td><code>{my-antenna-type}</code></td><td>@Loc.T("Antennentyp der eigenen Station","Own station antenna type","Tipo antenna stazione","Tipo antena propia")</td><td style="font-family:monospace">Dipol</td></tr>
-                                            <tr><td><code>{my-antenna-height}</code></td><td>@Loc.T("Antennenhöhe der eigenen Station","Own station antenna height","Altezza antenna stazione","Altura antena propia")</td><td style="font-family:monospace">10 m</td></tr>
-                                            <tr><td><code>{my-freq}</code></td>    <td>@Loc.T("Sendefrequenz der eigenen Station","Own station frequency","Frequenza stazione","Frecuencia propia estación")</td><td style="font-family:monospace">433.175 MHz</td></tr>
+                                            <tr><td><code>{version}</code></td>  <td>@Loc.T("App-Version",           "App version")</td>       <td style="font-family:monospace">@ver</td></tr>
+                                            <tr><td><code>{mycall}</code></td>   <td>@Loc.T("Eigenes Rufzeichen",     "Own callsign")</td> <td style="font-family:monospace">@_model.MyCallsign</td></tr>
+                                            <tr><td><code>{node-firmware}</code></td><td>@Loc.T("Node-Firmware",     "Node firmware")</td> <td style="font-family:monospace">4.35</td></tr>
+                                            <tr><td><code>{node-hw}</code></td>  <td>@Loc.T("Node-Hardware",         "Node hardware")</td> <td style="font-family:monospace">T-BEAM</td></tr>
+                                            <tr><td><code>{callsign}</code></td>  <td>@Loc.T("Anrufendes Rufzeichen",       "Caller's callsign")</td> <td style="font-family:monospace">OE1KBC-1</td></tr>
+                                            <tr><td><code>{mylocator}</code></td>   <td>@Loc.T("Eigener QTH-Locator", "Own QTH Locator")</td> <td style="font-family:monospace">JN48qn</td></tr>
+                                            <tr><td><code>{dest-name}</code></td><td>@Loc.T("Vorname (QRZ, Anrufer)",    "First name (QRZ, caller)")</td><td style="font-family:monospace">Max</td></tr>
+                                            <tr><td><code>{dest-loc}</code></td> <td>@Loc.T("Standort (QRZ, Anrufer)",   "Location (QRZ, caller)")</td> <td style="font-family:monospace">Wien</td></tr>
+                                            <tr><td><code>{locator}</code></td>   <td>@Loc.T("QTH-Locator (Gesprächspartner)", "QTH Locator (partner)")</td> <td style="font-family:monospace">JN48qn</td></tr>
+                                            <tr><td><code>{rssi}</code></td>     <td>@Loc.T("RSSI (dBm)",                "RSSI (dBm)")</td>           <td style="font-family:monospace">-85</td></tr>
+                                            <tr><td><code>{snr}</code></td>      <td>@Loc.T("SNR (dB)",               "SNR (dB)")</td>          <td style="font-family:monospace">9.5</td></tr>
+                                            <tr><td><code>{hw}</code></td>       <td>@Loc.T("Hardware-Name",          "Hardware name")</td>   <td style="font-family:monospace">T-BEAM</td></tr>
+                                            <tr><td><code>{route}</code></td>    <td>@Loc.T("Relay-Pfad",             "Relay path")</td>        <td style="font-family:monospace">OE1KBC → DB0TAW</td></tr>
+                                            <tr><td><code>{hops}</code></td>     <td>@Loc.T("Anzahl Relay-Hops",      "Relay hop count")</td>     <td style="font-family:monospace">1</td></tr>
+                                            <tr><td><code>{srctype}</code></td>  <td>@Loc.T("Verbindungstyp (roh)",   "Connection type (raw)")</td> <td style="font-family:monospace">lora</td></tr>
+                                            <tr><td><code>{srctype-label}</code></td><td>@Loc.T("Verbindungstyp (lesbar)", "Connection type (readable)")</td><td style="font-family:monospace">LoRa / UDP/Gateway</td></tr>
+                                            <tr><td><code>{date}</code></td>     <td>@Loc.T("Aktuelles Datum",        "Current date")</td>      <td style="font-family:monospace">@now.ToString("dd.MM.yyyy")</td></tr>
+                                            <tr><td><code>{time}</code></td>     <td>@Loc.T("Aktuelle Uhrzeit",       "Current time")</td>       <td style="font-family:monospace">@now.ToString("HH:mm")</td></tr>
+                                            <tr><td><code>{telemetry}</code></td><td>@Loc.T("Telemetrie-String (aus JSON-Datei)", "Telemetry string (from JSON file)")</td><td style="font-family:monospace">Temp=22.5°C Hum=60%</td></tr>
+                                            <tr><td><code>{last-qso}</code></td> <td>@Loc.T("Letztes QSO mit diesem Rufzeichen", "Last QSO with this callsign")</td><td style="font-family:monospace">@now.ToString("dd.MM.yyyy HH:mm")</td></tr>
+                                            <tr><td><code>{my-tx-power}</code></td><td>@Loc.T("Sendeleistung der eigenen Station","Own station TX power")</td><td style="font-family:monospace">22 dBm</td></tr>
+                                            <tr><td><code>{my-eirp}</code></td>    <td>@Loc.T("Effektive Strahlungsleistung (EIRP)","Effective isotropic radiated power (EIRP)")</td><td style="font-family:monospace">23.50 dBm</td></tr>
+                                            <tr><td><code>{my-antenna}</code></td> <td>@Loc.T("Antennengewinn der eigenen Station","Own station antenna gain")</td><td style="font-family:monospace">2.5 dBi</td></tr>
+                                            <tr><td><code>{my-antenna-type}</code></td><td>@Loc.T("Antennentyp der eigenen Station","Own station antenna type")</td><td style="font-family:monospace">Dipol</td></tr>
+                                            <tr><td><code>{my-antenna-height}</code></td><td>@Loc.T("Antennenhöhe der eigenen Station","Own station antenna height")</td><td style="font-family:monospace">10 m</td></tr>
+                                            <tr><td><code>{my-freq}</code></td>    <td>@Loc.T("Sendefrequenz der eigenen Station","Own station frequency")</td><td style="font-family:monospace">433.175 MHz</td></tr>
                                         </tbody>
                                     </table>
                                 }
                             </div>
 
                             <div class="settings-grid" style="margin-top:1rem">
-                                <label>@Loc.T("Befehl testen", "Test Command", "Testa comando", "Probar comando")</label>
+                                <label>@Loc.T("Befehl testen", "Test Command")</label>
                                 <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                                     <input type="text" @bind="_botTestCommand"
                                            placeholder="--ping"
                                            style="flex:2; min-width:100px; font-family:monospace" />
                                     <input type="text" @bind="_botTestCallsign"
-                                           placeholder="@Loc.T("Rufzeichen (opt.)", "Callsign (opt.)", "Nominativo (opz.)", "Indicativo (opt.)")"
+                                           placeholder="@Loc.T("Rufzeichen (opt.)", "Callsign (opt.)")"
                                            style="flex:1; min-width:80px" />
                                     <button class="btn-send-now" @onclick="TestBotCommandAsync"
                                             disabled="@(_botTesting || string.IsNullOrWhiteSpace(_botTestCommand))">
                                         @if (_botTesting)
                                         {
-                                            <span>⏳ @Loc.T("Wird ausgeführt…", "Running…", "Esecuzione…", "Ejecutando…")</span>
+                                            <span>⏳ @Loc.T("Wird ausgeführt…", "Running…")</span>
                                         }
                                         else
                                         {
-                                            <span>🧪 @Loc.T("Befehl testen", "Test Command", "Testa comando", "Probar comando")</span>
+                                            <span>🧪 @Loc.T("Befehl testen", "Test Command")</span>
                                         }
                                     </button>
                                 </div>
@@ -716,23 +698,23 @@
 
                         <!-- Bake / Beacon -->
         <div class="settings-section @(IsOpen("beacon") ? "" : "settings-section-collapsed")">
-            <h2 class="settings-section-title" @onclick='() => Toggle("beacon")'>📡 @Loc.T("Bake (Beacon)", "Beacon", "Beacon", "Baliza") <span class="section-chevron">@(IsOpen("beacon") ? "▲" : "▼")</span></h2>
+            <h2 class="settings-section-title" @onclick='() => Toggle("beacon")'>📡 @Loc.T("Bake (Beacon)", "Beacon") <span class="section-chevron">@(IsOpen("beacon") ? "▲" : "▼")</span></h2>
             @if (IsOpen("beacon")) {
             <div class="settings-grid">
-                <label>@Loc.T("Bake aktiv", "Beacon Active", "Beacon attivo", "Baliza activa")</label>
+                <label>@Loc.T("Bake aktiv", "Beacon Active")</label>
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.BeaconEnabled" />
-                    <span>@(_model.BeaconEnabled ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                    <span>@(_model.BeaconEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                 </label>
 
-                <label>@Loc.T("Gruppe", "Group", "Gruppo", "Grupo")</label>
+                <label>@Loc.T("Gruppe", "Group")</label>
                 <input type="text" @bind="_model.BeaconGroup" placeholder="#262" />
 
-                <label>@Loc.T("Bakentext", "Beacon Text", "Testo beacon", "Texto de baliza")</label>
+                <label>@Loc.T("Bakentext", "Beacon Text")</label>
                 <div class="settings-input-hint">
                     <input type="text" @bind="_model.BeaconText" />
                     <span class="settings-hint">
-                        @Loc.T("Unterstützte Variablen:", "Supported variables:", "Variabili supportate:", "Variables disponibles:")
+                        @Loc.T("Unterstützte Variablen:", "Supported variables:")
                         <code>{version}</code>,
                         <code>{mycall}</code>,
                         <code>{mylocator}</code>,
@@ -743,19 +725,19 @@
                     </span>
                 </div>
 
-                <label>@Loc.T("Interval (Stunden, min. 8)", "Interval (Hours, min. 8)", "Intervallo (ore, min. 8)", "Intervalo (horas, mín. 8)")</label>
+                <label>@Loc.T("Interval (Stunden, min. 8)", "Interval (Hours, min. 8)")</label>
                 <input type="number" min="8" @bind="_model.BeaconIntervalHours" />
 
-                <label>@Loc.T("Bake testen", "Test Beacon", "Testa beacon", "Probar baliza")</label>
+                <label>@Loc.T("Bake testen", "Test Beacon")</label>
                 <div style="display:flex; gap:8px; align-items:center;">
                     <button class="btn-send-now" @onclick="SendBeaconNowAsync" disabled="@(_beaconSending || string.IsNullOrWhiteSpace(_model.BeaconGroup) || string.IsNullOrWhiteSpace(_model.BeaconText))">
                         @if (_beaconSending)
                         {
-                            <span>⏳ @Loc.T("Wird gesendet…", "Sending…", "Invio in corso…", "Enviando…")</span>
+                            <span>⏳ @Loc.T("Wird gesendet…", "Sending…")</span>
                         }
                         else
                         {
-                            <span>📡 @Loc.T("Bake jetzt senden", "Send Beacon Now", "Invia beacon ora", "Enviar baliza ahora")</span>
+                            <span>📡 @Loc.T("Bake jetzt senden", "Send Beacon Now")</span>
                         }
                     </button>
                 </div>
@@ -772,55 +754,55 @@
 
         <!-- Telemetrie / Telemetry -->
         <div class="settings-section @(IsOpen("tele") ? "" : "settings-section-collapsed")">
-            <h2 class="settings-section-title" @onclick='() => Toggle("tele")'>📊 @Loc.T("Telemetrie", "Telemetry", "Telemetria", "Telemetría") <span class="section-chevron">@(IsOpen("tele") ? "▲" : "▼")</span></h2>
+            <h2 class="settings-section-title" @onclick='() => Toggle("tele")'>📊 @Loc.T("Telemetrie", "Telemetry") <span class="section-chevron">@(IsOpen("tele") ? "▲" : "▼")</span></h2>
             @if (IsOpen("tele")) {
             <div class="settings-grid">
-                <label>@Loc.T("Telemetrie aktiv", "Telemetry Active", "Telemetria attiva", "Telemetría activa")</label>
+                <label>@Loc.T("Telemetrie aktiv", "Telemetry Active")</label>
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.TelemetryEnabled" />
-                    <span>@(_model.TelemetryEnabled ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                    <span>@(_model.TelemetryEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                 </label>
 
-                <label>@Loc.T("JSON-Datei", "JSON File", "File JSON", "Archivo JSON")</label>
+                <label>@Loc.T("JSON-Datei", "JSON File")</label>
                 <input type="text" @bind="_model.TelemetryFilePath" placeholder="C:\Temp\telemetry.json" />
 
                 <label>
-                    @Loc.T("Ziel", "Target", "Destinatario", "Destino")<br />
-                    <small>@Loc.T("(Gruppe z.\u00a0B. #262, * für Alle, oder Rufzeichen)", "(Group e.\u00a0g. #262, * for all, or callsign)", "(Gruppo es. #262, * per tutti, o nominativo)", "(Grupo p.ej. #262, * para todos, o indicativo)")</small>
+                    @Loc.T("Ziel", "Target")<br />
+                    <small>@Loc.T("(Gruppe z.\u00a0B. #262, * für Alle, oder Rufzeichen)", "(Group e.\u00a0g. #262, * for all, or callsign)")</small>
                 </label>
                 <input type="text" @bind="_model.TelemetryGroup" placeholder="#262 / * / OE1KBC-1" />
 
                 <label>
-                    @Loc.T("Sendezeiten (Stunden 0\u201323)", "Send times (hours 0\u201323)", "Orari di invio (ore 0\u201323)", "Horarios de envío (horas 0\u201323)")<br />
-                    <small>@Loc.T("Kommagetrennt, z.\u00a0B. 11,15 f\u00fcr 11:00 und 15:00 Uhr", "Comma-separated, e.\u00a0g. 11,15 for 11:00 and 15:00", "Separati da virgola, es. 11,15 per 11:00 e 15:00", "Separados por coma, p.ej. 11,15 para 11:00 y 15:00")</small>
+                    @Loc.T("Sendezeiten (Stunden 0\u201323)", "Send times (hours 0\u201323)")<br />
+                    <small>@Loc.T("Kommagetrennt, z.\u00a0B. 11,15 f\u00fcr 11:00 und 15:00 Uhr", "Comma-separated, e.\u00a0g. 11,15 for 11:00 and 15:00")</small>
                 </label>
                 <input type="text" @bind="_model.TelemetryScheduleHours" placeholder="11,15" />
 
-                <label>@Loc.T("HTTP-API aktiv", "HTTP-API Active", "HTTP-API attiva", "HTTP-API activa")</label>
+                <label>@Loc.T("HTTP-API aktiv", "HTTP-API Active")</label>
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.TelemetryApiEnabled" />
-                    <span>@(_model.TelemetryApiEnabled ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                    <span>@(_model.TelemetryApiEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                 </label>
 
                 <label>
                     API-Key<br />
-                    <small>@Loc.T("(leer\u00a0= keine Authentifizierung)", "(empty\u00a0= no authentication)", "(vuoto = nessuna autenticazione)", "(vacío = sin autenticación)")</small>
+                    <small>@Loc.T("(leer\u00a0= keine Authentifizierung)", "(empty\u00a0= no authentication)")</small>
                 </label>
                 <input type="password" @bind="_model.TelemetryApiKey" autocomplete="new-password"
-                       placeholder="@Loc.T("Geheimer Schlüssel für POST /api/telemetry", "Secret key for POST /api/telemetry", "Chiave segreta per POST /api/telemetry", "Clave secreta para POST /api/telemetry")" />
+                       placeholder="@Loc.T("Geheimer Schlüssel für POST /api/telemetry", "Secret key for POST /api/telemetry")" />
             </div>
 
             <div style="margin-top:1rem">
-                <h3 style="font-size:1rem;margin-bottom:0.5rem">@Loc.T("Messwert-Zuordnung", "Measurement Mapping", "Mappatura misure", "Asignación de medidas")</h3>
-                <p><small>@Loc.T("JSON-Key: Schlüssel aus der JSON-Datei. Bezeichnung: Anzeigename in der Nachricht. Einheit: z.\u00a0B. °C, kW, hPa. Dez.: Nachkommastellen.", "JSON-Key: key from the JSON file. Label: display name in the message. Unit: e.\u00a0g. °C, kW, hPa. Dec.: decimal places.", "JSON-Key: chiave dal file. Etichetta: nome nel messaggio. Unità: es. °C, kW, hPa. Dec.: decimali.", "JSON-Key: clave del archivo. Etiqueta: nombre en el mensaje. Unidad: p.ej. °C, kW, hPa. Dec.: decimales.")</small></p>
+                <h3 style="font-size:1rem;margin-bottom:0.5rem">@Loc.T("Messwert-Zuordnung", "Measurement Mapping")</h3>
+                <p><small>@Loc.T("JSON-Key: Schlüssel aus der JSON-Datei. Bezeichnung: Anzeigename in der Nachricht. Einheit: z.\u00a0B. °C, kW, hPa. Dez.: Nachkommastellen.", "JSON-Key: key from the JSON file. Label: display name in the message. Unit: e.\u00a0g. °C, kW, hPa. Dec.: decimal places.")</small></p>
                 <table class="telemetry-mapping-table">
                     <thead>
                         <tr>
                             <th>JSON-Key</th>
-                            <th>@Loc.T("Bezeichnung", "Label", "Etichetta", "Etiqueta")</th>
-                            <th>@Loc.T("Einheit", "Unit", "Unità", "Unidad")</th>
-                            <th>@Loc.T("Dez.", "Dec.", "Dec.", "Dec.")</th>
-                            <th>@Loc.T("Karte", "Map", "Mappa", "Mapa")</th>
+                            <th>@Loc.T("Bezeichnung", "Label")</th>
+                            <th>@Loc.T("Einheit", "Unit")</th>
+                            <th>@Loc.T("Dez.", "Dec.")</th>
+                            <th>@Loc.T("Karte", "Map")</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -834,11 +816,11 @@
                                 <td><input type="text" @bind="e.Unit" /></td>
                                 <td><input type="number" min="0" max="4" style="width:4rem" @bind="e.Decimals" /></td>
                                 <td>
-                                    <select @bind="e.WeatherRole" title="@Loc.T("Karten-Rolle für Wetter-Popup", "Map role for weather popup", "Ruolo mappa per popup meteo", "Rol de mapa para popup meteorológico")">
+                                    <select @bind="e.WeatherRole" title="@Loc.T("Karten-Rolle für Wetter-Popup", "Map role for weather popup")">
                                         <option value="">–</option>
-                                        <option value="temp">🌡️ @Loc.T("Temp.", "Temp.", "Temp.", "Temp.")</option>
-                                        <option value="humidity">💧 @Loc.T("Feuchte", "Humidity", "Umidità", "Humedad")</option>
-                                        <option value="pressure">🧭 @Loc.T("Druck", "Pressure", "Pressione", "Presión")</option>
+                                        <option value="temp">🌡️ @Loc.T("Temp.", "Temp.")</option>
+                                        <option value="humidity">💧 @Loc.T("Feuchte", "Humidity")</option>
+                                        <option value="pressure">🧭 @Loc.T("Druck", "Pressure")</option>
                                     </select>
                                 </td>
                                 <td><button type="button" class="btn-remove" @onclick="() => _model.TelemetryMapping.Remove(e)">🗑️</button></td>
@@ -848,20 +830,20 @@
                 </table>
                 <button type="button" class="btn-add" @onclick="() => _model.TelemetryMapping.Add(new TelemetryMappingEntry())"
                         disabled="@(_model.TelemetryMapping.Count >= 3)">
-                    ➕ @Loc.T("Zeile hinzufügen", "Add Row", "Aggiungi riga", "Agregar fila")
+                    ➕ @Loc.T("Zeile hinzufügen", "Add Row")
                 </button>
                 @if (_model.TelemetryMapping.Count >= 3)
                 {
                     <div style="font-size:.8rem;color:#8b949e;margin-top:.3rem">
-                        @Loc.T("Maximal 3 Messwerte möglich.", "Maximum 3 measurements allowed.", "Massimo 3 misure consentite.", "Máximo 3 medidas permitidas.")
+                        @Loc.T("Maximal 3 Messwerte möglich.", "Maximum 3 measurements allowed.")
                     </div>
                 }
             </div>
 
             <!-- Vorschau -->
             <div style="margin-top:1.25rem">
-                <h3 style="font-size:1rem;margin-bottom:0.5rem">🔍 @Loc.T("Vorschau aktueller Telemetriedaten", "Preview Current Telemetry Data", "Anteprima telemetria attuale", "Vista previa de telemetría actual")</h3>
-                <button type="button" class="btn-add" @onclick="LoadTelemetryPreviewAsync">🔄 @Loc.T("Datei lesen & Vorschau", "Read File & Preview", "Leggi file & Anteprima", "Leer archivo & Vista previa")</button>
+                <h3 style="font-size:1rem;margin-bottom:0.5rem">🔍 @Loc.T("Vorschau aktueller Telemetriedaten", "Preview Current Telemetry Data")</h3>
+                <button type="button" class="btn-add" @onclick="LoadTelemetryPreviewAsync">🔄 @Loc.T("Datei lesen & Vorschau", "Read File & Preview")</button>
 
                 @if (_telemetryPreviewError != null)
                 {
@@ -872,7 +854,7 @@
                 {
                     <table class="telemetry-mapping-table" style="margin-top:0.75rem">
                         <thead>
-                            <tr><th>JSON-Key</th><th>@Loc.T("Aktueller Wert", "Current Value", "Valore attuale", "Valor actual")</th><th>@Loc.T("Gesendet als", "Sent as", "Inviato come", "Enviado como")</th></tr>
+                            <tr><th>JSON-Key</th><th>@Loc.T("Aktueller Wert", "Current Value")</th><th>@Loc.T("Gesendet als", "Sent as")</th></tr>
                         </thead>
                         <tbody>
                             @foreach (var row in _telemetryPreview)
@@ -890,7 +872,7 @@
                     @if (_telemetryMessages?.Count > 0)
                     {
                         <div style="margin-top:0.75rem">
-                            <strong style="font-size:13px">@Loc.T("Vorschau LoRa-Nachricht", "Preview LoRa Message", "Anteprima messaggio LoRa", "Vista previa mensaje LoRa")@(_telemetryMessages!.Count > 1 ? Loc.T("en", "s", "", "s") : ""):</strong>
+                            <strong style="font-size:13px">@Loc.T("Vorschau LoRa-Nachricht", "Preview LoRa Message")@(_telemetryMessages!.Count > 1 ? Loc.T("en", "s") : ""):</strong>
                             @foreach (var msg in _telemetryMessages)
                             {
                                 <div style="font-family:monospace;background:#16213e;color:#c9d1d9;padding:5px 10px;border-radius:4px;margin-top:4px;font-size:12px;word-break:break-all">
@@ -906,11 +888,11 @@
                 <button class="btn-send-now" @onclick="SendTelemetryNowAsync" disabled="@_sendingNow">
                     @if (_sendingNow)
                     {
-                        <span>⏳ @Loc.T("Wird gesendet…", "Sending…", "Invio in corso…", "Enviando…")</span>
+                        <span>⏳ @Loc.T("Wird gesendet…", "Sending…")</span>
                     }
                     else
                     {
-                        <span>📡 @Loc.T("Telemetrie jetzt senden", "Send Telemetry Now", "Invia telemetria ora", "Enviar telemetría ahora")</span>
+                        <span>📡 @Loc.T("Telemetrie jetzt senden", "Send Telemetry Now")</span>
                     }
                 </button>
                 @if (_sendResult != null)
@@ -925,50 +907,46 @@
 
         <!-- Watchlist -->
         <div class="settings-section @(IsOpen("watch") ? "" : "settings-section-collapsed")">
-            <h2 class="settings-section-title" @onclick='() => Toggle("watch")'>📻 @Loc.T("Watchlist", "Watchlist", "Watchlist", "Watchlist") <span class="section-chevron">@(IsOpen("watch") ? "▲" : "▼")</span></h2>
+            <h2 class="settings-section-title" @onclick='() => Toggle("watch")'>📻 @Loc.T("Watchlist", "Watchlist") <span class="section-chevron">@(IsOpen("watch") ? "▲" : "▼")</span></h2>
             @if (IsOpen("watch")) {
             <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
                 ℹ️ @Loc.T(
                     "Wenn ein eingehendes Paket (Nachricht, Position oder Telemetrie) von einem dieser Rufzeichen empfangen wird, ertönt ein Signalton und eine Benachrichtigung wird angezeigt.",
-                    "When an incoming packet (message, position or telemetry) from one of these callsigns is received, an alert tone sounds and a notification is shown.",
-                    "Quando arriva un pacchetto (messaggio, posizione o telemetria) da uno di questi nominativi, viene emesso un segnale acustico e mostrata una notifica.",
-                    "Cuando llega un paquete (mensaje, posici\u00f3n o telemetr\u00eda) de uno de estos indicativos, suena una alerta y se muestra una notificaci\u00f3n.")
+                    "When an incoming packet (message, position or telemetry) from one of these callsigns is received, an alert tone sounds and a notification is shown.")
                 <br />
                 @Loc.T(
                     "Ohne SSID (z.\u00a0B. DH1FR) werden alle SSID dieses Rufzeichens erkannt. Mit SSID (z.\u00a0B. DH1FR-1) nur exakt dieses Rufzeichen.",
-                    "Without SSID (e.\u00a0g. DH1FR) all SSIDs of that callsign are matched. With SSID (e.\u00a0g. DH1FR-1) only that exact callsign.",
-                    "Senza SSID (es. DH1FR) vengono rilevati tutti gli SSID. Con SSID (es. DH1FR-1) solo quel nominativo esatto.",
-                    "Sin SSID (p.ej. DH1FR) se detectan todos los SSID. Con SSID (p.ej. DH1FR-1) solo ese indicativo exacto.")
+                    "Without SSID (e.\u00a0g. DH1FR) all SSIDs of that callsign are matched. With SSID (e.\u00a0g. DH1FR-1) only that exact callsign.")
             </div>
             <div class="settings-grid">
                 <label>
-                    @Loc.T("Rufzeichen-Liste", "Callsign List", "Lista nominativi", "Lista de indicativos")<br />
-                    <small>@Loc.T("(eine pro Zeile, z.\u00a0B. DH1FR oder DH1FR-1)", "(one per line, e.\u00a0g. DH1FR or DH1FR-1)", "(uno per riga, es. DH1FR o DH1FR-1)", "(uno por l\u00ednea, p.ej. DH1FR o DH1FR-1)")</small>
+                    @Loc.T("Rufzeichen-Liste", "Callsign List")<br />
+                    <small>@Loc.T("(eine pro Zeile, z.\u00a0B. DH1FR oder DH1FR-1)", "(one per line, e.\u00a0g. DH1FR or DH1FR-1)")</small>
                 </label>
                 <textarea rows="4" @bind="_model.WatchCallsignsText"></textarea>
 
-                <label>@Loc.T("Auslöser", "Triggers", "Trigger", "Disparadores")</label>
+                <label>@Loc.T("Auslöser", "Triggers")</label>
                 <div style="display:flex;flex-direction:column;gap:4px">
                     <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
                         <input type="checkbox" @bind="_model.WatchOnMessage" />
-                        @Loc.T("Nachrichten (MSG)", "Messages (MSG)", "Messaggi (MSG)", "Mensajes (MSG)")
+                        @Loc.T("Nachrichten (MSG)", "Messages (MSG)")
                     </label>
                     <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
                         <input type="checkbox" @bind="_model.WatchOnPosition" />
-                        @Loc.T("Positionsbaken (POS)", "Position beacons (POS)", "Radiofari posizione (POS)", "Balizas de posición (POS)")
+                        @Loc.T("Positionsbaken (POS)", "Position beacons (POS)")
                     </label>
                     <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
                         <input type="checkbox" @bind="_model.WatchOnTelemetry" />
-                        @Loc.T("Telemetrie (TEL)", "Telemetry (TEL)", "Telemetria (TEL)", "Telemetría (TEL)")
+                        @Loc.T("Telemetrie (TEL)", "Telemetry (TEL)")
                     </label>
                     <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
                         <input type="checkbox" @bind="_model.WatchOnAck" />
-                        @Loc.T("Bestätigungen (ACK)", "Acknowledgements (ACK)", "Conferme (ACK)", "Confirmaciones (ACK)")
+                        @Loc.T("Bestätigungen (ACK)", "Acknowledgements (ACK)")
                     </label>
                 </div>
 
                 <label>
-                    @Loc.T("Anzeigedauer (Minuten)", "Display duration (minutes)", "Durata visualizzazione (minuti)", "Duración de visualización (minutos)")
+                    @Loc.T("Anzeigedauer (Minuten)", "Display duration (minutes)")
                 </label>
                 <input type="number" min="1" max="60" @bind="_model.WatchAlertMinutes" />
             </div>
@@ -977,15 +955,16 @@
 
         <!-- Sprache / Language -->
         <div class="settings-section @(IsOpen("lang") ? "" : "settings-section-collapsed")">
-            <h2 class="settings-section-title" @onclick='() => Toggle("lang")'>🌐 @Loc.T("Sprache", "Language", "Lingua", "Idioma") <span class="section-chevron">@(IsOpen("lang") ? "▲" : "▼")</span></h2>
+            <h2 class="settings-section-title" @onclick='() => Toggle("lang")'>🌐 @Loc.T("Sprache", "Language") <span class="section-chevron">@(IsOpen("lang") ? "▲" : "▼")</span></h2>
             @if (IsOpen("lang")) {
             <div class="settings-grid">
-                <label>@Loc.T("Oberflächensprache", "UI Language", "Lingua interfaccia", "Idioma de la interfaz")</label>
+                <label>@Loc.T("Oberflächensprache", "UI Language")</label>
                 <select @bind="_model.Language">
                     <option value="de">🇩🇪 Deutsch</option>
                     <option value="en">🇬🇧 English</option>
                     <option value="it">🇮🇹 Italiano</option>
                     <option value="es">🇪🇸 Español</option>
+                    <option value="fr">🇫🇷 Français</option>
                 </select>
             </div>
             }
@@ -993,19 +972,17 @@
 
         <!-- Datenbank / Database -->
         <div class="settings-section @(IsOpen("db") ? "" : "settings-section-collapsed")">
-            <h2 class="settings-section-title" @onclick='() => Toggle("db")'>🗄️ @Loc.T("Datenbank", "Database", "Database", "Base de datos") <span class="section-chevron">@(IsOpen("db") ? "▲" : "▼")</span></h2>
+            <h2 class="settings-section-title" @onclick='() => Toggle("db")'>🗄️ @Loc.T("Datenbank", "Database") <span class="section-chevron">@(IsOpen("db") ? "▲" : "▼")</span></h2>
             @if (IsOpen("db")) {
             <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
                 🔒 @Loc.T(
                     "Alle Monitor-Einträge (Rufzeichen, Nachrichtentexte, GPS, RSSI) werden in die externe Datenbank geschrieben. Nur im eigenen, abgesicherten Netz betreiben. Datenschutz beachten.",
-                    "All monitor entries (callsigns, message texts, GPS, RSSI) are written to the external database. Only operate in your own secured network. Consider privacy implications.",
-                    "Tutte le voci monitor vengono scritte nel database esterno. Usare solo in rete protetta. Considerare la privacy.",
-                    "Todas las entradas del monitor se escriben en la base de datos externa. Solo usar en red propia y segura. Considerar la privacidad.")
+                    "All monitor entries (callsigns, message texts, GPS, RSSI) are written to the external database. Only operate in your own secured network. Consider privacy implications.")
             </div>
             <div class="settings-grid">
-                <label>@Loc.T("Anbieter", "Provider", "Provider", "Proveedor")</label>
+                <label>@Loc.T("Anbieter", "Provider")</label>
                 <select @bind="_model.DbProvider" @bind:after="ResetDbTestState">
-                    <option value="@DatabaseSettings.ProviderNone">@Loc.T("Deaktiviert", "Disabled", "Disabilitato", "Desactivado")</option>
+                    <option value="@DatabaseSettings.ProviderNone">@Loc.T("Deaktiviert", "Disabled")</option>
                     <option value="@DatabaseSettings.ProviderMySql">MySQL / MariaDB</option>
                     <option value="@DatabaseSettings.ProviderInfluxDb">InfluxDB 2</option>
                 </select>
@@ -1013,13 +990,13 @@
                 @if (_model.DbProvider == DatabaseSettings.ProviderMySql)
                 {
                     <label>
-                        @Loc.T("Verbindungsstring", "Connection String", "Stringa di connessione", "Cadena de conexión")<br />
+                        @Loc.T("Verbindungsstring", "Connection String")<br />
                         <small>z.B. Server=localhost;Database=meshcom;User=mc;Password=secret;</small>
                     </label>
                     <input type="password" autocomplete="new-password" @bind="_model.DbMySqlConnectionString"
                            placeholder="Server=localhost;Database=meshcom;User=mc;Password=..." />
 
-                    <label>@Loc.T("Tabellenname", "Table Name", "Nome tabella", "Nombre de tabla")</label>
+                    <label>@Loc.T("Tabellenname", "Table Name")</label>
                     <input type="text" @bind="_model.DbMySqlTableName" placeholder="meshcom_monitor" />
                 }
 
@@ -1031,7 +1008,7 @@
                     <label>Token</label>
                     <input type="password" autocomplete="new-password" @bind="_model.DbInfluxToken" />
 
-                    <label>@Loc.T("Organisation", "Organisation", "Organizzazione", "Organización")</label>
+                    <label>@Loc.T("Organisation", "Organisation")</label>
                     <input type="text" @bind="_model.DbInfluxOrg" placeholder="meshcom" />
 
                     <label>Bucket</label>
@@ -1041,11 +1018,11 @@
                 @if (_model.DbProvider != DatabaseSettings.ProviderNone)
                 {
                     <label>
-                        @Loc.T("DB-Inserts loggen", "Log DB Inserts", "Log insert DB", "Registrar inserts DB")
+                        @Loc.T("DB-Inserts loggen", "Log DB Inserts")
                     </label>
                     <label class="settings-toggle">
                         <input type="checkbox" @bind="_model.DbLogInserts" />
-                        <span>@(_model.DbLogInserts ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                        <span>@(_model.DbLogInserts ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                     </label>
                 }
             </div>
@@ -1056,11 +1033,11 @@
                     <button type="button" class="btn-send-now" @onclick="TestDbConnectionAsync" disabled="@_dbTesting">
                         @if (_dbTesting)
                         {
-                            <span>⏳ @Loc.T("Teste…", "Testing…", "Test in corso…", "Probando…")</span>
+                            <span>⏳ @Loc.T("Teste…", "Testing…")</span>
                         }
                         else
                         {
-                            <span>🔌 @Loc.T("Verbindung testen", "Test Connection", "Testa connessione", "Probar conexión")</span>
+                            <span>🔌 @Loc.T("Verbindung testen", "Test Connection")</span>
                         }
                     </button>
                 </div>
@@ -1070,13 +1047,13 @@
                     @if (!_dbTestResult.IsConnected)
                     {
                         <div class="settings-error" style="margin-top:0.5rem">
-                            ❌ @Loc.T("Verbindung fehlgeschlagen:", "Connection failed:", "Connessione fallita:", "Conexión fallida:") @_dbTestResult.ErrorMessage
+                            ❌ @Loc.T("Verbindung fehlgeschlagen:", "Connection failed:") @_dbTestResult.ErrorMessage
                         </div>
                     }
                     else if (_dbTestResult.DatabaseExists && _dbTestResult.TableOrBucketExists)
                     {
                         <div class="settings-success" style="margin-top:0.5rem">
-                            ✅ @Loc.T("Verbindung OK – Datenbank und Tabelle vorhanden.", "Connection OK – database and table exist.", "Connessione OK – database e tabella esistono.", "Conexión OK – base de datos y tabla existen.")
+                            ✅ @Loc.T("Verbindung OK – Datenbank und Tabelle vorhanden.", "Connection OK – database and table exist.")
                         </div>
                     }
                     else
@@ -1086,35 +1063,35 @@
                                 ⚠️
                                 @if (!_dbTestResult.DatabaseExists)
                                 {
-                                    <span>@Loc.T("Datenbank nicht gefunden.", "Database not found.", "Database non trovato.", "Base de datos no encontrada.")</span>
+                                    <span>@Loc.T("Datenbank nicht gefunden.", "Database not found.")</span>
                                 }
                                 @if (!_dbTestResult.TableOrBucketExists)
                                 {
                                     @if (_model.DbProvider == DatabaseSettings.ProviderMySql)
                                     {
-                                        <span>@Loc.T("Tabelle nicht gefunden.", "Table not found.", "Tabella non trovata.", "Tabla no encontrada.")</span>
+                                        <span>@Loc.T("Tabelle nicht gefunden.", "Table not found.")</span>
                                     }
                                     else
                                     {
-                                        <span>@Loc.T("Bucket nicht gefunden.", "Bucket not found.", "Bucket non trovato.", "Bucket no encontrado.")</span>
+                                        <span>@Loc.T("Bucket nicht gefunden.", "Bucket not found.")</span>
                                     }
                                 }
                                 <br />
-                                @Loc.T("Soll automatisch angelegt werden?", "Should it be created automatically?", "Deve essere creato automaticamente?", "¿Debe crearse automáticamente?")
+                                @Loc.T("Soll automatisch angelegt werden?", "Should it be created automatically?")
                             </div>
                             <div style="margin-top:0.5rem;display:flex;gap:8px">
                                 <button type="button" class="btn-save" @onclick="SetupDbAsync" disabled="@_dbSettingUp">
                                     @if (_dbSettingUp)
                                     {
-                                        <span>⏳ @Loc.T("Wird angelegt…", "Creating…", "Creazione in corso…", "Creando…")</span>
+                                        <span>⏳ @Loc.T("Wird angelegt…", "Creating…")</span>
                                     }
                                     else
                                     {
-                                        <span>✅ @Loc.T("Ja, anlegen", "Yes, create", "Sì, crea", "Sí, crear")</span>
+                                        <span>✅ @Loc.T("Ja, anlegen", "Yes, create")</span>
                                     }
                                 </button>
                                 <button type="button" class="btn-remove" @onclick="ResetDbTestState">
-                                    @Loc.T("Abbrechen", "Cancel", "Annulla", "Cancelar")
+                                    @Loc.T("Abbrechen", "Cancel")
                                 </button>
                             </div>
                             @if (_dbSetupError != null)
@@ -1133,31 +1110,31 @@
             <h2 class="settings-section-title" @onclick='() => Toggle("webhook")'>🔗 Webhook <span class="section-chevron">@(IsOpen("webhook") ? "▲" : "▼")</span></h2>
             @if (IsOpen("webhook")) {
             <div class="settings-grid">
-                <label>@Loc.T("Webhook aktiv", "Webhook Active", "Webhook attivo", "Webhook activo")</label>
+                <label>@Loc.T("Webhook aktiv", "Webhook Active")</label>
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.WebhookEnabled" />
-                    <span>@(_model.WebhookEnabled ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                    <span>@(_model.WebhookEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                 </label>
 
                 <label>
                     URL<br />
-                    <small>@Loc.T("HTTP POST · JSON-Body mit event, from, to, text, rssi, lat, lon …", "HTTP POST · JSON body with event, from, to, text, rssi, lat, lon …", "HTTP POST · corpo JSON con event, from, to, text, rssi, lat, lon …", "HTTP POST · cuerpo JSON con event, from, to, text, rssi, lat, lon …")</small>
+                    <small>@Loc.T("HTTP POST · JSON-Body mit event, from, to, text, rssi, lat, lon …", "HTTP POST · JSON body with event, from, to, text, rssi, lat, lon …")</small>
                 </label>
                 <input type="text" @bind="_model.WebhookUrl" placeholder="https://homeassistant.local/api/webhook/meshcom" />
 
-                <label>@Loc.T("Auslöser", "Triggers", "Trigger", "Disparadores")</label>
+                <label>@Loc.T("Auslöser", "Triggers")</label>
                 <div style="display:flex;flex-direction:column;gap:4px">
                     <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
                         <input type="checkbox" @bind="_model.WebhookOnMessage" />
-                        @Loc.T("Nachrichten (msg)", "Messages (msg)", "Messaggi (msg)", "Mensajes (msg)")
+                        @Loc.T("Nachrichten (msg)", "Messages (msg)")
                     </label>
                     <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
                         <input type="checkbox" @bind="_model.WebhookOnPosition" />
-                        @Loc.T("Position (pos)", "Position (pos)", "Posizione (pos)", "Posición (pos)")
+                        @Loc.T("Position (pos)", "Position (pos)")
                     </label>
                     <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
                         <input type="checkbox" @bind="_model.WebhookOnTelemetry" />
-                        @Loc.T("Telemetrie (tele)", "Telemetry (tele)", "Telemetria (tele)", "Telemetría (tele)")
+                        @Loc.T("Telemetrie (tele)", "Telemetry (tele)")
                     </label>
                 </div>
             </div>
@@ -1169,82 +1146,82 @@
             <h2 class="settings-section-title" @onclick='() => Toggle("mqtt")'>📡 MQTT <span class="section-chevron">@(IsOpen("mqtt") ? "▲" : "▼")</span></h2>
             @if (IsOpen("mqtt")) {
             <div class="settings-grid">
-                <label>@Loc.T("MQTT aktiv", "MQTT Active", "MQTT attivo", "MQTT activo")</label>
+                <label>@Loc.T("MQTT aktiv", "MQTT Active")</label>
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.MqttEnabled" />
-                    <span>@(_model.MqttEnabled ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                    <span>@(_model.MqttEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                 </label>
 
-                <label>@Loc.T("Broker Host", "Broker Host", "Broker Host", "Broker Host")</label>
+                <label>@Loc.T("Broker Host", "Broker Host")</label>
                 <input type="text" @bind="_model.MqttHost" placeholder="localhost" />
 
-                <label>@Loc.T("Port", "Port", "Porta", "Puerto")</label>
+                <label>@Loc.T("Port", "Port")</label>
                 <input type="number" min="1" max="65535" @bind="_model.MqttPort" />
 
                 <label>Client ID</label>
                 <input type="text" @bind="_model.MqttClientId" placeholder="meshcom-webdesk" />
 
-                <label>@Loc.T("Benutzername", "Username", "Nome utente", "Usuario")</label>
+                <label>@Loc.T("Benutzername", "Username")</label>
                 <input type="text" @bind="_model.MqttUsername" autocomplete="username" />
 
-                <label>@Loc.T("Passwort", "Password", "Password", "Contraseña")</label>
+                <label>@Loc.T("Passwort", "Password")</label>
                 <input type="password" @bind="_model.MqttPassword" autocomplete="new-password" />
 
                 <label>TLS</label>
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.MqttUseTls" />
-                    <span>@(_model.MqttUseTls ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                    <span>@(_model.MqttUseTls ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                 </label>
 
                 <label>
-                    @Loc.T("Topic-Präfix", "Topic Prefix", "Prefisso Topic", "Prefijo Topic")<br />
-                    <small>@Loc.T("Basis-Präfix für alle Topics, z.B. \"meshcom\"", "Base prefix for all topics, e.g. \"meshcom\"", "Prefisso base per tutti i topic, es. \"meshcom\"", "Prefijo base para todos los topics, p.ej. \"meshcom\"")</small>
+                    @Loc.T("Topic-Präfix", "Topic Prefix")<br />
+                    <small>@Loc.T("Basis-Präfix für alle Topics, z.B. \"meshcom\"", "Base prefix for all topics, e.g. \"meshcom\"")</small>
                 </label>
                 <input type="text" @bind="_model.MqttTopicPrefix" placeholder="meshcom" />
 
-                <label>@Loc.T("Publisher – Auslöser", "Publisher – Triggers", "Publisher – Trigger", "Publisher – Disparadores")</label>
+                <label>@Loc.T("Publisher – Auslöser", "Publisher – Triggers")</label>
                 <div style="display:flex;flex-direction:column;gap:4px">
                     <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
                         <input type="checkbox" @bind="_model.MqttPublishMessage" />
-                        @Loc.T("Nachrichten (msg)", "Messages (msg)", "Messaggi (msg)", "Mensajes (msg)")
+                        @Loc.T("Nachrichten (msg)", "Messages (msg)")
                     </label>
                     <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
                         <input type="checkbox" @bind="_model.MqttPublishPosition" />
-                        @Loc.T("Position (pos)", "Position (pos)", "Posizione (pos)", "Posición (pos)")
+                        @Loc.T("Position (pos)", "Position (pos)")
                     </label>
                     <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
                         <input type="checkbox" @bind="_model.MqttPublishTelemetry" />
-                        @Loc.T("Telemetrie (tele)", "Telemetry (tele)", "Telemetria (tele)", "Telemetría (tele)")
+                        @Loc.T("Telemetrie (tele)", "Telemetry (tele)")
                     </label>
                 </div>
 
                 <label>
-                    @Loc.T("Subscriber aktiv", "Subscriber Active", "Subscriber attivo", "Subscriber activo")<br />
-                    <small>@Loc.T("Empfängt Sende-Befehle vom Broker und leitet sie ans Mesh weiter.", "Receives send commands from the broker and forwards them to the mesh.", "Riceve comandi di invio dal broker e li inoltro alla rete mesh.", "Recibe comandos de envío del broker y los reenvía a la red mesh.")</small>
+                    @Loc.T("Subscriber aktiv", "Subscriber Active")<br />
+                    <small>@Loc.T("Empfängt Sende-Befehle vom Broker und leitet sie ans Mesh weiter.", "Receives send commands from the broker and forwards them to the mesh.")</small>
                 </label>
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.MqttSubscribeEnabled" />
-                    <span>@(_model.MqttSubscribeEnabled ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                    <span>@(_model.MqttSubscribeEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                 </label>
 
                 @if (_model.MqttSubscribeEnabled && IsOpen("mqtt"))
                 {
-                    <label>@Loc.T("Send-Topics", "Send Topics", "Send Topics", "Send Topics")</label>
+                    <label>@Loc.T("Send-Topics", "Send Topics")</label>
                     <div style="display:flex;flex-direction:column;gap:2px;font-size:0.78rem;color:#8ba3c4;font-family:monospace">
                         <span>@(_model.MqttTopicPrefix)/send/broadcast</span>
                         <span>@(_model.MqttTopicPrefix)/send/group/{"{"}group{"}"}</span>
                         <span>@(_model.MqttTopicPrefix)/send/dm/{"{"}callsign{"}"}</span>
-                        <span style="font-family:sans-serif;font-size:0.75rem;color:#5a7a9a">@Loc.T("Payload: JSON { \"text\": \"…\" }", "Payload: JSON { \"text\": \"…\" }", "Payload: JSON { \"text\": \"…\" }", "Payload: JSON { \"text\": \"…\" }")</span>
+                        <span style="font-family:sans-serif;font-size:0.75rem;color:#5a7a9a">@Loc.T("Payload: JSON { \"text\": \"…\" }", "Payload: JSON { \"text\": \"…\" }")</span>
                     </div>
                 }
 
                 <label>
-                    @Loc.T("Aktivitäten loggen", "Log Activity", "Registra attività", "Registrar actividad")<br />
-                    <small>@Loc.T("Jedes Publish und eingehende Send-Topic wird in die Log-Datei geschrieben.", "Every publish and incoming send-topic is written to the log file.", "Ogni publish e send-topic in arrivo viene scritto nel log.", "Cada publish y send-topic entrante se escribe en el log.")</small>
+                    @Loc.T("Aktivitäten loggen", "Log Activity")<br />
+                    <small>@Loc.T("Jedes Publish und eingehende Send-Topic wird in die Log-Datei geschrieben.", "Every publish and incoming send-topic is written to the log file.")</small>
                 </label>
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.MqttLogRequests" />
-                    <span>@(_model.MqttLogRequests ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                    <span>@(_model.MqttLogRequests ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                 </label>
             </div>
 
@@ -1252,11 +1229,11 @@
                 <button type="button" class="btn-send-now" @onclick="TestMqttConnectionAsync" disabled="@_mqttTesting">
                     @if (_mqttTesting)
                     {
-                        <span>⏳ @Loc.T("Teste…", "Testing…", "Test in corso…", "Probando…")</span>
+                        <span>⏳ @Loc.T("Teste…", "Testing…")</span>
                     }
                     else
                     {
-                        <span>🔌 @Loc.T("Verbindung testen", "Test Connection", "Testa connessione", "Probar conexión")</span>
+                        <span>🔌 @Loc.T("Verbindung testen", "Test Connection")</span>
                     }
                 </button>
             </div>
@@ -1277,37 +1254,35 @@
             <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
                 ℹ️ @Loc.T(
                     "Abfragen des QRZ.com XML-API. Kostenloser Account liefert Basisdaten (Vorname, Ort). Ein XML-Abo (ca. $30/Jahr) schaltet vollständige Profildaten frei.",
-                    "Queries the QRZ.com XML API. A free account provides basic data (first name, location). An XML subscription (~$30/year) unlocks full profile data.",
-                    "Interroga l'API XML di QRZ.com. Un account gratuito fornisce dati di base (nome, luogo). Un abbonamento XML (~$30/anno) sblocca il profilo completo.",
-                    "Consulta la API XML de QRZ.com. Una cuenta gratuita proporciona datos básicos (nombre, lugar). Una suscripción XML (~$30/año) desbloquea el perfil completo.")
+                    "Queries the QRZ.com XML API. A free account provides basic data (first name, location). An XML subscription (~$30/year) unlocks full profile data.")
             </div>
             <div class="settings-grid">
-                <label>@Loc.T("QRZ.com aktiv", "QRZ.com Active", "QRZ.com attivo", "QRZ.com activo")</label>
+                <label>@Loc.T("QRZ.com aktiv", "QRZ.com Active")</label>
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.QrzEnabled" />
-                    <span>@(_model.QrzEnabled ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                    <span>@(_model.QrzEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                 </label>
 
-                <label>@Loc.T("Benutzername", "Username", "Nome utente", "Usuario")</label>
+                <label>@Loc.T("Benutzername", "Username")</label>
                 <input type="text" @bind="_model.QrzUsername" autocomplete="username"
-                       placeholder="@Loc.T("QRZ.com Benutzername", "QRZ.com username", "Nome utente QRZ.com", "Usuario QRZ.com")" />
+                       placeholder="@Loc.T("QRZ.com Benutzername", "QRZ.com username")" />
 
-                <label>@Loc.T("Passwort", "Password", "Password", "Contraseña")</label>
+                <label>@Loc.T("Passwort", "Password")</label>
                 <input type="password" @bind="_model.QrzPassword" autocomplete="new-password"
-                       placeholder="@Loc.T("QRZ.com Passwort", "QRZ.com password", "Password QRZ.com", "Contraseña QRZ.com")" />
+                       placeholder="@Loc.T("QRZ.com Passwort", "QRZ.com password")" />
 
                 <label>
-                    @Loc.T("Anfragen loggen", "Log Requests", "Registra richieste", "Registrar solicitudes")<br />
-                    <small>@Loc.T("Jede Abfrage (Cache & API) wird in die Log-Datei geschrieben.", "Every lookup (cache &amp; API) is written to the log file.", "Ogni ricerca (cache &amp; API) viene scritta nel log.", "Cada consulta (caché &amp; API) se escribe en el log.")</small>
+                    @Loc.T("Anfragen loggen", "Log Requests")<br />
+                    <small>@Loc.T("Jede Abfrage (Cache & API) wird in die Log-Datei geschrieben.", "Every lookup (cache &amp; API) is written to the log file.")</small>
                 </label>
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.QrzLogRequests" />
-                    <span>@(_model.QrzLogRequests ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                    <span>@(_model.QrzLogRequests ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                 </label>
 
                 <label>
-                    @Loc.T("Cache-Gültigkeit (Tage)", "Cache validity (days)", "Validità cache (giorni)", "Validez caché (días)")<br />
-                    <small>@Loc.T("0\u00a0= unbegrenzt (nie erneuern)", "0\u00a0= unlimited (never refresh)", "0\u00a0= illimitato (mai aggiornare)", "0\u00a0= ilimitado (nunca renovar)")</small>
+                    @Loc.T("Cache-Gültigkeit (Tage)", "Cache validity (days)")<br />
+                    <small>@Loc.T("0\u00a0= unbegrenzt (nie erneuern)", "0\u00a0= unlimited (never refresh)")</small>
                 </label>
                 <input type="number" min="0" @bind="_model.QrzCacheMaxAgeDays" />
             </div>
@@ -1317,15 +1292,15 @@
                     <button type="button" class="btn-send-now" @onclick="TestQrzAsync" disabled="@_qrzTesting">
                         @if (_qrzTesting)
                         {
-                            <span>⏳ @Loc.T("Teste…", "Testing…", "Test in corso…", "Probando…")</span>
+                            <span>⏳ @Loc.T("Teste…", "Testing…")</span>
                         }
                         else
                         {
-                            <span>🔍 @Loc.T("Verbindung testen", "Test Connection", "Testa connessione", "Probar conexión")</span>
+                            <span>🔍 @Loc.T("Verbindung testen", "Test Connection")</span>
                         }
                     </button>
                     <button type="button" class="btn-remove" @onclick="ClearQrzCacheAsync">
-                        🗑️ @Loc.T("Cache leeren", "Clear Cache", "Svuota cache", "Vaciar caché")
+                        🗑️ @Loc.T("Cache leeren", "Clear Cache")
                     </button>
                 </div>
                 @if (_qrzTestResult != null)
@@ -1341,7 +1316,7 @@
         <!-- Schnelltexte / Quick Texts -->
         <div class="settings-section @(IsOpen("quicktexts") ? "" : "settings-section-collapsed")">
             <h2 class="settings-section-title" @onclick='() => Toggle("quicktexts")'>
-                ⚡ @Loc.T("Schnelltexte", "Quick Texts", "Testi rapidi", "Textos rápidos")
+                ⚡ @Loc.T("Schnelltexte", "Quick Texts")
                 <span class="section-chevron">@(IsOpen("quicktexts") ? "▲" : "▼")</span>
             </h2>
             @if (IsOpen("quicktexts")) {
@@ -1349,15 +1324,13 @@
                 <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
                     ℹ️ @Loc.T(
                         "Schnelltexte erscheinen als Buttons in der Sendeleiste (⚡). Klick lädt den Text in das Eingabefeld – Du kannst ihn noch anpassen, bevor Du sendest.",
-                        "Quick texts appear as buttons in the send bar (⚡). A click loads the text into the input field – you can still edit before sending.",
-                        "I testi rapidi appaiono come pulsanti nella barra di invio (⚡). Il clic carica il testo nel campo – puoi ancora modificarlo prima di inviare.",
-                        "Los textos rápidos aparecen como botones en la barra de envío (⚡). Al hacer clic el texto se carga en el campo – aún puedes editarlo antes de enviar.")
+                        "Quick texts appear as buttons in the send bar (⚡). A click loads the text into the input field – you can still edit before sending.")
                 </div>
                 <table class="telemetry-mapping-table">
                     <thead>
                         <tr>
-                            <th style="width:140px">@Loc.T("Bezeichnung", "Label", "Etichetta", "Etiqueta")</th>
-                            <th>@Loc.T("Text (max. 149 Zeichen)", "Text (max. 149 characters)", "Testo (max. 149 caratteri)", "Texto (máx. 149 caracteres)")</th>
+                            <th style="width:140px">@Loc.T("Bezeichnung", "Label")</th>
+                            <th>@Loc.T("Text (max. 149 Zeichen)", "Text (max. 149 characters)")</th>
                             <th style="width:36px"></th>
                         </tr>
                     </thead>
@@ -1365,11 +1338,11 @@
                         @foreach (var qt in _model.QuickTexts)
                         {
                             <tr>
-                                <td><input type="text" @bind="qt.Label" placeholder="@Loc.T("z. B. 73", "e.g. 73", "es. 73", "p.ej. 73")" style="width:100%" /></td>
+                                <td><input type="text" @bind="qt.Label" placeholder="@Loc.T("z. B. 73", "e.g. 73")" style="width:100%" /></td>
                                 <td>
                                     <div style="display:flex;align-items:center;gap:6px">
                                         <input type="text" @bind="qt.Text" maxlength="149"
-                                               placeholder="@Loc.T("Nachrichtentext…", "Message text…", "Testo messaggio…", "Texto del mensaje…")"
+                                               placeholder="@Loc.T("Nachrichtentext…", "Message text…")"
                                                style="width:100%" />
                                         <span style="font-size:11px;color:#6e7681;white-space:nowrap">@qt.Text.Length/149</span>
                                     </div>
@@ -1382,21 +1355,21 @@
             <div style="margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
                 <button type="button" class="btn-add"
                         @onclick="() => _model.QuickTexts.Add(new QuickTextEntry())">
-                    + @Loc.T("Schnelltext hinzufügen", "Add Quick Text", "Aggiungi testo rapido", "Añadir texto rápido")
+                    + @Loc.T("Schnelltext hinzufügen", "Add Quick Text")
                 </button>
                 <button type="button" class="btn-add" style="padding:2px 10px;font-size:12px"
                         @onclick="() => _showQuickTextVars = !_showQuickTextVars">
                     📋 @(_showQuickTextVars
-                        ? Loc.T("Variablen ausblenden", "Hide Variables", "Nascondi variabili", "Ocultar variables")
-                        : Loc.T("Verfügbare Variablen", "Available Variables", "Variabili disponibili", "Variables disponibles"))
+                        ? Loc.T("Variablen ausblenden", "Hide Variables")
+                        : Loc.T("Verfügbare Variablen", "Available Variables"))
                 </button>
                 <input type="text" @bind="_filenameQuickTexts" style="width:220px;font-size:12px;padding:2px 6px" />
                 <button type="button" class="btn-add" style="padding:2px 10px;font-size:12px" @onclick="ExportQuickTextsAsync">
-                    📤 @Loc.T("Exportieren", "Export", "Esporta", "Exportar")
+                    📤 @Loc.T("Exportieren", "Export")
                 </button>
                 <label class="btn-add" style="padding:2px 10px;font-size:12px;cursor:pointer"
-                       title="@Loc.T("JSON-Datei importieren (ersetzt vorhandene Einträge)", "Import JSON file (replaces existing entries)", "Importa file JSON (sostituisce le voci esistenti)", "Importar archivo JSON (reemplaza entradas existentes)")">
-                    📥 @Loc.T("Importieren", "Import", "Importa", "Importar")
+                       title="@Loc.T("JSON-Datei importieren (ersetzt vorhandene Einträge)", "Import JSON file (replaces existing entries)")">
+                    📥 @Loc.T("Importieren", "Import")
                     <InputFile accept=".json" style="display:none" OnChange="ImportQuickTextsAsync" />
                 </label>
             </div>
@@ -1411,36 +1384,36 @@
                     <table class="telemetry-mapping-table" style="font-size:12px">
                         <thead>
                             <tr>
-                                <th>@Loc.T("Variable", "Variable", "Variabile", "Variable")</th>
-                                <th>@Loc.T("Beschreibung", "Description", "Descrizione", "Descripción")</th>
-                                <th>@Loc.T("Beispiel", "Example", "Esempio", "Ejemplo")</th>
+                                <th>@Loc.T("Variable", "Variable")</th>
+                                <th>@Loc.T("Beschreibung", "Description")</th>
+                                <th>@Loc.T("Beispiel", "Example")</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr><td><code>{mycall}</code></td>    <td>@Loc.T("Eigenes Rufzeichen",       "Own callsign",         "Nominativo proprio",       "Indicativo propio")</td>      <td style="font-family:monospace">@SettingsMonitor.CurrentValue.MyCallsign</td></tr>
-                            <tr><td><code>{node-firmware}</code></td><td>@Loc.T("Node-Firmware",          "Node firmware",        "Firmware del nodo",        "Firmware del nodo")</td>      <td style="font-family:monospace">4.35</td></tr>
-                            <tr><td><code>{node-hw}</code></td>    <td>@Loc.T("Node-Hardware",            "Node hardware",        "Hardware del nodo",        "Hardware del nodo")</td>      <td style="font-family:monospace">T-BEAM</td></tr>
-                            <tr><td><code>{callsign}</code></td>  <td>@Loc.T("Rufzeichen Gesprächspartner", "Chat partner callsign", "Nominativo interlocutore", "Indicativo interlocutor")</td> <td style="font-family:monospace">OE1KBC-1</td></tr>
-                            <tr><td><code>{mylocator}</code></td>   <td>@Loc.T("Eigener QTH-Locator", "Own QTH Locator", "Locatore QTH proprio", "Localizador QTH propio")</td>             <td style="font-family:monospace">JN48qn</td></tr>
-                            <tr><td><code>{dest-name}</code></td> <td>@Loc.T("Vorname (QRZ)",            "First name (QRZ)",     "Nome (QRZ)",               "Nombre (QRZ)")</td>           <td style="font-family:monospace">Max</td></tr>
-                            <tr><td><code>{dest-loc}</code></td>  <td>@Loc.T("Standort (QRZ)",           "Location (QRZ)",       "Posizione (QRZ)",          "Ubicación (QRZ)")</td>        <td style="font-family:monospace">Vienna, AT</td></tr>
-                            <tr><td><code>{locator}</code></td>   <td>@Loc.T("QTH-Locator (Gesprächspartner)", "QTH Locator (partner)", "Locatore QTH (partner)",   "Localizador QTH (interlocutor)")</td> <td style="font-family:monospace">JN48qn</td></tr>
-                            <tr><td><code>{rssi}</code></td>      <td>@Loc.T("RSSI (letzter Empfang)",   "RSSI (last RX)",       "RSSI (ultima RX)",         "RSSI (última RX)")</td>       <td style="font-family:monospace">-85</td></tr>
-                            <tr><td><code>{snr}</code></td>       <td>@Loc.T("SNR (letzter Empfang)",    "SNR (last RX)",        "SNR (ultima RX)",          "SNR (última RX)")</td>        <td style="font-family:monospace">6.5</td></tr>
-                            <tr><td><code>{hw}</code></td>        <td>@Loc.T("Hardware-Typ",             "Hardware type",        "Tipo hardware",            "Tipo hardware")</td>           <td style="font-family:monospace">T-Beam</td></tr>
-                            <tr><td><code>{route}</code></td>     <td>@Loc.T("Relay-Pfad",               "Relay path",           "Percorso relay",           "Ruta relay")</td>              <td style="font-family:monospace">OE1KBC → DB0TAW</td></tr>
-                            <tr><td><code>{hops}</code></td>      <td>@Loc.T("Anzahl Relay-Hops",        "Relay hop count",      "Numero hop relay",         "Número saltos")</td>           <td style="font-family:monospace">1</td></tr>
-                            <tr><td><code>{version}</code></td>   <td>@Loc.T("App-Version",              "App version",          "Versione app",             "Versión app")</td>             <td style="font-family:monospace">1.0.0</td></tr>
-                            <tr><td><code>{date}</code></td>      <td>@Loc.T("Aktuelles Datum",          "Current date",         "Data corrente",            "Fecha actual")</td>            <td style="font-family:monospace">@now.ToString("dd.MM.yyyy")</td></tr>
-                            <tr><td><code>{time}</code></td>      <td>@Loc.T("Aktuelle Uhrzeit",         "Current time",         "Ora corrente",             "Hora actual")</td>             <td style="font-family:monospace">@now.ToString("HH:mm")</td></tr>
-                            <tr><td><code>{telemetry}</code></td> <td>@Loc.T("Telemetrie-String (aus JSON-Datei)", "Telemetry string (from JSON file)", "Stringa telemetria (da file JSON)", "Cadena telemetría (desde archivo JSON)")</td><td style="font-family:monospace">Temp=22.5°C Hum=60%</td></tr>
-                            <tr><td><code>{last-qso}</code></td>  <td>@Loc.T("Letztes QSO mit diesem Rufzeichen", "Last QSO with this callsign", "Ultimo QSO con questo nominativo", "Último QSO con este indicativo")</td><td style="font-family:monospace">@now.ToString("dd.MM.yyyy HH:mm")</td></tr>
-                            <tr><td><code>{my-tx-power}</code></td><td>@Loc.T("Sendeleistung der eigenen Station","Own station TX power","Potenza TX stazione","Potencia TX propia estación")</td><td style="font-family:monospace">22 dBm</td></tr>
-                            <tr><td><code>{my-eirp}</code></td>    <td>@Loc.T("Effektive Strahlungsleistung (EIRP)","Effective isotropic radiated power (EIRP)","EIRP stazione","EIRP estación")</td><td style="font-family:monospace">23.50 dBm</td></tr>
-                            <tr><td><code>{my-antenna}</code></td> <td>@Loc.T("Antennengewinn der eigenen Station","Own station antenna gain","Guadagno antenna stazione","Ganancia antena propia")</td><td style="font-family:monospace">2.5 dBi</td></tr>
-                            <tr><td><code>{my-antenna-type}</code></td><td>@Loc.T("Antennentyp der eigenen Station","Own station antenna type","Tipo antenna stazione","Tipo antena propia")</td><td style="font-family:monospace">Dipol</td></tr>
-                            <tr><td><code>{my-antenna-height}</code></td><td>@Loc.T("Antennenhöhe der eigenen Station","Own station antenna height","Altezza antenna stazione","Altura antena propia")</td><td style="font-family:monospace">10 m</td></tr>
-                            <tr><td><code>{my-freq}</code></td>    <td>@Loc.T("Sendefrequenz der eigenen Station","Own station frequency","Frequenza stazione","Frecuencia propia estación")</td><td style="font-family:monospace">433.175 MHz</td></tr>
+                            <tr><td><code>{mycall}</code></td>    <td>@Loc.T("Eigenes Rufzeichen",       "Own callsign")</td>      <td style="font-family:monospace">@SettingsMonitor.CurrentValue.MyCallsign</td></tr>
+                            <tr><td><code>{node-firmware}</code></td><td>@Loc.T("Node-Firmware",          "Node firmware")</td>      <td style="font-family:monospace">4.35</td></tr>
+                            <tr><td><code>{node-hw}</code></td>    <td>@Loc.T("Node-Hardware",            "Node hardware")</td>      <td style="font-family:monospace">T-BEAM</td></tr>
+                            <tr><td><code>{callsign}</code></td>  <td>@Loc.T("Rufzeichen Gesprächspartner", "Chat partner callsign")</td> <td style="font-family:monospace">OE1KBC-1</td></tr>
+                            <tr><td><code>{mylocator}</code></td>   <td>@Loc.T("Eigener QTH-Locator", "Own QTH Locator")</td>             <td style="font-family:monospace">JN48qn</td></tr>
+                            <tr><td><code>{dest-name}</code></td> <td>@Loc.T("Vorname (QRZ)",            "First name (QRZ)")</td>           <td style="font-family:monospace">Max</td></tr>
+                            <tr><td><code>{dest-loc}</code></td>  <td>@Loc.T("Standort (QRZ)",           "Location (QRZ)")</td>        <td style="font-family:monospace">Vienna, AT</td></tr>
+                            <tr><td><code>{locator}</code></td>   <td>@Loc.T("QTH-Locator (Gesprächspartner)", "QTH Locator (partner)")</td> <td style="font-family:monospace">JN48qn</td></tr>
+                            <tr><td><code>{rssi}</code></td>      <td>@Loc.T("RSSI (letzter Empfang)",   "RSSI (last RX)")</td>       <td style="font-family:monospace">-85</td></tr>
+                            <tr><td><code>{snr}</code></td>       <td>@Loc.T("SNR (letzter Empfang)",    "SNR (last RX)")</td>        <td style="font-family:monospace">6.5</td></tr>
+                            <tr><td><code>{hw}</code></td>        <td>@Loc.T("Hardware-Typ",             "Hardware type")</td>           <td style="font-family:monospace">T-Beam</td></tr>
+                            <tr><td><code>{route}</code></td>     <td>@Loc.T("Relay-Pfad",               "Relay path")</td>              <td style="font-family:monospace">OE1KBC → DB0TAW</td></tr>
+                            <tr><td><code>{hops}</code></td>      <td>@Loc.T("Anzahl Relay-Hops",        "Relay hop count")</td>           <td style="font-family:monospace">1</td></tr>
+                            <tr><td><code>{version}</code></td>   <td>@Loc.T("App-Version",              "App version")</td>             <td style="font-family:monospace">1.0.0</td></tr>
+                            <tr><td><code>{date}</code></td>      <td>@Loc.T("Aktuelles Datum",          "Current date")</td>            <td style="font-family:monospace">@now.ToString("dd.MM.yyyy")</td></tr>
+                            <tr><td><code>{time}</code></td>      <td>@Loc.T("Aktuelle Uhrzeit",         "Current time")</td>             <td style="font-family:monospace">@now.ToString("HH:mm")</td></tr>
+                            <tr><td><code>{telemetry}</code></td> <td>@Loc.T("Telemetrie-String (aus JSON-Datei)", "Telemetry string (from JSON file)")</td><td style="font-family:monospace">Temp=22.5°C Hum=60%</td></tr>
+                            <tr><td><code>{last-qso}</code></td>  <td>@Loc.T("Letztes QSO mit diesem Rufzeichen", "Last QSO with this callsign")</td><td style="font-family:monospace">@now.ToString("dd.MM.yyyy HH:mm")</td></tr>
+                            <tr><td><code>{my-tx-power}</code></td><td>@Loc.T("Sendeleistung der eigenen Station","Own station TX power")</td><td style="font-family:monospace">22 dBm</td></tr>
+                            <tr><td><code>{my-eirp}</code></td>    <td>@Loc.T("Effektive Strahlungsleistung (EIRP)","Effective isotropic radiated power (EIRP)")</td><td style="font-family:monospace">23.50 dBm</td></tr>
+                            <tr><td><code>{my-antenna}</code></td> <td>@Loc.T("Antennengewinn der eigenen Station","Own station antenna gain")</td><td style="font-family:monospace">2.5 dBi</td></tr>
+                            <tr><td><code>{my-antenna-type}</code></td><td>@Loc.T("Antennentyp der eigenen Station","Own station antenna type")</td><td style="font-family:monospace">Dipol</td></tr>
+                            <tr><td><code>{my-antenna-height}</code></td><td>@Loc.T("Antennenhöhe der eigenen Station","Own station antenna height")</td><td style="font-family:monospace">10 m</td></tr>
+                            <tr><td><code>{my-freq}</code></td>    <td>@Loc.T("Sendefrequenz der eigenen Station","Own station frequency")</td><td style="font-family:monospace">433.175 MHz</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -1452,24 +1425,22 @@
         <!-- Gruppen-Labels -->
         <div class="settings-section @(IsOpen("grouplabels") ? "" : "settings-section-collapsed")">
             <h2 class="settings-section-title" @onclick='() => Toggle("grouplabels")'>
-                🏷️ @Loc.T("Gruppen-Labels", "Group Labels", "Etichette Gruppo", "Etiquetas de Grupo")
+                🏷️ @Loc.T("Gruppen-Labels", "Group Labels")
                 <span class="section-chevron">@(IsOpen("grouplabels") ? "▲" : "▼")</span>
             </h2>
             @if (IsOpen("grouplabels")) {
             <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
                 ℹ️ @Loc.T(
                     "Gruppen-Nummern werden im Chat-Tab mit einem Kurznamen angezeigt. Der vollständige Name erscheint als Tooltip. Quelle: icssw.org/meshcom-grc-gruppen/",
-                    "Group numbers are shown with a short label in the chat tab. The full name appears as a tooltip. Source: icssw.org/meshcom-grc-gruppen/",
-                    "I numeri di gruppo vengono mostrati con un'etichetta breve nella scheda chat. Il nome completo appare come tooltip.",
-                    "Los números de grupo se muestran con una etiqueta corta en la pestaña de chat. El nombre completo aparece como tooltip.")
+                    "Group numbers are shown with a short label in the chat tab. The full name appears as a tooltip. Source: icssw.org/meshcom-grc-gruppen/")
             </div>
             <div>
                 <table class="telemetry-mapping-table">
                     <thead>
                         <tr>
-                            <th>@Loc.T("Gruppe", "Group", "Gruppo", "Grupo")</th>
-                            <th>@Loc.T("Kurzname (Tab)", "Short Label (Tab)", "Nome breve (Tab)", "Nombre corto (Tab)")</th>
-                            <th>@Loc.T("Vollständiger Name", "Full Name", "Nome completo", "Nombre completo")</th>
+                            <th>@Loc.T("Gruppe", "Group")</th>
+                            <th>@Loc.T("Kurzname (Tab)", "Short Label (Tab)")</th>
+                            <th>@Loc.T("Vollständiger Name", "Full Name")</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -1488,19 +1459,19 @@
                 <div style="margin-top:0.5rem;display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
                     <button type="button" class="btn-add"
                             @onclick="() => _model.GroupLabels.Add(new GroupLabelEntry())">
-                        + @Loc.T("Gruppe hinzufügen", "Add Group", "Aggiungi gruppo", "Añadir grupo")
+                        + @Loc.T("Gruppe hinzufügen", "Add Group")
                     </button>
                     <button type="button" class="btn-add" style="padding:2px 10px;font-size:12px"
                             @onclick="() => _model.GroupLabels = GroupLabelEntry.Defaults.Select(g => new GroupLabelEntry { Group = g.Group, ShortLabel = g.ShortLabel, Label = g.Label }).ToList()">
-                        🔄 @Loc.T("Standard wiederherstellen", "Restore Defaults", "Ripristina predefiniti", "Restaurar predeterminados")
+                        🔄 @Loc.T("Standard wiederherstellen", "Restore Defaults")
                     </button>
                     <input type="text" @bind="_filenameGroupLabels" style="width:220px;font-size:12px;padding:2px 6px" />
                     <button type="button" class="btn-add" style="padding:2px 10px;font-size:12px" @onclick="ExportGroupLabelsAsync">
-                        📤 @Loc.T("Exportieren", "Export", "Esporta", "Exportar")
+                        📤 @Loc.T("Exportieren", "Export")
                     </button>
                     <label class="btn-add" style="padding:2px 10px;font-size:12px;cursor:pointer"
-                           title="@Loc.T("JSON-Datei importieren (ersetzt vorhandene Einträge)", "Import JSON file (replaces existing entries)", "Importa file JSON (sostituisce le voci esistenti)", "Importar archivo JSON (reemplaza entradas existentes)")">
-                        📥 @Loc.T("Importieren", "Import", "Importa", "Importar")
+                           title="@Loc.T("JSON-Datei importieren (ersetzt vorhandene Einträge)", "Import JSON file (replaces existing entries)")">
+                        📥 @Loc.T("Importieren", "Import")
                         <InputFile accept=".json" style="display:none" OnChange="ImportGroupLabelsAsync" />
                     </label>
                 </div>
@@ -1515,18 +1486,18 @@
         <!-- KI / QSO-Zusammenfassung -->
         <div class="settings-section @(IsOpen("ai") ? "" : "settings-section-collapsed")">
             <h2 class="settings-section-title" @onclick='() => Toggle("ai")'>
-                🤖 @Loc.T("KI / QSO-Zusammenfassung", "AI / QSO Summary", "IA / Riepilogo QSO", "IA / Resumen QSO")
+                🤖 @Loc.T("KI / QSO-Zusammenfassung", "AI / QSO Summary")
                 <span class="section-chevron">@(IsOpen("ai") ? "▲" : "▼")</span>
             </h2>
             @if (IsOpen("ai")) {
             <div class="settings-grid">
-                <label>@Loc.T("Aktiviert", "Enabled", "Attivo", "Activo")</label>
+                <label>@Loc.T("Aktiviert", "Enabled")</label>
                 <label class="toggle-label">
                     <input type="checkbox" @bind="_model.AiEnabled" />
-                    <span>@(_model.AiEnabled ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                    <span>@(_model.AiEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                 </label>
 
-                <label>@Loc.T("Anbieter", "Provider", "Provider", "Proveedor")</label>
+                <label>@Loc.T("Anbieter", "Provider")</label>
                 <select @bind="_model.AiProvider">
                     <option value="openai">OpenAI (api.openai.com)</option>
                     <option value="grok">Grok / xAI (api.x.ai)</option>
@@ -1539,56 +1510,56 @@
 
                 @if (_model.AiProvider == "azure")
                 {
-                    <label>@Loc.T("Azure Endpoint", "Azure Endpoint", "Azure Endpoint", "Azure Endpoint")</label>
+                    <label>@Loc.T("Azure Endpoint", "Azure Endpoint")</label>
                     <input type="text" @bind="_model.AiAzureEndpoint"
                            placeholder="https://mein-name.openai.azure.com" />
 
-                    <label>@Loc.T("API Version", "API Version", "Versione API", "Versión API")</label>
+                    <label>@Loc.T("API Version", "API Version")</label>
                     <input type="text" @bind="_model.AiAzureApiVersion"
                            placeholder="2024-08-01-preview" />
                 }
 
-                <label>@Loc.T("Modell / Deployment", "Model / Deployment", "Modello / Deployment", "Modelo / Deployment")</label>
+                <label>@Loc.T("Modell / Deployment", "Model / Deployment")</label>
                 @if (_model.AiProvider == "grok")
                 {
                     <select @bind="_model.AiModel">
-                        <option value="grok-3-mini">grok-3-mini (@Loc.T("empfohlen", "recommended", "consigliato", "recomendado"))</option>
+                        <option value="grok-3-mini">grok-3-mini (@Loc.T("empfohlen", "recommended"))</option>
                         <option value="grok-3">grok-3</option>
                     </select>
                 }
                 else if (_model.AiProvider == "azure")
                 {
                     <input type="text" @bind="_model.AiModel"
-                           placeholder="@Loc.T("Deployment-Name aus Azure Portal", "Deployment name from Azure Portal", "Nome deployment da Azure Portal", "Nombre de deployment de Azure Portal")" />
+                           placeholder="@Loc.T("Deployment-Name aus Azure Portal", "Deployment name from Azure Portal")" />
                 }
                 else
                 {
                     <select @bind="_model.AiModel">
-                        <option value="gpt-4o-mini">gpt-4o-mini (@Loc.T("empfohlen", "recommended", "consigliato", "recomendado"))</option>
+                        <option value="gpt-4o-mini">gpt-4o-mini (@Loc.T("empfohlen", "recommended"))</option>
                         <option value="gpt-4o">gpt-4o</option>
                         <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
                     </select>
                 }
 
-                <label>@Loc.T("Icon-Schwellwert (Tage)", "Icon threshold (days)", "Soglia icona (giorni)", "Umbral icono (días)")</label>
+                <label>@Loc.T("Icon-Schwellwert (Tage)", "Icon threshold (days)")</label>
                 <div>
                     <input type="number" min="0" max="365" @bind="_model.AiThresholdDays" />
-                    <div style="font-size:11px;color:#8b949e;margin-top:2px">@Loc.T("Icon erscheint wenn letztes QSO ≥ X Tage zurück liegt. 0 = immer anzeigen.", "Icon appears when last QSO is ≥ X days ago. 0 = always show.", "Icona se ultimo QSO ≥ X giorni fa. 0 = sempre.", "Icono si último QSO ≥ X días. 0 = siempre.")</div>
+                    <div style="font-size:11px;color:#8b949e;margin-top:2px">@Loc.T("Icon erscheint wenn letztes QSO ≥ X Tage zurück liegt. 0 = immer anzeigen.", "Icon appears when last QSO is ≥ X days ago. 0 = always show.")</div>
                 </div>
 
-                <label>@Loc.T("Auswertungszeitraum (Tage)", "Summary period (days)", "Periodo riepilogo (giorni)", "Período resumen (días)")</label>
+                <label>@Loc.T("Auswertungszeitraum (Tage)", "Summary period (days)")</label>
                 <div>
                     <input type="number" min="0" max="3650" @bind="_model.AiSummaryDays" />
-                    <div style="font-size:11px;color:#8b949e;margin-top:2px">@Loc.T("Nachrichten der letzten X Tage werden ausgewertet. 0 = alle verfügbaren.", "Messages from the last X days are evaluated. 0 = all available.", "Messaggi degli ultimi X giorni. 0 = tutti.", "Mensajes de los últimos X días. 0 = todos.")</div>
+                    <div style="font-size:11px;color:#8b949e;margin-top:2px">@Loc.T("Nachrichten der letzten X Tage werden ausgewertet. 0 = alle verfügbaren.", "Messages from the last X days are evaluated. 0 = all available.")</div>
                 </div>
 
-                <label>@Loc.T("Max. Nachrichten", "Max. messages", "Max. messaggi", "Máx. mensajes")</label>
+                <label>@Loc.T("Max. Nachrichten", "Max. messages")</label>
                 <input type="number" min="10" max="500" @bind="_model.AiMaxMessages" />
 
-                <label>@Loc.T("API-Anfragen loggen", "Log API requests", "Registra richieste API", "Registrar solicitudes API")</label>
+                <label>@Loc.T("API-Anfragen loggen", "Log API requests")</label>
                 <label class="toggle-label">
                     <input type="checkbox" @bind="_model.AiLogRequests" />
-                    <span>@(_model.AiLogRequests ? Loc.T("Aktiv", "Active", "Attivo", "Activo") : Loc.T("Inaktiv", "Inactive", "Inattivo", "Inactivo"))</span>
+                    <span>@(_model.AiLogRequests ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                 </label>
             </div>
             @if (_model.AiEnabled && IsOpen("ai"))
@@ -1596,32 +1567,30 @@
                 <div class="settings-notice" style="background:#2a1a0a;border-color:#8a5a1a;margin-top:0.75rem">
                     ⚠️ @Loc.T(
                         "Datenschutzhinweis: Beim Generieren einer Zusammenfassung werden Nachrichtentexte an einen externen KI-Dienst gesendet. Bitte stelle sicher, dass alle Gesprächspartner damit einverstanden sind.",
-                        "Privacy notice: When generating a summary, message texts are sent to an external AI service. Please ensure all conversation partners consent to this.",
-                        "Avviso privacy: durante la generazione di un riepilogo, i testi vengono inviati a un servizio AI esterno.",
-                        "Aviso de privacidad: al generar un resumen, los textos se envían a un servicio de IA externo.")
+                        "Privacy notice: When generating a summary, message texts are sent to an external AI service. Please ensure all conversation partners consent to this.")
                 </div>
 
                 <!-- Token-Statistik -->
                 <div style="margin-top:0.75rem">
                     <div style="display:flex;align-items:center;gap:8px;margin-bottom:0.4rem">
-                        <strong style="font-size:0.92rem">📊 @Loc.T("Token-Verbrauch (seit letztem Start)", "Token usage (since last start)", "Utilizzo token (dall'ultimo avvio)", "Uso de tokens (desde último inicio)")</strong>
+                        <strong style="font-size:0.92rem">📊 @Loc.T("Token-Verbrauch (seit letztem Start)", "Token usage (since last start)")</strong>
                         <button type="button" class="btn-add" style="padding:2px 8px;font-size:11px" @onclick="RefreshAiUsageStats">🔄</button>
                     </div>
                     @{
                         var usage = _aiUsageStats ?? QsoSummaryService.GetUsageStats();
                     }
                     <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:0.87rem;color:#c9d1d9;max-width:340px">
-                        <span style="color:#8b949e">@Loc.T("Anfragen:", "Requests:", "Richieste:", "Solicitudes:")</span>
+                        <span style="color:#8b949e">@Loc.T("Anfragen:", "Requests:")</span>
                         <span>@usage.RequestCount</span>
-                        <span style="color:#8b949e">@Loc.T("Prompt-Token:", "Prompt tokens:", "Token prompt:", "Tokens de prompt:")</span>
+                        <span style="color:#8b949e">@Loc.T("Prompt-Token:", "Prompt tokens:")</span>
                         <span>@usage.PromptTokens.ToString("N0")</span>
-                        <span style="color:#8b949e">@Loc.T("Completion-Token:", "Completion tokens:", "Token completion:", "Tokens de completion:")</span>
+                        <span style="color:#8b949e">@Loc.T("Completion-Token:", "Completion tokens:")</span>
                         <span>@usage.CompletionTokens.ToString("N0")</span>
-                        <span style="color:#8b949e">@Loc.T("Gesamt-Token:", "Total tokens:", "Token totali:", "Tokens totales:")</span>
+                        <span style="color:#8b949e">@Loc.T("Gesamt-Token:", "Total tokens:")</span>
                         <span><strong>@usage.TotalTokens.ToString("N0")</strong></span>
                         @if (usage.LastRequestAt.HasValue)
                         {
-                            <span style="color:#8b949e">@Loc.T("Letzte Anfrage:", "Last request:", "Ultima richiesta:", "Última solicitud:")</span>
+                            <span style="color:#8b949e">@Loc.T("Letzte Anfrage:", "Last request:")</span>
                             <span>@usage.LastRequestAt.Value.ToString("dd.MM.yyyy HH:mm")</span>
                         }
                     </div>
@@ -1635,18 +1604,16 @@
                             <button type="button" class="btn-send-now" @onclick="CheckAiBalanceAsync" disabled="@_aiBalanceChecking">
                                 @if (_aiBalanceChecking)
                                 {
-                                    <span>⏳ @Loc.T("Prüfe…", "Checking…", "Verifica…", "Comprobando…")</span>
+                                    <span>⏳ @Loc.T("Prüfe…", "Checking…")</span>
                                 }
                                 else
                                 {
-                                    <span>💰 @Loc.T("Guthaben prüfen", "Check balance", "Verifica credito", "Consultar saldo")</span>
+                                    <span>💰 @Loc.T("Guthaben prüfen", "Check balance")</span>
                                 }
                             </button>
                             <small style="color:#8b949e">@Loc.T(
                                 "Verbrauch: Projekt-Key reicht. Limit/Restguthaben: User-Key (sk-…) erforderlich.",
-                                "Usage: Project Key sufficient. Limit/balance: User Key (sk-…) required.",
-                                "Utilizzo: Project Key sufficiente. Limite/saldo: User Key (sk-…) necessario.",
-                                "Uso: Project Key suficiente. Límite/saldo: User Key (sk-…) necesario.")</small>
+                                "Usage: Project Key sufficient. Limit/balance: User Key (sk-…) required.")</small>
                         </div>
                         @if (_aiBalanceResult != null)
                         {
@@ -1673,16 +1640,16 @@
 
                 <div style="margin-top:0.75rem;display:flex;flex-direction:column;gap:0.5rem">
                     <div style="display:flex;gap:8px;align-items:center">
-                        <input type="text" @bind="_aiTestCallsign" placeholder="@Loc.T("Rufzeichen z.B. DL6WAB-1", "Callsign e.g. DL6WAB-1", "Nominativo es. DL6WAB-1", "Indicativo p.ej. DL6WAB-1")"
+                        <input type="text" @bind="_aiTestCallsign" placeholder="@Loc.T("Rufzeichen z.B. DL6WAB-1", "Callsign e.g. DL6WAB-1")"
                                style="width:180px" />
                         <button type="button" class="btn-send-now" @onclick="TestAiAsync" disabled="@_aiTesting">
                             @if (_aiTesting)
                             {
-                                <span>⏳ @Loc.T("Teste...", "Testing...", "Test...", "Probando...")</span>
+                                <span>⏳ @Loc.T("Teste...", "Testing...")</span>
                             }
                             else
                             {
-                                <span>🔬 @Loc.T("DB + API testen", "Test DB + API", "Testa DB + API", "Probar DB + API")</span>
+                                <span>🔬 @Loc.T("DB + API testen", "Test DB + API")</span>
                             }
                         </button>
                     </div>
@@ -1700,31 +1667,29 @@
         <!-- Datensicherung / Backup & Restore -->
         <div class="settings-section @(IsOpen("backup") ? "" : "settings-section-collapsed")">
             <h2 class="settings-section-title" @onclick='() => Toggle("backup")'>
-                🔐 @Loc.T("Datensicherung", "Backup & Restore", "Backup e ripristino", "Copia de seguridad")
+                🔐 @Loc.T("Datensicherung", "Backup & Restore")
                 <span class="section-chevron">@(IsOpen("backup") ? "▲" : "▼")</span>
             </h2>
             @if (IsOpen("backup")) {
             <div class="settings-notice" style="margin-bottom:0.75rem">
                 🔒 @Loc.T(
                     "Alle Einstellungen inkl. Passwörter und API-Keys werden AES-256 verschlüsselt gespeichert. Das Passwort wird nirgendwo gespeichert – bei Verlust ist die Datei nicht wiederherstellbar.",
-                    "All settings including passwords and API keys are saved AES-256 encrypted. The password is not stored anywhere – if lost, the file cannot be recovered.",
-                    "Tutte le impostazioni incluse password e chiavi API vengono salvate con crittografia AES-256. La password non viene memorizzata – se persa, il file non è recuperabile.",
-                    "Todos los ajustes incluyendo contraseñas y claves API se guardan cifrados con AES-256. La contraseña no se almacena en ningún lugar – si se pierde, el archivo no se puede recuperar.")
+                    "All settings including passwords and API keys are saved AES-256 encrypted. The password is not stored anywhere – if lost, the file cannot be recovered.")
             </div>
 
             @* Export *@
             <div style="margin-bottom:1rem">
                 <h3 style="font-size:0.9rem;margin:0 0 0.5rem;color:#a0c4ff">
-                    📤 @Loc.T("Exportieren", "Export", "Esporta", "Exportar")
+                    📤 @Loc.T("Exportieren", "Export")
                 </h3>
                 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                     <input type="password" @bind="_backupPassword" autocomplete="new-password"
-                           placeholder="@Loc.T("Passwort für Verschlüsselung", "Encryption password", "Password di cifratura", "Contraseña de cifrado")"
+                           placeholder="@Loc.T("Passwort für Verschlüsselung", "Encryption password")"
                            style="flex:1;min-width:180px" />
                     <input type="text" @bind="_filenameBackup" style="width:220px;font-size:12px;padding:2px 6px" />
                     <button class="btn-action" @onclick="ExportSettingsAsync"
                             disabled="@string.IsNullOrWhiteSpace(_backupPassword)">
-                        📤 @Loc.T("Backup erstellen", "Create Backup", "Crea backup", "Crear copia de seguridad")
+                        📤 @Loc.T("Backup erstellen", "Create Backup")
                     </button>
                 </div>
             </div>
@@ -1732,22 +1697,20 @@
             @* Import *@
             <div>
                 <h3 style="font-size:0.9rem;margin:0 0 0.5rem;color:#a0c4ff">
-                    📥 @Loc.T("Importieren", "Import", "Importa", "Importar")
+                    📥 @Loc.T("Importieren", "Import")
                 </h3>
                 <div class="settings-notice" style="margin-bottom:0.5rem;background:#2b0d0d;border-color:#6e2020;color:#f0a0a0">
                     ⚠️ @Loc.T(
                         "Alle aktuellen Einstellungen werden durch die Backup-Datei ersetzt.",
-                        "All current settings will be replaced by the backup file.",
-                        "Tutte le impostazioni correnti verranno sostituite dal file di backup.",
-                        "Todos los ajustes actuales serán reemplazados por el archivo de copia de seguridad.")
+                        "All current settings will be replaced by the backup file.")
                 </div>
                 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                     <input type="password" @bind="_restorePassword" autocomplete="new-password"
-                           placeholder="@Loc.T("Passwort der Backup-Datei", "Backup file password", "Password del file di backup", "Contraseña del archivo de copia")"
+                           placeholder="@Loc.T("Passwort der Backup-Datei", "Backup file password")"
                            style="flex:1;min-width:180px" />
                     <label class="btn-action" style="cursor:pointer"
-                           title="@Loc.T("MeshComWebDesk-settings.enc öffnen", "Open MeshComWebDesk-settings.enc", "Apri MeshComWebDesk-settings.enc", "Abrir MeshComWebDesk-settings.enc")">
-                        📥 @Loc.T("Backup wiederherstellen", "Restore Backup", "Ripristina backup", "Restaurar copia de seguridad")
+                           title="@Loc.T("MeshComWebDesk-settings.enc öffnen", "Open MeshComWebDesk-settings.enc")">
+                        📥 @Loc.T("Backup wiederherstellen", "Restore Backup")
                         <InputFile accept=".enc" style="display:none" OnChange="ImportSettingsAsync" />
                     </label>
                 </div>
@@ -1760,7 +1723,7 @@
             @if (_backupSuccess || _restored)
             {
                 <div class="settings-success" style="margin-top:0.5rem">
-                    ✅ @Loc.T("Erfolgreich.", "Success.", "Operazione riuscita.", "Correcto.")
+                    ✅ @Loc.T("Erfolgreich.", "Success.")
                 </div>
             }
             }
@@ -1769,9 +1732,9 @@
         <div class="settings-actions">
             @if (_saved)
             {
-                <div class="settings-success">✅ @Loc.T("Einstellungen gespeichert.", "Settings saved.", "Impostazioni salvate.", "Ajustes guardados.")</div>
+                <div class="settings-success">✅ @Loc.T("Einstellungen gespeichert.", "Settings saved.")</div>
             }
-            <button class="btn-save" @onclick="SaveAsync">💾 @Loc.T("Speichern", "Save", "Salva", "Guardar")</button>
+            <button class="btn-save" @onclick="SaveAsync">💾 @Loc.T("Speichern", "Save")</button>
         </div>
 
     </div>
@@ -1889,11 +1852,11 @@
         try
         {
             await UdpService.SendTelemetryNowAsync();
-            _sendResult = $"✅ {Loc.T("Telemetrie gesendet.", "Telemetry sent.", "Telemetria inviata.", "Telemetría enviada.")}";
+            _sendResult = $"✅ {Loc.T("Telemetrie gesendet.", "Telemetry sent.")}";
         }
         catch (Exception ex)
         {
-            _sendResult = $"❌ {Loc.T("Fehler:", "Error:", "Errore:", "Error:")} {ex.Message}";
+            _sendResult = $"❌ {Loc.T("Fehler:", "Error:")} {ex.Message}";
         }
         finally
         {
@@ -1908,7 +1871,7 @@
         try
         {
             await UdpService.SendAutoReplyNowAsync(_autoReplyTestCallsign.Trim().ToUpperInvariant());
-            _autoReplyResult = $"✅ {Loc.T("Auto-Reply gesendet an", "Auto-Reply sent to", "Auto-risposta inviata a", "Auto-respuesta enviada a")} {_autoReplyTestCallsign.Trim().ToUpperInvariant()}";
+            _autoReplyResult = $"✅ {Loc.T("Auto-Reply gesendet an", "Auto-Reply sent to")} {_autoReplyTestCallsign.Trim().ToUpperInvariant()}";
         }
         catch (Exception ex)
         {
@@ -1949,7 +1912,7 @@
         try
         {
             await UdpService.SendBeaconNowAsync();
-            _beaconResult = $"✅ {Loc.T("Bake gesendet an", "Beacon sent to", "Beacon inviato a", "Baliza enviada a")} {_model.BeaconGroup}";
+            _beaconResult = $"✅ {Loc.T("Bake gesendet an", "Beacon sent to")} {_model.BeaconGroup}";
         }
         catch (Exception ex)
         {
@@ -1976,12 +1939,12 @@
         var filePath = _model.TelemetryFilePath;
         if (string.IsNullOrWhiteSpace(filePath))
         {
-            _telemetryPreviewError = Loc.T("Kein Dateipfad konfiguriert.", "No file path configured.", "Nessun percorso file configurato.", "No hay ruta de archivo configurada.");
+            _telemetryPreviewError = Loc.T("Kein Dateipfad konfiguriert.", "No file path configured.");
             return;
         }
         if (!File.Exists(filePath))
         {
-            _telemetryPreviewError = Loc.T($"Datei nicht gefunden: {filePath}", $"File not found: {filePath}", $"File non trovato: {filePath}", $"Archivo no encontrado: {filePath}");
+            _telemetryPreviewError = Loc.T($"Datei nicht gefunden: {filePath}", $"File not found: {filePath}");
             return;
         }
 
@@ -2000,7 +1963,7 @@
 
                 if (!root.TryGetProperty(entry.JsonKey, out var valueProp))
                 {
-                    rows.Add(new(entry.JsonKey, "–", Loc.T("⚠️ Key nicht in Datei", "⚠️ Key not found in file", "⚠️ Chiave non trovata nel file", "⚠️ Clave no encontrada"), true));
+                    rows.Add(new(entry.JsonKey, "–", Loc.T("⚠️ Key nicht in Datei", "⚠️ Key not found in file"), true));
                     continue;
                 }
 
@@ -2014,7 +1977,7 @@
                     value = parsed;
                 else
                 {
-                    rows.Add(new(entry.JsonKey, valueProp.ToString(), Loc.T("⚠️ Kein Zahlenwert", "⚠️ Not a numeric value", "⚠️ Valore non numerico", "⚠️ Valor no numérico"), true));
+                    rows.Add(new(entry.JsonKey, valueProp.ToString(), Loc.T("⚠️ Kein Zahlenwert", "⚠️ Not a numeric value"), true));
                     continue;
                 }
 
@@ -2060,7 +2023,7 @@
         }
         catch (Exception ex)
         {
-            _telemetryPreviewError = Loc.T($"Fehler: {ex.Message}", $"Error: {ex.Message}", $"Errore: {ex.Message}", $"Error: {ex.Message}");
+            _telemetryPreviewError = Loc.T($"Fehler: {ex.Message}", $"Error: {ex.Message}");
         }
     }
 
@@ -2096,9 +2059,7 @@
             else
                 _qrzTestResult = Loc.T(
                     $"⚠️ Kein Eintrag für {testCallsign} gefunden (Login OK oder Rufzeichen unbekannt).",
-                    $"⚠️ No entry found for {testCallsign} (login OK or callsign unknown).",
-                    $"⚠️ Nessun risultato per {testCallsign} (login OK o nominativo sconosciuto).",
-                    $"⚠️ Sin resultado para {testCallsign} (login OK o indicativo desconocido).");
+                    $"⚠️ No entry found for {testCallsign} (login OK or callsign unknown).");
         }
         catch (Exception ex)
         {
@@ -2113,7 +2074,7 @@
     private void ClearQrzCacheAsync()
     {
         QrzService.ClearCache();
-        _qrzTestResult = Loc.T("✅ Cache geleert.", "✅ Cache cleared.", "✅ Cache svuotata.", "✅ Caché vaciado.");
+        _qrzTestResult = Loc.T("✅ Cache geleert.", "✅ Cache cleared.");
     }
 
     private async Task TestAiAsync()
@@ -2130,7 +2091,7 @@
             var cs = _aiTestCallsign.Trim();
             if (string.IsNullOrEmpty(cs))
             {
-                _aiTestResult = Loc.T("❌ Bitte ein Rufzeichen eingeben.", "❌ Please enter a callsign.", "❌ Inserire un nominativo.", "❌ Introduce un indicativo.");
+                _aiTestResult = Loc.T("❌ Bitte ein Rufzeichen eingeben.", "❌ Please enter a callsign.");
                 return;
             }
 
@@ -2143,20 +2104,14 @@
 
             var dbLine = lastQso.HasValue
                 ? Loc.T($"✅ DB: Letztes QSO mit {csBase}: {lastQso:dd.MM.yyyy HH:mm}",
-                         $"✅ DB: Last QSO with {csBase}: {lastQso:dd.MM.yyyy HH:mm}",
-                         $"✅ DB: Ultimo QSO con {csBase}: {lastQso:dd.MM.yyyy HH:mm}",
-                         $"✅ DB: Último QSO con {csBase}: {lastQso:dd.MM.yyyy HH:mm}")
+                         $"✅ DB: Last QSO with {csBase}: {lastQso:dd.MM.yyyy HH:mm}")
                 : Loc.T($"⚠️ DB: Keine Nachrichten für {csBase} gefunden.",
-                         $"⚠️ DB: No messages found for {csBase}.",
-                         $"⚠️ DB: Nessun messaggio trovato per {csBase}.",
-                         $"⚠️ DB: No se encontraron mensajes para {csBase}.");
+                         $"⚠️ DB: No messages found for {csBase}.");
 
             var iconLine = hasData
-                ? Loc.T("✅ Icon: würde angezeigt werden.", "✅ Icon: would be shown.", "✅ Icona: verrebbe mostrata.", "✅ Ícono: se mostraría.")
+                ? Loc.T("✅ Icon: würde angezeigt werden.", "✅ Icon: would be shown.")
                 : Loc.T("ℹ️ Icon: wird nicht angezeigt (Schwellwert nicht erreicht oder keine Daten).",
-                         "ℹ️ Icon: not shown (threshold not reached or no data).",
-                         "ℹ️ Icona: non mostrata (soglia non raggiunta o nessun dato).",
-                         "ℹ️ Ícono: no se muestra (umbral no alcanzado o sin datos).");
+                         "ℹ️ Icon: not shown (threshold not reached or no data).");
 
             // Step 2: quick API ping (generate with max 1 message to test connectivity)
             var apiLine = string.Empty;
@@ -2168,13 +2123,9 @@
                     var summary = await QsoSummaryService.GenerateSummaryAsync(csBase, _model.MyCallsign);
                     apiLine = summary != null
                         ? Loc.T("✅ API: Verbindung erfolgreich, Zusammenfassung generiert.",
-                                 "✅ API: Connection successful, summary generated.",
-                                 "✅ API: Connessione riuscita, riepilogo generato.",
-                                 "✅ API: Conexión exitosa, resumen generado.")
+                                 "✅ API: Connection successful, summary generated.")
                         : Loc.T("❌ API: Anfrage fehlgeschlagen. Bitte Log prüfen.",
-                                 "❌ API: Request failed. Please check log.",
-                                 "❌ API: Richiesta fallita. Controlla il log.",
-                                 "❌ API: Solicitud fallida. Revisa el log.");
+                                 "❌ API: Request failed. Please check log.");
                 }
                 catch (Exception ex)
                 {
@@ -2184,9 +2135,7 @@
             else
             {
                 apiLine = Loc.T("ℹ️ API: Kein API-Key konfiguriert – nur DB-Test möglich.",
-                                 "ℹ️ API: No API key configured – DB test only.",
-                                 "ℹ️ API: Nessuna chiave API – solo test DB.",
-                                 "ℹ️ API: Sin clave API – solo prueba DB.");
+                                 "ℹ️ API: No API key configured – DB test only.");
             }
 
             _aiTestResult = string.Join("\n", new[] { dbLine, iconLine, apiLine }.Where(l => !string.IsNullOrEmpty(l)));
@@ -2217,14 +2166,10 @@
             {
                 null                                    => Loc.T(
                     "ℹ️ Nur für OpenAI verfügbar. Bitte Provider und API-Key prüfen.",
-                    "ℹ️ Only available for OpenAI. Please check provider and API key.",
-                    "ℹ️ Disponibile solo per OpenAI. Controlla provider e chiave API.",
-                    "ℹ️ Solo disponible para OpenAI. Comprueba proveedor y clave API."),
+                    "ℹ️ Only available for OpenAI. Please check provider and API key."),
                 "⚠️ BILLING_API_RESTRICTED"             => Loc.T(
                     "⚠️ OpenAI hat die Billing-API für diesen Key gesperrt. Guthaben direkt einsehen: https://platform.openai.com/settings/organization/billing/overview",
-                    "⚠️ OpenAI has restricted the Billing API for this key. Check balance directly: https://platform.openai.com/settings/organization/billing/overview",
-                    "⚠️ OpenAI ha limitato la Billing API per questa chiave. Verifica il saldo su: https://platform.openai.com/settings/organization/billing/overview",
-                    "⚠️ OpenAI ha restringido la Billing API para esta clave. Consulta el saldo en: https://platform.openai.com/settings/organization/billing/overview"),
+                    "⚠️ OpenAI has restricted the Billing API for this key. Check balance directly: https://platform.openai.com/settings/organization/billing/overview"),
                 string r when r.StartsWith("❌")        => r,
                 string r                                => $"✅ {r}"
             };
@@ -2257,11 +2202,11 @@
             using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(10));
             await client.ConnectAsync(optBuilder.Build(), cts.Token);
             await client.DisconnectAsync(new MQTTnet.Client.MqttClientDisconnectOptionsBuilder().Build());
-            _mqttTestResult = $"✅ {Loc.T("Verbindung erfolgreich.", "Connection successful.", "Connessione riuscita.", "Conexión exitosa.")})";
+            _mqttTestResult = $"✅ {Loc.T("Verbindung erfolgreich.", "Connection successful.")})";
         }
         catch (Exception ex)
         {
-            _mqttTestResult = $"❌ {Loc.T("Verbindung fehlgeschlagen:", "Connection failed:", "Connessione fallita:", "Conexión fallida:")} {ex.Message}";
+            _mqttTestResult = $"❌ {Loc.T("Verbindung fehlgeschlagen:", "Connection failed:")} {ex.Message}";
         }
         finally
         {
@@ -2543,9 +2488,7 @@
             if (entries is null)
             {
                 _importError = Loc.T("Import fehlgeschlagen: Ungültiges JSON-Format.",
-                    "Import failed: invalid JSON format.",
-                    "Importazione fallita: formato JSON non valido.",
-                    "Importación fallida: formato JSON no válido.");
+                    "Import failed: invalid JSON format.");
                 return;
             }
 
@@ -2554,9 +2497,7 @@
             {
                 _importError = Loc.T(
                     $"Import fehlgeschlagen: {invalid.Count} Einträge ohne Name gefunden.",
-                    $"Import failed: {invalid.Count} entries without a name.",
-                    $"Importazione fallita: {invalid.Count} voci senza nome.",
-                    $"Importación fallida: {invalid.Count} entradas sin nombre.");
+                    $"Import failed: {invalid.Count} entries without a name.");
                 return;
             }
 
@@ -2567,9 +2508,7 @@
         {
             _importError = Loc.T(
                 $"Import fehlgeschlagen: JSON-Fehler – {ex.Message}",
-                $"Import failed: JSON error – {ex.Message}",
-                $"Importazione fallita: errore JSON – {ex.Message}",
-                $"Importación fallida: error JSON – {ex.Message}");
+                $"Import failed: JSON error – {ex.Message}");
         }
         catch (Exception ex) { _importError = $"Import: {ex.Message}"; }
     }
@@ -2605,9 +2544,7 @@
             if (entries is null)
             {
                 _importError = Loc.T("Import fehlgeschlagen: Ungültiges JSON-Format.",
-                    "Import failed: invalid JSON format.",
-                    "Importazione fallita: formato JSON non valido.",
-                    "Importación fallida: formato JSON no válido.");
+                    "Import failed: invalid JSON format.");
                 return;
             }
 
@@ -2616,9 +2553,7 @@
             {
                 _importError = Loc.T(
                     $"Import fehlgeschlagen: {invalid.Count} Einträge ohne Gruppen-Nummer gefunden.",
-                    $"Import failed: {invalid.Count} entries without a group number.",
-                    $"Importazione fallita: {invalid.Count} voci senza numero gruppo.",
-                    $"Importación fallida: {invalid.Count} entradas sin número de grupo.");
+                    $"Import failed: {invalid.Count} entries without a group number.");
                 return;
             }
 
@@ -2629,9 +2564,7 @@
         {
             _importError = Loc.T(
                 $"Import fehlgeschlagen: JSON-Fehler – {ex.Message}",
-                $"Import failed: JSON error – {ex.Message}",
-                $"Importazione fallita: errore JSON – {ex.Message}",
-                $"Importación fallida: error JSON – {ex.Message}");
+                $"Import failed: JSON error – {ex.Message}");
         }
         catch (Exception ex) { _importError = $"Import: {ex.Message}"; }
     }
@@ -2667,9 +2600,7 @@
             if (entries is null)
             {
                 _importError = Loc.T("Import fehlgeschlagen: Ungültiges JSON-Format.",
-                    "Import failed: invalid JSON format.",
-                    "Importazione fallita: formato JSON non valido.",
-                    "Importación fallida: formato JSON no válido.");
+                    "Import failed: invalid JSON format.");
                 return;
             }
 
@@ -2678,9 +2609,7 @@
             {
                 _importError = Loc.T(
                     $"Import fehlgeschlagen: {invalid.Count} Einträge ohne Text gefunden.",
-                    $"Import failed: {invalid.Count} entries without text.",
-                    $"Importazione fallita: {invalid.Count} voci senza testo.",
-                    $"Importación fallida: {invalid.Count} entradas sin texto.");
+                    $"Import failed: {invalid.Count} entries without text.");
                 return;
             }
 
@@ -2691,9 +2620,7 @@
         {
             _importError = Loc.T(
                 $"Import fehlgeschlagen: JSON-Fehler – {ex.Message}",
-                $"Import failed: JSON error – {ex.Message}",
-                $"Importazione fallita: errore JSON – {ex.Message}",
-                $"Importación fallida: error JSON – {ex.Message}");
+                $"Import failed: JSON error – {ex.Message}");
         }
         catch (Exception ex) { _importError = $"Import: {ex.Message}"; }
     }
@@ -2717,9 +2644,7 @@
         {
             _backupError = Loc.T(
                 "Bitte ein Passwort eingeben.",
-                "Please enter a password.",
-                "Inserire una password.",
-                "Por favor, introduce una contraseña.");
+                "Please enter a password.");
             return;
         }
 
@@ -2736,10 +2661,9 @@
             var file = await Task.Run(() =>
             {
                 var salt = System.Security.Cryptography.RandomNumberGenerator.GetBytes(16);
-                using var kdf = new System.Security.Cryptography.Rfc2898DeriveBytes(
+                var key = System.Security.Cryptography.Rfc2898DeriveBytes.Pbkdf2(
                     password, salt, 100_000,
-                    System.Security.Cryptography.HashAlgorithmName.SHA256);
-                var key = kdf.GetBytes(32);
+                    System.Security.Cryptography.HashAlgorithmName.SHA256, outputLength: 32);
 
                 using var aes = System.Security.Cryptography.Aes.Create();
                 aes.KeySize = 256;
@@ -2787,9 +2711,7 @@
         {
             _backupError = Loc.T(
                 "Bitte das Passwort der Backup-Datei eingeben.",
-                "Please enter the backup file password.",
-                "Inserire la password del file di backup.",
-                "Por favor, introduce la contraseña del archivo de copia de seguridad.");
+                "Please enter the backup file password.");
             StateHasChanged();
             return;
         }
@@ -2811,9 +2733,7 @@
             {
                 _backupError = Loc.T(
                     "Ungültige Backup-Datei (kein MeshComWebDesk-Format).",
-                    "Invalid backup file (not a MeshComWebDesk format).",
-                    "File di backup non valido (formato non MeshComWebDesk).",
-                    "Archivo de copia de seguridad no válido (no es formato MeshComWebDesk).");
+                    "Invalid backup file (not a MeshComWebDesk format).");
                 StateHasChanged();
                 return;
             }
@@ -2831,10 +2751,9 @@
             {
                 try
                 {
-                    using var kdf = new System.Security.Cryptography.Rfc2898DeriveBytes(
+                    var key = System.Security.Cryptography.Rfc2898DeriveBytes.Pbkdf2(
                         password, salt, 100_000,
-                        System.Security.Cryptography.HashAlgorithmName.SHA256);
-                    var key = kdf.GetBytes(32);
+                        System.Security.Cryptography.HashAlgorithmName.SHA256, outputLength: 32);
 
                     using var aes = System.Security.Cryptography.Aes.Create();
                     aes.KeySize = 256;
@@ -2860,9 +2779,7 @@
             {
                 _backupError = Loc.T(
                     "Entschlüsselung fehlgeschlagen – falsches Passwort oder beschädigte Datei.",
-                    "Decryption failed – wrong password or corrupted file.",
-                    "Decrittazione fallita – password errata o file danneggiato.",
-                    "Descifrado fallido – contraseña incorrecta o archivo dañado.");
+                    "Decryption failed – wrong password or corrupted file.");
                 StateHasChanged();
                 return;
             }
@@ -2879,9 +2796,7 @@
             {
                 _backupError = Loc.T(
                     $"Import fehlgeschlagen: JSON-Fehler – {ex.Message}",
-                    $"Import failed: JSON error – {ex.Message}",
-                    $"Importazione fallita: errore JSON – {ex.Message}",
-                    $"Importación fallida: error JSON – {ex.Message}");
+                    $"Import failed: JSON error – {ex.Message}");
                 StateHasChanged();
                 return;
             }
@@ -2890,9 +2805,7 @@
             {
                 _backupError = Loc.T(
                     "Import fehlgeschlagen: Ungültiges Format.",
-                    "Import failed: invalid format.",
-                    "Importazione fallita: formato non valido.",
-                    "Importación fallida: formato no válido.");
+                    "Import failed: invalid format.");
                 StateHasChanged();
                 return;
             }

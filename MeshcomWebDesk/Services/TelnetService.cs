@@ -90,6 +90,7 @@ public class TelnetService : IConsoleService, IAsyncDisposable
             CipherSuitesPolicy? cipherPolicy = null;
             try
             {
+#pragma warning disable CA1416 // PlatformNotSupportedException is caught below for Windows
                 cipherPolicy = new CipherSuitesPolicy(new[]
                 {
                     TlsCipherSuite.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
@@ -99,6 +100,7 @@ public class TelnetService : IConsoleService, IAsyncDisposable
                     TlsCipherSuite.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
                     TlsCipherSuite.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
                 });
+#pragma warning restore CA1416
             }
             catch (PlatformNotSupportedException)
             {

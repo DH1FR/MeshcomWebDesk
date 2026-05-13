@@ -1,4 +1,4 @@
-@using Microsoft.Extensions.Options
+﻿@using Microsoft.Extensions.Options
 @using MeshcomWebDesk.Models
 @using MeshcomWebDesk.Services
 @inject IOptionsMonitor<MeshcomSettings> SettingsMonitor
@@ -19,7 +19,7 @@
                     @qt.Label
                 </button>
             }
-            <button class="quicktext-close" @onclick="() => _flyoutOpen = false" title="@Loc.T("Schließen", "Close", "Chiudi", "Cerrar")">✕</button>
+            <button class="quicktext-close" @onclick="() => _flyoutOpen = false" title="@Loc.T("Schließen", "Close")">✕</button>
         </div>
     }
     <div class="send-bar">
@@ -27,10 +27,10 @@
         {
             <button class="btn-quicktext @(_flyoutOpen ? "btn-quicktext-active" : "")"
                     @onclick="ToggleFlyout"
-                    title="@Loc.T("Schnelltexte", "Quick Texts", "Testi rapidi", "Textos rápidos")">⚡</button>
+                    title="@Loc.T("Schnelltexte", "Quick Texts")">⚡</button>
         }
         <textarea id="send-bar-input"
-                  placeholder="@Loc.T("Nachricht eingeben...", "Enter message...", "Inserisci messaggio...", "Escribe un mensaje...")"
+                  placeholder="@Loc.T("Nachricht eingeben...", "Enter message...")"
                   maxlength="149"
                   spellcheck="true"
                   autocomplete="on"
@@ -46,7 +46,7 @@
             }
             else
             {
-                @Loc.T("Senden", "Send", "Invia", "Enviar")
+                @Loc.T("Senden", "Send")
             }
         </button>
     </div>
@@ -72,7 +72,7 @@
 
     protected override void OnInitialized()
     {
-        Loc.OnChange += ForceRerender;
+        Loc.OnChange += OnLocChange;
         LoadQuickTextsFromSettings();
         _settingsListener = SettingsMonitor.OnChange(_ => { LoadQuickTextsFromSettings(); InvokeAsync(ForceRerender); });
     }
@@ -101,10 +101,12 @@
         }
     }
 
+    private void OnLocChange() => _ = InvokeAsync(StateHasChanged);
+
     public void Dispose()
     {
         _cooldownCts?.Cancel();
-        Loc.OnChange -= ForceRerender;
+        Loc.OnChange -= OnLocChange;
         _settingsListener?.Dispose();
         _dotNetRef?.Dispose();
     }

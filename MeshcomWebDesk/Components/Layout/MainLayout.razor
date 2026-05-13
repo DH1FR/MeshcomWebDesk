@@ -1,4 +1,4 @@
-@inherits LayoutComponentBase
+﻿@inherits LayoutComponentBase
 @inject MeshcomWebDesk.Services.LanguageService Loc
 @inject Microsoft.Extensions.Options.IOptionsMonitor<MeshcomWebDesk.Models.MeshcomSettings> SettingsMon
 @implements IDisposable
@@ -12,16 +12,16 @@
         <nav class="app-nav">
             <NavLink class="app-nav-link" href="/" Match="NavLinkMatch.All">💬 <span class="nav-label">@Loc.T("Chat", "Chat")</span></NavLink>
             <NavLink class="app-nav-link" href="/mh">📻 <span class="nav-label">MH</span></NavLink>
-            <NavLink class="app-nav-link" href="/map">🗺️ <span class="nav-label">@Loc.T("Karte", "Map", "Mappa", "Mapa")</span></NavLink>
+            <NavLink class="app-nav-link" href="/map">🗺️ <span class="nav-label">@Loc.T("Karte", "Map")</span></NavLink>
             @if (SettingsMon.CurrentValue.TelnetEnabled)
             {
                 <NavLink class="app-nav-link" href="/telnet">🖥️ <span class="nav-label">TLS Console</span></NavLink>
             }
-            <NavLink class="app-nav-link" href="/settings">⚙️ <span class="nav-label">@Loc.T("Einstellungen", "Settings", "Impostazioni", "Configuración")</span></NavLink>
-            <NavLink class="app-nav-link" href="/clear">🗑️ <span class="nav-label">@Loc.T("Löschen", "Clear", "Elimina", "Borrar")</span></NavLink>
-            <NavLink class="app-nav-link" href="/about">ℹ️ <span class="nav-label">@Loc.T("Über", "About", "Info", "Acerca de")</span></NavLink>
+            <NavLink class="app-nav-link" href="/settings">⚙️ <span class="nav-label">@Loc.T("Einstellungen", "Settings")</span></NavLink>
+            <NavLink class="app-nav-link" href="/clear">🗑️ <span class="nav-label">@Loc.T("Löschen", "Clear")</span></NavLink>
+            <NavLink class="app-nav-link" href="/about">ℹ️ <span class="nav-label">@Loc.T("Über", "About")</span></NavLink>
             <a class="app-nav-link" href="@($"https://github.com/DH1FR/MeshcomWebDesk/blob/master/docs/node-connection-{Loc.Current}.md")" target="_blank" rel="noopener">
-                ❓ <span class="nav-label">@Loc.T("Hilfe", "Help", "Aiuto", "Ayuda")</span>
+                ❓ <span class="nav-label">@Loc.T("Hilfe", "Help")</span>
             </a>
         </nav>
     </header>
@@ -43,11 +43,13 @@
     private string _version =
         System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? string.Empty;
 
+    private void OnLocChange() => _ = InvokeAsync(StateHasChanged);
+
     protected override void OnInitialized()
     {
-        Loc.OnChange += StateHasChanged;
+        Loc.OnChange += OnLocChange;
         SettingsMon.OnChange((settings, name) => InvokeAsync(StateHasChanged));
     }
 
-    public void Dispose() => Loc.OnChange -= StateHasChanged;
+    public void Dispose() => Loc.OnChange -= OnLocChange;
 }
