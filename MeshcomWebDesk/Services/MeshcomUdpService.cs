@@ -150,6 +150,10 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                     var sourceNode = _nodeManager.ResolveNodeByIp(sourceIp);
                     var myCallsign = sourceNode?.Callsign ?? _settings.MyCallsign;
 
+                    // Update last-seen timestamp so the UI can show online status
+                    if (sourceNode is not null)
+                        _nodeManager.MarkNodeSeen(sourceNode.Id);
+
                     if (sourceNode is not null)
                         _logger.LogDebug("UDP RX from node '{NodeName}' ({NodeId}) IP={Ip}",
                             sourceNode.Name, sourceNode.Id, sourceIp);

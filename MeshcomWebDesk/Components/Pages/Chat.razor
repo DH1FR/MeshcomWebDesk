@@ -28,9 +28,21 @@
     @if (NodeManager.MultiNodeEnabled) {
     <div class="node-switcher-bar">
         @foreach (var node in NodeManager.Nodes) {
+            var status   = NodeManager.GetNodeStatus(node.Id);
+            var dotClass = status switch {
+                NodeOnlineStatus.Online  => "online",
+                NodeOnlineStatus.Stale   => "stale",
+                NodeOnlineStatus.Offline => "offline",
+                _                        => "unknown"
+            };
+            var lastSeen = NodeManager.GetLastSeen(node.Id);
+            var tooltip  = lastSeen.HasValue
+                ? $"{node.Callsign}  |  {node.DeviceIp}:{node.DevicePort}  |  {Loc.T("Zuletzt", "Last seen", "Visto", "Visto")}: {FormatLastSeen(lastSeen.Value)}"
+                : $"{node.Callsign}  |  {node.DeviceIp}:{node.DevicePort}  |  {Loc.T("Noch kein Paket", "No packet yet", "Nessun pacchetto", "Sin paquete")}";
             <button class="node-switcher-btn @(NodeManager.SelectedNode?.Id == node.Id ? "active" : "")"
                     @onclick="() => SelectNode(node.Id)"
-                    title="@node.Callsign  |  @node.DeviceIp:@node.DevicePort">
+                    title="@tooltip">
+                <span class="node-status-dot @dotClass"></span>
                 @if (node.IsPrimary) { <span>★</span> }
                 @node.Name
                 <small style="opacity:.7;font-size:.75em">@node.Callsign</small>
@@ -1489,6 +1501,14 @@
     }
 
     private void SelectNode(Guid nodeId) => NodeManager.SelectNode(nodeId);
+
+    private string FormatLastSeen(DateTime utc)
+    {
+        var age = DateTime.UtcNow - utc;
+        if (age.TotalSeconds < 60)  return Loc.T($"vor {(int)age.TotalSeconds}s", $"{(int)age.TotalSeconds}s ago", $"{(int)age.TotalSeconds}s fa", $"hace {(int)age.TotalSeconds}s");
+        if (age.TotalMinutes < 60)  return Loc.T($"vor {(int)age.TotalMinutes}min", $"{(int)age.TotalMinutes}min ago", $"{(int)age.TotalMinutes}min fa", $"hace {(int)age.TotalMinutes}min");
+        return Loc.T($"vor {(int)age.TotalHours}h", $"{(int)age.TotalHours}h ago", $"{(int)age.TotalHours}h fa", $"hace {(int)age.TotalHours}h");
+    }
 
     private void OnNodeChanged()
     {

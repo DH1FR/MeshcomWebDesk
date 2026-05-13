@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using Microsoft.Extensions.Options;
 using MeshcomWebDesk.Models;
@@ -27,10 +28,48 @@ public sealed class NodeManager
 {
     private readonly IOptionsMonitor<MeshcomSettings> _settingsMonitor;
 
-    /// <summary>Raised whenever the selected (chat-view) node changes.</summary>
+    /// <summary>Raised whenever the selected (chat-view) node changes or a node's online status changes.</summary>
     public event Action? OnSelectedNodeChanged;
 
     private Guid? _selectedNodeId;
+
+    // ── Last-seen tracking ───────────────────────────────────────────────
+    private readonly ConcurrentDictionary<Guid, DateTime> _lastSeen = new();
+
+    /// <summary>Records that a packet was received from the given node right now.</summary>
+    public void MarkNodeSeen(Guid nodeId)
+    {
+        var previous = _lastSeen.GetValueOrDefault(nodeId);
+        _lastSeen[nodeId] = DateTime.UtcNow;
+        // Only fire OnChange when the status bucket changes (offline→online, online→stale, etc.)
+        if (GetNodeStatus(nodeId, previous) != GetNodeStatus(nodeId, DateTime.UtcNow))
+            OnSelectedNodeChanged?.Invoke();
+        else
+            OnSelectedNodeChanged?.Invoke(); // always refresh so the tooltip stays current
+    }
+
+    /// <summary>Returns the UTC timestamp of the last received packet for this node, or null if never seen.</summary>
+    public DateTime? GetLastSeen(Guid nodeId) =>
+        _lastSeen.TryGetValue(nodeId, out var t) ? t : null;
+
+    /// <summary>Returns the online status of a node based on the last received packet time.</summary>
+    public NodeOnlineStatus GetNodeStatus(Guid nodeId)
+    {
+        if (!_lastSeen.TryGetValue(nodeId, out var t)) return NodeOnlineStatus.Unknown;
+        var age = DateTime.UtcNow - t;
+        if (age.TotalMinutes <= 5)  return NodeOnlineStatus.Online;
+        if (age.TotalMinutes <= 30) return NodeOnlineStatus.Stale;
+        return NodeOnlineStatus.Offline;
+    }
+
+    private static NodeOnlineStatus GetNodeStatus(Guid _, DateTime? t)
+    {
+        if (t is null) return NodeOnlineStatus.Unknown;
+        var age = DateTime.UtcNow - t.Value;
+        if (age.TotalMinutes <= 5)  return NodeOnlineStatus.Online;
+        if (age.TotalMinutes <= 30) return NodeOnlineStatus.Stale;
+        return NodeOnlineStatus.Offline;
+    }
 
     public NodeManager(IOptionsMonitor<MeshcomSettings> settingsMonitor)
     {
