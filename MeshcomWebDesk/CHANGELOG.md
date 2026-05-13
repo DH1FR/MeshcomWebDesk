@@ -1,5 +1,13 @@
 ﻿# Changelog
 
+## [1.10.1] – in development (dev)
+
+### Features
+
+### Bugfixes
+
+---
+
 ## [1.10.0] – released
 
 ### Features
