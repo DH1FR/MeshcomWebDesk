@@ -557,6 +557,21 @@ Clicking it opens a modal dialog with **four tabs**:
 - HTTP on port 5162 **stays active** – existing bookmarks and Docker deployments are unaffected
 - HTTPS is only needed for PWA installation on Android / iPad / iPhone over LAN
 
+### ⚡ Optimisations & Bugfixes (selected)
+
+- **QRZ race condition** – in-flight deduplication (`ConcurrentDictionary`) prevents parallel duplicate lookups for the same callsign
+- **Direct tab visibility** – newly created direct-message tabs appear immediately in the UI even when voice announcements are disabled
+- **Bot false-positive** – decoration strings like `---===` are no longer misidentified as bot commands; `IsCommand()` checks that `--` or `—` is immediately followed by a letter
+- **{last-qso} accuracy** – the variable returns the *previous* QSO (the triggering message is excluded); no previous QSO → `kein QSO` / `no QSO`
+- **Telemetry double-send** – the telemetry scheduler now initialises `lastSentSlot` to the current hour on startup, preventing a duplicate send within the first hour after a restart
+- **TLS password transmission** – the encrypted `dp:` prefix string is now decrypted before being sent to the node; plain-text password is transmitted correctly
+- **TelnetEnabled persistence** – the setting is now correctly written to and read from `appsettings.override.json`; no longer lost after restart or backup restore
+- **Multi-node first-connect cert** – `certThumbprintOverride` is passed as `string.Empty` (not `null`) for nodes without a stored fingerprint, preventing Node-1's fingerprint from being applied to Node-2
+- **Serial connect – no ESP32 reboot** – DTR and RTS are explicitly held low after `SerialPort.Open()` to prevent the hardware reset that Windows triggers via the DTR pin
+- **Speaker icon persists** – the speaker toggle in the status bar remains visible immediately after chat page reloads (state stored like the bell icon)
+- **PBKDF2 on thread-pool** – CPU-intensive key derivation for backup encryption runs on `Task.Run()` to keep the SignalR heartbeat alive
+- **Backup import via Blazor InputFile** – replaces the JS-interop `int[]` file-read that exceeded the 32 KB SignalR message limit
+
 ---
 
 ## Architecture
