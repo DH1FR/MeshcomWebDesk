@@ -67,7 +67,10 @@ public class TelnetService : IConsoleService, IAsyncDisposable
         var port = s.TelnetPort;
         UnknownCertThumbprint = null;
 
-        // Resolve effective cert thumbprint: override → global setting
+        // Resolve effective cert thumbprint:
+        // - null  → legacy single-node: fall back to global setting
+        // - ""    → multi-node first-connect: no known thumbprint, accept any cert
+        // - "AA:" → multi-node: verify against this specific fingerprint
         _activeCertThumbprint = certThumbprintOverride ?? s.TelnetCertThumbprint;
 
         AppendLine($"[Verbinde mit {host}:{port}...]");

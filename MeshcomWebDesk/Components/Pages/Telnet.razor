@@ -300,10 +300,12 @@
             var node = ActiveNodeProfile;
             if (node is not null)
             {
-                // Multi-node: pass node-specific host, cert thumbprint and password
+                // Multi-node: pass node-specific host, cert thumbprint and password.
+                // Use string.Empty (not null) when no thumbprint is stored so the
+                // fallback to the global TelnetCertThumbprint (= Node 1) is NOT triggered.
                 await TelnetService.ConnectAsync(
                     hostOverride:           node.DeviceIp,
-                    certThumbprintOverride: string.IsNullOrEmpty(node.TelnetCertThumbprint) ? null : node.TelnetCertThumbprint,
+                    certThumbprintOverride: node.TelnetCertThumbprint,   // "" → first-connect mode
                     passwordOverride:       string.IsNullOrEmpty(node.TelnetPassword) ? null : node.TelnetPassword);
             }
             else
