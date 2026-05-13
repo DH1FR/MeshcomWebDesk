@@ -26,7 +26,19 @@ public class SerialConsoleService : IConsoleService, IAsyncDisposable
         _logger = logger;
     }
 
-    public static string[] GetAvailablePorts() => SerialPort.GetPortNames();
+    /// <summary>
+    /// Returns available serial port names, deduplicated and sorted.
+    /// <para>
+    /// <see cref="SerialPort.GetPortNames"/> on Windows may return duplicate entries
+    /// because it reads from multiple registry keys.  This wrapper applies
+    /// <see cref="Enumerable.Distinct"/> and sorts the result.
+    /// </para>
+    /// </summary>
+    public static string[] GetAvailablePorts() =>
+        SerialPort.GetPortNames()
+                  .Distinct(StringComparer.OrdinalIgnoreCase)
+                  .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+                  .ToArray();
 
     public async Task ConnectAsync(string? hostOverride = null)
     {
@@ -42,9 +54,21 @@ public class SerialConsoleService : IConsoleService, IAsyncDisposable
                 return;
             }
 
+            var portName = settings.SerialPortName;
+
+            // On Windows, COM ports with numbers >= 10 must be opened as "\\.\COMx".
+            // The System.IO.Ports.SerialPort constructor accepts this extended form.
+            if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(
+                    System.Runtime.InteropServices.OSPlatform.Windows)
+                && System.Text.RegularExpressions.Regex.IsMatch(portName, @"^COM\d{2,}$",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+            {
+                portName = $"\\\\.\\{portName}";
+            }
+
             _cts = new CancellationTokenSource();
             _port = new SerialPort(
-                settings.SerialPortName,
+                portName,
                 settings.SerialBaudRate,
                 Parity.None,
                 8,
