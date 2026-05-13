@@ -1,16 +1,16 @@
-﻿﻿﻿```
-  ███╗   ███╗███████╗███████╗██╗  ██╗ ██████╗ ██████╗ ███╗   ███╗
-  ████╗ ████║██╔════╝██╔════╝██║  ██║██╔════╝██╔═══██╗████╗ ████║
-  ██╔████╔██║█████╗  ███████╗███████║██║     ██║   ██║██╔████╔██║
-  ██║╚██╔╝██║██╔══╝  ╚════██║██╔══██║██║     ██║   ██║██║╚██╔╝██║
-  ██║ ╚═╝ ██║███████╗███████║██║  ██║╚██████╗╚██████╔╝██║ ╚═╝ ██║
-  ╚═╝     ╚═╝╚══════╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚═╝     ╚═╝
-    ██╗    ██╗███████╗██████╗ ██████╗ ███████╗███████╗██╗  ██╗
-    ██║    ██║██╔════╝██╔══██╗██╔══██╗██╔════╝██╔════╝██║ ██╔╝
-    ██║ █╗ ██║█████╗  ██████╔╝██║  ██║█████╗  ███████╗█████╔╝
-    ██║███╗██║██╔══╝  ██╔══██╗██║  ██║██╔══╝  ╚════██║██╔═██╗
-    ╚███╔███╔╝███████╗██████╔╝██████╔╝███████╗███████║██║  ██╗
-     ╚══╝╚══╝ ╚══════╝╚═════╝ ╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═╝
+´╗┐```
+  ÔûêÔûêÔûêÔòù   ÔûêÔûêÔûêÔòùÔûêÔûêÔûêÔûêÔûêÔûêÔûêÔòùÔûêÔûêÔûêÔûêÔûêÔûêÔûêÔòùÔûêÔûêÔòù  ÔûêÔûêÔòù ÔûêÔûêÔûêÔûêÔûêÔûêÔòù ÔûêÔûêÔûêÔûêÔûêÔûêÔòù ÔûêÔûêÔûêÔòù   ÔûêÔûêÔûêÔòù
+  ÔûêÔûêÔûêÔûêÔòù ÔûêÔûêÔûêÔûêÔòæÔûêÔûêÔòöÔòÉÔòÉÔòÉÔòÉÔòØÔûêÔûêÔòöÔòÉÔòÉÔòÉÔòÉÔòØÔûêÔûêÔòæ  ÔûêÔûêÔòæÔûêÔûêÔòöÔòÉÔòÉÔòÉÔòÉÔòØÔûêÔûêÔòöÔòÉÔòÉÔòÉÔûêÔûêÔòùÔûêÔûêÔûêÔûêÔòù ÔûêÔûêÔûêÔûêÔòæ
+  ÔûêÔûêÔòöÔûêÔûêÔûêÔûêÔòöÔûêÔûêÔòæÔûêÔûêÔûêÔûêÔûêÔòù  ÔûêÔûêÔûêÔûêÔûêÔûêÔûêÔòùÔûêÔûêÔûêÔûêÔûêÔûêÔûêÔòæÔûêÔûêÔòæ     ÔûêÔûêÔòæ   ÔûêÔûêÔòæÔûêÔûêÔòöÔûêÔûêÔûêÔûêÔòöÔûêÔûêÔòæ
+  ÔûêÔûêÔòæÔòÜÔûêÔûêÔòöÔòØÔûêÔûêÔòæÔûêÔûêÔòöÔòÉÔòÉÔòØ  ÔòÜÔòÉÔòÉÔòÉÔòÉÔûêÔûêÔòæÔûêÔûêÔòöÔòÉÔòÉÔûêÔûêÔòæÔûêÔûêÔòæ     ÔûêÔûêÔòæ   ÔûêÔûêÔòæÔûêÔûêÔòæÔòÜÔûêÔûêÔòöÔòØÔûêÔûêÔòæ
+  ÔûêÔûêÔòæ ÔòÜÔòÉÔòØ ÔûêÔûêÔòæÔûêÔûêÔûêÔûêÔûêÔûêÔûêÔòùÔûêÔûêÔûêÔûêÔûêÔûêÔûêÔòæÔûêÔûêÔòæ  ÔûêÔûêÔòæÔòÜÔûêÔûêÔûêÔûêÔûêÔûêÔòùÔòÜÔûêÔûêÔûêÔûêÔûêÔûêÔòöÔòØÔûêÔûêÔòæ ÔòÜÔòÉÔòØ ÔûêÔûêÔòæ
+  ÔòÜÔòÉÔòØ     ÔòÜÔòÉÔòØÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØÔòÜÔòÉÔòØ  ÔòÜÔòÉÔòØ ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ ÔòÜÔòÉÔòØ     ÔòÜÔòÉÔòØ
+    ÔûêÔûêÔòù    ÔûêÔûêÔòùÔûêÔûêÔûêÔûêÔûêÔûêÔûêÔòùÔûêÔûêÔûêÔûêÔûêÔûêÔòù ÔûêÔûêÔûêÔûêÔûêÔûêÔòù ÔûêÔûêÔûêÔûêÔûêÔûêÔûêÔòùÔûêÔûêÔûêÔûêÔûêÔûêÔûêÔòùÔûêÔûêÔòù  ÔûêÔûêÔòù
+    ÔûêÔûêÔòæ    ÔûêÔûêÔòæÔûêÔûêÔòöÔòÉÔòÉÔòÉÔòÉÔòØÔûêÔûêÔòöÔòÉÔòÉÔûêÔûêÔòùÔûêÔûêÔòöÔòÉÔòÉÔûêÔûêÔòùÔûêÔûêÔòöÔòÉÔòÉÔòÉÔòÉÔòØÔûêÔûêÔòöÔòÉÔòÉÔòÉÔòÉÔòØÔûêÔûêÔòæ ÔûêÔûêÔòöÔòØ
+    ÔûêÔûêÔòæ ÔûêÔòù ÔûêÔûêÔòæÔûêÔûêÔûêÔûêÔûêÔòù  ÔûêÔûêÔûêÔûêÔûêÔûêÔòöÔòØÔûêÔûêÔòæ  ÔûêÔûêÔòæÔûêÔûêÔûêÔûêÔûêÔòù  ÔûêÔûêÔûêÔûêÔûêÔûêÔûêÔòùÔûêÔûêÔûêÔûêÔûêÔòöÔòØ
+    ÔûêÔûêÔòæÔûêÔûêÔûêÔòùÔûêÔûêÔòæÔûêÔûêÔòöÔòÉÔòÉÔòØ  ÔûêÔûêÔòöÔòÉÔòÉÔûêÔûêÔòùÔûêÔûêÔòæ  ÔûêÔûêÔòæÔûêÔûêÔòöÔòÉÔòÉÔòØ  ÔòÜÔòÉÔòÉÔòÉÔòÉÔûêÔûêÔòæÔûêÔûêÔòöÔòÉÔûêÔûêÔòù
+    ÔòÜÔûêÔûêÔûêÔòöÔûêÔûêÔûêÔòöÔòØÔûêÔûêÔûêÔûêÔûêÔûêÔûêÔòùÔûêÔûêÔûêÔûêÔûêÔûêÔòöÔòØÔûêÔûêÔûêÔûêÔûêÔûêÔòöÔòØÔûêÔûêÔûêÔûêÔûêÔûêÔûêÔòùÔûêÔûêÔûêÔûêÔûêÔûêÔûêÔòæÔûêÔûêÔòæ  ÔûêÔûêÔòù
+     ÔòÜÔòÉÔòÉÔòØÔòÜÔòÉÔòÉÔòØ ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØÔòÜÔòÉÔòØ  ÔòÜÔòÉÔòØ
 ```
 
 # MeshCom WebDesk
@@ -222,13 +222,13 @@ Two connection modes are supported, selectable in **Settings → 🖥️ Console
 ---
 
 ### 🌐 UI Language
-- Full bilingual interface: **Deutsch 🇩🇪** and **English 🇬🇧**
+- Full multilingual interface: **Deutsch 🇩🇪**, **English 🇬🇧**, **Français 🇫🇷**, **Italiano 🇮🇹**, **Español 🇪🇸**
 - Language is selected in **Settings → Language** and persisted in `appsettings.override.json`
 - Switching applies **instantly** across all pages without any page reload or restart
 
 ### 📡 Beacon (Bake)
 - **Periodic beacon** – sends a configurable text to a configurable group at a fixed interval
-- Interval is configurable in whole hours (minimum 1 h); first transmission after **one full interval** (no send on every restart)
+- Interval is configurable in whole hours (minimum **8 h**); existing values below 8 h are automatically corrected on load; first transmission after **one full interval** (no send on every restart)
 - Enabled / disabled via `BeaconEnabled` flag – applies **live** without restart
 - **Supported placeholders** in `BeaconText`: `{version}`, `{mycall}`, `{mylocator}`, `{date}`, `{time}`, `{telemetry}` – shown as inline hint in Settings
 - **Status indicator** in the status bar: pulsing `●` dot with next scheduled send time; turns yellow when < 10 min away
@@ -574,7 +574,7 @@ MeshcomWebDesk/              ← Blazor Server (ASP.NET Core host)
       ChatService.cs           ← Singleton: routing, tabs, MH list, monitor, deduplication, webhook trigger, OnBotCommand event
       DataPersistenceService.cs← BackgroundService: load/save state to JSON on disk
       SettingsService.cs       ← Writes appsettings.override.json in DataPath (Docker-safe); changes applied live via IOptionsMonitor
-      LanguageService.cs       ← Singleton: UI language switching (de/en); T(de,en) helper; OnChange event for instant re-render
+      LanguageService.cs       ← Singleton: UI language switching (de/en/fr/it/es); T(de,en) helper; OnChange event for instant re-render
       WebhookService.cs        ← HTTP POST fire-and-forget on message / position / telemetry events
       QrzService.cs             ← QRZ.com XML API: session login, callsign lookup, in-memory cache
       QsoSummaryService.cs      ← AI-based QSO summary: reads messages from MySQL, calls AI API, stores result in qso_summaries table; token usage tracking; balance check
@@ -630,14 +630,14 @@ All settings in `MeshcomWebDesk/appsettings.json`:
   "BeaconEnabled":      false,           // send periodic beacon (Bake)
   "BeaconGroup":        "#262",          // target group for beacon
   "BeaconText":         "...",           // beacon text; {version} → app version
-  "BeaconIntervalHours": 1,              // beacon interval in hours (minimum 1)
+  "BeaconIntervalHours": 8,              // beacon interval in hours (minimum 8)
   "TelemetryEnabled":      false,        // send periodic telemetry message
   "TelemetryFilePath":     "/data/telemetry.json", // source JSON file (written by HA, script etc.)
   "TelemetryGroup":        "#262",       // destination: group (#262), broadcast (*), or callsign
   "TelemetryScheduleHours":   "11,15",      // send at 11:00 and 15:00 (comma-separated hours 0–23)
   "TelemetryApiEnabled":   false,        // enable POST /api/telemetry HTTP endpoint
   "TelemetryApiKey":       "",           // optional X-Api-Key for the endpoint (empty = no auth)
-  "Language":              "de",         // UI language: "de" (German) or "en" (English)
+  "Language":              "de",         // UI language: "de", "en", "fr", "it", "es"
   "Database": {                          // optional database sink
     "Provider":              "none",     // "none" | "mysql" | "influxdb2"
     "MySqlConnectionString": "",         // e.g. "Server=localhost;Database=meshcom;User=mc;Password=secret;"
@@ -1318,35 +1318,18 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
  ## 📋 Changelog
 
-### v1.9.6 *(dev)*
+### v1.10.0 *(dev)*
+- **feat:** 🌐 **Multi-language UI** – interface now available in **Français 🇫🇷**, **Italiano 🇮🇹** and **Español 🇪🇸** in addition to Deutsch and English; language is switched in **Settings → Language** and takes effect instantly without a page reload
 - **feat:** 🖧 **Multi-Node support** – configure multiple MeshCom nodes simultaneously; each node has its own UDP connection, callsign, chat tabs, monitor feed, and console credentials; node profiles are managed under **Settings → Further Nodes**
-- **feat:** 🔀 **Node switcher in Chat** – dropdown in the Chat header switches the active node; tabs and monitor are scoped per node; no UDP reconnect required when switching
-- **feat:** 🎯 **Source-IP-based node routing** – incoming UDP packets are assigned to the correct node by the sender's IP address (IPv4-mapped IPv6 normalised); multi-node safe even when all nodes share port 1799
-- **feat:** 📡 **Primary-node-only global features** – MH list, Live Map, beacon, bot, telemetry, and OTA are restricted to the primary node; secondary nodes are chat-only
-- **feat:** 💾 **Per-node state persistence** – all node states (tabs, monitor messages) are saved and restored independently; the primary node's MH list is preserved separately
-- **feat:** 🖥️ **Console node switcher (TLS mode)** – dropdown in the Console header to select which node to connect to via TLS; disabled while a connection is active
-- **feat:** 🔒 **Per-node TLS certificate & password** – each node profile stores its own TLS certificate fingerprint and console password; encrypted at rest; first-connect fingerprint banner works independently per node
-- **feat:** 🔌 **Serial Console (USB)** – connect to a MeshCom node via USB/serial (CP210x); COM port and baud rate configurable in **Settings → 🖥️ Console → Serial Console**; console mode switchable between TLS and Serial without restart
-- **fix:** ⚡ **Serial connect – no ESP32 reboot** – DTR and RTS are explicitly held low after `SerialPort.Open()`; prevents the ESP32 hardware reset that Windows triggers via the DTR pin when opening the port
-- **fix:** 🪪 **TLS cert banner – serial mode** – the *Unknown Certificate* banner is now suppressed when Serial Console mode is active; serial connections do not use TLS certificates
-- **fix:** 🔑 **Multi-node first-connect cert** – `certThumbprintOverride` is passed as `string.Empty` (not `null`) for nodes without a stored fingerprint, preventing the global Node-1 fingerprint from being applied to Node-2 and causing a mismatch rejection
-- **fix:** 💾 **Settings persistence** – `SerialPortName`, `SerialBaudRate`, `ConsoleMode`, `TelnetEnabled`, and per-node `TelnetCertThumbprint` / `TelnetPassword` are now correctly serialised to `appsettings.override.json`
-- **fix:** 🔓 **Per-node TLS password decryption** – `DecryptMeshcomSettingsPostConfigure` now iterates all node profiles and decrypts their `TelnetPassword` fields on startup
-- **feat:** 🖥️ **TLS-Console-Tab** – neuer Tab „TLS Console" (rechts neben Suchen) für verschlüsselten Konsolenzugriff auf den MeshCom-Node (TLS, Standard-Port 2323, Device IP); nur sichtbar wenn in den Einstellungen aktiviert; manuelles Verbinden/Trennen über den Statusleisten-Schalter
-- **feat:** 🔒 **TLS mit Zertifikat-Fingerprint-Vertrauen** – selbst-signierte Zertifikate werden über einen SHA-256-Fingerprint in den Einstellungen akzeptiert; „Trust & Save"-Funktion übernimmt unbekannte Zertifikate direkt beim ersten Verbindungsversuch
-- **feat:** 🔑 **Passwort-Authentifizierung** – Passwort wird verschlüsselt (DPAPI) gespeichert und bei der Anmeldung automatisch übertragen
-- **feat:** ⏸️ **Pause-Funktion** – Bildschirmausgabe der TLS-Console anhalten; neue Zeilen werden weiter gepuffert, Scroll gestoppt
-- **feat:** 🔌 **Manuelles Trennen** – „Trennen"-Button im Header der TLS-Console
-- **feat:** 📦 **Firmware-Link** – Link zu [MeshCom-Firmware auf GitHub](https://github.com/icssw-org/MeshCom-Firmware) direkt im Konsolenheader
-- **feat:** 🔄 **OTA-Update** – Button „🔄 OTA" sendet `--ota-update` an den Node; 5-Sekunden-Countdown-Dialog mit animiertem Fortschrittsbalken; OTA-Webseite öffnet sich danach automatisch im neuen Tab; TLS-Console wird nach dem Öffnen der OTA-Seite automatisch getrennt
-- **feat:** 🖥️ **TLS-Console-Statusindikator** – Statusleiste zeigt Verbindungsstatus (grün/rot) analog zum Sprachansage-Toggle; Klick baut Verbindung auf bzw. trennt sie
-- **feat:** ⚙️ **Einstellungen – TLS-Console-Sektion** – Aktivierungs-Checkbox, Port, Passwort, Zertifikat-Fingerprint sowie Hinweis, dass auf dem Node `enable Telnet console` aktiv sein muss
-- **feat:** 🔊 **Lautsprechersymbol bleibt erhalten** – Sprachansage-Schalter in der Statusleiste bleibt nach Seitenaufbau/Reconnect sofort sichtbar (vorher kurzzeitig ausgeblendet)
-- **fix:** 💾 **TelnetEnabled nicht gespeichert/wiederhergestellt** – Einstellung ging nach Neustart und bei Backup-Restore verloren
-- **fix:** 🔑 **Passwort TLS-Console** – verschlüsselter `dp:`-String wurde statt Klartext an den Node gesendet; Entschlüsselung beim Start korrigiert
-- **fix:** 📡 **Telemetrie-Doppelversand nach Neustart** – Telemetrie-Scheduler sendete nach einem Neustart innerhalb der geplanten Stunde erneut; `lastSentSlot` wird jetzt auf die aktuelle Stunde initialisiert
+- **feat:** 🖥️ **TLS Console / Serial Console** – console page now supports direct USB serial access (CP210x); COM port and baud rate configurable in **Settings → 🖥️ Console → Serial Console**; console mode switchable between TLS and Serial without restart; TLS Console requires **MeshCom firmware v4.35p.05.13 or later**
+- **feat:** 🔄 **OTA-Update via console** – button sends `--ota-update` to the node; 5-second countdown dialog; OTA page opens automatically in a new tab
+- **feat:** 🔁 **Reboot via console** – `--reboot` command shows a confirmation dialog; connection is closed after a short delay
+- **feat:** 📡 **Beacon interval minimum 8 h** – the beacon interval can no longer be set below 8 hours; existing values < 8 h are automatically corrected to 8 h on load
+- **feat:** 📊 **Telemetry mapping limit** – maximum of 3 telemetry mapping entries; the add button is disabled when the limit is reached
+- **fix:** 🔊 **Speaker icon persists** – the speaker icon in the status bar now persists across chat page reloads
+
 ### v1.9.5
-- **feat:** 💬 **MsgId im Monitor** – eingehende Nachrichten zeigen die Nachrichten-ID (msg_id) im Monitor an; erleichtert Diagnose und ACK-Zuordnung
+- **feat:** 💬 **MsgId im Monitor**
 - **feat:** 🟡 **Toast-Bezeichnung** – Toast-Anzeige für Watchlist- und CQ-Treffer zeigt jetzt „empfangen" statt „gehört"
 - **feat:** ↔️ **Eigene Nachrichten linksbündig** – neue Option OwnMessagesAlignLeft in den Einstellungen; eigene gesendete Nachrichten können optional linksbündig dargestellt werden (Standard: rechtsbündig)
 - **feat:** 🔊 **Watchlist-TTS Drosselung** – Sprachansagen für Watchlist-Treffer werden pro Rufzeichen maximal einmal alle 5 Minuten ausgelöst
