@@ -303,7 +303,7 @@
                 // Multi-node: pass node-specific host, cert thumbprint and password
                 await TelnetService.ConnectAsync(
                     hostOverride:           node.DeviceIp,
-                    certThumbprintOverride: node.TelnetCertThumbprint,
+                    certThumbprintOverride: string.IsNullOrEmpty(node.TelnetCertThumbprint) ? null : node.TelnetCertThumbprint,
                     passwordOverride:       string.IsNullOrEmpty(node.TelnetPassword) ? null : node.TelnetPassword);
             }
             else
@@ -384,6 +384,10 @@
 
     private void HandleChange()
     {
+        // Pick up cert fingerprint from TLS first-connect (may arrive via OnChange callback)
+        if (!_isSerial && !string.IsNullOrEmpty(TelnetService.UnknownCertThumbprint))
+            _unknownCertThumbprint = TelnetService.UnknownCertThumbprint;
+
         if (_paused) return;
         InvokeAsync(async () => { StateHasChanged(); await ScrollToBottomAsync(); });
     }
