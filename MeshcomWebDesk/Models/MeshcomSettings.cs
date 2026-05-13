@@ -4,6 +4,17 @@ public class MeshcomSettings
 {
     public const string SectionName = "Meshcom";
 
+    // ── Multi-Node ────────────────────────────────────────────────────────
+    /// <summary>
+    /// List of configured MeshCom nodes.
+    /// When this list is non-empty it takes precedence over the legacy
+    /// <see cref="DeviceIp"/> / <see cref="DevicePort"/> / <see cref="ListenIp"/> /
+    /// <see cref="ListenPort"/> properties, which are kept for backward compatibility.
+    /// Exactly one entry must have <see cref="NodeProfile.IsPrimary"/> = true.
+    /// </summary>
+    public List<NodeProfile> Nodes { get; set; } = [];
+
+    // ── Legacy / Primary node connection (used when Nodes list is empty) ──
     /// <summary>IP address to bind the UDP listener to (e.g. "0.0.0.0" for all interfaces).</summary>
     public string ListenIp { get; set; } = "0.0.0.0";
 

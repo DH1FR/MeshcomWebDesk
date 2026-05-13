@@ -26,9 +26,21 @@ public class SerialConsoleService : IConsoleService, IAsyncDisposable
         _logger = logger;
     }
 
-    public static string[] GetAvailablePorts() => SerialPort.GetPortNames();
+    /// <summary>
+    /// Returns available serial port names, deduplicated and sorted.
+    /// <para>
+    /// <see cref="SerialPort.GetPortNames"/> on Windows may return duplicate entries
+    /// because it reads from multiple registry keys.  This wrapper applies
+    /// <see cref="Enumerable.Distinct"/> and sorts the result.
+    /// </para>
+    /// </summary>
+    public static string[] GetAvailablePorts() =>
+        SerialPort.GetPortNames()
+                  .Distinct(StringComparer.OrdinalIgnoreCase)
+                  .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+                  .ToArray();
 
-    public async Task ConnectAsync()
+    public async Task ConnectAsync(string? hostOverride = null)
     {
         await _lock.WaitAsync();
         try
@@ -42,9 +54,13 @@ public class SerialConsoleService : IConsoleService, IAsyncDisposable
                 return;
             }
 
+            // .NET's SerialPort handles COM10+ correctly with the plain "COMx" name.
+            // Do NOT prepend "\\.\\" – that causes "does not resolve to a valid serial port".
+            var portName = settings.SerialPortName.Trim();
+
             _cts = new CancellationTokenSource();
             _port = new SerialPort(
-                settings.SerialPortName,
+                portName,
                 settings.SerialBaudRate,
                 Parity.None,
                 8,
@@ -53,11 +69,15 @@ public class SerialConsoleService : IConsoleService, IAsyncDisposable
                 Encoding = Encoding.UTF8,
                 NewLine = "\n",
                 ReadTimeout = 500,
-                DtrEnable = true,
-                RtsEnable = true
+                DtrEnable = false,   // DTR HIGH würde ESP32-Reset auslösen
+                RtsEnable = false
             };
 
             _port.Open();
+            // Windows toggled DTR during Open() regardless of the initial property value.
+            // Explicitly pull it low again so the ESP32 reset pin is not asserted.
+            _port.DtrEnable = false;
+            _port.RtsEnable = false;
             IsConnected = true;
             AppendLine($"● Verbunden mit {settings.SerialPortName} @ {settings.SerialBaudRate} Baud");
             OnChange?.Invoke();

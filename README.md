@@ -1,4 +1,4 @@
-﻿```
+﻿﻿﻿```
   ███╗   ███╗███████╗███████╗██╗  ██╗ ██████╗ ██████╗ ███╗   ███╗
   ████╗ ████║██╔════╝██╔════╝██║  ██║██╔════╝██╔═══██╗████╗ ████║
   ██╔████╔██║█████╗  ███████╗███████║██║     ██║   ██║██╔████╔██║
@@ -154,7 +154,72 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 - Most settings apply **immediately without restart**
 - Settings that still require a restart: **Listen-IP / Listen-Port** (socket binding) and **Log-Path / Log-Retention** (Serilog)
 - **Collapsible sections** – all 14 setting sections can be individually expanded/collapsed; all start collapsed so the page is compact by default; state is saved in `localStorage` and **restored on every visit**
-- **Encrypted sensitive fields** – `MySqlConnectionString`, `InfluxToken`, `Qrz.Password` and `TelemetryApiKey` are encrypted with the ASP.NET Core Data Protection API before being written to `appsettings.override.json` (prefix `dp:`); existing plain-text values continue to work and are encrypted on the next save
+- **Encrypted sensitive fields** – `MySqlConnectionString`, `InfluxToken`, `QrzTelnetPassword` (global and per-node) are encrypted with the ASP.NET Core Data Protection API before being written to `appsettings.override.json` (prefix `dp:`); existing plain-text values continue to work and are encrypted on the next save
+
+### 🖧 Multi-Node Support
+
+MeshCom WebDesk supports **multiple MeshCom nodes** running simultaneously.
+Each node has its own UDP connection, callsign, and console credentials.
+
+#### Node profiles (Settings → Further Nodes)
+Each node profile contains:
+
+| Field | Description |
+|---|---|
+| **Name** | Display name shown in the node switcher (e.g. `Balkon`, `Auto`) |
+| **Callsign** | Own callsign used for outgoing messages on this node (e.g. `OE1ABC-2`) |
+| **Device IP** | IP address of the MeshCom node |
+| **Device Port** | UDP port on the node (default `1799`) |
+| **Listen IP** | Local bind address (`0.0.0.0` = all interfaces) |
+| **Listen Port** | Local UDP port to receive packets from this node |
+| **Primary** | Mark exactly one node as primary; only the primary node drives the MH list, Live Map, beacons, telemetry and bot |
+| **TLS Certificate Fingerprint** | SHA-256 fingerprint of this node's self-signed TLS certificate (filled automatically on first connect via *Trust & Save*) |
+| **TLS Password** | Console password for this node (encrypted at rest) |
+
+#### Node behaviour
+- **Chat tabs and monitor** are scoped per node – each node has its own independent set of tabs and monitor messages
+- **Incoming messages** are routed to the correct node by source IP address
+- **Outgoing messages** are sent via the node that owns the active chat tab
+- **Auto-replies and bot replies** are sent back through the same node that received the triggering message
+- **MH list, Live Map, beacon, bot, telemetry, OTA, and reboot** only operate on the **primary node**
+- A **node switcher** dropdown appears in the Chat header whenever more than one node is configured; switching changes the visible chat tabs and monitor without disconnecting UDP
+
+#### State persistence
+- All node states (tabs, monitor messages) are saved independently per node
+- The primary node's MH list is saved separately
+- On restart all node states are restored from the persistence snapshot
+
+---
+
+### 🖥️ Console (TLS & Serial)
+
+The **Console** page (`/telnet`) provides direct access to the node's command line.
+Two connection modes are supported, selectable in **Settings → 🖥️ Console**:
+
+#### TLS Console
+- Encrypted TCP connection to the node on port **2323** (fixed firmware port)
+- The node generates a unique **self-signed EC P-256 certificate** on first boot; every node has a different certificate
+- **First-connect mode**: when no certificate fingerprint is stored for a node, the connection is accepted and the fingerprint is shown in a yellow banner at the top of the console
+- click **Trust & Save** to store the fingerprint permanently in the node's profile
+- from the next connect onwards the fingerprint is verified automatically
+- **Per-node certificate and password**: each node in **Settings → Further Nodes** has its own *TLS Certificate Fingerprint* and *TLS Password* field; these are independent of the global console settings
+- **Node switcher** in the Console header (TLS mode only) – select which node to connect to without leaving the page; the switcher is disabled while a connection is active
+- **Password authentication**: if the node requests a password after the TLS handshake, the stored node password is sent automatically
+- **OTA Update** button – sends `--ota-update` to the connected node; a 5-second countdown dialog opens and the OTA web server page opens automatically in a new tab
+- **Reboot** button – sends `--reboot` with a confirmation dialog
+- **Pause / Resume** – freeze the console output (new lines are still buffered); useful when scrolling back in the log
+- **LoRa highlight** toggle – colour-codes LoRa debug lines for easier reading
+- **Clear** – clears the visible output
+
+#### Serial Console (USB)
+- Direct connection to a MeshCom node via USB/serial (CP210x or similar)
+- Select the COM port and baud rate in **Settings → 🖥️ Console → Serial Console**
+- On **Windows**: port names are deduplicated automatically (Windows may enumerate the same port twice); plain `COMx` names are used — do **not** add `\\.\` prefix
+- On **Linux/Docker**: pass the device through (`/dev/ttyUSB0`) and add the container user to the `dialout` group (see Docker section)
+- **DTR/RTS are explicitly held low** after opening the port so the ESP32 reset pin is not asserted and the node does **not** reboot on connect
+- The serial console does not use certificates; the TLS certificate banner is suppressed in serial mode
+
+---
 
 ### 🌐 UI Language
 - Full bilingual interface: **Deutsch 🇩🇪** and **English 🇬🇧**
@@ -1254,6 +1319,19 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
  ## 📋 Changelog
 
 ### v1.9.6 *(dev)*
+- **feat:** 🖧 **Multi-Node support** – configure multiple MeshCom nodes simultaneously; each node has its own UDP connection, callsign, chat tabs, monitor feed, and console credentials; node profiles are managed under **Settings → Further Nodes**
+- **feat:** 🔀 **Node switcher in Chat** – dropdown in the Chat header switches the active node; tabs and monitor are scoped per node; no UDP reconnect required when switching
+- **feat:** 🎯 **Source-IP-based node routing** – incoming UDP packets are assigned to the correct node by the sender's IP address (IPv4-mapped IPv6 normalised); multi-node safe even when all nodes share port 1799
+- **feat:** 📡 **Primary-node-only global features** – MH list, Live Map, beacon, bot, telemetry, and OTA are restricted to the primary node; secondary nodes are chat-only
+- **feat:** 💾 **Per-node state persistence** – all node states (tabs, monitor messages) are saved and restored independently; the primary node's MH list is preserved separately
+- **feat:** 🖥️ **Console node switcher (TLS mode)** – dropdown in the Console header to select which node to connect to via TLS; disabled while a connection is active
+- **feat:** 🔒 **Per-node TLS certificate & password** – each node profile stores its own TLS certificate fingerprint and console password; encrypted at rest; first-connect fingerprint banner works independently per node
+- **feat:** 🔌 **Serial Console (USB)** – connect to a MeshCom node via USB/serial (CP210x); COM port and baud rate configurable in **Settings → 🖥️ Console → Serial Console**; console mode switchable between TLS and Serial without restart
+- **fix:** ⚡ **Serial connect – no ESP32 reboot** – DTR and RTS are explicitly held low after `SerialPort.Open()`; prevents the ESP32 hardware reset that Windows triggers via the DTR pin when opening the port
+- **fix:** 🪪 **TLS cert banner – serial mode** – the *Unknown Certificate* banner is now suppressed when Serial Console mode is active; serial connections do not use TLS certificates
+- **fix:** 🔑 **Multi-node first-connect cert** – `certThumbprintOverride` is passed as `string.Empty` (not `null`) for nodes without a stored fingerprint, preventing the global Node-1 fingerprint from being applied to Node-2 and causing a mismatch rejection
+- **fix:** 💾 **Settings persistence** – `SerialPortName`, `SerialBaudRate`, `ConsoleMode`, `TelnetEnabled`, and per-node `TelnetCertThumbprint` / `TelnetPassword` are now correctly serialised to `appsettings.override.json`
+- **fix:** 🔓 **Per-node TLS password decryption** – `DecryptMeshcomSettingsPostConfigure` now iterates all node profiles and decrypts their `TelnetPassword` fields on startup
 - **feat:** 🖥️ **TLS-Console-Tab** – neuer Tab „TLS Console" (rechts neben Suchen) für verschlüsselten Konsolenzugriff auf den MeshCom-Node (TLS, Standard-Port 2323, Device IP); nur sichtbar wenn in den Einstellungen aktiviert; manuelles Verbinden/Trennen über den Statusleisten-Schalter
 - **feat:** 🔒 **TLS mit Zertifikat-Fingerprint-Vertrauen** – selbst-signierte Zertifikate werden über einen SHA-256-Fingerprint in den Einstellungen akzeptiert; „Trust & Save"-Funktion übernimmt unbekannte Zertifikate direkt beim ersten Verbindungsversuch
 - **feat:** 🔑 **Passwort-Authentifizierung** – Passwort wird verschlüsselt (DPAPI) gespeichert und bei der Anmeldung automatisch übertragen

@@ -20,8 +20,17 @@ public class TelnetService : IConsoleService, IAsyncDisposable
     private StreamWriter? _writer;
     private CancellationTokenSource? _cts;
 
+    // Effective thumbprint used during the current/most recent connect attempt.
+    // Set from ConnectAsync so ValidateDeviceCert (callback, no parameters) can access it.
+    private string _activeCertThumbprint = string.Empty;
+
     public bool    IsConnected           { get; private set; }
     public bool    IsEnabled             => _settingsMonitor.CurrentValue.TelnetEnabled;
+    /// <summary>
+    /// Set when an unknown (first-connect) certificate is received.
+    /// Callers (Settings page, Telnet page) can read this and offer a "Trust &amp; save" button.
+    /// Reset to null at the start of each ConnectAsync call.
+    /// </summary>
     public string? UnknownCertThumbprint { get; set; }
     public string  LastLine              { get; private set; } = string.Empty;
     public List<string> Lines { get; } = new(500);
@@ -34,13 +43,35 @@ public class TelnetService : IConsoleService, IAsyncDisposable
         _logger          = logger;
     }
 
-    public async Task ConnectAsync()
+    /// <summary>Implements <see cref="IConsoleService.ConnectAsync"/> (legacy single-parameter overload).</summary>
+    Task IConsoleService.ConnectAsync(string? hostOverride) =>
+        ConnectAsync(hostOverride: hostOverride);
+
+    /// <param name="hostOverride">IP or hostname to connect to; falls back to <c>settings.DeviceIp</c>.</param>
+    /// <param name="certThumbprintOverride">
+    ///   SHA-256 fingerprint of the expected node certificate (colon-separated hex).
+    ///   Pass <c>null</c> or empty to fall back to <c>settings.TelnetCertThumbprint</c>.
+    ///   Pass an empty string explicitly to force first-connect mode for a specific node.
+    /// </param>
+    /// <param name="passwordOverride">
+    ///   Password to send after TLS handshake.  <c>null</c> = use <c>settings.TelnetPassword</c>.
+    /// </param>
+    public async Task ConnectAsync(
+        string? hostOverride           = null,
+        string? certThumbprintOverride = null,
+        string? passwordOverride       = null)
     {
         if (IsConnected) return;
         var s    = _settingsMonitor.CurrentValue;
-        var host = s.DeviceIp;
+        var host = hostOverride ?? s.DeviceIp;
         var port = s.TelnetPort;
         UnknownCertThumbprint = null;
+
+        // Resolve effective cert thumbprint:
+        // - null  → legacy single-node: fall back to global setting
+        // - ""    → multi-node first-connect: no known thumbprint, accept any cert
+        // - "AA:" → multi-node: verify against this specific fingerprint
+        _activeCertThumbprint = certThumbprintOverride ?? s.TelnetCertThumbprint;
 
         AppendLine($"[Verbinde mit {host}:{port}...]");
         OnChange?.Invoke();
@@ -104,8 +135,10 @@ public class TelnetService : IConsoleService, IAsyncDisposable
 
             if (promptLine.TrimStart().StartsWith("Password", StringComparison.OrdinalIgnoreCase))
             {
+                // Use override password first, fall back to global setting
+                var effectivePassword = passwordOverride ?? s.TelnetPassword;
                 // Send password with explicit CRLF (same as PuTTY)
-                await _writer.WriteAsync(s.TelnetPassword + "\r\n");
+                await _writer.WriteAsync(effectivePassword + "\r\n");
                 await _writer.FlushAsync();
 
                 // Read server response – may be multi-line (welcome banner after success, or "Access denied")
@@ -188,10 +221,15 @@ public class TelnetService : IConsoleService, IAsyncDisposable
         var raw         = cert.GetRawCertData();
         var hash        = SHA256.HashData(raw);
         var fingerprint = string.Join(":", hash.Select(b => b.ToString("X2")));
-        var knownThumbprint = _settingsMonitor.CurrentValue.TelnetCertThumbprint
+
+        // _activeCertThumbprint was set at the start of ConnectAsync from either
+        // the node-specific override or the global settings value.
+        var knownThumbprint = _activeCertThumbprint
             .Replace(":", "").Replace(" ", "").ToUpperInvariant();
+
         if (string.IsNullOrEmpty(knownThumbprint))
         {
+            // First-connect mode: accept the cert and expose fingerprint for the UI
             UnknownCertThumbprint = fingerprint;
             _logger.LogWarning("Telnet: first-connect cert fingerprint {Fp}", fingerprint);
             return true;

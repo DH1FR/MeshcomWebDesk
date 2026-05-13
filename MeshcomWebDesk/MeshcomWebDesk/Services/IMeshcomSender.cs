@@ -7,5 +7,5 @@ namespace MeshcomWebDesk.Services;
 /// </summary>
 public interface IMeshcomSender
 {
-    Task SendMessageAsync(string destination, string text, string? tabKey = null);
+    Task SendMessageAsync(string destination, string text, string? tabKey = null, Guid? sourceNodeId = null);
 }

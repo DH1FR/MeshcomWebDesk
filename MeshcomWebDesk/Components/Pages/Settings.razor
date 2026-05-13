@@ -5,6 +5,7 @@
 @inject IOptionsMonitor<MeshcomSettings> SettingsMonitor
 @inject SettingsService SettingsService
 @inject MeshcomUdpService UdpService
+@inject NodeManager NodeManager
 @inject LanguageService Loc
 @inject DatabaseSetupService DatabaseSetupService
 @inject QrzService QrzService
@@ -73,6 +74,93 @@
                     "¿Cómo configuro mi nodo MeshCom para WebDesk?")
                 <span class="settings-help-banner-arrow">→</span>
             </a>
+            }
+        </div>
+
+        <!-- Multi-Node -->
+        <div class="settings-section @(IsOpen("nodes") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("nodes")'>🖧 @Loc.T("Weitere Nodes", "Additional Nodes", "Nodi aggiuntivi", "Nodos adicionales") <span class="section-chevron">@(IsOpen("nodes") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("nodes")) {
+            <p style="color:#8b949e;font-size:.85em;margin:0 0 .5rem 0">
+                @Loc.T(
+                    "Konfiguriere mehrere MeshCom-Nodes. Der Primär-Node treibt alle globalen Funktionen (Karte, MH, Bot, Telemetrie …). Weitere Nodes sind im Chat auswählbar.",
+                    "Configure multiple MeshCom nodes. The primary node drives all global features (map, MH, bot, telemetry …). Additional nodes are selectable in the chat view.",
+                    "Configura più nodi MeshCom. Il nodo primario gestisce tutte le funzioni globali.",
+                    "Configura varios nodos MeshCom. El nodo primario gestiona todas las funciones globales.")
+            </p>
+            @if (_model.Nodes.Count == 0) {
+                <p style="color:#8b949e;font-size:.85em">
+                    @Loc.T(
+                        "Kein weiterer Node konfiguriert. Die Verbindungseinstellungen oben gelten für den einzigen (Primär-)Node.",
+                        "No additional nodes configured. The connection settings above apply to the single (primary) node.",
+                        "Nessun nodo aggiuntivo configurato.",
+                        "Ningún nodo adicional configurado.")
+                </p>
+            }
+            @foreach (var node in _model.Nodes) {
+                <div class="settings-node-card">
+                    <div class="settings-node-header">
+                        <strong>@node.Name</strong>
+                        @if (node.IsPrimary) {
+                            <span class="settings-node-primary-badge">★ @Loc.T("Primär", "Primary", "Primario", "Primario")</span>
+                        }
+                        <div class="settings-node-actions">
+                            @if (!node.IsPrimary) {
+                                <button class="btn-small" @onclick="() => SetPrimaryNode(node)">@Loc.T("Als Primär", "Set Primary", "Imposta primario", "Establecer primario")</button>
+                            }
+                            <button class="btn-small btn-danger" @onclick="() => RemoveNode(node)">✕</button>
+                        </div>
+                    </div>
+                    <div class="settings-grid" style="margin-top:.5rem">
+                        <label>@Loc.T("Name", "Name", "Nome", "Nombre")</label>
+                        <input type="text" @bind="node.Name" />
+                        <label>@Loc.T("Rufzeichen", "Callsign", "Nominativo", "Indicativo")</label>
+                        <div>
+                            <input type="text" @bind="node.Callsign" placeholder="OE1ABC-2" style="text-transform:uppercase;width:100%" />
+                            @if (string.IsNullOrWhiteSpace(node.Callsign))
+                            {
+                                <small style="color:#f85149">⚠️ @Loc.T("Rufzeichen darf nicht leer sein.", "Callsign must not be empty.", "Il nominativo non può essere vuoto.", "El indicativo no puede estar vacío.")</small>
+                            }
+                            else if (_model.Nodes.Count(n => string.Equals(n.Callsign, node.Callsign, StringComparison.OrdinalIgnoreCase)) > 1)
+                            {
+                                <small style="color:#f85149">⚠️ @Loc.T("Rufzeichen wird von mehreren Nodes verwendet – Echo-Erkennung schlägt fehl!", "Callsign used by multiple nodes – echo detection will fail!", "Nominativo usato da più nodi – il rilevamento eco fallirà!", "Indicativo usado por varios nodos – ¡la detección de eco fallará!")</small>
+                            }
+                        </div>
+                        <label>Device IP</label>
+                        <input type="text" @bind="node.DeviceIp" />
+                        <label>Device Port</label>
+                        <input type="number" min="1" max="65535" @bind="node.DevicePort" />
+                        <label>Listen IP</label>
+                        <input type="text" @bind="node.ListenIp" />
+                        <label>Listen Port</label>
+                        <input type="number" min="1" max="65535" @bind="node.ListenPort" />
+                        @* ── TLS Console ── *@
+                        <label>
+                            @Loc.T("TLS Passwort", "TLS Password", "Password TLS", "Contraseña TLS")<br />
+                            <small>@Loc.T("Leer = kein Passwort (--passwd am Node)", "Empty = no password (--passwd on node)", "Vuoto = nessuna password", "Vacío = sin contraseña")</small>
+                        </label>
+                        <input type="password" @bind="node.TelnetPassword" placeholder="••••••••" autocomplete="new-password" />
+                        <label>
+                            @Loc.T("TLS Zertifikat-Fingerprint", "TLS Certificate Fingerprint", "Impronta certificato TLS", "Huella certificado TLS")<br />
+                            <small>@Loc.T("Leer = beim ersten Verbinden anzeigen", "Empty = show on first connect", "Vuoto = mostra al primo collegamento", "Vacío = mostrar en la primera conexión")</small>
+                        </label>
+                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                            <input type="text" @bind="node.TelnetCertThumbprint"
+                                   placeholder="AA:BB:CC:…"
+                                   style="flex:1;min-width:200px;font-family:monospace;font-size:11px;" />
+                            @if (!string.IsNullOrEmpty(node.TelnetCertThumbprint))
+                            {
+                                <button class="btn-danger" style="padding:2px 8px;font-size:11px;"
+                                        @onclick="() => node.TelnetCertThumbprint = string.Empty"
+                                        title="@Loc.T("Fingerprint löschen (First-Connect-Modus)", "Clear fingerprint (first-connect mode)", "Cancella impronta", "Borrar huella")">
+                                    🗑
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+            <button class="btn-secondary" style="margin-top:.5rem" @onclick="AddNode">+ @Loc.T("Node hinzufügen", "Add Node", "Aggiungi nodo", "Agregar nodo")</button>
             }
         </div>
 
@@ -1746,6 +1834,37 @@
                 string.Join(",", _openSections)).AsTask();
     }
 
+    // ── Multi-node helpers ─────────────────────────────────────────────────
+    private void AddNode()
+    {
+        var isFirst = _model.Nodes.Count == 0;
+        _model.Nodes.Add(new NodeProfile
+        {
+            Name       = $"Node {_model.Nodes.Count + 1}",
+            Callsign   = _model.MyCallsign,
+            DeviceIp   = _model.DeviceIp,
+            DevicePort = _model.DevicePort,
+            ListenIp   = _model.ListenIp,
+            ListenPort = _model.ListenPort + _model.Nodes.Count,
+            IsPrimary  = isFirst
+        });
+    }
+
+    private void RemoveNode(NodeProfile node)
+    {
+        _model.Nodes.Remove(node);
+        // If the removed node was primary, make the first remaining node primary.
+        if (node.IsPrimary && _model.Nodes.Count > 0)
+            _model.Nodes[0].IsPrimary = true;
+    }
+
+    private void SetPrimaryNode(NodeProfile node)
+    {
+        foreach (var n in _model.Nodes) n.IsPrimary = false;
+        node.IsPrimary = true;
+    }
+    // ──────────────────────────────────────────────────────────────────────
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
@@ -2228,7 +2347,19 @@
             DeviceIp            = s.DeviceIp,
             DevicePort          = s.DevicePort,
             MyCallsign          = s.MyCallsign,
-            LogPath             = s.LogPath,
+            Nodes               = s.Nodes.Select(n => new NodeProfile
+            {
+                Id                    = n.Id,
+                Name                  = n.Name,
+                Callsign              = n.Callsign,
+                DeviceIp              = n.DeviceIp,
+                DevicePort            = n.DevicePort,
+                ListenIp              = n.ListenIp,
+                ListenPort            = n.ListenPort,
+                IsPrimary             = n.IsPrimary,
+                TelnetCertThumbprint  = n.TelnetCertThumbprint,
+                TelnetPassword        = n.TelnetPassword
+            }).ToList(),
             LogRetainDays       = s.LogRetainDays,
             LogUdpTraffic       = s.LogUdpTraffic,
             MonitorMaxMessages  = s.MonitorMaxMessages,
@@ -2788,6 +2919,19 @@
                 DeviceIp            = s.DeviceIp,
                 DevicePort          = s.DevicePort,
                 MyCallsign          = s.MyCallsign,
+                Nodes               = (s.Nodes ?? []).Select(n => new NodeProfile
+                {
+                    Id                    = n.Id,
+                    Name                  = n.Name,
+                    Callsign              = n.Callsign,
+                    DeviceIp              = n.DeviceIp,
+                    DevicePort            = n.DevicePort,
+                    ListenIp              = n.ListenIp,
+                    ListenPort            = n.ListenPort,
+                    IsPrimary             = n.IsPrimary,
+                    TelnetCertThumbprint  = n.TelnetCertThumbprint,
+                    TelnetPassword        = n.TelnetPassword
+                }).ToList(),
                 LogPath             = s.LogPath,
                 LogRetainDays       = s.LogRetainDays,
                 LogUdpTraffic       = s.LogUdpTraffic,
@@ -3006,6 +3150,9 @@
         public string SerialPortName          { get; set; } = string.Empty;
         public int    SerialBaudRate          { get; set; } = 115200;
 
+        // Multi-node
+        public List<NodeProfile> Nodes { get; set; } = [];
+
         // Quick Texts
         public List<QuickTextEntry> QuickTexts { get; set; } = [];
 
@@ -3026,6 +3173,7 @@
 
         public MeshcomSettings ToSettings() => new()
         {
+            Nodes               = Nodes,
             ListenIp            = ListenIp,
             ListenPort          = ListenPort,
             DeviceIp            = DeviceIp,

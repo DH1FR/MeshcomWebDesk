@@ -16,6 +16,7 @@
 @inject MeshcomWebDesk.Services.QsoSummaryService QsoSummaryService
 @inject TelnetService TelnetService
 @inject SerialConsoleService SerialConsoleService
+@inject NodeManager NodeManager
 @implements IDisposable
 
 <PageTitle>MeshCom Web Client</PageTitle>
@@ -23,6 +24,32 @@
 <ErrorBoundary>
     <ChildContent>
 <div class="meshcom-container">
+    @* ===== NODE SWITCHER (only when multi-node is enabled) ===== *@
+    @if (NodeManager.MultiNodeEnabled) {
+    <div class="node-switcher-bar">
+        @foreach (var node in NodeManager.Nodes) {
+            var status   = NodeManager.GetNodeStatus(node.Id);
+            var dotClass = status switch {
+                NodeOnlineStatus.Online  => "online",
+                NodeOnlineStatus.Stale   => "stale",
+                NodeOnlineStatus.Offline => "offline",
+                _                        => "unknown"
+            };
+            var lastSeen = NodeManager.GetLastSeen(node.Id);
+            var tooltip  = lastSeen.HasValue
+                ? $"{node.Callsign}  |  {node.DeviceIp}:{node.DevicePort}  |  {Loc.T("Zuletzt", "Last seen", "Visto", "Visto")}: {FormatLastSeen(lastSeen.Value)}"
+                : $"{node.Callsign}  |  {node.DeviceIp}:{node.DevicePort}  |  {Loc.T("Noch kein Paket", "No packet yet", "Nessun pacchetto", "Sin paquete")}";
+            <button class="node-switcher-btn @(NodeManager.SelectedNode?.Id == node.Id ? "active" : "")"
+                    @onclick="() => SelectNode(node.Id)"
+                    title="@tooltip">
+                <span class="node-status-dot @dotClass"></span>
+                @if (node.IsPrimary) { <span>★</span> }
+                @node.Name
+                <small style="opacity:.7;font-size:.75em">@node.Callsign</small>
+            </button>
+        }
+    </div>
+    }
     @* ===== UPPER AREA: Tabs with conversations ===== *@
     <div class="upper-pane">
         <div class="tab-bar">
@@ -808,6 +835,9 @@
     private string _myCallsign = string.Empty;
     private bool _disposed;
     private ConnectionStatus _status = new();
+
+    /// <summary>Id des aktuell ausgewählten Nodes. Null = Legacy/Primary.</summary>
+    private Guid? _activeNodeId => NodeManager.SelectedNode?.Id;
     private MeshcomSettings _settings = new();
     private bool _showMonitor = false;
     private SendBar? _sendBar;
@@ -967,8 +997,9 @@
         ChatService.OnDirectMessage += HandleDirectMessage;
         TelnetService.OnChange += OnTelnetChanged;
         SerialConsoleService.OnChange += OnTelnetChanged;
+        NodeManager.OnSelectedNodeChanged += OnNodeChanged;
         // Restore active tab from service memory so the first render already shows the correct tab
-        _activeTabKey = ChatService.ActiveTabKey;
+        _activeTabKey = ChatService.GetActiveTabKey(_activeNodeId);
         RefreshData();
         _isInitialized = true;
     }
@@ -1012,16 +1043,16 @@
             // read the correct key from ChatService.ActiveTabKey.
             try
             {
-                if (string.IsNullOrEmpty(ChatService.ActiveTabKey))
+                if (string.IsNullOrEmpty(ChatService.GetActiveTabKey(_activeNodeId)))
                 {
                     var savedKey = await JS.InvokeAsync<string>("meshcomChat.getActiveTab");
                     if (!string.IsNullOrEmpty(savedKey) && _tabs.Any(t => t.Key == savedKey))
                     {
                         _activeTabKey          = savedKey;
-                        _activeTab             = ChatService.GetTab(savedKey);
-                        _activeTabMessages     = ChatService.GetTabMessages(savedKey);
-                        ChatService.ActiveTabKey = savedKey;
-                        ChatService.ClearUnread(savedKey);
+                        _activeTab             = ChatService.GetTab(savedKey, _activeNodeId);
+                        _activeTabMessages     = ChatService.GetTabMessages(savedKey, _activeNodeId);
+                        ChatService.SetActiveTabKey(_activeNodeId, savedKey);
+                        ChatService.ClearUnread(savedKey, _activeNodeId);
                         needsRender = true;
                     }
                 }
@@ -1158,17 +1189,16 @@
 
     private void RefreshData()
     {
-        _tabs = ChatService.Tabs.ToList();
+        _tabs = ChatService.GetTabs(_activeNodeId).ToList();
         ApplyTabOrder();
-        _allMessages = ChatService.AllMessages;
+        _allMessages = ChatService.GetAllMessages(_activeNodeId);
         RebuildFilterCache();
 
         // If active tab was closed, select first available
         if (!string.IsNullOrEmpty(_activeTabKey))
         {
-            // Use the instance from the refreshed list so HasQsoSummary is up-to-date
             _activeTab = _tabs.FirstOrDefault(t => t.Key == _activeTabKey)
-                      ?? ChatService.GetTab(_activeTabKey);
+                      ?? ChatService.GetTab(_activeTabKey, _activeNodeId);
         }
 
         if (_activeTab == null && _tabs.Count > 0)
@@ -1179,11 +1209,11 @@
 
         // Create a snapshot of the active tab's messages for thread-safe rendering
         _activeTabMessages = _activeTab != null
-            ? ChatService.GetTabMessages(_activeTabKey)
+            ? ChatService.GetTabMessages(_activeTabKey, _activeNodeId)
             : [];
 
         if (!string.IsNullOrEmpty(_activeTabKey))
-            ChatService.ClearUnread(_activeTabKey);
+            ChatService.ClearUnread(_activeTabKey, _activeNodeId);
         _scrollMessages = true;
 
         // Sound notification: play beep when a new direct chat message to own callsign arrives.
@@ -1276,10 +1306,10 @@
     private void SelectTab(string key)
     {
         _activeTabKey = key;
-        _activeTab = ChatService.GetTab(key);
-        _activeTabMessages = ChatService.GetTabMessages(key);
-        ChatService.ClearUnread(key);
-        ChatService.ActiveTabKey = key;
+        _activeTab = ChatService.GetTab(key, _activeNodeId);
+        _activeTabMessages = ChatService.GetTabMessages(key, _activeNodeId);
+        ChatService.ClearUnread(key, _activeNodeId);
+        ChatService.SetActiveTabKey(_activeNodeId, key);
         _scrollMessages = true;
         _ = JS.InvokeVoidAsync("meshcomChat.setActiveTab", key).AsTask();
 
@@ -1304,14 +1334,14 @@
 
     private void CloseTab(string key)
     {
-        ChatService.CloseTab(key);
+        ChatService.CloseTab(key, _activeNodeId);
         if (_tabOrder.Remove(key))
             _ = JS.InvokeVoidAsync("meshcomChat.setTabOrder", _tabOrder).AsTask();
         if (_activeTabKey == key)
         {
             _activeTabKey = string.Empty;
             _activeTab = null;
-            ChatService.ActiveTabKey = string.Empty;
+            ChatService.SetActiveTabKey(_activeNodeId, string.Empty);
             _ = JS.InvokeVoidAsync("meshcomChat.setActiveTab", (object?)null).AsTask();
         }
         RefreshData();
@@ -1366,7 +1396,7 @@
             return;
 
         var key = _newTabCallsign.Trim().ToUpperInvariant();
-        ChatService.OpenTab(key);
+        ChatService.OpenTab(key, _activeNodeId);
         _showNewTabInput = false;
         _newTabCallsign = string.Empty;
         SelectTab(key);
@@ -1376,7 +1406,7 @@
     private void OpenTabFromMonitor(string callsign)
     {
         var key = callsign.Trim().ToUpperInvariant();
-        ChatService.OpenTab(key);
+        ChatService.OpenTab(key, _activeNodeId);
         SelectTab(key);
         RefreshData();
     }
@@ -1467,6 +1497,25 @@
         ChatService.OnDirectMessage -= HandleDirectMessage;
         TelnetService.OnChange -= OnTelnetChanged;
         SerialConsoleService.OnChange -= OnTelnetChanged;
+        NodeManager.OnSelectedNodeChanged -= OnNodeChanged;
+    }
+
+    private void SelectNode(Guid nodeId) => NodeManager.SelectNode(nodeId);
+
+    private string FormatLastSeen(DateTime utc)
+    {
+        var age = DateTime.UtcNow - utc;
+        if (age.TotalSeconds < 60)  return Loc.T($"vor {(int)age.TotalSeconds}s", $"{(int)age.TotalSeconds}s ago", $"{(int)age.TotalSeconds}s fa", $"hace {(int)age.TotalSeconds}s");
+        if (age.TotalMinutes < 60)  return Loc.T($"vor {(int)age.TotalMinutes}min", $"{(int)age.TotalMinutes}min ago", $"{(int)age.TotalMinutes}min fa", $"hace {(int)age.TotalMinutes}min");
+        return Loc.T($"vor {(int)age.TotalHours}h", $"{(int)age.TotalHours}h ago", $"{(int)age.TotalHours}h fa", $"hace {(int)age.TotalHours}h");
+    }
+
+    private void OnNodeChanged()
+    {
+        // Beim Wechsel des aktiven Nodes den aktiven Tab-Key aus dem neuen Node laden
+        _activeTabKey = ChatService.GetActiveTabKey(_activeNodeId);
+        RefreshData();
+        InvokeAsync(StateHasChanged);
     }
 
     // ── QSO Summary ───────────────────────────────────────────────────────

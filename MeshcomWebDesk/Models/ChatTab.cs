@@ -3,6 +3,11 @@ namespace MeshcomWebDesk.Models;
 public class ChatTab
 {
     /// <summary>
+    /// Id des NodeProfile, zu dem dieser Tab gehört. Null = Legacy-Modus (kein Multi-Node).
+    /// </summary>
+    public Guid? NodeId { get; set; }
+
+    /// <summary>
     /// Unique key for this tab. Callsign, group name, or special values like "*" (broadcast).
     /// </summary>
     public string Key { get; set; } = string.Empty;

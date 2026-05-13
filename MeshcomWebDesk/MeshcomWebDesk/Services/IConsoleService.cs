@@ -9,7 +9,7 @@ public interface IConsoleService
     List<string> Lines { get; }
     event Action OnChange;
 
-    Task ConnectAsync();
+    Task ConnectAsync(string? hostOverride = null);
     Task DisconnectAsync();
     Task SendLineAsync(string line);
 }

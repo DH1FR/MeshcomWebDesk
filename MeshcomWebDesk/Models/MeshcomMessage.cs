@@ -4,6 +4,12 @@ public class MeshcomMessage
 {
     public DateTime Timestamp { get; set; } = DateTime.Now;
 
+    /// <summary>
+    /// Id des NodeProfile, von dem diese Nachricht empfangen wurde (bzw. über den sie gesendet wurde).
+    /// Null = Legacy-Single-Node-Modus.
+    /// </summary>
+    public Guid? NodeId { get; set; }
+
     /// <summary>Sender callsign (first hop only).</summary>
     public string From { get; set; } = string.Empty;
 
