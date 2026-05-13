@@ -3,7 +3,8 @@
 ## [1.10.0] – in development (dev)
 
 ### Features
-- **Multi-language UI (French, Italian, Spanish)**: The UI language can now be set to French (`fr`), Italian (`it`) or Spanish (`es`) in addition to German and English. All UI strings are fully translated via dictionary-based `LanguageService.T(de, en)` lookups; translation files live in `Services/Translations/`.
+- **Multi-Node Support**: Multiple MeshCom nodes can be configured and used simultaneously. Each node has its own IP, port, callsign and TLS certificate. A node switcher bar in the chat page allows switching the active node at any time. Chat tabs, monitor, outgoing messages, auto-reply and bot replies are all node-aware. Node online status is shown in the switcher buttons.
+- **Multi-language UI (French, Italian, Spanish)**:
 - **TLS Console / Serial Console**: The console page now supports either a TLS connection (previous behaviour) or direct USB serial access (115200 baud). Switch mode in **Settings → 🖥️ Console → Serial Console**. TLS Console requires **MeshCom firmware v4.35p.05.13 or later**.
 - **OTA update via console**: The command `--ota-update` starts OTA mode with a 5-second countdown dialog; the connection is automatically closed after the OTA page opens.
 - **Reboot via console**: The command `--reboot` shows a confirmation dialog; after sending, the connection is closed after a short delay.
