@@ -206,7 +206,6 @@ Each node profile contains:
 > ⚠️ **Firmware requirement:** The TLS Console feature requires **MeshCom firmware v4.35p.05.13 or later**. Serial Console (USB) works with all firmware versions.
 
 The **Console** page (`/telnet`) provides direct command-line access to the MeshCom node.
-The TLS Console **replaces the classic Telnet connection** – all node communication that was previously only accessible via serial USB is now also available **over the network, encrypted via TLS**.
 Two connection modes are supported, selectable in **Settings → 🖥️ Console**:
 
 #### TLS Console
