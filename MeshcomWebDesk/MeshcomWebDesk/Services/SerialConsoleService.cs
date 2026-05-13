@@ -54,17 +54,9 @@ public class SerialConsoleService : IConsoleService, IAsyncDisposable
                 return;
             }
 
-            var portName = settings.SerialPortName;
-
-            // On Windows, COM ports with numbers >= 10 must be opened as "\\.\COMx".
-            // The System.IO.Ports.SerialPort constructor accepts this extended form.
-            if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(
-                    System.Runtime.InteropServices.OSPlatform.Windows)
-                && System.Text.RegularExpressions.Regex.IsMatch(portName, @"^COM\d{2,}$",
-                    System.Text.RegularExpressions.RegexOptions.IgnoreCase))
-            {
-                portName = $"\\\\.\\{portName}";
-            }
+            // .NET's SerialPort handles COM10+ correctly with the plain "COMx" name.
+            // Do NOT prepend "\\.\\" – that causes "does not resolve to a valid serial port".
+            var portName = settings.SerialPortName.Trim();
 
             _cts = new CancellationTokenSource();
             _port = new SerialPort(
