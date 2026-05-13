@@ -122,8 +122,8 @@
         </div>
     }
 
-    @* ── Unbekanntes Zertifikat – First-Connect-Banner ── *@
-    @if (!string.IsNullOrEmpty(_unknownCertThumbprint))
+    @* ── Unbekanntes Zertifikat – First-Connect-Banner (nur TLS-Modus) ── *@
+    @if (!_isSerial && !string.IsNullOrEmpty(_unknownCertThumbprint))
     {
         <div class="settings-warn" style="margin:.4rem .6rem">
             <strong>@Loc.T("Unbekanntes Zertifikat", "Unknown Certificate", "Certificato sconosciuto", "Certificado desconocido")</strong><br />
@@ -237,8 +237,8 @@
             _consoleNodeId = NodeManager.PrimaryNode?.Id ?? NodeManager.Nodes[0].Id;
         TelnetService.OnChange += HandleChange;
         SerialConsoleService.OnChange += HandleChange;
-        // Pick up any fingerprint left from a previous connect attempt
-        if (!string.IsNullOrEmpty(TelnetService.UnknownCertThumbprint))
+        // Pick up any fingerprint left from a previous connect attempt (nur im TLS-Modus relevant)
+        if (!_isSerial && !string.IsNullOrEmpty(TelnetService.UnknownCertThumbprint))
             _unknownCertThumbprint = TelnetService.UnknownCertThumbprint;
     }
 
@@ -291,24 +291,31 @@
         _unknownCertThumbprint = null;
         TelnetService.UnknownCertThumbprint = null;
 
-        var node = ActiveNodeProfile;
-        if (node is not null)
+        if (_isSerial)
         {
-            // Multi-node: pass node-specific host, cert thumbprint and password
-            await TelnetService.ConnectAsync(
-                hostOverride:           node.DeviceIp,
-                certThumbprintOverride: node.TelnetCertThumbprint,
-                passwordOverride:       string.IsNullOrEmpty(node.TelnetPassword) ? null : node.TelnetPassword);
+            await SerialConsoleService.ConnectAsync();
         }
         else
         {
-            // Legacy single-node: use global settings
-            await TelnetService.ConnectAsync();
-        }
+            var node = ActiveNodeProfile;
+            if (node is not null)
+            {
+                // Multi-node: pass node-specific host, cert thumbprint and password
+                await TelnetService.ConnectAsync(
+                    hostOverride:           node.DeviceIp,
+                    certThumbprintOverride: node.TelnetCertThumbprint,
+                    passwordOverride:       string.IsNullOrEmpty(node.TelnetPassword) ? null : node.TelnetPassword);
+            }
+            else
+            {
+                // Legacy single-node: use global settings
+                await TelnetService.ConnectAsync();
+            }
 
-        // Show first-connect cert fingerprint if received
-        if (!string.IsNullOrEmpty(TelnetService.UnknownCertThumbprint))
-            _unknownCertThumbprint = TelnetService.UnknownCertThumbprint;
+            // Show first-connect cert fingerprint if received (nur TLS-Modus)
+            if (!string.IsNullOrEmpty(TelnetService.UnknownCertThumbprint))
+                _unknownCertThumbprint = TelnetService.UnknownCertThumbprint;
+        }
 
         await InvokeAsync(StateHasChanged);
     }

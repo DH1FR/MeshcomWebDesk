@@ -29,6 +29,10 @@ public sealed class DecryptMeshcomSettingsPostConfigure : IPostConfigureOptions<
         options.Ai.ApiKey                      = TryDecrypt(options.Ai.ApiKey);
         options.TelnetPassword                 = TryDecrypt(options.TelnetPassword);
 
+        // Decrypt per-node TLS passwords
+        foreach (var node in options.Nodes)
+            node.TelnetPassword = TryDecrypt(node.TelnetPassword);
+
         // Migration: MhMaxAgeDays (days) → MhMaxAgeHours (hours).
         // When the old key is present and the new one is still at its default (0), convert.
         if (options.MhMaxAgeDays > 0 && options.MhMaxAgeHours == 0)

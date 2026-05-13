@@ -69,11 +69,15 @@ public class SerialConsoleService : IConsoleService, IAsyncDisposable
                 Encoding = Encoding.UTF8,
                 NewLine = "\n",
                 ReadTimeout = 500,
-                DtrEnable = true,
-                RtsEnable = true
+                DtrEnable = false,   // DTR HIGH würde ESP32-Reset auslösen
+                RtsEnable = false
             };
 
             _port.Open();
+            // Windows toggled DTR during Open() regardless of the initial property value.
+            // Explicitly pull it low again so the ESP32 reset pin is not asserted.
+            _port.DtrEnable = false;
+            _port.RtsEnable = false;
             IsConnected = true;
             AppendLine($"● Verbunden mit {settings.SerialPortName} @ {settings.SerialBaudRate} Baud");
             OnChange?.Invoke();
