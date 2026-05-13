@@ -161,6 +161,50 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 - Language is selected in **Settings → Language** and persisted in `appsettings.override.json`
 - Switching applies **instantly** across all pages without any page reload or restart
 
+### 🖥️ Console (TLS & Serial)
+
+The **Console** page (`/telnet`) provides direct command-line access to the MeshCom node.
+Two connection modes are supported, selectable in **Settings → 🖥️ Console**:
+
+#### TLS Console
+
+The TLS Console transmits the same input/output that is available on the node's serial interface – but **over the network**, encrypted via TLS.
+This is particularly useful when the node is **not physically accessible** via USB (e.g. mounted outdoors or inside an enclosure).
+
+**Node setup (one-time, via the node's serial console or web interface):**
+
+1. **Enable TLS Console** on the node:
+   - Via serial command: `--tlsconsole on`
+   - Or via the node's web interface: **Settings → IP Network Settings → TLS Console**
+2. **Set a password** on the node (strongly recommended):
+   - Via serial command: `--passwd <your-password>`
+
+**WebDesk setup (Settings → 🖥️ Console):**
+- Enable **TLS Console**
+- Enter the **Device IP** (same IP as configured for UDP)
+- Enter the **password** set on the node – it is stored encrypted (DPAPI) in `appsettings.override.json`
+- On first connect, the node's self-signed TLS certificate is shown – click **Trust & Save** to accept and store the fingerprint
+
+> ⚠️ **Firmware requirement:** TLS Console requires **MeshCom firmware v4.35p.05.13 or later**.
+
+**Features:**
+- **Pause** – freeze the visible output; new lines continue to buffer
+- **Clear** – clear the visible output
+- **OTA Update** – sends `--ota-update`; a 5-second countdown dialog appears; the OTA page opens automatically in a new browser tab
+- **Reboot** – sends `--reboot` with a confirmation dialog
+- **Firmware link** – direct link to the [MeshCom Firmware releases](https://github.com/icssw-org/MeshCom-Firmware) in the console header
+
+#### Serial Console (USB)
+
+- Direct connection to a MeshCom node via USB/serial (CP210x or similar)
+- Select the COM port and baud rate in **Settings → 🖥️ Console → Serial Console**
+- On **Windows**: plain `COMx` names are used – do **not** add `\\.\` prefix
+- On **Linux/Docker**: pass the device through (`/dev/ttyUSB0`) and add the container user to the `dialout` group (see Docker section)
+- **DTR/RTS are explicitly held low** after opening the port so the ESP32 reset pin is not asserted and the node does **not** reboot on connect
+- The serial console does not use certificates; the TLS certificate banner is suppressed in serial mode
+
+---
+
 ### 📡 Beacon (Bake)
 - **Periodic beacon** – sends a configurable text to a configurable group at a fixed interval
 - Interval is configurable in whole hours (minimum **8 h**); existing values below 8 h are automatically corrected on load; first transmission after **one full interval** (no send on every restart)
