@@ -92,8 +92,48 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 - **📋 Copy message to clipboard** – hovering over a message in a direct chat tab reveals a 📋 button; clicking it copies the message text to the clipboard (JS Clipboard API)
 - **{last-qso} variable** – expands to the date and time of the **previous** direct QSO with the current callsign (the contact that triggered the expansion is excluded); `kein QSO` / `no QSO` if no prior QSO exists; database-first with in-memory fallback; available in Auto-Reply, Bot commands, Beacon and Quick Texts
 
+---
+
+### 🖧 Multi-Node Support
+
+MeshCom WebDesk can connect to **multiple MeshCom nodes simultaneously**.
+Each node has its own UDP connection, callsign, chat tabs, monitor feed and console credentials.
+
+#### Node profiles (Settings → Further Nodes)
+
+Each node profile contains:
+
+| Field | Description |
+|---|---|
+| **Name** | Display name shown in the node switcher (e.g. `Balkon`, `Auto`) |
+| **Callsign** | Own callsign used for outgoing messages on this node (e.g. `OE1ABC-2`) |
+| **Device IP** | IP address of the MeshCom node |
+| **Device Port** | UDP port on the node (default `1799`) |
+| **Listen IP** | Local bind address (`0.0.0.0` = all interfaces) |
+| **Listen Port** | Local UDP port to receive packets from this node (default `1799`) |
+| **Primary** | Exactly one node must be marked primary – only the primary node drives MH list, Live Map, beacons, telemetry, bot and OTA/reboot |
+| **TLS Certificate Fingerprint** | SHA-256 fingerprint of this node's self-signed TLS certificate; filled automatically via *Trust & Save* on first connect |
+| **TLS Password** | Console password for this node (encrypted at rest with DPAPI) |
+
+> 💡 When multiple nodes share the same UDP port (`1799`), incoming packets are routed to the correct node by the **sender's IP address** – no port forwarding required.
+
+#### Node behaviour
+
+- **Chat tabs and monitor** are scoped per node – each node has its own independent set of tabs and monitor messages
+- **Incoming messages** are routed to the correct node by source IP address
+- **Outgoing messages** are sent via the node that owns the active chat tab
+- **Auto-replies and bot replies** are sent back through the same node that received the triggering message
+- **MH list, Live Map, beacon, bot, telemetry, OTA and reboot** only operate on the **primary node**
+- A **node switcher** dropdown appears in the Chat header whenever more than one node is configured; switching changes the visible chat tabs and monitor without reconnecting UDP
+
+#### State persistence
+
+- All node states (tabs, monitor messages) are saved and restored independently per node on restart
+- The primary node's MH list is saved separately
+
+---
+
 ### 📻 MH – Most Recently Heard
-- Live table of all heard stations with last message, timestamp and message count
 - **GPS position** parsed from EXTUDP position packets (`lat_dir` / `long_dir` APRS format)
 - **QTH Locator** – Maidenhead locator (e.g. `JN48qn`) calculated from GPS coordinates; shown below the GPS position in the MH table and in the station card popup; also available as `{locator}` placeholder in Auto-Reply, Bot commands and Quick Texts
 - **Station card popup** – hovering (desktop) or tapping (mobile) a callsign shows a rich card with QRZ name/QTH, RSSI/SNR, battery, distance, QTH locator, GPS coordinates (as OSM link) and firmware; buttons: **💬 Open Chat** and **🔗 aprs.fi**
