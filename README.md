@@ -1,16 +1,16 @@
-´╗┐```
-  ÔûêÔûêÔûêÔòù   ÔûêÔûêÔûêÔòùÔûêÔûêÔûêÔûêÔûêÔûêÔûêÔòùÔûêÔûêÔûêÔûêÔûêÔûêÔûêÔòùÔûêÔûêÔòù  ÔûêÔûêÔòù ÔûêÔûêÔûêÔûêÔûêÔûêÔòù ÔûêÔûêÔûêÔûêÔûêÔûêÔòù ÔûêÔûêÔûêÔòù   ÔûêÔûêÔûêÔòù
-  ÔûêÔûêÔûêÔûêÔòù ÔûêÔûêÔûêÔûêÔòæÔûêÔûêÔòöÔòÉÔòÉÔòÉÔòÉÔòØÔûêÔûêÔòöÔòÉÔòÉÔòÉÔòÉÔòØÔûêÔûêÔòæ  ÔûêÔûêÔòæÔûêÔûêÔòöÔòÉÔòÉÔòÉÔòÉÔòØÔûêÔûêÔòöÔòÉÔòÉÔòÉÔûêÔûêÔòùÔûêÔûêÔûêÔûêÔòù ÔûêÔûêÔûêÔûêÔòæ
-  ÔûêÔûêÔòöÔûêÔûêÔûêÔûêÔòöÔûêÔûêÔòæÔûêÔûêÔûêÔûêÔûêÔòù  ÔûêÔûêÔûêÔûêÔûêÔûêÔûêÔòùÔûêÔûêÔûêÔûêÔûêÔûêÔûêÔòæÔûêÔûêÔòæ     ÔûêÔûêÔòæ   ÔûêÔûêÔòæÔûêÔûêÔòöÔûêÔûêÔûêÔûêÔòöÔûêÔûêÔòæ
-  ÔûêÔûêÔòæÔòÜÔûêÔûêÔòöÔòØÔûêÔûêÔòæÔûêÔûêÔòöÔòÉÔòÉÔòØ  ÔòÜÔòÉÔòÉÔòÉÔòÉÔûêÔûêÔòæÔûêÔûêÔòöÔòÉÔòÉÔûêÔûêÔòæÔûêÔûêÔòæ     ÔûêÔûêÔòæ   ÔûêÔûêÔòæÔûêÔûêÔòæÔòÜÔûêÔûêÔòöÔòØÔûêÔûêÔòæ
-  ÔûêÔûêÔòæ ÔòÜÔòÉÔòØ ÔûêÔûêÔòæÔûêÔûêÔûêÔûêÔûêÔûêÔûêÔòùÔûêÔûêÔûêÔûêÔûêÔûêÔûêÔòæÔûêÔûêÔòæ  ÔûêÔûêÔòæÔòÜÔûêÔûêÔûêÔûêÔûêÔûêÔòùÔòÜÔûêÔûêÔûêÔûêÔûêÔûêÔòöÔòØÔûêÔûêÔòæ ÔòÜÔòÉÔòØ ÔûêÔûêÔòæ
-  ÔòÜÔòÉÔòØ     ÔòÜÔòÉÔòØÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØÔòÜÔòÉÔòØ  ÔòÜÔòÉÔòØ ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ ÔòÜÔòÉÔòØ     ÔòÜÔòÉÔòØ
-    ÔûêÔûêÔòù    ÔûêÔûêÔòùÔûêÔûêÔûêÔûêÔûêÔûêÔûêÔòùÔûêÔûêÔûêÔûêÔûêÔûêÔòù ÔûêÔûêÔûêÔûêÔûêÔûêÔòù ÔûêÔûêÔûêÔûêÔûêÔûêÔûêÔòùÔûêÔûêÔûêÔûêÔûêÔûêÔûêÔòùÔûêÔûêÔòù  ÔûêÔûêÔòù
-    ÔûêÔûêÔòæ    ÔûêÔûêÔòæÔûêÔûêÔòöÔòÉÔòÉÔòÉÔòÉÔòØÔûêÔûêÔòöÔòÉÔòÉÔûêÔûêÔòùÔûêÔûêÔòöÔòÉÔòÉÔûêÔûêÔòùÔûêÔûêÔòöÔòÉÔòÉÔòÉÔòÉÔòØÔûêÔûêÔòöÔòÉÔòÉÔòÉÔòÉÔòØÔûêÔûêÔòæ ÔûêÔûêÔòöÔòØ
-    ÔûêÔûêÔòæ ÔûêÔòù ÔûêÔûêÔòæÔûêÔûêÔûêÔûêÔûêÔòù  ÔûêÔûêÔûêÔûêÔûêÔûêÔòöÔòØÔûêÔûêÔòæ  ÔûêÔûêÔòæÔûêÔûêÔûêÔûêÔûêÔòù  ÔûêÔûêÔûêÔûêÔûêÔûêÔûêÔòùÔûêÔûêÔûêÔûêÔûêÔòöÔòØ
-    ÔûêÔûêÔòæÔûêÔûêÔûêÔòùÔûêÔûêÔòæÔûêÔûêÔòöÔòÉÔòÉÔòØ  ÔûêÔûêÔòöÔòÉÔòÉÔûêÔûêÔòùÔûêÔûêÔòæ  ÔûêÔûêÔòæÔûêÔûêÔòöÔòÉÔòÉÔòØ  ÔòÜÔòÉÔòÉÔòÉÔòÉÔûêÔûêÔòæÔûêÔûêÔòöÔòÉÔûêÔûêÔòù
-    ÔòÜÔûêÔûêÔûêÔòöÔûêÔûêÔûêÔòöÔòØÔûêÔûêÔûêÔûêÔûêÔûêÔûêÔòùÔûêÔûêÔûêÔûêÔûêÔûêÔòöÔòØÔûêÔûêÔûêÔûêÔûêÔûêÔòöÔòØÔûêÔûêÔûêÔûêÔûêÔûêÔûêÔòùÔûêÔûêÔûêÔûêÔûêÔûêÔûêÔòæÔûêÔûêÔòæ  ÔûêÔûêÔòù
-     ÔòÜÔòÉÔòÉÔòØÔòÜÔòÉÔòÉÔòØ ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØÔòÜÔòÉÔòØ  ÔòÜÔòÉÔòØ
+﻿```
+  ███╗   ███╗███████╗███████╗██╗  ██╗ ██████╗ ██████╗ ███╗   ███╗
+  ████╗ ████║██╔════╝██╔════╝██║  ██║██╔════╝██╔═══██╗████╗ ████║
+  ██╔████╔██║█████╗  ███████╗███████║██║     ██║   ██║██╔████╔██║
+  ██║╚██╔╝██║██╔══╝  ╚════██║██╔══██║██║     ██║   ██║██║╚██╔╝██║
+  ██║ ╚═╝ ██║███████╗███████║██║  ██║╚██████╗╚██████╔╝██║ ╚═╝ ██║
+  ╚═╝     ╚═╝╚══════╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚═╝     ╚═╝
+    ██╗    ██╗███████╗██████╗ ██████╗ ███████╗███████╗██╗  ██╗
+    ██║    ██║██╔════╝██╔══██╗██╔══██╗██╔════╝██╔════╝██║ ██╔╝
+    ██║ █╗ ██║█████╗  ██████╔╝██║  ██║█████╗  ███████╗█████╔╝
+    ██║███╗██║██╔══╝  ██╔══██╗██║  ██║██╔══╝  ╚════██║██╔═██╗
+    ╚███╔███╔╝███████╗██████╔╝██████╔╝███████╗███████║██║  ██╗
+     ╚══╝╚══╝ ╚══════╝╚═════╝ ╚═════╝ ╚══════╝╚══════╝╚═╝  ╚═╝
 ```
 
 # MeshCom WebDesk
@@ -154,72 +154,7 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 - Most settings apply **immediately without restart**
 - Settings that still require a restart: **Listen-IP / Listen-Port** (socket binding) and **Log-Path / Log-Retention** (Serilog)
 - **Collapsible sections** – all 14 setting sections can be individually expanded/collapsed; all start collapsed so the page is compact by default; state is saved in `localStorage` and **restored on every visit**
-- **Encrypted sensitive fields** – `MySqlConnectionString`, `InfluxToken`, `QrzTelnetPassword` (global and per-node) are encrypted with the ASP.NET Core Data Protection API before being written to `appsettings.override.json` (prefix `dp:`); existing plain-text values continue to work and are encrypted on the next save
-
-### 🖧 Multi-Node Support
-
-MeshCom WebDesk supports **multiple MeshCom nodes** running simultaneously.
-Each node has its own UDP connection, callsign, and console credentials.
-
-#### Node profiles (Settings → Further Nodes)
-Each node profile contains:
-
-| Field | Description |
-|---|---|
-| **Name** | Display name shown in the node switcher (e.g. `Balkon`, `Auto`) |
-| **Callsign** | Own callsign used for outgoing messages on this node (e.g. `OE1ABC-2`) |
-| **Device IP** | IP address of the MeshCom node |
-| **Device Port** | UDP port on the node (default `1799`) |
-| **Listen IP** | Local bind address (`0.0.0.0` = all interfaces) |
-| **Listen Port** | Local UDP port to receive packets from this node |
-| **Primary** | Mark exactly one node as primary; only the primary node drives the MH list, Live Map, beacons, telemetry and bot |
-| **TLS Certificate Fingerprint** | SHA-256 fingerprint of this node's self-signed TLS certificate (filled automatically on first connect via *Trust & Save*) |
-| **TLS Password** | Console password for this node (encrypted at rest) |
-
-#### Node behaviour
-- **Chat tabs and monitor** are scoped per node – each node has its own independent set of tabs and monitor messages
-- **Incoming messages** are routed to the correct node by source IP address
-- **Outgoing messages** are sent via the node that owns the active chat tab
-- **Auto-replies and bot replies** are sent back through the same node that received the triggering message
-- **MH list, Live Map, beacon, bot, telemetry, OTA, and reboot** only operate on the **primary node**
-- A **node switcher** dropdown appears in the Chat header whenever more than one node is configured; switching changes the visible chat tabs and monitor without disconnecting UDP
-
-#### State persistence
-- All node states (tabs, monitor messages) are saved independently per node
-- The primary node's MH list is saved separately
-- On restart all node states are restored from the persistence snapshot
-
----
-
-### 🖥️ Console (TLS & Serial)
-
-The **Console** page (`/telnet`) provides direct access to the node's command line.
-Two connection modes are supported, selectable in **Settings → 🖥️ Console**:
-
-#### TLS Console
-- Encrypted TCP connection to the node on port **2323** (fixed firmware port)
-- The node generates a unique **self-signed EC P-256 certificate** on first boot; every node has a different certificate
-- **First-connect mode**: when no certificate fingerprint is stored for a node, the connection is accepted and the fingerprint is shown in a yellow banner at the top of the console
-- click **Trust & Save** to store the fingerprint permanently in the node's profile
-- from the next connect onwards the fingerprint is verified automatically
-- **Per-node certificate and password**: each node in **Settings → Further Nodes** has its own *TLS Certificate Fingerprint* and *TLS Password* field; these are independent of the global console settings
-- **Node switcher** in the Console header (TLS mode only) – select which node to connect to without leaving the page; the switcher is disabled while a connection is active
-- **Password authentication**: if the node requests a password after the TLS handshake, the stored node password is sent automatically
-- **OTA Update** button – sends `--ota-update` to the connected node; a 5-second countdown dialog opens and the OTA web server page opens automatically in a new tab
-- **Reboot** button – sends `--reboot` with a confirmation dialog
-- **Pause / Resume** – freeze the console output (new lines are still buffered); useful when scrolling back in the log
-- **LoRa highlight** toggle – colour-codes LoRa debug lines for easier reading
-- **Clear** – clears the visible output
-
-#### Serial Console (USB)
-- Direct connection to a MeshCom node via USB/serial (CP210x or similar)
-- Select the COM port and baud rate in **Settings → 🖥️ Console → Serial Console**
-- On **Windows**: port names are deduplicated automatically (Windows may enumerate the same port twice); plain `COMx` names are used — do **not** add `\\.\` prefix
-- On **Linux/Docker**: pass the device through (`/dev/ttyUSB0`) and add the container user to the `dialout` group (see Docker section)
-- **DTR/RTS are explicitly held low** after opening the port so the ESP32 reset pin is not asserted and the node does **not** reboot on connect
-- The serial console does not use certificates; the TLS certificate banner is suppressed in serial mode
-
----
+- **Encrypted sensitive fields** – `MySqlConnectionString`, `InfluxToken`, `Qrz.Password` and `TelemetryApiKey` are encrypted with the ASP.NET Core Data Protection API before being written to `appsettings.override.json` (prefix `dp:`); existing plain-text values continue to work and are encrypted on the next save
 
 ### 🌐 UI Language
 - Full multilingual interface: **Deutsch 🇩🇪**, **English 🇬🇧**, **Français 🇫🇷**, **Italiano 🇮🇹**, **Español 🇪🇸**
@@ -574,7 +509,7 @@ MeshcomWebDesk/              ← Blazor Server (ASP.NET Core host)
       ChatService.cs           ← Singleton: routing, tabs, MH list, monitor, deduplication, webhook trigger, OnBotCommand event
       DataPersistenceService.cs← BackgroundService: load/save state to JSON on disk
       SettingsService.cs       ← Writes appsettings.override.json in DataPath (Docker-safe); changes applied live via IOptionsMonitor
-      LanguageService.cs       ← Singleton: UI language switching (de/en/fr/it/es); T(de,en) helper; OnChange event for instant re-render
+      LanguageService.cs       ← Singleton: UI language switching (de/en); T(de,en) helper; OnChange event for instant re-render
       WebhookService.cs        ← HTTP POST fire-and-forget on message / position / telemetry events
       QrzService.cs             ← QRZ.com XML API: session login, callsign lookup, in-memory cache
       QsoSummaryService.cs      ← AI-based QSO summary: reads messages from MySQL, calls AI API, stores result in qso_summaries table; token usage tracking; balance check
@@ -1029,45 +964,6 @@ The container runs in the background and restarts automatically (`restart: unles
 Web interface: **http://\<Linux-IP\>:5162**
 
 > **Note:** `network_mode: host` is required so the container can receive UDP packets from the MeshCom device.
-### 🔌 Serial Console (USB) in Docker
-
-If you want to use the **Serial Console** feature (connecting to the MeshCom node via USB/serial instead of TLS),
-the host serial device must be explicitly passed through to the container.
-
-**Linux host – `docker-compose.yml`:**
-
-```yaml
-services:
-  meshcomwebdesk:
-    # ... other settings ...
-    devices:
-      - "/dev/ttyUSB0:/dev/ttyUSB0"   # ESP32 via USB – adjust port name as needed
-      # - "/dev/ttyACM0:/dev/ttyACM0" # alternative: CDC ACM devices
-```
-
-The correct device name can be found with:
-
-```bash
-ls /dev/tty*        # list all serial devices
-dmesg | grep tty    # check kernel log after plugging in the USB cable
-```
-
-Additionally the container user must have access to the serial port. Add the `dialout` group:
-
-```yaml
-services:
-  meshcomwebdesk:
-    # ... other settings ...
-    group_add:
-      - dialout
-```
-
-> **Windows host + Docker Desktop:** USB serial passthrough is not supported out-of-the-box.
-> It requires [usbipd-win](https://github.com/dorssel/usbipd-win) to forward USB devices into WSL2.
-> In this scenario it is recommended to run MeshCom WebDesk **natively on Windows** and use the Serial Console directly.
-
-> **Tip:** Serial Console mode is configured in the app under **Settings → 🖥️ Console → Serial Console**.
-> Enter the device name (e.g. `/dev/ttyUSB0`) in the COM-Port field and set the baud rate to `115200`.
 
 ### Changing the configuration
 
@@ -1329,7 +1225,7 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 - **fix:** 🔊 **Speaker icon persists** – the speaker icon in the status bar now persists across chat page reloads
 
 ### v1.9.5
-- **feat:** 💬 **MsgId im Monitor**
+- **feat:** 💬 **MsgId im Monitor** – eingehende Nachrichten zeigen die Nachrichten-ID (msg_id) im Monitor an; erleichtert Diagnose und ACK-Zuordnung
 - **feat:** 🟡 **Toast-Bezeichnung** – Toast-Anzeige für Watchlist- und CQ-Treffer zeigt jetzt „empfangen" statt „gehört"
 - **feat:** ↔️ **Eigene Nachrichten linksbündig** – neue Option OwnMessagesAlignLeft in den Einstellungen; eigene gesendete Nachrichten können optional linksbündig dargestellt werden (Standard: rechtsbündig)
 - **feat:** 🔊 **Watchlist-TTS Drosselung** – Sprachansagen für Watchlist-Treffer werden pro Rufzeichen maximal einmal alle 5 Minuten ausgelöst
