@@ -164,6 +164,7 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 ### 🖥️ Console (TLS & Serial)
 
 The **Console** page (`/telnet`) provides direct command-line access to the MeshCom node.
+The TLS Console **replaces the classic Telnet connection** – all node communication that was previously only accessible via serial USB is now also available **over the network, encrypted via TLS**.
 Two connection modes are supported, selectable in **Settings → 🖥️ Console**:
 
 #### TLS Console
