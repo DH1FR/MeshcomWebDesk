@@ -1,6 +1,6 @@
 ﻿# Changelog
 
-## [1.10.0] – in development (dev)
+## [1.10.0] – released
 
 ### Features
 - **Multi-Node Support**: Multiple MeshCom nodes can be configured and used simultaneously. Each node has its own IP, port, callsign and TLS certificate. A node switcher bar in the chat page allows switching the active node at any time. Chat tabs, monitor, outgoing messages, auto-reply and bot replies are all node-aware. Node online status is shown in the switcher buttons.

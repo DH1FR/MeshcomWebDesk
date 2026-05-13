@@ -1337,7 +1337,7 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
  ## 📋 Changelog
 
-### v1.10.0 *(dev)*
+### v1.10.0
 - **feat:** 🌐 **Multi-language UI** – interface now available in **Français 🇫🇷**, **Italiano 🇮🇹** and **Español 🇪🇸** in addition to Deutsch and English; language is switched in **Settings → Language** and takes effect instantly without a page reload
 - **feat:** 🖧 **Multi-Node support** – configure multiple MeshCom nodes simultaneously; each node has its own UDP connection, callsign, chat tabs, monitor feed, and console credentials; node profiles are managed under **Settings → Further Nodes**
 - **feat:** 🖥️ **TLS Console / Serial Console** – console page now supports direct USB serial access (CP210x); COM port and baud rate configurable in **Settings → 🖥️ Console → Serial Console**; console mode switchable between TLS and Serial without restart; TLS Console requires **MeshCom firmware v4.35p.05.13 or later**
