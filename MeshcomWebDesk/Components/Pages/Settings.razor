@@ -1478,7 +1478,7 @@
                             @onclick="() => { foreach (var d in GroupLabelEntry.Defaults) { if (!_model.GroupLabels.Any(g => g.Group == d.Group)) _model.GroupLabels.Add(new GroupLabelEntry { Group = d.Group, ShortLabel = d.ShortLabel, Label = d.Label }); } }">
                         ➕ @Loc.T("Fehlende ergänzen", "Add Missing")
                     </button>
-                    <button type="button" class="btn-remove" style="padding:2px 10px;font-size:12px"
+                    <button type="button" class="btn-add" style="padding:2px 10px;font-size:12px"
                             title="@Loc.T("Alle Gruppen-Labels löschen", "Clear all group labels")"
                             @onclick="() => _model.GroupLabels.Clear()">
                         🗑️ @Loc.T("Liste leeren", "Clear List")
