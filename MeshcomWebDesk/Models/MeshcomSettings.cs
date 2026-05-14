@@ -294,6 +294,12 @@ public class MeshcomSettings
     /// </summary>
     public bool GatewayHighlightEnabled { get; set; } = true;
 
+    /// <summary>
+    /// Gateway server source for the highlight list.
+    /// Allowed values: "oe" (meshcom.oevsv.at, default), "dl" (meshcom.hamnet.network), "both".
+    /// </summary>
+    public string GatewayServer { get; set; } = "oe";
+
     // ── Telnet / Console ─────────────────────────────────────────────────
 
     /// <summary>When true, a Console tab is shown.</summary>

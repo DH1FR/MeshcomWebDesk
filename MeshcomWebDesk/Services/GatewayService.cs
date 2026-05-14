@@ -1,13 +1,15 @@
 using System.Collections.Frozen;
 using System.Net.Http;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Options;
+using MeshcomWebDesk.Models;
 
 namespace MeshcomWebDesk.Services;
 
 /// <summary>
 /// Periodically fetches the list of active MeshCom gateway stations from the public
-/// dashboard at https://meshcom.oevsv.at/gateways.html and makes it available as a
-/// frozen set of upper-cased callsigns.
+/// dashboard(s) and makes it available as a frozen set of upper-cased callsigns.
+/// The server source (OE, DL, or both) is configurable via <see cref="MeshcomSettings.GatewayServer"/>.
 /// </summary>
 public sealed class GatewayService : IHostedService, IAsyncDisposable
 {
@@ -19,17 +21,21 @@ public sealed class GatewayService : IHostedService, IAsyncDisposable
         @"<td\s+bgcolor=""#00FF66"">([A-Z0-9]+-\d+)\s*\(\d+\)</td>",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-    private const string GatewayUrl = "https://meshcom.oevsv.at/gateways.html";
+    private const string GatewayUrlOe = "https://meshcom.oevsv.at/gateways.html";
+    private const string GatewayUrlDl = "http://meshcom.hamnet.network/meshcom/gateways.html";
 
     private readonly IHttpClientFactory  _httpClientFactory;
     private readonly ILogger<GatewayService> _logger;
+    private readonly IOptionsMonitor<MeshcomSettings> _settings;
     private FrozenSet<string> _gateways = FrozenSet<string>.Empty;
     private Timer?  _timer;
 
-    public GatewayService(IHttpClientFactory httpClientFactory, ILogger<GatewayService> logger)
+    public GatewayService(IHttpClientFactory httpClientFactory, ILogger<GatewayService> logger,
+        IOptionsMonitor<MeshcomSettings> settings)
     {
         _httpClientFactory = httpClientFactory;
         _logger            = logger;
+        _settings          = settings;
     }
 
     // ── Public API ───────────────────────────────────────────────────────
@@ -64,19 +70,36 @@ public sealed class GatewayService : IHostedService, IAsyncDisposable
     {
         try
         {
-            using var client = _httpClientFactory.CreateClient("MeshcomGateway");
-            var html = await client.GetStringAsync(GatewayUrl);
-
+            var server = _settings.CurrentValue.GatewayServer?.ToLowerInvariant() ?? "oe";
             var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (Match m in CallsignRegex.Matches(html))
-                set.Add(m.Groups[1].Value.ToUpperInvariant());
+
+            if (server == "oe" || server == "both")
+                await FetchIntoAsync(GatewayUrlOe, set);
+
+            if (server == "dl" || server == "both")
+                await FetchIntoAsync(GatewayUrlDl, set);
 
             _gateways = set.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
-            _logger.LogDebug("GatewayService: {Count} gateways loaded.", _gateways.Count);
+            _logger.LogDebug("GatewayService: {Count} gateways loaded (server={Server}).", _gateways.Count, server);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "GatewayService: failed to refresh gateway list.");
+        }
+    }
+
+    private async Task FetchIntoAsync(string url, HashSet<string> target)
+    {
+        try
+        {
+            using var client = _httpClientFactory.CreateClient("MeshcomGateway");
+            var html = await client.GetStringAsync(url);
+            foreach (Match m in CallsignRegex.Matches(html))
+                target.Add(m.Groups[1].Value.ToUpperInvariant());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "GatewayService: failed to fetch {Url}.", url);
         }
     }
 

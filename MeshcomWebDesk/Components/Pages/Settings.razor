@@ -325,12 +325,22 @@
 
                 <label>
                     @Loc.T("Gateway-Hervorhebung", "Gateway Highlight")<br />
-                    <small>@Loc.T("Gateway-Stationen (von meshcom.oevsv.at) mit 🌐-Symbol und Farbe hervorheben.", "Highlight gateway stations (from meshcom.oevsv.at) with a 🌐 symbol and colour.")</small>
+                    <small>@Loc.T("Gateway-Stationen mit 🌐-Symbol und Farbe hervorheben.", "Highlight gateway stations with a 🌐 symbol and colour.")</small>
                 </label>
                 <label>
                     <input type="checkbox" @bind="_model.GatewayHighlightEnabled" />
                     <span>@(_model.GatewayHighlightEnabled ? Loc.T("Aktiviert", "Enabled") : Loc.T("Deaktiviert", "Disabled"))</span>
                 </label>
+
+                <label>
+                    @Loc.T("Gateway-Quelle", "Gateway Source")<br />
+                    <small>@Loc.T("Server für die Gateway-Liste.", "Server for the gateway list.")</small>
+                </label>
+                <select @bind="_model.GatewayServer">
+                    <option value="oe">🇦🇹 OE – meshcom.oevsv.at</option>
+                    <option value="dl">🇩🇪 DL – meshcom.hamnet.network</option>
+                    <option value="both">@Loc.T("OE + DL (beide)", "OE + DL (both)")</option>
+                </select>
             </div>
             }
         </div>
@@ -2411,6 +2421,7 @@
             OwnMessagesAlignLeft    = s.OwnMessagesAlignLeft,
             TxCooldownSeconds       = s.TxCooldownSeconds,
             GatewayHighlightEnabled = s.GatewayHighlightEnabled,
+            GatewayServer           = s.GatewayServer,
             TelnetEnabled           = s.TelnetEnabled,
             ConsoleMode             = s.ConsoleMode,
             TelnetPort              = s.TelnetPort,
@@ -2943,6 +2954,7 @@
                 OwnMessagesAlignLeft    = s.OwnMessagesAlignLeft,
                 TxCooldownSeconds       = s.TxCooldownSeconds,
                 GatewayHighlightEnabled = s.GatewayHighlightEnabled,
+                GatewayServer           = s.GatewayServer,
                 TelnetEnabled           = s.TelnetEnabled,
                 ConsoleMode             = s.ConsoleMode,
                 TelnetPort              = s.TelnetPort,
@@ -3067,6 +3079,7 @@
         public bool   OwnMessagesAlignLeft    { get; set; } = false;
         public int    TxCooldownSeconds         { get; set; } = 5;
         public bool   GatewayHighlightEnabled  { get; set; } = true;
+        public string GatewayServer            { get; set; } = "oe";
         public bool   TelnetEnabled            { get; set; } = false;
         public string ConsoleMode             { get; set; } = "tls";
         public int    TelnetPort              { get; set; } = 2323;
@@ -3197,6 +3210,7 @@
             OwnMessagesAlignLeft    = OwnMessagesAlignLeft,
             TxCooldownSeconds       = TxCooldownSeconds,
             GatewayHighlightEnabled = GatewayHighlightEnabled,
+            GatewayServer           = GatewayServer,
             TelnetEnabled           = TelnetEnabled,
             ConsoleMode             = ConsoleMode,
             TelnetPort              = TelnetPort,
