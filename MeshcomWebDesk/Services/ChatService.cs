@@ -293,6 +293,7 @@ public class ChatService
             if (tab != null)
             {
                 tab.Messages.Add(message);
+                tab.MessageCount = tab.Messages.Count;
                 tab.UnreadCount++;
             }
         }
@@ -334,6 +335,7 @@ public class ChatService
         {
             AppendToMonitor(message, state);
             tab.Messages.Add(message);
+            tab.MessageCount = tab.Messages.Count;
         }
         NotifyChange();
     }
@@ -610,7 +612,10 @@ public class ChatService
                         || !_settings.GroupFilterEnabled
                         || _settings.Groups.Contains(tab.Key, StringComparer.OrdinalIgnoreCase);
                     if (tabAllowed)
+                    {
+                        tab.MessageCount = tab.Messages.Count;
                         state.Tabs[tab.Key] = tab;
+                    }
                 }
             }
 
@@ -637,7 +642,10 @@ public class ChatService
                         || !_settings.GroupFilterEnabled
                         || _settings.Groups.Contains(tab.Key, StringComparer.OrdinalIgnoreCase);
                     if (tabAllowed)
+                    {
+                        tab.MessageCount = tab.Messages.Count;
                         primaryState.Tabs[tab.Key] = tab;
+                    }
                 }
             }
         }

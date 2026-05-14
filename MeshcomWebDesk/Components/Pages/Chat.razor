@@ -81,9 +81,9 @@
                         {
                             <span class="tab-qrz-name" title="@grp.Label">@grp.ShortLabel</span>
                         }
-                        @if (tab.Messages.Count > 0)
+                        @if (tab.MessageCount > 0)
                         {
-                            <span class="tab-msg-count" title="@Loc.T($"{tab.Messages.Count} Nachrichten", $"{tab.Messages.Count} messages")">Msg.:&nbsp;@tab.Messages.Count</span>
+                            <span class="tab-msg-count" title="@Loc.T($"{tab.MessageCount} Nachrichten", $"{tab.MessageCount} messages")">Msg.:&nbsp;@tab.MessageCount</span>
                         }
                     </span>
                     @if (tab.UnreadCount > 0)

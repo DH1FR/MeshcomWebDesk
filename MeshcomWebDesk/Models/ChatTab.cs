@@ -18,6 +18,14 @@ public class ChatTab
     /// <summary>Messages belonging to this conversation.</summary>
     public List<MeshcomMessage> Messages { get; set; } = [];
 
+    /// <summary>
+    /// Thread-safe message count. Updated by ChatService under its internal lock
+    /// whenever a message is added or removed, so Razor templates can read this
+    /// without holding the lock and without touching <see cref="Messages"/> directly.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public int MessageCount { get; set; }
+
     /// <summary>Number of messages received while this tab was not active. Not persisted.</summary>
     [System.Text.Json.Serialization.JsonIgnore]
     public int UnreadCount { get; set; }
