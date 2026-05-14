@@ -777,6 +777,12 @@
                     <small>@Loc.T("Kommagetrennt, z.\u00a0B. 11,15 f\u00fcr 11:00 und 15:00 Uhr", "Comma-separated, e.\u00a0g. 11,15 for 11:00 and 15:00")</small>
                 </label>
                 <input type="text" @bind="_model.TelemetryScheduleHours" placeholder="11,15" />
+                @if (_model.TelemetryScheduleHours?.Split(',', StringSplitOptions.RemoveEmptyEntries).Length > 6)
+                {
+                    <div style="font-size:.8rem;color:#f85149;margin-top:.2rem">
+                        @Loc.T("Maximal 6 Sendezeiten möglich.", "Maximum 6 send times allowed.")
+                    </div>
+                }
 
                 <label>@Loc.T("HTTP-API aktiv", "HTTP-API Active")</label>
                 <label class="settings-toggle">
@@ -828,16 +834,9 @@
                         }
                     </tbody>
                 </table>
-                <button type="button" class="btn-add" @onclick="() => _model.TelemetryMapping.Add(new TelemetryMappingEntry())"
-                        disabled="@(_model.TelemetryMapping.Count >= 3)">
+                <button type="button" class="btn-add" @onclick="() => _model.TelemetryMapping.Add(new TelemetryMappingEntry())">
                     ➕ @Loc.T("Zeile hinzufügen", "Add Row")
                 </button>
-                @if (_model.TelemetryMapping.Count >= 3)
-                {
-                    <div style="font-size:.8rem;color:#8b949e;margin-top:.3rem">
-                        @Loc.T("Maximal 3 Messwerte möglich.", "Maximum 3 measurements allowed.")
-                    </div>
-                }
             </div>
 
             <!-- Vorschau -->

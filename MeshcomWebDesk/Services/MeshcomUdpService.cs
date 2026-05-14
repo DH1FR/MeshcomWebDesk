@@ -722,6 +722,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         input.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
              .Select(p => int.TryParse(p, out var h) && h >= 0 && h <= 23 ? h : -1)
              .Where(h => h >= 0)
+             .Take(6)
              .ToHashSet();
 
     private static DateTime ComputeNextScheduledTime(HashSet<int> hours, DateTime from)
