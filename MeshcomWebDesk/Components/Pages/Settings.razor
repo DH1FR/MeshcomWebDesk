@@ -1956,15 +1956,16 @@
             var rows  = new List<TelemetryPreviewRow>();
             var parts = new List<string>();
 
-            foreach (var entry in _model.TelemetryMapping)
-            {
-                if (string.IsNullOrWhiteSpace(entry.JsonKey)) continue;
+            // Build a lookup of configured mapping entries by JsonKey for quick access
+            var mappingLookup = _model.TelemetryMapping
+                .Where(m => !string.IsNullOrWhiteSpace(m.JsonKey))
+                .ToDictionary(m => m.JsonKey, m => m);
 
-                if (!root.TryGetProperty(entry.JsonKey, out var valueProp))
-                {
-                    rows.Add(new(entry.JsonKey, "–", Loc.T("⚠️ Key nicht in Datei", "⚠️ Key not found in file"), true));
-                    continue;
-                }
+            // Iterate over ALL keys in the JSON file
+            foreach (var jsonProp in root.EnumerateObject())
+            {
+                var jsonKey = jsonProp.Name;
+                var valueProp = jsonProp.Value;
 
                 double value;
                 if (valueProp.ValueKind == System.Text.Json.JsonValueKind.Number)
@@ -1976,16 +1977,28 @@
                     value = parsed;
                 else
                 {
-                    rows.Add(new(entry.JsonKey, valueProp.ToString(), Loc.T("⚠️ Kein Zahlenwert", "⚠️ Not a numeric value"), true));
+                    rows.Add(new(jsonKey, valueProp.ToString(), Loc.T("⚠️ Kein Zahlenwert", "⚠️ Not a numeric value"), true));
                     continue;
                 }
 
-                var decimals  = Math.Max(0, entry.Decimals);
+                // Use configured mapping if available, otherwise show raw key/value
+                mappingLookup.TryGetValue(jsonKey, out var entry);
+                var decimals  = entry != null ? Math.Max(0, entry.Decimals) : 1;
                 var formatted = value.ToString($"F{decimals}", System.Globalization.CultureInfo.InvariantCulture);
-                var label     = string.IsNullOrWhiteSpace(entry.Label) ? entry.JsonKey : entry.Label;
-                var part      = $"{label}={formatted}{entry.Unit}";
-                rows.Add(new(entry.JsonKey, value.ToString(System.Globalization.CultureInfo.InvariantCulture), part, false));
-                parts.Add(part);
+                var label     = entry != null && !string.IsNullOrWhiteSpace(entry.Label) ? entry.Label : jsonKey;
+                var unit      = entry?.Unit ?? string.Empty;
+                var part      = $"{label}={formatted}{unit}";
+                // Mark rows that have no mapping configured
+                var isWarning = entry == null;
+                rows.Add(new(jsonKey, value.ToString(System.Globalization.CultureInfo.InvariantCulture), isWarning ? $"⚠️ {part}" : part, isWarning));
+                if (!isWarning) parts.Add(part);
+            }
+
+            // Additionally report configured keys that are missing in the file
+            foreach (var entry in _model.TelemetryMapping.Where(m => !string.IsNullOrWhiteSpace(m.JsonKey)))
+            {
+                if (!root.TryGetProperty(entry.JsonKey, out _))
+                    rows.Add(new(entry.JsonKey, "–", Loc.T("⚠️ Key nicht in Datei", "⚠️ Key not found in file"), true));
             }
 
             _telemetryPreview = rows;
