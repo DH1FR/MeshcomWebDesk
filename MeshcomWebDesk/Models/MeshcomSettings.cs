@@ -204,7 +204,7 @@ public class MeshcomSettings
     /// Used to show a human-readable name below the group tab title in the chat UI.
     /// Pre-filled with the official MeshCom GRC group list (icssw.org/meshcom-grc-gruppen/).
     /// </summary>
-    public List<GroupLabelEntry> GroupLabels { get; set; } = GroupLabelEntry.Defaults;
+    public List<GroupLabelEntry> GroupLabels { get; set; } = [];
 
     /// <summary>
     /// Maximum age of MH list entries in hours. Entries whose <c>LastHeard</c> timestamp is
