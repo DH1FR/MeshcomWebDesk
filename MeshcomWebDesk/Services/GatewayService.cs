@@ -73,11 +73,10 @@ public sealed class GatewayService : IHostedService, IAsyncDisposable
             var server = _settings.CurrentValue.GatewayServer?.ToLowerInvariant() ?? "oe";
             var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            if (server == "oe" || server == "both")
-                await FetchIntoAsync(GatewayUrlOe, set);
-
-            if (server == "dl" || server == "both")
+            if (server == "dl")
                 await FetchIntoAsync(GatewayUrlDl, set);
+            else
+                await FetchIntoAsync(GatewayUrlOe, set);
 
             _gateways = set.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
             _logger.LogDebug("GatewayService: {Count} gateways loaded (server={Server}).", _gateways.Count, server);
