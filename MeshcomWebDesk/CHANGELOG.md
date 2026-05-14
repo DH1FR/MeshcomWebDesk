@@ -6,6 +6,7 @@
 
 ### Bugfixes
 - **Fix Telemetry mapping limit**: The entry limit of 3 was incorrectly applied to the telemetry measurement mapping instead of the send-time schedule. Mapping entries are now unlimited (send times: max. 6). Entries beyond 3 were also silently dropped on save – this is now fixed. The telemetry preview now shows all keys from the JSON file, not only configured ones.
+- **Fix Gruppen-Labels wachsen**: Die Gruppen-Labels-Liste wurde bei jedem App-Start durch ASP.NET Core Configuration Binding verdoppelt (Defaults wurden angehängt statt ersetzt). Die Liste startet jetzt leer; in den Einstellungen stehen neue Buttons zur Verfügung: 🔄 Standard wiederherstellen, ➕ Fehlende ergänzen, 🗑️ Liste leeren.
 
 ---
 
