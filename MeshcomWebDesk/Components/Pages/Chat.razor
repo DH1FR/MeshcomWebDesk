@@ -1559,9 +1559,9 @@
         _globalSearchMode    = true;
         _aiSearchAllContacts = true;
         _qsoModalTab         = IsAiActive ? 3 : 2;
-        // Pre-fill date range: last 90 days up to today
+        // Pre-fill date range: last 90 days up to end of today
         _searchFrom = DateTime.Today.AddDays(-90);
-        _searchTo   = DateTime.Today;
+        _searchTo   = DateTime.Today.AddDays(1).AddSeconds(-1);
         StateHasChanged();
         return Task.CompletedTask;
     }
