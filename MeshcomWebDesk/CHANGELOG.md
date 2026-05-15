@@ -3,9 +3,14 @@
 ## [1.10.1] – in development (dev)
 
 ### Features
+- **KI-Suche: Zeitraum-Voreinstellung**: Beim Öffnen der globalen KI-Suche wird der Suchzeitraum automatisch auf die letzten 90 Tage bis zum aktuellen Tag (23:59:59) voreingestellt.
+- **KI-Suche: Echo-Duplikate entfernt**: Gruppenachrichten werden vor der Prompt-Erstellung dedupliziert (LoRa-Echo erzeugt Doppeleinträge in der DB). Spart Token und verbessert die Antwortqualität.
+- **KI-Suche: Zeitstempel-Korrektur**: Timestamps aus MySQL werden jetzt korrekt als Lokalzeit (`DateTimeKind.Local`) interpretiert – kein UTC-Shift (+2 h) mehr in KI-Antworten, QSO-Verlauf und Textsuche.
+- **KI-Suche: Modell-Auswahl „Automatisch"**: Neues Modell `auto` (Einstellung: *Automatisch (empfohlen)*) wählt je nach Prompt-Größe automatisch zwischen `gpt-4o-mini`, `gpt-4.1-mini` und `gpt-4.1`.
+- **KI-Suche: Erweiterte Nachrichtenauswahl**: Die globale Suche berücksichtigt jetzt alle Direktnachrichten, eigene Gruppenachrichten sowie Gruppen-@-Erwähnungen. JSON-Statusmeldungen und ACKs werden ausgefiltert.
 
 ### Bugfixes
-- **Fix Telemetry mapping limit**: The entry limit of 3 was incorrectly applied to the telemetry measurement mapping instead of the send-time schedule. Mapping entries are now unlimited (send times: max. 6). Entries beyond 3 were also silently dropped on save – this is now fixed. The telemetry preview now shows all keys from the JSON file, not only configured ones.
+- **Fix Telemetry mapping limit**:
 - **Fix Gruppen-Labels wachsen**: Die Gruppen-Labels-Liste wurde bei jedem App-Start durch ASP.NET Core Configuration Binding verdoppelt (Defaults wurden angehängt statt ersetzt). Die Liste startet jetzt leer; in den Einstellungen stehen neue Buttons zur Verfügung: 🔄 Standard wiederherstellen, ➕ Fehlende ergänzen, 🗑️ Liste leeren.
 
 ---
