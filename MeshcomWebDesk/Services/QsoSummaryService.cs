@@ -873,10 +873,28 @@ public sealed class QsoSummaryService
                 : "\n(Kein Nachrichtenverlauf vorhanden – beantworte die Frage ausschließlich anhand der Stationsdaten.)";
 
             var scopeDescription = allDirectContacts
-                ? $"allen Direkt-QSOs von {myCallsign}"
+                ? $"allen Nachrichten von {myCallsign} (Direkt-QSOs und Gruppen)"
                 : $"dem QSO-Verlauf zwischen {myCallsign} und {callsignBase}";
 
-            var prompt = $"""
+            // Place the question AFTER the conversation block so the model sees it last
+            // and doesn't lose it in the middle of a large context window.
+            var prompt = allDirectContacts
+                ? $"""
+                Du hilfst bei der Suche in {scopeDescription}.
+                Der Benutzer ist {myCallsign}. Zeilen mit 'ICH' sind vom Benutzer gesendete Nachrichten.
+                Durchsuche den gesamten Nachrichtenverlauf nach der Frage.
+                Nutze dabei auch Synonyme, verwandte Begriffe und inhaltliche Zusammenhänge.
+                Zitiere bei Fundstellen das genaue Datum, die Uhrzeit, das Rufzeichen und den Originaltext.
+                Falls nichts Passendes gefunden wird, sage das klar.
+                Antworte in der gleichen Sprache wie die Frage.
+
+                Bekannte Stationsdaten:
+                {sbCtx}
+                {conversationSection}
+
+                Frage: {query}
+                """
+                : $"""
                 Du hilfst bei Fragen zu {scopeDescription}.
                 Der Benutzer ist {myCallsign}. Zeilen mit 'ICH' sind vom Benutzer gesendete Nachrichten.
 
