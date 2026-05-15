@@ -757,10 +757,11 @@ public sealed class QsoSummaryService
             foreach (var p in where.Params)
                 cmd.Parameters.AddWithValue(p.Key, p.Value);
 
-            _logger.LogInformation(
-                "QsoSummaryService: SearchAsync SQL – {Sql} | Params: {Params}",
-                where.Sql,
-                string.Join(", ", where.Params.Select(p => $"{p.Key}={p.Value}")));
+            if (ai.LogRequests)
+                _logger.LogInformation(
+                    "QsoSummaryService: SearchAsync SQL – {Sql} | Params: {Params}",
+                    where.Sql,
+                    string.Join(", ", where.Params.Select(p => $"{p.Key}={p.Value}")));
 
             var messages = new List<RawMessage>();
             await using var reader = await cmd.ExecuteReaderAsync(ct);
@@ -777,18 +778,21 @@ public sealed class QsoSummaryService
                 "QsoSummaryService: SearchAsync({Mode}) – {Count} messages loaded, query='{Query}'",
                 allDirectContacts ? "ALL" : callsignBase, messages.Count, query);
 
-            if (messages.Count > 0)
+            if (ai.LogRequests)
             {
-                var sample = messages.TakeLast(3)
-                    .Select(m => $"{m.Timestamp:dd.MM HH:mm} {m.From}→{m.To}: {m.Text?[..Math.Min(60, m.Text.Length)]}");
-                _logger.LogInformation(
-                    "QsoSummaryService: SearchAsync – last 3 messages: {Sample}",
-                    string.Join(" | ", sample));
-            }
-            else
-            {
-                _logger.LogWarning(
-                    "QsoSummaryService: SearchAsync – NO messages found! Check SQL/params above.");
+                if (messages.Count > 0)
+                {
+                    var sample = messages.TakeLast(3)
+                        .Select(m => $"{m.Timestamp:dd.MM HH:mm} {m.From}→{m.To}: {m.Text?[..Math.Min(60, m.Text.Length)]}");
+                    _logger.LogInformation(
+                        "QsoSummaryService: SearchAsync – last 3 messages: {Sample}",
+                        string.Join(" | ", sample));
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "QsoSummaryService: SearchAsync – NO messages found! Check SQL/params above.");
+                }
             }
 
             // ── Station context from QRZ.com and MH list ──────────────────
@@ -923,13 +927,13 @@ public sealed class QsoSummaryService
             });
 
             if (ai.LogRequests)
+            {
                 _logger.LogInformation("QsoSummaryService: Search request for {Callsign}: {Query}", callsignBase, query);
-
-            // Estimate token usage: ~4 chars per token
-            var estimatedTokens = prompt.Length / 4;
-            _logger.LogInformation(
-                "QsoSummaryService: SearchAsync prompt – {Chars} chars, ~{Tokens} estimated tokens, messages={Count}",
-                prompt.Length, estimatedTokens, messages.Count);
+                var estimatedTokens = prompt.Length / 4;
+                _logger.LogInformation(
+                    "QsoSummaryService: SearchAsync prompt – {Chars} chars, ~{Tokens} estimated tokens, messages={Count}",
+                    prompt.Length, estimatedTokens, messages.Count);
+            }
 
             using var request = new HttpRequestMessage(HttpMethod.Post, ai.GetApiUrl());
             if (ai.Provider == AiSettings.ProviderAzureOpenAi)
@@ -956,9 +960,10 @@ public sealed class QsoSummaryService
                 .GetProperty("content")
                 .GetString();
 
-            _logger.LogInformation(
-                "QsoSummaryService: SearchAsync answer (first 300 chars): {Answer}",
-                answer is null ? "(null)" : answer[..Math.Min(300, answer.Length)]);
+            if (ai.LogRequests)
+                _logger.LogInformation(
+                    "QsoSummaryService: SearchAsync answer (first 300 chars): {Answer}",
+                    answer is null ? "(null)" : answer[..Math.Min(300, answer.Length)]);
 
             return answer;
         }
