@@ -80,7 +80,7 @@
                     style="@(Console.IsConnected ? "" : "display:none")">
                 @(_paused ? "▶ " + Loc.T("Weiter", "Resume") : "⏸ " + Loc.T("Pause", "Pause"))
             </button>
-            <button class="btn-sm @(_loraHighlight ? "btn-primary" : "btn-action")" @onclick="() => _loraHighlight = !_loraHighlight"
+            <button class="btn-sm @(_loraHighlight ? "btn-primary" : "btn-action")" @onclick="ToggleLoraHighlightAsync"
                     title="@Loc.T("LoRa-Debug-Hervorhebung ein/aus", "LoRa debug highlighting on/off")">
                 📻 @Loc.T("LoRa", "LoRa")
             </button>
@@ -243,6 +243,15 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            try
+            {
+                _loraHighlight = await JS.InvokeAsync<bool>("meshcomChat.getLoraHighlight");
+                StateHasChanged();
+            }
+            catch (JSException) { }
+        }
         await ScrollToBottomAsync();
     }
 
@@ -397,6 +406,13 @@
         _paused = !_paused;
         if (!_paused)
             InvokeAsync(async () => { StateHasChanged(); await ScrollToBottomAsync(); });
+    }
+
+    private async Task ToggleLoraHighlightAsync()
+    {
+        _loraHighlight = !_loraHighlight;
+        try { await JS.InvokeVoidAsync("meshcomChat.setLoraHighlight", _loraHighlight); }
+        catch (JSException) { }
     }
 
     private async Task ScrollToBottomAsync()

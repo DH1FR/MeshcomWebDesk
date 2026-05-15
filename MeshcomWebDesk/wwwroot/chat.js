@@ -209,6 +209,8 @@ window.meshcomChat = (function () {
         setSettingsSections: (csv) => localStorage.setItem('meshcom-settings-sections', csv ?? ''),
         getWelcomedVersion:  () => localStorage.getItem('meshcom-welcomed-version') || '',
         setWelcomedVersion:  (v) => localStorage.setItem('meshcom-welcomed-version', v || ''),
+        getLoraHighlight:    () => localStorage.getItem('meshcom-lora-highlight') === '1',
+        setLoraHighlight:    (v) => localStorage.setItem('meshcom-lora-highlight', v ? '1' : '0'),
         showWelcomeDialog:   (version, storageKey, txtQuestion, txtYes, txtNo, author) => {
             if (document.getElementById('welcome-dialog-overlay')) return;
             var overlay = document.createElement('div');
