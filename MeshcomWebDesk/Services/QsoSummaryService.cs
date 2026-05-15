@@ -914,9 +914,29 @@ public sealed class QsoSummaryService
                 {conversationSection}
                 """;
 
+            // Auto model selection: choose based on prompt size after building the prompt.
+            // Thresholds (tokens ≈ chars / 4):
+            //   < 10 000 tokens  → gpt-4o-mini  (fast & cheap)
+            //   10 000 – 60 000  → gpt-4.1-mini (large context, good value)
+            //   > 60 000 tokens  → gpt-4.1      (maximum reliability)
+            var estimatedTokens = prompt.Length / 4;
+            var modelToUse = ai.Model;
+            if (ai.Model == "auto")
+            {
+                modelToUse = estimatedTokens switch
+                {
+                    < 10_000  => "gpt-4o-mini",
+                    < 60_000  => "gpt-4.1-mini",
+                    _         => "gpt-4.1"
+                };
+                _logger.LogInformation(
+                    "QsoSummaryService: Auto model – ~{Tokens} tokens → {Model}",
+                    estimatedTokens, modelToUse);
+            }
+
             var requestBody = JsonSerializer.Serialize(new
             {
-                model    = ai.Model,
+                model    = modelToUse,
                 messages = new[]
                 {
                     new { role = "system", content = $"Du bist ein hilfreicher Assistent für Amateurfunk. Der Benutzer ist {myCallsign}. Beantworte Fragen zu Stationen anhand der bereitgestellten Stationsdaten (QRZ.com, GPS, Locator) und dem Nachrichtenverlauf. Nachrichten mit 'ICH' wurden vom Benutzer gesendet." },
@@ -929,10 +949,9 @@ public sealed class QsoSummaryService
             if (ai.LogRequests)
             {
                 _logger.LogInformation("QsoSummaryService: Search request for {Callsign}: {Query}", callsignBase, query);
-                var estimatedTokens = prompt.Length / 4;
                 _logger.LogInformation(
-                    "QsoSummaryService: SearchAsync prompt – {Chars} chars, ~{Tokens} estimated tokens, messages={Count}",
-                    prompt.Length, estimatedTokens, messages.Count);
+                    "QsoSummaryService: SearchAsync prompt – {Chars} chars, ~{Tokens} estimated tokens, messages={Count}, model={Model}",
+                    prompt.Length, estimatedTokens, messages.Count, modelToUse);
             }
 
             using var request = new HttpRequestMessage(HttpMethod.Post, ai.GetApiUrl());
