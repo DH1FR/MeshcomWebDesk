@@ -757,6 +757,11 @@ public sealed class QsoSummaryService
             foreach (var p in where.Params)
                 cmd.Parameters.AddWithValue(p.Key, p.Value);
 
+            _logger.LogInformation(
+                "QsoSummaryService: SearchAsync SQL – {Sql} | Params: {Params}",
+                where.Sql,
+                string.Join(", ", where.Params.Select(p => $"{p.Key}={p.Value}")));
+
             var messages = new List<RawMessage>();
             await using var reader = await cmd.ExecuteReaderAsync(ct);
             while (await reader.ReadAsync(ct))
