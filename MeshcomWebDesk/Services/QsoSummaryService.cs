@@ -1083,7 +1083,9 @@ public sealed class QsoSummaryService
             "is_telemetry = 0",
             "is_outgoing IS NOT NULL",
             "text IS NOT NULL AND text != ''",
-            "text NOT LIKE '%:ack%'"
+            "text NOT LIKE '%:ack%'",
+            // Exclude raw JSON status messages (e.g. {"type":"info",...}) – no searchable content
+            "text NOT LIKE '{%'"
         };
 
         var parms = new Dictionary<string, object>
@@ -1095,7 +1097,12 @@ public sealed class QsoSummaryService
             ["@mentionBase"] = "%@" + myBase + "%"
         };
 
-        if (from.HasValue) { conditions.Add("timestamp >= @from"); parms["@from"] = from.Value; }
+        // Apply default 90-day window in all-contacts mode when no explicit range is set,
+        // to keep the prompt size manageable for the AI context window.
+        var effectiveFrom = from ?? DateTime.UtcNow.AddDays(-90);
+        conditions.Add("timestamp >= @from");
+        parms["@from"] = effectiveFrom;
+
         if (to.HasValue)   { conditions.Add("timestamp <= @to");   parms["@to"]   = to.Value; }
 
         return ($"WHERE {string.Join(" AND ", conditions)}", parms);
