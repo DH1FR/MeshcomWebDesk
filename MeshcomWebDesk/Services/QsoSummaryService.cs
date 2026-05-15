@@ -615,7 +615,7 @@ public sealed class QsoSummaryService
             await using var reader = await cmd.ExecuteReaderAsync(ct);
             while (await reader.ReadAsync(ct))
                 list.Add(new QsoHistoryMessage(
-                    reader.GetDateTime(0),
+                    DateTime.SpecifyKind(reader.GetDateTime(0), DateTimeKind.Local),
                     reader.GetString(1),
                     reader.GetString(2),
                     reader.GetString(3),
@@ -695,7 +695,7 @@ public sealed class QsoSummaryService
             await using var reader = await cmd.ExecuteReaderAsync(ct);
             while (await reader.ReadAsync(ct))
                 list.Add(new QsoHistoryMessage(
-                    reader.GetDateTime(0),
+                    DateTime.SpecifyKind(reader.GetDateTime(0), DateTimeKind.Local),
                     reader.GetString(1),
                     reader.GetString(2),
                     reader.GetString(3),
@@ -751,22 +751,62 @@ public sealed class QsoSummaryService
                 SELECT timestamp, from_call, to_call, text, is_outgoing
                 FROM `{db.MySqlTableName}`
                 {where.Sql}
-                ORDER BY timestamp ASC
+                ORDER BY timestamp DESC
                 LIMIT {ai.MaxMessages}
                 """, conn);
             foreach (var p in where.Params)
                 cmd.Parameters.AddWithValue(p.Key, p.Value);
 
+            if (ai.LogRequests)
+                _logger.LogInformation(
+                    "QsoSummaryService: SearchAsync SQL – {Sql} | Params: {Params}",
+                    where.Sql,
+                    string.Join(", ", where.Params.Select(p => $"{p.Key}={p.Value}")));
+
             var messages = new List<RawMessage>();
             await using var reader = await cmd.ExecuteReaderAsync(ct);
             while (await reader.ReadAsync(ct))
                 messages.Add(new RawMessage(
-                    reader.GetDateTime(0), reader.GetString(1),
-                    reader.GetString(2), reader.GetString(3), reader.GetBoolean(4)));
+                    DateTime.SpecifyKind(reader.GetDateTime(0), DateTimeKind.Local),
+                    reader.GetString(1), reader.GetString(2),
+                    reader.GetString(3), reader.GetBoolean(4)));
+
+            // Reverse so the AI receives messages in chronological order (oldest first);
+            // newest messages were loaded first so old ones are dropped when limit is hit.
+            messages.Reverse();
+
+            // Remove echo duplicates: group messages are stored twice (outgoing "#9" + incoming echo "9").
+            // Keep the outgoing entry (IsOutgoing=true) when both exist within 30 seconds.
+            messages = messages
+                .GroupBy(m => (
+                    From: m.From,
+                    To:   m.To.TrimStart('#'),
+                    Text: m.Text,
+                    Bucket: m.Timestamp.Ticks / TimeSpan.FromSeconds(30).Ticks))
+                .Select(g => g.FirstOrDefault(m => m.IsOutgoing) ?? g.First())
+                .OrderBy(m => m.Timestamp)
+                .ToList();
 
             _logger.LogInformation(
                 "QsoSummaryService: SearchAsync({Mode}) – {Count} messages loaded, query='{Query}'",
                 allDirectContacts ? "ALL" : callsignBase, messages.Count, query);
+
+            if (ai.LogRequests)
+            {
+                if (messages.Count > 0)
+                {
+                    var sample = messages.TakeLast(3)
+                        .Select(m => $"{m.Timestamp:dd.MM HH:mm} {m.From}→{m.To}: {m.Text?[..Math.Min(60, m.Text.Length)]}");
+                    _logger.LogInformation(
+                        "QsoSummaryService: SearchAsync – last 3 messages: {Sample}",
+                        string.Join(" | ", sample));
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "QsoSummaryService: SearchAsync – NO messages found! Check SQL/params above.");
+                }
+            }
 
             // ── Station context from QRZ.com and MH list ──────────────────
             var sbCtx = new StringBuilder();
@@ -850,10 +890,28 @@ public sealed class QsoSummaryService
                 : "\n(Kein Nachrichtenverlauf vorhanden – beantworte die Frage ausschließlich anhand der Stationsdaten.)";
 
             var scopeDescription = allDirectContacts
-                ? $"allen Direkt-QSOs von {myCallsign}"
+                ? $"allen Nachrichten von {myCallsign} (Direkt-QSOs und Gruppen)"
                 : $"dem QSO-Verlauf zwischen {myCallsign} und {callsignBase}";
 
-            var prompt = $"""
+            // Place the question AFTER the conversation block so the model sees it last
+            // and doesn't lose it in the middle of a large context window.
+            var prompt = allDirectContacts
+                ? $"""
+                Du hilfst bei der Suche in {scopeDescription}.
+                Der Benutzer ist {myCallsign}. Zeilen mit 'ICH' sind vom Benutzer gesendete Nachrichten.
+                Durchsuche den gesamten Nachrichtenverlauf nach der Frage.
+                Nutze dabei auch Synonyme, verwandte Begriffe und inhaltliche Zusammenhänge.
+                Zitiere bei Fundstellen das genaue Datum, die Uhrzeit, das Rufzeichen und den Originaltext.
+                Falls nichts Passendes gefunden wird, sage das klar.
+                Antworte in der gleichen Sprache wie die Frage.
+
+                Bekannte Stationsdaten:
+                {sbCtx}
+                {conversationSection}
+
+                Frage: {query}
+                """
+                : $"""
                 Du hilfst bei Fragen zu {scopeDescription}.
                 Der Benutzer ist {myCallsign}. Zeilen mit 'ICH' sind vom Benutzer gesendete Nachrichten.
 
@@ -869,9 +927,29 @@ public sealed class QsoSummaryService
                 {conversationSection}
                 """;
 
+            // Auto model selection: choose based on prompt size after building the prompt.
+            // Thresholds (tokens ≈ chars / 4):
+            //   < 10 000 tokens  → gpt-4o-mini  (fast & cheap)
+            //   10 000 – 60 000  → gpt-4.1-mini (large context, good value)
+            //   > 60 000 tokens  → gpt-4.1      (maximum reliability)
+            var estimatedTokens = prompt.Length / 4;
+            var modelToUse = ai.Model;
+            if (ai.Model == "auto")
+            {
+                modelToUse = estimatedTokens switch
+                {
+                    < 10_000  => "gpt-4o-mini",
+                    < 60_000  => "gpt-4.1-mini",
+                    _         => "gpt-4.1"
+                };
+                _logger.LogInformation(
+                    "QsoSummaryService: Auto model – ~{Tokens} tokens → {Model}",
+                    estimatedTokens, modelToUse);
+            }
+
             var requestBody = JsonSerializer.Serialize(new
             {
-                model    = ai.Model,
+                model    = modelToUse,
                 messages = new[]
                 {
                     new { role = "system", content = $"Du bist ein hilfreicher Assistent für Amateurfunk. Der Benutzer ist {myCallsign}. Beantworte Fragen zu Stationen anhand der bereitgestellten Stationsdaten (QRZ.com, GPS, Locator) und dem Nachrichtenverlauf. Nachrichten mit 'ICH' wurden vom Benutzer gesendet." },
@@ -882,7 +960,12 @@ public sealed class QsoSummaryService
             });
 
             if (ai.LogRequests)
+            {
                 _logger.LogInformation("QsoSummaryService: Search request for {Callsign}: {Query}", callsignBase, query);
+                _logger.LogInformation(
+                    "QsoSummaryService: SearchAsync prompt – {Chars} chars, ~{Tokens} estimated tokens, messages={Count}, model={Model}",
+                    prompt.Length, estimatedTokens, messages.Count, modelToUse);
+            }
 
             using var request = new HttpRequestMessage(HttpMethod.Post, ai.GetApiUrl());
             if (ai.Provider == AiSettings.ProviderAzureOpenAi)
@@ -903,11 +986,18 @@ public sealed class QsoSummaryService
 
             using var doc = JsonDocument.Parse(responseBody);
             AccumulateUsage(doc.RootElement);
-            return doc.RootElement
+            var answer = doc.RootElement
                 .GetProperty("choices")[0]
                 .GetProperty("message")
                 .GetProperty("content")
                 .GetString();
+
+            if (ai.LogRequests)
+                _logger.LogInformation(
+                    "QsoSummaryService: SearchAsync answer (first 300 chars): {Answer}",
+                    answer is null ? "(null)" : answer[..Math.Min(300, answer.Length)]);
+
+            return answer;
         }
         catch (Exception ex)
         {
@@ -995,35 +1085,56 @@ public sealed class QsoSummaryService
             ? myCallsign[..myCallsign.IndexOf('-')]
             : myCallsign;
 
-        // Must involve own callsign (any SSID) on either side
-        // AND remote side must not be a group (#...) or broadcast (*  / ALL)
+        // Three cases are included:
+        // 1. Direct 1:1 messages where I am sender or receiver (no group prefix)
+        // 2. Group messages I sent myself (from_call = me, to_call = #...)
+        // 3. Group messages where someone @-mentioned my callsign in the text
+        //    (Amateur radio callsigns are globally unique, so no false positives)
         var conditions = new List<string>
         {
             """
             (
-                (from_call = @myCall OR from_call LIKE @myLike)
-             OR (to_call   = @myCall OR to_call   LIKE @myLike)
+                (
+                    (from_call = @myCall OR from_call = @myBase OR from_call LIKE @myLike)
+                 OR (to_call   = @myCall OR to_call   = @myBase OR to_call   LIKE @myLike)
+                )
+             OR (
+                    (from_call = @myCall OR from_call = @myBase OR from_call LIKE @myLike)
+                    AND to_call LIKE '#%'
+                )
+             OR (
+                    to_call LIKE '#%'
+                    AND (text LIKE @mentionCall OR text LIKE @mentionBase)
+                )
             )
             """,
-            // Exclude group and broadcast destinations/sources
-            "to_call   NOT LIKE '#%'",
-            "from_call NOT LIKE '#%'",
+            // Exclude broadcasts
             "to_call   NOT IN ('*','ALL','all')",
             "from_call NOT IN ('*','ALL','all')",
             "is_position_beacon = 0",
             "is_telemetry = 0",
             "is_outgoing IS NOT NULL",
             "text IS NOT NULL AND text != ''",
-            "text NOT LIKE '%:ack%'"
+            "text NOT LIKE '%:ack%'",
+            // Exclude raw JSON status messages (e.g. {"type":"info",...}) – no searchable content
+            "text NOT LIKE '{%'"
         };
 
         var parms = new Dictionary<string, object>
         {
-            ["@myCall"] = myCallsign,
-            ["@myLike"] = myBase + "-%"
+            ["@myCall"]      = myCallsign,
+            ["@myBase"]      = myBase,
+            ["@myLike"]      = myBase + "-%",
+            ["@mentionCall"] = "%@" + myCallsign + "%",
+            ["@mentionBase"] = "%@" + myBase + "%"
         };
 
-        if (from.HasValue) { conditions.Add("timestamp >= @from"); parms["@from"] = from.Value; }
+        // Apply default 90-day window in all-contacts mode when no explicit range is set,
+        // to keep the prompt size manageable for the AI context window.
+        var effectiveFrom = from ?? DateTime.UtcNow.AddDays(-90);
+        conditions.Add("timestamp >= @from");
+        parms["@from"] = effectiveFrom;
+
         if (to.HasValue)   { conditions.Add("timestamp <= @to");   parms["@to"]   = to.Value; }
 
         return ($"WHERE {string.Join(" AND ", conditions)}", parms);

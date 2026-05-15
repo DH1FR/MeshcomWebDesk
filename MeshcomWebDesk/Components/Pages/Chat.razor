@@ -81,9 +81,9 @@
                         {
                             <span class="tab-qrz-name" title="@grp.Label">@grp.ShortLabel</span>
                         }
-                        @if (tab.Messages.Count > 0)
+                        @if (tab.MessageCount > 0)
                         {
-                            <span class="tab-msg-count" title="@Loc.T($"{tab.Messages.Count} Nachrichten", $"{tab.Messages.Count} messages")">Msg.:&nbsp;@tab.Messages.Count</span>
+                            <span class="tab-msg-count" title="@Loc.T($"{tab.MessageCount} Nachrichten", $"{tab.MessageCount} messages")">Msg.:&nbsp;@tab.MessageCount</span>
                         }
                     </span>
                     @if (tab.UnreadCount > 0)
@@ -1414,7 +1414,7 @@
         var isBroadcast = _activeTab.Key == "*" || _activeTab.Key.TrimStart('#').Equals("alle", StringComparison.OrdinalIgnoreCase);
         var destination = isBroadcast ? "*" : _activeTab.Key.TrimStart('#');
         var tabKey = isBroadcast ? "*" : _activeTab.Key;
-        await UdpService.SendMessageAsync(destination, text, tabKey);
+        await UdpService.SendMessageAsync(destination, text, tabKey, sourceNodeId: _activeNodeId);
         ChatService.RecordTx();
     }
 
@@ -1559,6 +1559,9 @@
         _globalSearchMode    = true;
         _aiSearchAllContacts = true;
         _qsoModalTab         = IsAiActive ? 3 : 2;
+        // Pre-fill date range: last 90 days up to end of today
+        _searchFrom = DateTime.Today.AddDays(-90);
+        _searchTo   = DateTime.Today.AddDays(1).AddSeconds(-1);
         StateHasChanged();
         return Task.CompletedTask;
     }

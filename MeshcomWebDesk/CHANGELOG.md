@@ -1,5 +1,21 @@
 ﻿# Changelog
 
+## [1.10.1] – in development (dev)
+
+### Features
+- **AI Search: Default date range**: When opening the global AI search the date range is now pre-filled to the last 90 days up to the end of the current day (23:59:59).
+- **AI Search: Echo deduplication**: Group messages are deduplicated before prompt construction (LoRa echo creates duplicate DB rows). Reduces token usage and improves answer quality.
+- **AI Search: Timestamp fix**: Timestamps read from MySQL are now correctly treated as local time (`DateTimeKind.Local`) – no more UTC shift (+2 h) in AI answers, QSO history and text search.
+- **AI Search: Automatic model selection**: New model option `auto` (*Automatic (recommended)*) picks between `gpt-4o-mini`, `gpt-4.1-mini` and `gpt-4.1` depending on prompt size.
+- **AI Search: Expanded message scope**: The global search now includes all direct messages, own group messages and group @-mentions. Raw JSON status packets and ACKs are filtered out.
+
+### Bugfixes
+- **Fix Telemetry mapping limit**: The entry limit of 3 was incorrectly applied to the telemetry measurement mapping instead of the send-time schedule. Mapping entries are now unlimited (send times: max. 6). Entries beyond 3 were also silently dropped on save – this is now fixed. The telemetry preview now shows all keys from the JSON file, not only configured ones.
+- **Fix Group Labels growing**: The group labels list was duplicated on every app start due to ASP.NET Core configuration binding appending defaults instead of replacing them. The list now starts empty; new buttons are available in settings: 🔄 Restore defaults, ➕ Add missing, 🗑️ Clear list.
+- **Further improvements and bug fixes.**
+
+---
+
 ## [1.10.0] – released
 
 ### Features

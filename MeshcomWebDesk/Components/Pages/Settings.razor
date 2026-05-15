@@ -325,12 +325,21 @@
 
                 <label>
                     @Loc.T("Gateway-Hervorhebung", "Gateway Highlight")<br />
-                    <small>@Loc.T("Gateway-Stationen (von meshcom.oevsv.at) mit 🌐-Symbol und Farbe hervorheben.", "Highlight gateway stations (from meshcom.oevsv.at) with a 🌐 symbol and colour.")</small>
+                    <small>@Loc.T("Gateway-Stationen mit 🌐-Symbol und Farbe hervorheben.", "Highlight gateway stations with a 🌐 symbol and colour.")</small>
                 </label>
                 <label>
                     <input type="checkbox" @bind="_model.GatewayHighlightEnabled" />
                     <span>@(_model.GatewayHighlightEnabled ? Loc.T("Aktiviert", "Enabled") : Loc.T("Deaktiviert", "Disabled"))</span>
                 </label>
+
+                <label>
+                    @Loc.T("Gateway-Quelle", "Gateway Source")<br />
+                    <small>@Loc.T("Server für die Gateway-Liste.", "Server for the gateway list.")</small>
+                </label>
+                <select @bind="_model.GatewayServer">
+                    <option value="oe">🇦🇹 OE – meshcom.oevsv.at</option>
+                    <option value="dl">🇩🇪 DL – meshcom.hamnet.network</option>
+                </select>
             </div>
             }
         </div>
@@ -777,6 +786,12 @@
                     <small>@Loc.T("Kommagetrennt, z.\u00a0B. 11,15 f\u00fcr 11:00 und 15:00 Uhr", "Comma-separated, e.\u00a0g. 11,15 for 11:00 and 15:00")</small>
                 </label>
                 <input type="text" @bind="_model.TelemetryScheduleHours" placeholder="11,15" />
+                @if (_model.TelemetryScheduleHours?.Split(',', StringSplitOptions.RemoveEmptyEntries).Length > 6)
+                {
+                    <div style="font-size:.8rem;color:#f85149;margin-top:.2rem">
+                        @Loc.T("Maximal 6 Sendezeiten möglich.", "Maximum 6 send times allowed.")
+                    </div>
+                }
 
                 <label>@Loc.T("HTTP-API aktiv", "HTTP-API Active")</label>
                 <label class="settings-toggle">
@@ -828,16 +843,9 @@
                         }
                     </tbody>
                 </table>
-                <button type="button" class="btn-add" @onclick="() => _model.TelemetryMapping.Add(new TelemetryMappingEntry())"
-                        disabled="@(_model.TelemetryMapping.Count >= 3)">
+                <button type="button" class="btn-add" @onclick="() => _model.TelemetryMapping.Add(new TelemetryMappingEntry())">
                     ➕ @Loc.T("Zeile hinzufügen", "Add Row")
                 </button>
-                @if (_model.TelemetryMapping.Count >= 3)
-                {
-                    <div style="font-size:.8rem;color:#8b949e;margin-top:.3rem">
-                        @Loc.T("Maximal 3 Messwerte möglich.", "Maximum 3 measurements allowed.")
-                    </div>
-                }
             </div>
 
             <!-- Vorschau -->
@@ -1465,6 +1473,16 @@
                             @onclick="() => _model.GroupLabels = GroupLabelEntry.Defaults.Select(g => new GroupLabelEntry { Group = g.Group, ShortLabel = g.ShortLabel, Label = g.Label }).ToList()">
                         🔄 @Loc.T("Standard wiederherstellen", "Restore Defaults")
                     </button>
+                    <button type="button" class="btn-add" style="padding:2px 10px;font-size:12px"
+                            title="@Loc.T("Ergänzt fehlende Standard-Gruppen, vorhandene Einträge bleiben unverändert.", "Adds missing default groups; existing entries are not changed.")"
+                            @onclick="() => { foreach (var d in GroupLabelEntry.Defaults) { if (!_model.GroupLabels.Any(g => g.Group == d.Group)) _model.GroupLabels.Add(new GroupLabelEntry { Group = d.Group, ShortLabel = d.ShortLabel, Label = d.Label }); } }">
+                        ➕ @Loc.T("Fehlende ergänzen", "Add Missing")
+                    </button>
+                    <button type="button" class="btn-add" style="padding:2px 10px;font-size:12px"
+                            title="@Loc.T("Alle Gruppen-Labels löschen", "Clear all group labels")"
+                            @onclick="() => _model.GroupLabels.Clear()">
+                        🗑️ @Loc.T("Liste leeren", "Clear List")
+                    </button>
                     <input type="text" @bind="_filenameGroupLabels" style="width:220px;font-size:12px;padding:2px 6px" />
                     <button type="button" class="btn-add" style="padding:2px 10px;font-size:12px" @onclick="ExportGroupLabelsAsync">
                         📤 @Loc.T("Exportieren", "Export")
@@ -1535,7 +1553,11 @@
                 else
                 {
                     <select @bind="_model.AiModel">
-                        <option value="gpt-4o-mini">gpt-4o-mini (@Loc.T("empfohlen", "recommended"))</option>
+                        <option value="auto">🤖 @Loc.T("Automatisch (empfohlen)", "Automatic (recommended)")</option>
+                        <option value="gpt-4o-mini">gpt-4o-mini</option>
+                        <option value="gpt-4.1-nano">gpt-4.1-nano (@Loc.T("günstig", "budget"))</option>
+                        <option value="gpt-4.1-mini">gpt-4.1-mini (@Loc.T("empfohlen für große Suche", "recommended for large search"))</option>
+                        <option value="gpt-4.1">gpt-4.1</option>
                         <option value="gpt-4o">gpt-4o</option>
                         <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
                     </select>
@@ -1957,15 +1979,16 @@
             var rows  = new List<TelemetryPreviewRow>();
             var parts = new List<string>();
 
-            foreach (var entry in _model.TelemetryMapping)
-            {
-                if (string.IsNullOrWhiteSpace(entry.JsonKey)) continue;
+            // Build a lookup of configured mapping entries by JsonKey for quick access
+            var mappingLookup = _model.TelemetryMapping
+                .Where(m => !string.IsNullOrWhiteSpace(m.JsonKey))
+                .ToDictionary(m => m.JsonKey, m => m);
 
-                if (!root.TryGetProperty(entry.JsonKey, out var valueProp))
-                {
-                    rows.Add(new(entry.JsonKey, "–", Loc.T("⚠️ Key nicht in Datei", "⚠️ Key not found in file"), true));
-                    continue;
-                }
+            // Iterate over ALL keys in the JSON file
+            foreach (var jsonProp in root.EnumerateObject())
+            {
+                var jsonKey = jsonProp.Name;
+                var valueProp = jsonProp.Value;
 
                 double value;
                 if (valueProp.ValueKind == System.Text.Json.JsonValueKind.Number)
@@ -1977,16 +2000,28 @@
                     value = parsed;
                 else
                 {
-                    rows.Add(new(entry.JsonKey, valueProp.ToString(), Loc.T("⚠️ Kein Zahlenwert", "⚠️ Not a numeric value"), true));
+                    rows.Add(new(jsonKey, valueProp.ToString(), Loc.T("⚠️ Kein Zahlenwert", "⚠️ Not a numeric value"), true));
                     continue;
                 }
 
-                var decimals  = Math.Max(0, entry.Decimals);
+                // Use configured mapping if available, otherwise show raw key/value
+                mappingLookup.TryGetValue(jsonKey, out var entry);
+                var decimals  = entry != null ? Math.Max(0, entry.Decimals) : 1;
                 var formatted = value.ToString($"F{decimals}", System.Globalization.CultureInfo.InvariantCulture);
-                var label     = string.IsNullOrWhiteSpace(entry.Label) ? entry.JsonKey : entry.Label;
-                var part      = $"{label}={formatted}{entry.Unit}";
-                rows.Add(new(entry.JsonKey, value.ToString(System.Globalization.CultureInfo.InvariantCulture), part, false));
-                parts.Add(part);
+                var label     = entry != null && !string.IsNullOrWhiteSpace(entry.Label) ? entry.Label : jsonKey;
+                var unit      = entry?.Unit ?? string.Empty;
+                var part      = $"{label}={formatted}{unit}";
+                // Mark rows that have no mapping configured
+                var isWarning = entry == null;
+                rows.Add(new(jsonKey, value.ToString(System.Globalization.CultureInfo.InvariantCulture), isWarning ? $"⚠️ {part}" : part, isWarning));
+                if (!isWarning) parts.Add(part);
+            }
+
+            // Additionally report configured keys that are missing in the file
+            foreach (var entry in _model.TelemetryMapping.Where(m => !string.IsNullOrWhiteSpace(m.JsonKey)))
+            {
+                if (!root.TryGetProperty(entry.JsonKey, out _))
+                    rows.Add(new(entry.JsonKey, "–", Loc.T("⚠️ Key nicht in Datei", "⚠️ Key not found in file"), true));
             }
 
             _telemetryPreview = rows;
@@ -2399,6 +2434,7 @@
             OwnMessagesAlignLeft    = s.OwnMessagesAlignLeft,
             TxCooldownSeconds       = s.TxCooldownSeconds,
             GatewayHighlightEnabled = s.GatewayHighlightEnabled,
+            GatewayServer           = s.GatewayServer,
             TelnetEnabled           = s.TelnetEnabled,
             ConsoleMode             = s.ConsoleMode,
             TelnetPort              = s.TelnetPort,
@@ -2931,6 +2967,7 @@
                 OwnMessagesAlignLeft    = s.OwnMessagesAlignLeft,
                 TxCooldownSeconds       = s.TxCooldownSeconds,
                 GatewayHighlightEnabled = s.GatewayHighlightEnabled,
+                GatewayServer           = s.GatewayServer,
                 TelnetEnabled           = s.TelnetEnabled,
                 ConsoleMode             = s.ConsoleMode,
                 TelnetPort              = s.TelnetPort,
@@ -3034,7 +3071,7 @@
         public bool   AiEnabled          { get; set; }
         public string AiProvider         { get; set; } = MeshcomWebDesk.Models.AiSettings.ProviderOpenAi;
         public string AiApiKey           { get; set; } = string.Empty;
-        public string AiModel            { get; set; } = "gpt-4o-mini";
+        public string AiModel            { get; set; } = "auto";
         public string AiAzureEndpoint    { get; set; } = string.Empty;
         public string AiAzureApiVersion  { get; set; } = "2024-08-01-preview";
         public int    AiThresholdDays    { get; set; } = 7;
@@ -3055,6 +3092,7 @@
         public bool   OwnMessagesAlignLeft    { get; set; } = false;
         public int    TxCooldownSeconds         { get; set; } = 5;
         public bool   GatewayHighlightEnabled  { get; set; } = true;
+        public string GatewayServer            { get; set; } = "oe";
         public bool   TelnetEnabled            { get; set; } = false;
         public string ConsoleMode             { get; set; } = "tls";
         public int    TelnetPort              { get; set; } = 2323;
@@ -3123,7 +3161,7 @@
             TelemetryFilePath      = TelemetryFilePath,
             TelemetryGroup         = TelemetryGroup,
             TelemetryScheduleHours = TelemetryScheduleHours,
-            TelemetryMapping       = TelemetryMapping.Take(3).ToList(),
+            TelemetryMapping       = TelemetryMapping.ToList(),
             TelemetryApiEnabled    = TelemetryApiEnabled,
             TelemetryApiKey        = TelemetryApiKey,
             Language               = Language,
@@ -3185,6 +3223,7 @@
             OwnMessagesAlignLeft    = OwnMessagesAlignLeft,
             TxCooldownSeconds       = TxCooldownSeconds,
             GatewayHighlightEnabled = GatewayHighlightEnabled,
+            GatewayServer           = GatewayServer,
             TelnetEnabled           = TelnetEnabled,
             ConsoleMode             = ConsoleMode,
             TelnetPort              = TelnetPort,

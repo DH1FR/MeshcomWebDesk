@@ -204,7 +204,7 @@ public class MeshcomSettings
     /// Used to show a human-readable name below the group tab title in the chat UI.
     /// Pre-filled with the official MeshCom GRC group list (icssw.org/meshcom-grc-gruppen/).
     /// </summary>
-    public List<GroupLabelEntry> GroupLabels { get; set; } = GroupLabelEntry.Defaults;
+    public List<GroupLabelEntry> GroupLabels { get; set; } = [];
 
     /// <summary>
     /// Maximum age of MH list entries in hours. Entries whose <c>LastHeard</c> timestamp is
@@ -293,6 +293,12 @@ public class MeshcomSettings
     /// with a special colour and 🌐 symbol in the MH list and on the map.
     /// </summary>
     public bool GatewayHighlightEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Gateway server source for the highlight list.
+    /// Allowed values: "oe" (meshcom.oevsv.at, default), "dl" (meshcom.hamnet.network), "both".
+    /// </summary>
+    public string GatewayServer { get; set; } = "oe";
 
     // ── Telnet / Console ─────────────────────────────────────────────────
 

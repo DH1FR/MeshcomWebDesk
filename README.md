@@ -206,7 +206,6 @@ Each node profile contains:
 > ⚠️ **Firmware requirement:** The TLS Console feature requires **MeshCom firmware v4.35p.05.13 or later**. Serial Console (USB) works with all firmware versions.
 
 The **Console** page (`/telnet`) provides direct command-line access to the MeshCom node.
-The TLS Console **replaces the classic Telnet connection** – all node communication that was previously only accessible via serial USB is now also available **over the network, encrypted via TLS**.
 Two connection modes are supported, selectable in **Settings → 🖥️ Console**:
 
 #### TLS Console
@@ -402,13 +401,13 @@ Clicking it opens a modal dialog with **four tabs**:
 - **Generate / Regenerate** button – sends the last N messages (configurable `MaxMessages`, default 50) to the AI and stores the result in the `qso_summaries` table
 - **Supported AI providers:**
 
-  | Provider | `Provider` value | Default model |
+  | Provider | `Provider` value | Available models |
   |---|---|---|
-  | **OpenAI** (default) | `openai` | `gpt-4o-mini` |
-  | **Grok** (xAI) | `grok` | `grok-3-mini` |
+  | **OpenAI** (default) | `openai` | `auto` (recommended) · `gpt-4o-mini` · `gpt-4.1-nano` · `gpt-4.1-mini` · `gpt-4.1` · `gpt-4o` · `gpt-3.5-turbo` |
+  | **Grok** (xAI) | `grok` | `grok-3-mini` · `grok-3` |
   | **Azure OpenAI** | `azure` | deployment name |
 
-- **Token usage statistics** – current session prompt / completion / total tokens and request count shown in **Settings → 🤖 KI**
+  > **Model `auto` (Automatic)**: selects the best model based on prompt size - `gpt-4o-mini` for small prompts, `gpt-4.1-mini` for medium and `gpt-4.1` for large context windows. Recommended for AI Search.- **Token usage statistics** – current session prompt / completion / total tokens and request count shown in **Settings → 🤖 KI**
 - **OpenAI balance check** – queries the OpenAI billing API and shows remaining credit / monthly usage in Settings; falls back to a dashboard link when the billing endpoint is restricted (project keys)
 - **Azure OpenAI**: configurable resource endpoint and API version
 
@@ -427,11 +426,11 @@ Clicking it opens a modal dialog with **four tabs**:
 #### 🔎 KI-Suche (AI Search)
 - Ask any natural-language question about the conversation (e.g. *"What did Jürgen recommend?"*)
 - The AI receives all relevant messages and responds with a precise answer **citing exact timestamps**
-- Optional date range to narrow the search window
-- **„Alle Direkt-QSOs durchsuchen" / „Search all direct QSOs"** – optional checkbox to search across **all direct 1:1 QSOs** instead of just the current conversation; group messages (`#...`) and broadcasts are excluded; the AI lists the callsigns found and cites the exact timestamp and original text for each match
-- Requires AI to be enabled and an API key to be configured
-
-#### ⚙️ Setting up AI features (step by step)
+- **Date range pre-filled** - when opening the global AI search the date range is automatically set to the last 90 days up to the end of the current day (23:59:59); can be adjusted manually
+- **"Alle Direkt-QSOs durchsuchen" / "Search all direct QSOs"** - optional checkbox to search across **all direct 1:1 QSOs**, own group messages and group @-mentions; raw JSON status packets and ACKs are filtered out automatically
+- **Echo deduplication** - LoRa-echo duplicates (same message stored twice from outgoing + incoming echo) are removed before the prompt is built, reducing token usage
+- **Automatic model selection** - model option uto (*Automatic (recommended)*) picks gpt-4o-mini, gpt-4.1-mini or gpt-4.1 automatically based on prompt size
+- Requires AI to be enabled and an API key to be configured#### ⚙️ Setting up AI features (step by step)
 
 1. **Set up MySQL** – configure `Database.Provider = "mysql"` and a valid `MySqlConnectionString` in Settings; use the **„Anlegen"** button to create the schema automatically
 2. **Choose a provider** – `openai` (default), `grok` or `azure`
@@ -439,11 +438,12 @@ Clicking it opens a modal dialog with **four tabs**:
    - OpenAI: create a key at [platform.openai.com/api-keys](https://platform.openai.com/api-keys) (project key is sufficient for summaries)
    - Grok / xAI: create a key at [console.x.ai](https://console.x.ai/)
    - Azure OpenAI: enter resource endpoint + deployment name + API version
-4. **Enable AI** – tick *„Aktiviert"* and click **💾 Save**; takes effect immediately without restart
-5. **Test** – enter a callsign in the test field and click **„DB + API testen"**; the test checks DB connectivity and makes a live API call
-6. The 🔎 icon appears on chat tabs once messages are stored in MySQL
+4. **Choose a model** - select *Automatic (recommended)* (`auto`) to let the app pick the best model based on prompt size, or choose a specific model (e.g. `gpt-4.1-mini` for large searches, `gpt-4o-mini` for cost efficiency)
+5. **Enable AI** - tick *"Aktiviert"* and click **💾 Save**; takes effect immediately without restart
+6. **Test** - enter a callsign in the test field and click **"DB + API testen"**; the test checks DB connectivity and makes a live API call
+7. The 🔎 icon appears on chat tabs once messages are stored in MySQL
 
-> API keys are stored **encrypted** in `appsettings.override.json` (ASP.NET Core Data Protection, `dp:` prefix).
+> **Tip:** Enable *"KI-Anfragen protokollieren"* (Log AI requests) in Settings to see detailed diagnostics - SQL used, prompt size, token estimate and answer preview - in the application log. API keys are stored **encrypted** in `appsettings.override.json` (ASP.NET Core Data Protection, `dp:` prefix).
 
 
 ### 🔗 Webhook
