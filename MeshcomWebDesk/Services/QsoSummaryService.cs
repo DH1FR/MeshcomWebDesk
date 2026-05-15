@@ -615,7 +615,7 @@ public sealed class QsoSummaryService
             await using var reader = await cmd.ExecuteReaderAsync(ct);
             while (await reader.ReadAsync(ct))
                 list.Add(new QsoHistoryMessage(
-                    reader.GetDateTime(0),
+                    DateTime.SpecifyKind(reader.GetDateTime(0), DateTimeKind.Local),
                     reader.GetString(1),
                     reader.GetString(2),
                     reader.GetString(3),
@@ -695,7 +695,7 @@ public sealed class QsoSummaryService
             await using var reader = await cmd.ExecuteReaderAsync(ct);
             while (await reader.ReadAsync(ct))
                 list.Add(new QsoHistoryMessage(
-                    reader.GetDateTime(0),
+                    DateTime.SpecifyKind(reader.GetDateTime(0), DateTimeKind.Local),
                     reader.GetString(1),
                     reader.GetString(2),
                     reader.GetString(3),
@@ -767,8 +767,9 @@ public sealed class QsoSummaryService
             await using var reader = await cmd.ExecuteReaderAsync(ct);
             while (await reader.ReadAsync(ct))
                 messages.Add(new RawMessage(
-                    reader.GetDateTime(0), reader.GetString(1),
-                    reader.GetString(2), reader.GetString(3), reader.GetBoolean(4)));
+                    DateTime.SpecifyKind(reader.GetDateTime(0), DateTimeKind.Local),
+                    reader.GetString(1), reader.GetString(2),
+                    reader.GetString(3), reader.GetBoolean(4)));
 
             // Reverse so the AI receives messages in chronological order (oldest first);
             // newest messages were loaded first so old ones are dropped when limit is hit.
