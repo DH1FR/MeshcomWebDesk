@@ -182,6 +182,7 @@ public class SettingsService
                 ["OwnMessagesAlignLeft"]    = s.OwnMessagesAlignLeft,
                 ["TxCooldownSeconds"]       = s.TxCooldownSeconds,
                 ["GatewayHighlightEnabled"] = s.GatewayHighlightEnabled,
+                ["GatewayServer"]           = s.GatewayServer,
                 ["TelnetEnabled"]           = s.TelnetEnabled,
                 ["ConsoleMode"]             = s.ConsoleMode,
                 ["TelnetPort"]              = s.TelnetPort,

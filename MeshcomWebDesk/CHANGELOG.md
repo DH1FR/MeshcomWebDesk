@@ -1,6 +1,13 @@
 ﻿# Changelog
 
-## [1.10.1] – in development (dev)
+## [1.10.2] – in development (dev)
+
+### Bugfixes
+- **Fix Gateway Source not saved**: The `GatewayServer` setting (OE / DL source selection) was missing from `SettingsService.SaveMeshcomSettingsAsync` and was therefore reset to the default on every restart.
+
+---
+
+## [1.10.1] – released
 
 ### Features
 - **AI Search: Default date range**: When opening the global AI search the date range is now pre-filled to the last 90 days up to the end of the current day (23:59:59).
