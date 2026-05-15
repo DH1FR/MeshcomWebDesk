@@ -1009,11 +1009,11 @@ public sealed class QsoSummaryService
             """
             (
                 (
-                    (from_call = @myCall OR from_call LIKE @myLike)
-                 OR (to_call   = @myCall OR to_call   LIKE @myLike)
+                    (from_call = @myCall OR from_call = @myBase OR from_call LIKE @myLike)
+                 OR (to_call   = @myCall OR to_call   = @myBase OR to_call   LIKE @myLike)
                 )
              OR (
-                    (from_call = @myCall OR from_call LIKE @myLike)
+                    (from_call = @myCall OR from_call = @myBase OR from_call LIKE @myLike)
                     AND to_call LIKE '#%'
                 )
              OR (
@@ -1035,6 +1035,7 @@ public sealed class QsoSummaryService
         var parms = new Dictionary<string, object>
         {
             ["@myCall"]      = myCallsign,
+            ["@myBase"]      = myBase,
             ["@myLike"]      = myBase + "-%",
             ["@mentionCall"] = "%@" + myCallsign + "%",
             ["@mentionBase"] = "%@" + myBase + "%"
