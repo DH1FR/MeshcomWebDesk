@@ -76,7 +76,8 @@
                 </button>
             }
             <button class="btn-sm @(_paused ? "btn-primary" : "btn-action")" @onclick="TogglePause"
-                    title="@(_paused ? Loc.T("Ausgabe fortsetzen (Scroll wieder aktiv)", "Resume output (scroll re-enabled)") : Loc.T("Ausgabe pausieren (neue Zeilen kommen weiter rein)", "Pause output (new lines still buffered)"))">
+                    title="@(_paused ? Loc.T("Ausgabe fortsetzen (Scroll wieder aktiv)", "Resume output (scroll re-enabled)") : Loc.T("Ausgabe pausieren (neue Zeilen kommen weiter rein)", "Pause output (new lines still buffered)"))"
+                    style="@(Console.IsConnected ? "" : "display:none")">
                 @(_paused ? "▶ " + Loc.T("Weiter", "Resume") : "⏸ " + Loc.T("Pause", "Pause"))
             </button>
             <button class="btn-sm @(_loraHighlight ? "btn-primary" : "btn-action")" @onclick="() => _loraHighlight = !_loraHighlight"
