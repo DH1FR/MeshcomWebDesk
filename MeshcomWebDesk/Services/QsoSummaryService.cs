@@ -777,6 +777,20 @@ public sealed class QsoSummaryService
                 "QsoSummaryService: SearchAsync({Mode}) – {Count} messages loaded, query='{Query}'",
                 allDirectContacts ? "ALL" : callsignBase, messages.Count, query);
 
+            if (messages.Count > 0)
+            {
+                var sample = messages.TakeLast(3)
+                    .Select(m => $"{m.Timestamp:dd.MM HH:mm} {m.From}→{m.To}: {m.Text?[..Math.Min(60, m.Text.Length)]}");
+                _logger.LogInformation(
+                    "QsoSummaryService: SearchAsync – last 3 messages: {Sample}",
+                    string.Join(" | ", sample));
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "QsoSummaryService: SearchAsync – NO messages found! Check SQL/params above.");
+            }
+
             // ── Station context from QRZ.com and MH list ──────────────────
             var sbCtx = new StringBuilder();
 
