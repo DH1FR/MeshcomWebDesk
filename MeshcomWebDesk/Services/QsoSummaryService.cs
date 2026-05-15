@@ -774,6 +774,18 @@ public sealed class QsoSummaryService
             // newest messages were loaded first so old ones are dropped when limit is hit.
             messages.Reverse();
 
+            // Remove echo duplicates: group messages are stored twice (outgoing "#9" + incoming echo "9").
+            // Keep the outgoing entry (IsOutgoing=true) when both exist within 30 seconds.
+            messages = messages
+                .GroupBy(m => (
+                    From: m.From,
+                    To:   m.To.TrimStart('#'),
+                    Text: m.Text,
+                    Bucket: m.Timestamp.Ticks / TimeSpan.FromSeconds(30).Ticks))
+                .Select(g => g.FirstOrDefault(m => m.IsOutgoing) ?? g.First())
+                .OrderBy(m => m.Timestamp)
+                .ToList();
+
             _logger.LogInformation(
                 "QsoSummaryService: SearchAsync({Mode}) – {Count} messages loaded, query='{Query}'",
                 allDirectContacts ? "ALL" : callsignBase, messages.Count, query);
