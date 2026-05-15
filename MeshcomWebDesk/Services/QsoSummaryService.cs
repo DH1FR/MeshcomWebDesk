@@ -751,7 +751,7 @@ public sealed class QsoSummaryService
                 SELECT timestamp, from_call, to_call, text, is_outgoing
                 FROM `{db.MySqlTableName}`
                 {where.Sql}
-                ORDER BY timestamp ASC
+                ORDER BY timestamp DESC
                 LIMIT {ai.MaxMessages}
                 """, conn);
             foreach (var p in where.Params)
@@ -763,6 +763,10 @@ public sealed class QsoSummaryService
                 messages.Add(new RawMessage(
                     reader.GetDateTime(0), reader.GetString(1),
                     reader.GetString(2), reader.GetString(3), reader.GetBoolean(4)));
+
+            // Reverse so the AI receives messages in chronological order (oldest first);
+            // newest messages were loaded first so old ones are dropped when limit is hit.
+            messages.Reverse();
 
             _logger.LogInformation(
                 "QsoSummaryService: SearchAsync({Mode}) – {Count} messages loaded, query='{Query}'",
@@ -995,19 +999,30 @@ public sealed class QsoSummaryService
             ? myCallsign[..myCallsign.IndexOf('-')]
             : myCallsign;
 
-        // Must involve own callsign (any SSID) on either side
-        // AND remote side must not be a group (#...) or broadcast (*  / ALL)
+        // Three cases are included:
+        // 1. Direct 1:1 messages where I am sender or receiver (no group prefix)
+        // 2. Group messages I sent myself (from_call = me, to_call = #...)
+        // 3. Group messages where someone @-mentioned my callsign in the text
+        //    (Amateur radio callsigns are globally unique, so no false positives)
         var conditions = new List<string>
         {
             """
             (
-                (from_call = @myCall OR from_call LIKE @myLike)
-             OR (to_call   = @myCall OR to_call   LIKE @myLike)
+                (
+                    (from_call = @myCall OR from_call LIKE @myLike)
+                 OR (to_call   = @myCall OR to_call   LIKE @myLike)
+                )
+             OR (
+                    (from_call = @myCall OR from_call LIKE @myLike)
+                    AND to_call LIKE '#%'
+                )
+             OR (
+                    to_call LIKE '#%'
+                    AND (text LIKE @mentionCall OR text LIKE @mentionBase)
+                )
             )
             """,
-            // Exclude group and broadcast destinations/sources
-            "to_call   NOT LIKE '#%'",
-            "from_call NOT LIKE '#%'",
+            // Exclude broadcasts
             "to_call   NOT IN ('*','ALL','all')",
             "from_call NOT IN ('*','ALL','all')",
             "is_position_beacon = 0",
@@ -1019,8 +1034,10 @@ public sealed class QsoSummaryService
 
         var parms = new Dictionary<string, object>
         {
-            ["@myCall"] = myCallsign,
-            ["@myLike"] = myBase + "-%"
+            ["@myCall"]      = myCallsign,
+            ["@myLike"]      = myBase + "-%",
+            ["@mentionCall"] = "%@" + myCallsign + "%",
+            ["@mentionBase"] = "%@" + myBase + "%"
         };
 
         if (from.HasValue) { conditions.Add("timestamp >= @from"); parms["@from"] = from.Value; }
