@@ -925,6 +925,12 @@ public sealed class QsoSummaryService
             if (ai.LogRequests)
                 _logger.LogInformation("QsoSummaryService: Search request for {Callsign}: {Query}", callsignBase, query);
 
+            // Estimate token usage: ~4 chars per token
+            var estimatedTokens = prompt.Length / 4;
+            _logger.LogInformation(
+                "QsoSummaryService: SearchAsync prompt – {Chars} chars, ~{Tokens} estimated tokens, messages={Count}",
+                prompt.Length, estimatedTokens, messages.Count);
+
             using var request = new HttpRequestMessage(HttpMethod.Post, ai.GetApiUrl());
             if (ai.Provider == AiSettings.ProviderAzureOpenAi)
                 request.Headers.Add("api-key", ai.ApiKey);
@@ -944,11 +950,17 @@ public sealed class QsoSummaryService
 
             using var doc = JsonDocument.Parse(responseBody);
             AccumulateUsage(doc.RootElement);
-            return doc.RootElement
+            var answer = doc.RootElement
                 .GetProperty("choices")[0]
                 .GetProperty("message")
                 .GetProperty("content")
                 .GetString();
+
+            _logger.LogInformation(
+                "QsoSummaryService: SearchAsync answer (first 300 chars): {Answer}",
+                answer is null ? "(null)" : answer[..Math.Min(300, answer.Length)]);
+
+            return answer;
         }
         catch (Exception ex)
         {
