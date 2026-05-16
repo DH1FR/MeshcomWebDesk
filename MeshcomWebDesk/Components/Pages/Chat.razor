@@ -1375,7 +1375,8 @@
 
     private async Task CopyMessageAsync(string text)
     {
-        await JS.InvokeVoidAsync("meshcomChat.copyToClipboard", text);
+        try { await JS.InvokeVoidAsync("meshcomChat.copyToClipboard", text); }
+        catch { /* clipboard not available (e.g. iOS Safari outside gesture context) */ }
     }
 
     private void CreateNewTab()

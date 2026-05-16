@@ -242,17 +242,25 @@ window.meshcomChat = (function () {
         // ── Nachricht in Zwischenablage kopieren ──
         copyToClipboard: (text) => {
             if (navigator.clipboard && navigator.clipboard.writeText) {
-                return navigator.clipboard.writeText(text);
+                return navigator.clipboard.writeText(text).catch(() => {
+                    // iOS Safari: clipboard API may fail outside trusted gesture context
+                    meshcomChat._copyFallback(text);
+                });
             }
-            // Fallback für ältere Browser
-            var ta = document.createElement('textarea');
-            ta.value = text;
-            ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px';
-            document.body.appendChild(ta);
-            ta.select();
-            document.execCommand('copy');
-            document.body.removeChild(ta);
+            meshcomChat._copyFallback(text);
             return Promise.resolve();
+        },
+
+        _copyFallback: (text) => {
+            // iOS Safari-compatible fallback using a temporary input element
+            var el = document.createElement('input');
+            el.value = text;
+            el.style.cssText = 'position:fixed;top:0;left:0;opacity:0;font-size:16px';
+            document.body.appendChild(el);
+            el.focus();
+            el.setSelectionRange(0, el.value.length);
+            try { document.execCommand('copy'); } catch(e) { }
+            document.body.removeChild(el);
         },
 
         // ── SendBar: fügt Text an der aktuellen Cursorposition ein ──
