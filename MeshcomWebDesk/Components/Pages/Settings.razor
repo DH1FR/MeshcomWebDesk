@@ -383,6 +383,12 @@
                                @onchange="@(() => _model.ConsoleMode = "serial")" />
                         🔌 @Loc.T("Seriell Console", "Serial Console")
                     </label>
+                    <label style="display:flex; gap:.3rem; align-items:center; cursor:pointer;">
+                        <input type="radio" name="consoleMode" value="hmac"
+                               checked="@(_model.ConsoleMode == "hmac")"
+                               @onchange="@(() => _model.ConsoleMode = "hmac")" />
+                        🔐 HMAC Console
+                    </label>
                 </div>
 
                 @if (_model.ConsoleMode == "tls")
@@ -432,6 +438,20 @@
                     <div style="font-size:.8rem; color:#8b949e;">
                         @Loc.T("Voraussetzung: Auf dem Node muss 'enable Telnet console' (Port 2323) aktiviert sein.",
                                "Requirement: The node must have 'enable Telnet console' (port 2323) enabled.")
+                    </div>
+                }
+                else if (_model.ConsoleMode == "hmac")
+                {
+                    <label>@Loc.T("Port", "Port")</label>
+                    <input type="number" @bind="_model.TelnetPort" min="1" max="65535" />
+
+                    <label>@Loc.T("Passwort", "Password")</label>
+                    <input type="password" @bind="_model.TelnetPassword" placeholder="••••••••" autocomplete="new-password" />
+
+                    <span></span>
+                    <div style="font-size:.8rem; color:#8b949e;">
+                        @Loc.T("HMAC-TCP: Verbindung ohne TLS, Authentifizierung per HMAC-SHA256 Challenge-Response.",
+                               "HMAC-TCP: Connection without TLS, authentication via HMAC-SHA256 challenge-response.")
                     </div>
                 }
                 else

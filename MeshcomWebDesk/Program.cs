@@ -117,6 +117,7 @@ builder.Services.AddSingleton<UpdateCheckService>();
 builder.Services.AddSingleton<ElevationService>();
 builder.Services.AddSingleton<TelnetService>();
 builder.Services.AddSingleton<SerialConsoleService>();
+builder.Services.AddSingleton<HmacConsoleService>();
 builder.Services.AddHttpClient("MeshcomGateway").ConfigurePrimaryHttpMessageHandler(
     () => new HttpClientHandler { AllowAutoRedirect = true });
 builder.Services.AddSingleton<GatewayService>();

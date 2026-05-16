@@ -5,6 +5,7 @@
 @rendermode InteractiveServer
 @inject TelnetService TelnetService
 @inject SerialConsoleService SerialConsoleService
+@inject HmacConsoleService HmacConsoleService
 @inject NodeManager NodeManager
 @inject SettingsService SettingsService
 @inject IOptionsMonitor<MeshcomSettings> SettingsMon
@@ -24,6 +25,10 @@
             @if (_isSerial)
             {
                 <span>🔌 @Loc.T("Seriell Console", "Serial Console")</span>
+            }
+            else if (_isHmac)
+            {
+                <span>🔐 HMAC Console</span>
             }
             else
             {
@@ -65,27 +70,27 @@
             {
                 <button class="btn-action btn-sm" title="@Loc.T("OTA-Update starten – sendet --ota-update an den Node und öffnet den OTA-Webserver", "Start OTA update – sends --ota-update to node and opens OTA web server")"
                         @onclick="StartOtaAsync">
-                    🔄 OTA
+                    🔄 <span class="btn-label">OTA</span>
                 </button>
                 <button class="btn-warn btn-sm" title="@Loc.T("Node neu starten – sendet --reboot an den Node", "Reboot node – sends --reboot to node")"
                         @onclick="() => _rebootConfirm = true">
-                    🔁 @Loc.T("Reboot", "Reboot")
+                    🔁 <span class="btn-label">@Loc.T("Reboot", "Reboot")</span>
                 </button>
                 <button class="btn-danger btn-sm" @onclick="DisconnectAsync">
-                    @Loc.T("Trennen", "Disconnect")
+                    🔌 <span class="btn-label">@Loc.T("Trennen", "Disconnect")</span>
                 </button>
             }
             <button class="btn-sm @(_paused ? "btn-primary" : "btn-action")" @onclick="TogglePause"
                     title="@(_paused ? Loc.T("Ausgabe fortsetzen (Scroll wieder aktiv)", "Resume output (scroll re-enabled)") : Loc.T("Ausgabe pausieren (neue Zeilen kommen weiter rein)", "Pause output (new lines still buffered)"))"
                     style="@(Console.IsConnected ? "" : "display:none")">
-                @(_paused ? "▶ " + Loc.T("Weiter", "Resume") : "⏸ " + Loc.T("Pause", "Pause"))
+                @(_paused ? "▶" : "⏸") <span class="btn-label">@(_paused ? Loc.T("Weiter", "Resume") : Loc.T("Pause", "Pause"))</span>
             </button>
             <button class="btn-sm @(_loraHighlight ? "btn-primary" : "btn-action")" @onclick="ToggleLoraHighlightAsync"
                     title="@Loc.T("LoRa-Debug-Hervorhebung ein/aus", "LoRa debug highlighting on/off")">
-                📻 @Loc.T("LoRa", "LoRa")
+                📻 <span class="btn-label">@Loc.T("LoRa", "LoRa")</span>
             </button>
-            <button class="btn-action btn-sm" @onclick="ClearLines">
-                @Loc.T("Löschen", "Clear")
+            <button class="btn-action btn-sm" @onclick="ClearLines" title="@Loc.T("Ausgabe löschen", "Clear output")">
+                🗑️ <span class="btn-label">@Loc.T("Löschen", "Clear")</span>
             </button>
         </div>
     </div>
@@ -206,9 +211,15 @@
     // Fingerprint of an unknown (first-connect) certificate, shown as a trust banner
     private string? _unknownCertThumbprint;
 
-    // Active console service (TLS or Serial)
-    private IConsoleService Console => _isSerial ? SerialConsoleService : TelnetService;
+    // Active console service (TLS, Serial oder HMAC)
+    private IConsoleService Console => SettingsMon.CurrentValue.ConsoleMode switch
+    {
+        "serial" => SerialConsoleService,
+        "hmac"   => HmacConsoleService,
+        _        => TelnetService
+    };
     private bool _isSerial => SettingsMon.CurrentValue.ConsoleMode == "serial";
+    private bool _isHmac   => SettingsMon.CurrentValue.ConsoleMode == "hmac";
 
     /// <summary>IP address of the currently selected console node (or legacy DeviceIp).</summary>
     private string ActiveNodeIp
@@ -236,8 +247,9 @@
             _consoleNodeId = NodeManager.PrimaryNode?.Id ?? NodeManager.Nodes[0].Id;
         TelnetService.OnChange += HandleChange;
         SerialConsoleService.OnChange += HandleChange;
+        HmacConsoleService.OnChange += HandleChange;
         // Pick up any fingerprint left from a previous connect attempt (nur im TLS-Modus relevant)
-        if (!_isSerial && !string.IsNullOrEmpty(TelnetService.UnknownCertThumbprint))
+        if (!_isSerial && !_isHmac && !string.IsNullOrEmpty(TelnetService.UnknownCertThumbprint))
             _unknownCertThumbprint = TelnetService.UnknownCertThumbprint;
     }
 
@@ -259,6 +271,7 @@
     {
         TelnetService.OnChange -= HandleChange;
         SerialConsoleService.OnChange -= HandleChange;
+        HmacConsoleService.OnChange -= HandleChange;
     }
 
     // ── Node selection ────────────────────────────────────────────────────
@@ -302,6 +315,10 @@
         if (_isSerial)
         {
             await SerialConsoleService.ConnectAsync();
+        }
+        else if (_isHmac)
+        {
+            await HmacConsoleService.ConnectAsync(ActiveNodeIp);
         }
         else
         {
