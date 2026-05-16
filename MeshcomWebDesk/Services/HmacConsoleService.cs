@@ -193,8 +193,11 @@ public class HmacConsoleService : IConsoleService, IAsyncDisposable
 
     private void AppendLine(string line)
     {
-        Lines.Add(line);
-        if (Lines.Count > 500) Lines.RemoveAt(0);
+        lock (Lines)
+        {
+            if (Lines.Count >= 500) Lines.RemoveAt(0);
+            Lines.Add(line);
+        }
     }
 
     public async ValueTask DisposeAsync()
