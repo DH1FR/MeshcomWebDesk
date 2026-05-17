@@ -11,7 +11,7 @@ namespace MeshcomWebDesk.Services;
 public class ConsoleLogService
 {
     private readonly IOptionsMonitor<MeshcomSettings> _settingsMonitor;
-    private readonly IConfiguration _configuration;
+    private readonly string _resolvedLogPath;
     private readonly ILogger<ConsoleLogService> _logger;
 
     // One writer per host key, reused within the same calendar day.
@@ -20,12 +20,12 @@ public class ConsoleLogService
 
     public ConsoleLogService(
         IOptionsMonitor<MeshcomSettings> settingsMonitor,
-        IConfiguration configuration,
+        ResolvedLogPath resolvedLogPath,
         ILogger<ConsoleLogService> logger)
     {
-        _settingsMonitor = settingsMonitor;
-        _configuration   = configuration;
-        _logger          = logger;
+        _settingsMonitor  = settingsMonitor;
+        _resolvedLogPath  = resolvedLogPath.Path;
+        _logger           = logger;
     }
 
     /// <summary>
@@ -77,20 +77,14 @@ public class ConsoleLogService
     // ── Private helpers ────────────────────────────────────────────────────
 
     /// <summary>
-    /// Returns the effective log path: prefers the configured value, falls back to
-    /// the IConfiguration source (appsettings.json before override), then AppBaseDir.
+    /// Returns the effective log path: prefers the configured value from settings,
+    /// falls back to the startup-resolved path (immune to override.json empty string).
     /// </summary>
     private string ResolveLogPath(MeshcomSettings s)
     {
         if (!string.IsNullOrWhiteSpace(s.LogPath))
             return s.LogPath;
-
-        // IOptionsMonitor returned empty (override.json wrote ""), read from raw IConfiguration
-        var fromConfig = _configuration.GetValue<string>($"{MeshcomSettings.SectionName}:LogPath");
-        if (!string.IsNullOrWhiteSpace(fromConfig))
-            return fromConfig;
-
-        return AppContext.BaseDirectory;
+        return _resolvedLogPath;
     }
 
     private async Task<StreamWriter> GetOrCreateWriterAsync(string host, DateOnly today, string logPath)
