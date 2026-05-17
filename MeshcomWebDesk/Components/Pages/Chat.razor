@@ -895,7 +895,7 @@
     private List<RecentPartner> _recentPartners = [];
     private bool _recentPartnersLoaded;
     private bool _isInitialized;
-    private DateTime _lastNotificationTime = DateTime.MinValue;
+    private readonly Dictionary<Guid?, DateTime> _lastNotificationTime = new();
     private string _monitorFilter = string.Empty;
     private IReadOnlyList<MeshcomMessage> _cachedFilteredMessages = [];
     private CancellationTokenSource? _filterDebounce;
@@ -1233,9 +1233,10 @@
             string.Equals(m.To, _myCallsign, StringComparison.OrdinalIgnoreCase));
         if (latestDirect != null)
         {
-            if (_isInitialized && _soundEnabled && latestDirect.Timestamp > _lastNotificationTime)
+            var lastTime = _lastNotificationTime.GetValueOrDefault(_activeNodeId, DateTime.MinValue);
+            if (_isInitialized && _soundEnabled && latestDirect.Timestamp > lastTime)
                 _playSound = true;
-            _lastNotificationTime = latestDirect.Timestamp;
+            _lastNotificationTime[_activeNodeId] = latestDirect.Timestamp;
         }
     }
 
