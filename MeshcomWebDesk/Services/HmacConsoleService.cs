@@ -52,7 +52,7 @@ public class HmacConsoleService : IConsoleService, IAsyncDisposable
 
             _cts = new CancellationTokenSource();
 
-            AppendLine($"[Verbinde mit {host}:{port} (HMAC)…]");
+            AppendLine($"[Verbinde mit {host}:{port} (NET Console)…]");
             OnChange?.Invoke();
 
             using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
@@ -98,7 +98,7 @@ public class HmacConsoleService : IConsoleService, IAsyncDisposable
             }
 
             IsConnected = true;
-            AppendLine($"● Verbunden mit {host}:{port} (HMAC-TCP)");
+            AppendLine($"● Verbunden mit {host}:{port} (NET Console)");
             OnChange?.Invoke();
 
             // ── Schritt 6: bidirektionaler Lese-Loop ─────────────────────────
@@ -111,7 +111,7 @@ public class HmacConsoleService : IConsoleService, IAsyncDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "HMAC-Console connect failed");
+            _logger.LogError(ex, "NET Console connect failed");
             AppendLine($"✗ Verbindungsfehler: {ex.Message}");
             await CleanupAsync();
         }
@@ -145,7 +145,7 @@ public class HmacConsoleService : IConsoleService, IAsyncDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "HMAC-Console send failed");
+            _logger.LogError(ex, "NET Console send failed");
             AppendLine($"✗ Senden fehlgeschlagen: {ex.Message}");
             await CleanupAsync();
             OnChange?.Invoke();
@@ -169,7 +169,7 @@ public class HmacConsoleService : IConsoleService, IAsyncDisposable
         catch (OperationCanceledException) { /* normal bei Disconnect */ }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "HMAC-Console read loop ended");
+            _logger.LogWarning(ex, "NET Console read loop ended");
             AppendLine($"[Verbindung unterbrochen: {ex.Message}]");
         }
         finally

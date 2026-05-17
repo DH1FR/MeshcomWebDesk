@@ -28,7 +28,7 @@
             }
             else if (_isHmac)
             {
-                <span>🔐 HMAC Console</span>
+                <span>🔐 NET Console</span>
             }
             else
             {
@@ -211,7 +211,7 @@
     // Fingerprint of an unknown (first-connect) certificate, shown as a trust banner
     private string? _unknownCertThumbprint;
 
-    // Active console service (TLS, Serial oder HMAC)
+    // Active console service (TLS, Serial oder NET)
     private IConsoleService Console => SettingsMon.CurrentValue.ConsoleMode switch
     {
         "serial" => SerialConsoleService,

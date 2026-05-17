@@ -387,7 +387,7 @@
                         <input type="radio" name="consoleMode" value="hmac"
                                checked="@(_model.ConsoleMode == "hmac")"
                                @onchange="@(() => _model.ConsoleMode = "hmac")" />
-                        🔐 HMAC Console
+                        🔐 NET Console
                     </label>
                 </div>
 
@@ -450,8 +450,8 @@
 
                     <span></span>
                     <div style="font-size:.8rem; color:#8b949e;">
-                        @Loc.T("HMAC-TCP: Verbindung ohne TLS, Authentifizierung per HMAC-SHA256 Challenge-Response.",
-                               "HMAC-TCP: Connection without TLS, authentication via HMAC-SHA256 challenge-response.")
+                        @Loc.T("NET Console: Verbindung ohne TLS, Authentifizierung per HMAC-SHA256 Challenge-Response.",
+                               "NET Console: Connection without TLS, authentication via HMAC-SHA256 challenge-response.")
                     </div>
                 }
                 else

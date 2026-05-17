@@ -305,7 +305,7 @@ public class MeshcomSettings
     /// <summary>When true, a Console tab is shown.</summary>
     public bool TelnetEnabled { get; set; } = false;
 
-    /// <summary>Console mode: "tls" (default), "serial", or "hmac".</summary>
+    /// <summary>Console mode: "tls" (default), "serial", or "hmac" (NET Console).</summary>
     public string ConsoleMode { get; set; } = "tls";
 
     /// <summary>TCP port for the TLS Telnet connection. Default: 2323.</summary>

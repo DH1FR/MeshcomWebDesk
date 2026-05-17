@@ -428,12 +428,7 @@
                 "hmac"   => HmacConsoleService.IsConnected,
                 _        => TelnetService.IsConnected
             };
-            var consoleIcon = _settings.ConsoleMode switch
-            {
-                "serial" => "🔌",
-                "hmac"   => "🔐",
-                _        => "🖥️"
-            };
+            var consoleIcon = "🖥️";
             <button class="status-mute-btn @(consoleConnected ? "" : "status-mute-off")"
                     @onclick="ToggleTelnetAsync"
                     title="@(consoleConnected ? Loc.T("Console verbunden – klicken zum Trennen", "Console connected – click to disconnect") : Loc.T("Console getrennt – klicken zum Verbinden", "Console disconnected – click to connect"))">
