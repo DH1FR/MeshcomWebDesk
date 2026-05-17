@@ -2383,10 +2383,13 @@
                 ListenPort            = n.ListenPort,
                 IsPrimary             = n.IsPrimary,
                 TelnetCertThumbprint  = n.TelnetCertThumbprint,
-                TelnetPassword        = n.TelnetPassword
+                TelnetPassword        = n.TelnetPassword,
+                ConsoleLogEnabled     = n.ConsoleLogEnabled
             }).ToList(),
+            LogPath             = s.LogPath,
             LogRetainDays       = s.LogRetainDays,
             LogUdpTraffic       = s.LogUdpTraffic,
+            ConsoleLogEnabled   = s.ConsoleLogEnabled,
             MonitorMaxMessages  = s.MonitorMaxMessages,
             TabMaxMessages      = s.TabMaxMessages,
             MhMaxAgeHours       = s.MhMaxAgeHours,
