@@ -44,15 +44,18 @@ public class ConsoleLogService
         await _lock.WaitAsync();
         try
         {
-            var s      = _settingsMonitor.CurrentValue;
-            var today  = DateOnly.FromDateTime(DateTime.Now);
-            var writer = await GetOrCreateWriterAsync(host, today, s.LogPath);
+            var s         = _settingsMonitor.CurrentValue;
+            var today     = DateOnly.FromDateTime(DateTime.Now);
+            var resolvedPath = string.IsNullOrWhiteSpace(s.LogPath) ? AppContext.BaseDirectory : s.LogPath;
+            var writer    = await GetOrCreateWriterAsync(host, today, s.LogPath);
 
             await writer.WriteLineAsync(
                 $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} {trimmed}");
             await writer.FlushAsync();
 
-            _logger.LogInformation("ConsoleLogService: wrote to {File}", Path.Combine(_settingsMonitor.CurrentValue.LogPath, $"console-{host}-{today:yyyy-MM-dd}.log"));
+            var safeHost = string.Concat(host.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
+            _logger.LogInformation("ConsoleLogService: wrote to {File}",
+                Path.Combine(resolvedPath, $"console-{safeHost}-{today:yyyy-MM-dd}.log"));
 
             // Purge old files (best-effort, once per write call, guarded by lock)
             PurgeOldFiles(host, today, s.LogPath, s.LogRetainDays);
