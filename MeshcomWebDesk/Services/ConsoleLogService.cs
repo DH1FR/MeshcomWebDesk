@@ -57,7 +57,7 @@ public class ConsoleLogService
             await writer.FlushAsync();
 
             var safeHost = string.Concat(host.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
-            _logger.LogInformation("ConsoleLogService: wrote to {File}",
+            _logger.LogDebug("ConsoleLogService: wrote to {File}",
                 Path.Combine(logPath, $"console-{safeHost}-{today:yyyy-MM-dd}.log"));
 
             // Purge old files (best-effort, once per write call, guarded by lock)
