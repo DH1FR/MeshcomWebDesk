@@ -11,6 +11,7 @@ namespace MeshcomWebDesk.Services;
 public class ConsoleLogService
 {
     private readonly IOptionsMonitor<MeshcomSettings> _settingsMonitor;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<ConsoleLogService> _logger;
 
     // One writer per host key, reused within the same calendar day.
@@ -19,9 +20,11 @@ public class ConsoleLogService
 
     public ConsoleLogService(
         IOptionsMonitor<MeshcomSettings> settingsMonitor,
+        IConfiguration configuration,
         ILogger<ConsoleLogService> logger)
     {
         _settingsMonitor = settingsMonitor;
+        _configuration   = configuration;
         _logger          = logger;
     }
 
@@ -44,10 +47,10 @@ public class ConsoleLogService
         await _lock.WaitAsync();
         try
         {
-            var s         = _settingsMonitor.CurrentValue;
-            var today     = DateOnly.FromDateTime(DateTime.Now);
-            var resolvedPath = string.IsNullOrWhiteSpace(s.LogPath) ? AppContext.BaseDirectory : s.LogPath;
-            var writer    = await GetOrCreateWriterAsync(host, today, s.LogPath);
+            var s            = _settingsMonitor.CurrentValue;
+            var today        = DateOnly.FromDateTime(DateTime.Now);
+            var logPath      = ResolveLogPath(s);
+            var writer       = await GetOrCreateWriterAsync(host, today, logPath);
 
             await writer.WriteLineAsync(
                 $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} {trimmed}");
@@ -55,10 +58,10 @@ public class ConsoleLogService
 
             var safeHost = string.Concat(host.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
             _logger.LogInformation("ConsoleLogService: wrote to {File}",
-                Path.Combine(resolvedPath, $"console-{safeHost}-{today:yyyy-MM-dd}.log"));
+                Path.Combine(logPath, $"console-{safeHost}-{today:yyyy-MM-dd}.log"));
 
             // Purge old files (best-effort, once per write call, guarded by lock)
-            PurgeOldFiles(host, today, s.LogPath, s.LogRetainDays);
+            PurgeOldFiles(host, today, logPath, s.LogRetainDays);
         }
         catch (Exception ex)
         {
@@ -73,6 +76,23 @@ public class ConsoleLogService
 
     // ── Private helpers ────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Returns the effective log path: prefers the configured value, falls back to
+    /// the IConfiguration source (appsettings.json before override), then AppBaseDir.
+    /// </summary>
+    private string ResolveLogPath(MeshcomSettings s)
+    {
+        if (!string.IsNullOrWhiteSpace(s.LogPath))
+            return s.LogPath;
+
+        // IOptionsMonitor returned empty (override.json wrote ""), read from raw IConfiguration
+        var fromConfig = _configuration.GetValue<string>($"{MeshcomSettings.SectionName}:LogPath");
+        if (!string.IsNullOrWhiteSpace(fromConfig))
+            return fromConfig;
+
+        return AppContext.BaseDirectory;
+    }
+
     private async Task<StreamWriter> GetOrCreateWriterAsync(string host, DateOnly today, string logPath)
     {
         // Reuse existing writer if same host + same day
@@ -85,10 +105,6 @@ public class ConsoleLogService
             try { await old.Writer.DisposeAsync(); } catch { }
             _writers.Remove(host);
         }
-
-        // Fall back to the application base directory when no log path is configured
-        if (string.IsNullOrWhiteSpace(logPath))
-            logPath = AppContext.BaseDirectory;
 
         Directory.CreateDirectory(logPath);
 
