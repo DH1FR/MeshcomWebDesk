@@ -807,9 +807,19 @@ This client communicates with the MeshCom node using the **EXTUDP JSON protocol*
 
 1. Outgoing message sent → `⏳` pending (waiting for node echo)
 2. Node echo arrives with sequence marker `{034}` → indicator changes to `✓` (transmitted over LoRa)
-3. Recipient sends ACK `:ack034` → message marked as delivered `✓✓`
+3. Recipient sends ACK `:ack034` → message marked as delivered `✓✓` (LoRa ACK)
 4. Group / broadcast messages: no ACK expected → `☁️` after node echo
-5. Gateway delivery confirmed → `☁️✓`
+5. Gateway ACK received (src_type `udp`) → `☁️✓`
+6. Both LoRa ACK **and** Gateway ACK received → `✓✓ ☁️✓` (direct LoRa + Gateway confirmed)
+
+| Icon | Meaning |
+|------|--------|
+| `⏳` | Sent – waiting for node echo |
+| `✓` | Node echo received (on air) |
+| `✓✓` | Delivered – LoRa ACK from recipient |
+| `☁️` | Sent via group/broadcast – no ACK expected |
+| `☁️✓` | Delivered – Gateway ACK only |
+| `✓✓ ☁️✓` | Delivered – LoRa ACK **and** Gateway ACK |
 
 ### Hardware IDs (`hw_id`)
 
@@ -1627,7 +1637,7 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 - Full relay path display in monitor
 
 ### v1.1.0
-- ACK delivery tracking (`⏳` / `✓` / `✓✓` / `☁️` / `☁️✓`)
+- ACK delivery tracking (`⏳` / `✓` / `✓✓` / `☁️` / `☁️✓` / `✓✓ ☁️✓`)
 - MH list with GPS distance, battery level and hardware badge
 - Web-based Settings editor
 - Multi-language UI (de / en / it / es)
