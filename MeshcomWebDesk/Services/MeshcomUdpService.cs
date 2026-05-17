@@ -176,8 +176,16 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                         }
 
                         // Skip node echoes of our own sent messages (already recorded as outgoing).
-                        // Still extract own GPS position and node metadata from the echo if present.
-                        if (string.Equals(message.From, myCallsign, StringComparison.OrdinalIgnoreCase))
+                        // Also skip src_type:"node" packets from foreign callsigns: the node forwards
+                        // every received LoRa packet twice – once as src_type:"node" (relay confirmation)
+                        // and once as src_type:"lora" (the authoritative incoming message). Processing
+                        // the node-relay copy first would occupy the msg_id in the dedup cache and cause
+                        // the real lora packet to be silently dropped as a duplicate.
+                        if (message.IsNodePacket && !string.Equals(message.From, myCallsign, StringComparison.OrdinalIgnoreCase))
+                        {
+                            _logger.LogDebug("Skipping node relay echo from foreign station {From} (src_type=node)", message.From);
+                        }
+                        else if (string.Equals(message.From, myCallsign, StringComparison.OrdinalIgnoreCase))
                         {
                             if (message.Latitude.HasValue && message.Longitude.HasValue)
                             {

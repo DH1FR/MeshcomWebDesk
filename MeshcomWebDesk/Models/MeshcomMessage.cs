@@ -93,6 +93,9 @@ public class MeshcomMessage
     /// <summary>Source type from the JSON "src_type" field: "lora", "udp", or "node".</summary>
     public string? SrcType { get; set; }
 
+    /// <summary>True when src_type is "node" – the local hardware node relayed this packet via UDP.</summary>
+    public bool IsNodePacket => string.Equals(SrcType, "node", StringComparison.OrdinalIgnoreCase);
+
     /// <summary>Hardware ID from the JSON "hw_id" field.</summary>
     public int? HwId { get; set; }
 
