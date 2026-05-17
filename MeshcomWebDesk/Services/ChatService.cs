@@ -23,6 +23,8 @@ public class ChatService
         public ConcurrentDictionary<string, HeardStation> MhList     { get; } = new(StringComparer.OrdinalIgnoreCase);
         public List<MeshcomMessage>                        Messages   { get; } = [];
         public string                                      ActiveTabKey { get; set; } = string.Empty;
+        /// <summary>User-defined tab display order (list of tab keys). Empty = natural insertion order.</summary>
+        public List<string>                                TabOrder   { get; set; } = [];
     }
 
     private readonly ConcurrentDictionary<Guid, NodeState> _nodeState = new();
@@ -184,6 +186,18 @@ public class ChatService
         {
             return ResolveState(nodeId).Tabs.Values.ToList();
         }
+    }
+
+    /// <summary>Returns the persisted tab order for a node. Empty list = no saved order.</summary>
+    public IReadOnlyList<string> GetTabOrder(Guid? nodeId)
+    {
+        lock (_lock) { return ResolveState(nodeId).TabOrder.ToList(); }
+    }
+
+    /// <summary>Saves the tab order for a node so it survives the next snapshot cycle.</summary>
+    public void SetTabOrder(Guid? nodeId, IEnumerable<string> order)
+    {
+        lock (_lock) { ResolveState(nodeId).TabOrder = [.. order]; }
     }
 
     /// <summary>All messages sorted newest-first (legacy/primary node).</summary>
@@ -571,7 +585,8 @@ public class ChatService
                                     .Select(t => new ChatTab { NodeId = t.NodeId, Key = t.Key, Title = t.Title, Messages = t.Messages.ToList() })
                                     .ToList(),
                 MhList          = primaryState.MhList.Values.ToList(),
-                MonitorMessages = primaryState.Messages.ToList()
+                MonitorMessages = primaryState.Messages.ToList(),
+                TabOrder        = primaryState.TabOrder.ToList()
             };
 
             // Persist every known node state into NodeSnapshots
@@ -582,7 +597,8 @@ public class ChatService
                     Tabs            = state.Tabs.Values
                                         .Select(t => new ChatTab { NodeId = t.NodeId, Key = t.Key, Title = t.Title, Messages = t.Messages.ToList() })
                                         .ToList(),
-                    MonitorMessages = state.Messages.ToList()
+                    MonitorMessages = state.Messages.ToList(),
+                    TabOrder        = state.TabOrder.ToList()
                 };
             }
 
@@ -617,6 +633,8 @@ public class ChatService
                         state.Tabs[tab.Key] = tab;
                     }
                 }
+
+                state.TabOrder = entry.TabOrder.Count > 0 ? [.. entry.TabOrder] : [];
             }
 
             // ── Restore MH list + primary fallback (legacy single-node snapshots) ──
@@ -647,6 +665,8 @@ public class ChatService
                         primaryState.Tabs[tab.Key] = tab;
                     }
                 }
+
+                primaryState.TabOrder = snapshot.TabOrder.Count > 0 ? [.. snapshot.TabOrder] : [];
             }
         }
 

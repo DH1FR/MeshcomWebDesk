@@ -7,6 +7,8 @@ public class NodeSnapshotEntry
 {
     public List<ChatTab>        Tabs            { get; set; } = [];
     public List<MeshcomMessage> MonitorMessages { get; set; } = [];
+    /// <summary>User-defined tab display order (list of tab keys).</summary>
+    public List<string>         TabOrder        { get; set; } = [];
 }
 
 /// <summary>
@@ -20,6 +22,8 @@ public class PersistenceSnapshot
     public List<ChatTab>        Tabs            { get; set; } = [];
     public List<HeardStation>   MhList          { get; set; } = [];
     public List<MeshcomMessage> MonitorMessages { get; set; } = [];
+    /// <summary>User-defined tab display order for the primary node (legacy).</summary>
+    public List<string>         TabOrder        { get; set; } = [];
 
     // ── Multi-node state: key = NodeProfile.Id.ToString() ───────────────
     /// <summary>

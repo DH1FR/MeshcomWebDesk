@@ -998,6 +998,10 @@
         NodeManager.OnSelectedNodeChanged += OnNodeChanged;
         // Restore active tab from service memory so the first render already shows the correct tab
         _activeTabKey = ChatService.GetActiveTabKey(_activeNodeId);
+        // Server-seitig gespeicherte Tab-Reihenfolge vor dem ersten Render anwenden
+        var serverOrder = ChatService.GetTabOrder(_activeNodeId);
+        if (serverOrder.Count > 0)
+            _tabOrder = [.. serverOrder];
         RefreshData();
         _isInitialized = true;
     }
@@ -1057,15 +1061,20 @@
             }
             catch (JSException) { }
 
-            // Restore saved tab order
+            // Restore saved tab order – localStorage als Fallback wenn server-seitig noch nichts gespeichert
             try
             {
-                var order = await JS.InvokeAsync<string[]?>("meshcomChat.getTabOrder");
-                if (order != null && order.Length > 0)
+                if (_tabOrder.Count == 0)
                 {
-                    _tabOrder = [.. order];
-                    ApplyTabOrder();
-                    needsRender = true;
+                    var order = await JS.InvokeAsync<string[]?>("meshcomChat.getTabOrder");
+                    if (order != null && order.Length > 0)
+                    {
+                        _tabOrder = [.. order];
+                        // Reihenfolge auch server-seitig sichern damit nächster Reload kein JS braucht
+                        ChatService.SetTabOrder(_activeNodeId, _tabOrder);
+                        ApplyTabOrder();
+                        needsRender = true;
+                    }
                 }
             }
             catch (JSException) { }
@@ -1785,6 +1794,8 @@
         _tabs.RemoveAt(fromIdx);
         _tabs.Insert(toIdx, tab);
         _tabOrder = _tabs.Select(t => t.Key).ToList();
+        // Server-seitig persistieren (überlebt Browser-Reload und Neustart)
+        ChatService.SetTabOrder(_activeNodeId, _tabOrder);
         _ = JS.InvokeVoidAsync("meshcomChat.setTabOrder", _tabOrder).AsTask();
         StateHasChanged();
     }
