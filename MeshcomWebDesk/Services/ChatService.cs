@@ -464,29 +464,44 @@ public class ChatService
 
     public void MarkMessageAcknowledged(string sequenceNumber, Guid? nodeId, string? ackSender = null, bool isGateway = false)
     {
-        var messages = ResolveState(nodeId).Messages;
-        lock (_lock)
+        bool Found(IEnumerable<MeshcomMessage> messages)
         {
-            var msg = messages.FirstOrDefault(m =>
-                m.IsOutgoing && m.SequenceNumber == sequenceNumber);
-
-            if (msg == null && ackSender != null)
+            lock (_lock)
             {
-                var cutoff = DateTime.Now.AddMinutes(-10);
-                msg = messages.FirstOrDefault(m =>
-                    m.IsOutgoing &&
-                    !m.IsAcknowledged &&
-                    m.Timestamp >= cutoff &&
-                    string.Equals(m.To, ackSender, StringComparison.OrdinalIgnoreCase));
-            }
+                var msg = messages.FirstOrDefault(m =>
+                    m.IsOutgoing && m.SequenceNumber == sequenceNumber);
 
-            if (msg != null)
-            {
-                msg.SequenceNumber    = sequenceNumber;
-                msg.IsAcknowledged    = true;
-                msg.IsGatewayDelivered = isGateway;
+                if (msg == null && ackSender != null)
+                {
+                    var cutoff = DateTime.Now.AddMinutes(-10);
+                    msg = messages.FirstOrDefault(m =>
+                        m.IsOutgoing &&
+                        !m.IsAcknowledged &&
+                        m.Timestamp >= cutoff &&
+                        string.Equals(m.To, ackSender, StringComparison.OrdinalIgnoreCase));
+                }
+
+                if (msg != null)
+                {
+                    msg.SequenceNumber     = sequenceNumber;
+                    msg.IsAcknowledged     = true;
+                    msg.IsGatewayDelivered = isGateway;
+                    return true;
+                }
+                return false;
             }
         }
+
+        // Search the node that received the ACK first, then fall back to all other nodes.
+        // In multi-node setups the outgoing message may have been sent from a different node
+        // than the one that received the ACK (e.g. DH1FR-99 sent Pong, DH1FR-2 ACKs it back
+        // and the ACK arrives at DH1FR-2's WebDesk – but the Pong lives in DH1FR-99's state).
+        if (!Found(ResolveState(nodeId).Messages))
+        {
+            foreach (var state in _nodeState.Values)
+                if (Found(state.Messages)) break;
+        }
+
         NotifyChange();
     }
 
