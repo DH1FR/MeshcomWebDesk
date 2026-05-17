@@ -1270,6 +1270,7 @@
 
     private void HandleNewDirectTab(string callsign, MeshcomMessage message)
     {
+        if (message.NodeId != _activeNodeId) return;
         if (_voiceEnabled == true)
             SpeakDirectMessage(callsign);
         InvokeAsync(StateHasChanged);
@@ -1278,6 +1279,7 @@
     // Folgenachrichten ans eigene Rufzeichen (Tab bereits offen): TTS nur wenn Cooldown abgelaufen
     private void HandleDirectMessage(string callsign, MeshcomMessage message)
     {
+        if (message.NodeId != _activeNodeId) return;
         if (_voiceEnabled != true) return;
         SpeakDirectMessage(callsign);
         InvokeAsync(StateHasChanged);
