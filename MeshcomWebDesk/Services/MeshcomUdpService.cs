@@ -175,13 +175,16 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                             Status.LastSnr = message.Snr;
                         }
 
-                        // Skip node echoes of our own sent messages (already recorded as outgoing).
-                        // Also skip src_type:"node" packets from foreign callsigns: the node forwards
-                        // every received LoRa packet twice – once as src_type:"node" (relay confirmation)
-                        // and once as src_type:"lora" (the authoritative incoming message). Processing
-                        // the node-relay copy first would occupy the msg_id in the dedup cache and cause
-                        // the real lora packet to be silently dropped as a duplicate.
-                        if (message.IsNodePacket && !string.Equals(message.From, myCallsign, StringComparison.OrdinalIgnoreCase))
+                        // Skip src_type:"node" relay echoes from foreign callsigns for regular messages.
+                        // The node forwards every received LoRa packet twice – once as src_type:"node"
+                        // (relay confirmation) and once as src_type:"lora" (the authoritative copy).
+                        // Processing the node copy first would occupy the msg_id in the dedup cache and
+                        // cause the real lora packet to be dropped as a duplicate.
+                        // EXCEPTION: ACKs must never be skipped – the firmware may deliver an ACK only
+                        // as src_type:"node" (no second lora copy), so skipping it loses the delivery tick.
+                        if (message.IsNodePacket &&
+                            !message.IsAck &&
+                            !string.Equals(message.From, myCallsign, StringComparison.OrdinalIgnoreCase))
                         {
                             _logger.LogDebug("Skipping node relay echo from foreign station {From} (src_type=node)", message.From);
                         }
