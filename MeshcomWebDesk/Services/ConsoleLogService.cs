@@ -31,7 +31,11 @@ public class ConsoleLogService
     /// </summary>
     public async Task WriteAsync(string host, bool enabled, string line)
     {
-        if (!enabled || string.IsNullOrWhiteSpace(host)) return;
+        if (!enabled || string.IsNullOrWhiteSpace(host))
+        {
+            _logger.LogWarning("ConsoleLogService.WriteAsync: skipped – enabled={Enabled}, host='{Host}'", enabled, host);
+            return;
+        }
 
         // Strip leading/trailing whitespace but keep the raw text
         var trimmed = line.Trim();
@@ -48,7 +52,7 @@ public class ConsoleLogService
                 $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} {trimmed}");
             await writer.FlushAsync();
 
-            _logger.LogDebug("ConsoleLogService: wrote line for host {Host}", host);
+            _logger.LogInformation("ConsoleLogService: wrote to {File}", Path.Combine(_settingsMonitor.CurrentValue.LogPath, $"console-{host}-{today:yyyy-MM-dd}.log"));
 
             // Purge old files (best-effort, once per write call, guarded by lock)
             PurgeOldFiles(host, today, s.LogPath, s.LogRetainDays);
