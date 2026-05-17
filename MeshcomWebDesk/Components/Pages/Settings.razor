@@ -16,6 +16,7 @@
 @inject ChatService ChatService
 @inject TelnetService TelnetService
 @inject SerialConsoleService SerialConsoleService
+@inject MeshcomWebDesk.Models.ResolvedLogPath ResolvedLogPath
 @implements IDisposable
 
 <PageTitle>@Loc.T("Einstellungen", "Settings") – MeshCom WebDesk</PageTitle>
@@ -264,7 +265,12 @@
             @if (IsOpen("log")) {
             <div class="settings-grid">
                 <label>@Loc.T("Log-Pfad", "Log Path")</label>
-                <input type="text" @bind="_model.LogPath" />
+                <input type="text" @bind="_model.LogPath" placeholder="@ResolvedLogPath.Path" />
+                @if (string.IsNullOrWhiteSpace(_model.LogPath))
+                {
+                    <span></span>
+                    <small style="color:#8b949e">@Loc.T("Leer = Standard-Pfad wird verwendet:", "Empty = default path is used:") <code>@ResolvedLogPath.Path</code></small>
+                }
 
                 <label>@Loc.T("Log-Aufbewahrung (Tage)", "Log Retention (Days)")</label>
                 <input type="number" min="1" @bind="_model.LogRetainDays" />
