@@ -378,8 +378,8 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         // Subtract 1 minute so {last-qso} only shows QSOs clearly before the current exchange,
         // not messages from the same session/minute window.
         var text = await ExpandVariablesAsync(_settings.AutoReplyText, callsign, before: triggerTimestamp);
-        _logger.LogInformation("Auto-reply to new contact {Callsign} via node {NodeId}", callsign, nodeId);
-        await SendMessageAsync(callsign, text, sourceNodeId: nodeId);
+        _logger.LogInformation("Auto-reply to new contact {Callsign} via primary node", callsign);
+        await SendMessageAsync(callsign, text, sourceNodeId: null);
     }
 
     private async Task HandleBotCommandAsync(MeshcomMessage message)
@@ -402,8 +402,11 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
 
             for (var i = 0; i < parts.Count; i++)
             {
-                // Reply via the same node that received the command
-                await SendMessageAsync(message.From, parts[i], sourceNodeId: message.NodeId);
+                // Reply via the primary node (own LoRa hardware), not via the originating node.
+                // message.NodeId is the node that *received* the command (could be a foreign node
+                // whose UDP packets we see on the network). Sending back to that node's IP would
+                // bypass our own LoRa radio and deliver the reply as a UDP-direct message.
+                await SendMessageAsync(message.From, parts[i], sourceNodeId: null);
                 if (i < parts.Count - 1)
                     await Task.Delay(TimeSpan.FromSeconds(2));
             }
