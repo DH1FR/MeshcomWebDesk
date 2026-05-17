@@ -53,7 +53,8 @@ public class SettingsService
                     ["ListenPort"]           = n.ListenPort,
                     ["IsPrimary"]            = n.IsPrimary,
                     ["TelnetCertThumbprint"] = n.TelnetCertThumbprint,
-                    ["TelnetPassword"]       = Encrypt(n.TelnetPassword)
+                    ["TelnetPassword"]       = Encrypt(n.TelnetPassword),
+                    ["ConsoleLogEnabled"]    = n.ConsoleLogEnabled
                 }).ToArray()),
                 ["ListenIp"]            = s.ListenIp,
                 ["ListenPort"]          = s.ListenPort,
@@ -189,7 +190,8 @@ public class SettingsService
                 ["TelnetPassword"]          = Encrypt(s.TelnetPassword),
                 ["TelnetCertThumbprint"]    = s.TelnetCertThumbprint,
                 ["SerialPortName"]          = s.SerialPortName,
-                ["SerialBaudRate"]          = s.SerialBaudRate
+                ["SerialBaudRate"]          = s.SerialBaudRate,
+                ["ConsoleLogEnabled"]       = s.ConsoleLogEnabled
             }
         };
 
