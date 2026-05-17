@@ -2016,6 +2016,7 @@
 
     private static string AckCssClass(MeshcomMessage m)
     {
+        if (m.IsAcknowledged && m.IsLoraDelivered && m.IsGatewayDelivered) return "msg-ack ack-cloud-ok ack-ok";
         if (m.IsAcknowledged && m.IsGatewayDelivered) return "msg-ack ack-cloud-ok";
         if (m.IsAcknowledged)                         return "msg-ack ack-ok";
         if (m.SequenceNumber != null)                 return "msg-ack ack-sent";
@@ -2027,6 +2028,7 @@
         // Gruppe / Broadcast: kein ACK erwartet → sofort Wolke
         var isGroupOrBcast = m.To == "*" || m.To.StartsWith('#');
 
+        if (m.IsAcknowledged && m.IsLoraDelivered && m.IsGatewayDelivered) return "✓✓ ☁️✓";
         if (m.IsAcknowledged && m.IsGatewayDelivered) return "☁️✓";
         if (m.IsAcknowledged)                         return "✓✓";
         if (isGroupOrBcast && m.SequenceNumber != null) return "☁️";
@@ -2038,6 +2040,8 @@
     {
         var isGroupOrBcast = m.To == "*" || m.To.StartsWith('#');
 
+        if (m.IsAcknowledged && m.IsLoraDelivered && m.IsGatewayDelivered)
+            return "✓✓ ☁️✓ Zugestellt via LoRa (direkt) + Gateway";
         if (m.IsAcknowledged && m.IsGatewayDelivered)
             return "☁️✓ Über Gateway zugestellt";
         if (m.IsAcknowledged)

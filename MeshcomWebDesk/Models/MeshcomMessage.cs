@@ -78,9 +78,11 @@ public class MeshcomMessage
     /// <summary>True once a delivery ACK for this outgoing message has been received.</summary>
     public bool IsAcknowledged { get; set; }
 
+    /// <summary>True when at least one ACK was received directly over LoRa.</summary>
+    public bool IsLoraDelivered { get; set; }
+
     /// <summary>
-    /// True when the ACK was delivered via the MeshCom Gateway/Server (src_type "udp")
-    /// rather than directly over LoRa. Displayed as ☁️✓ instead of ✓✓.
+    /// True when at least one ACK was received via the MeshCom Gateway/Server (src_type "udp").
     /// </summary>
     public bool IsGatewayDelivered { get; set; }
 

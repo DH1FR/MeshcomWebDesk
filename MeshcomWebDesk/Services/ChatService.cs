@@ -476,16 +476,17 @@ public class ChatService
                     var cutoff = DateTime.Now.AddMinutes(-10);
                     msg = messages.FirstOrDefault(m =>
                         m.IsOutgoing &&
-                        !m.IsAcknowledged &&
                         m.Timestamp >= cutoff &&
                         string.Equals(m.To, ackSender, StringComparison.OrdinalIgnoreCase));
                 }
 
                 if (msg != null)
                 {
-                    msg.SequenceNumber     = sequenceNumber;
-                    msg.IsAcknowledged     = true;
-                    msg.IsGatewayDelivered = isGateway;
+                    msg.SequenceNumber  = sequenceNumber;
+                    msg.IsAcknowledged  = true;
+                    // Accumulate delivery flags – never clear a flag that was already set.
+                    if (isGateway)  msg.IsGatewayDelivered = true;
+                    else            msg.IsLoraDelivered    = true;
                     return true;
                 }
                 return false;
