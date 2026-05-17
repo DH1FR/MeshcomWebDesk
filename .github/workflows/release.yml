@@ -57,6 +57,15 @@ jobs:
             -p:PublishSingleFile=true \
             -o ./publish/osx-arm64
 
+      - name: Publish Linux arm64 / Raspberry Pi 4+5 (framework-dependent)
+        run: |
+          dotnet publish MeshcomWebDesk/MeshcomWebDesk.csproj \
+            -c Release \
+            -r linux-arm64 \
+            --no-self-contained \
+            -p:PublishSingleFile=true \
+            -o ./publish/linux-arm64
+
       - name: Package Windows ZIP
         run: |
           cp deploy/appsettings.template.json publish/win-x64/appsettings.json
@@ -87,12 +96,23 @@ jobs:
           tar -czf MeshcomWebDesk-${{ github.ref_name }}-osx-arm64.tar.gz \
             -C publish/osx-arm64 .
 
+      - name: Package Linux arm64 tarball (Raspberry Pi 4+5)
+        run: |
+          cp deploy/appsettings.template.json publish/linux-arm64/appsettings.json
+          cp deploy/install.sh publish/linux-arm64/
+          cp deploy/meshcom-webdesk.service publish/linux-arm64/
+          chmod +x publish/linux-arm64/MeshcomWebDesk
+          chmod +x publish/linux-arm64/install.sh
+          tar -czf MeshcomWebDesk-${{ github.ref_name }}-linux-arm64.tar.gz \
+            -C publish/linux-arm64 .
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             MeshcomWebDesk-${{ github.ref_name }}-win-x64.zip
             MeshcomWebDesk-${{ github.ref_name }}-linux-x64.tar.gz
+            MeshcomWebDesk-${{ github.ref_name }}-linux-arm64.tar.gz
             MeshcomWebDesk-${{ github.ref_name }}-osx-x64.tar.gz
             MeshcomWebDesk-${{ github.ref_name }}-osx-arm64.tar.gz
           generate_release_notes: true
