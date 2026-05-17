@@ -28,6 +28,8 @@ public class HmacConsoleService : IConsoleService, IAsyncDisposable
     private readonly SemaphoreSlim _lock = new(1, 1);
 
     public bool IsConnected { get; private set; }
+    /// <summary>Host to which the current connection was established. Empty when not connected.</summary>
+    public string ConnectedHost { get; private set; } = string.Empty;
     public List<string> Lines { get; } = new(500);
     public event Action? OnChange;
 
@@ -98,6 +100,7 @@ public class HmacConsoleService : IConsoleService, IAsyncDisposable
             }
 
             IsConnected = true;
+            ConnectedHost = host;
             AppendLine($"● Verbunden mit {host}:{port} (NET Console)");
             OnChange?.Invoke();
 
@@ -181,7 +184,8 @@ public class HmacConsoleService : IConsoleService, IAsyncDisposable
 
     private async Task CleanupAsync()
     {
-        IsConnected = false;
+        IsConnected   = false;
+        ConnectedHost = string.Empty;
         _cts?.Cancel();
         _cts?.Dispose();
         _cts = null;

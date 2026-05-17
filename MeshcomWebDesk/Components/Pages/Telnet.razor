@@ -41,7 +41,12 @@
                     @if (_isSerial)
                     { @($"● {Loc.T("Verbunden", "Connected")} {_settings.SerialPortName}") }
                     else
-                    { @($"● {Loc.T("Verbunden", "Connected")} {ActiveNodeIp}:{_settings.TelnetPort}") }
+                    {
+                        var connectedHost = _isHmac
+                            ? HmacConsoleService.ConnectedHost
+                            : TelnetService.ConnectedHost;
+                        @($"● {Loc.T("Verbunden", "Connected")} {connectedHost}:{_settings.TelnetPort}")
+                    }
                 }
                 else
                 {

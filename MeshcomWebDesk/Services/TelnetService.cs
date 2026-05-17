@@ -26,6 +26,8 @@ public class TelnetService : IConsoleService, IAsyncDisposable
 
     public bool    IsConnected           { get; private set; }
     public bool    IsEnabled             => _settingsMonitor.CurrentValue.TelnetEnabled;
+    /// <summary>Host to which the current connection was established. Empty when not connected.</summary>
+    public string  ConnectedHost         { get; private set; } = string.Empty;
     /// <summary>
     /// Set when an unknown (first-connect) certificate is received.
     /// Callers (Settings page, Telnet page) can read this and offer a "Trust &amp; save" button.
@@ -174,6 +176,7 @@ public class TelnetService : IConsoleService, IAsyncDisposable
             }
 
             IsConnected = true;
+            ConnectedHost = host;
             AppendLine($"[Verbunden mit {host}:{port}]");
             _cts = new CancellationTokenSource();
             _ = ReadLoopAsync(_cts.Token);
@@ -198,8 +201,9 @@ public class TelnetService : IConsoleService, IAsyncDisposable
     {
         _cts?.Cancel();
         await DisposeConnectionAsync();
-        IsConnected = false;
-        LastLine    = string.Empty;
+        IsConnected   = false;
+        ConnectedHost = string.Empty;
+        LastLine      = string.Empty;
         AppendLine("[Getrennt]");
         OnChange?.Invoke();
         _logger.LogInformation("Telnet disconnected");
