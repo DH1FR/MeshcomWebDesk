@@ -1,0 +1,124 @@
+using Microsoft.Extensions.Options;
+using MeshcomWebDesk.Models;
+
+namespace MeshcomWebDesk.Services;
+
+/// <summary>
+/// Writes console output lines to daily rolling log files per host/port identifier.
+/// File name pattern: console-{host}-{yyyy-MM-dd}.log
+/// Old files are purged after <see cref="MeshcomSettings.LogRetainDays"/> days.
+/// </summary>
+public class ConsoleLogService
+{
+    private readonly IOptionsMonitor<MeshcomSettings> _settingsMonitor;
+    private readonly ILogger<ConsoleLogService> _logger;
+
+    // One writer per host key, reused within the same calendar day.
+    private readonly Dictionary<string, (StreamWriter Writer, DateOnly Date)> _writers = new();
+    private readonly SemaphoreSlim _lock = new(1, 1);
+
+    public ConsoleLogService(
+        IOptionsMonitor<MeshcomSettings> settingsMonitor,
+        ILogger<ConsoleLogService> logger)
+    {
+        _settingsMonitor = settingsMonitor;
+        _logger          = logger;
+    }
+
+    /// <summary>
+    /// Appends <paramref name="line"/> with a UTC timestamp to the console log for <paramref name="host"/>.
+    /// A no-op when <paramref name="enabled"/> is false.
+    /// </summary>
+    public async Task WriteAsync(string host, bool enabled, string line)
+    {
+        if (!enabled || string.IsNullOrWhiteSpace(host)) return;
+
+        // Strip leading/trailing whitespace but keep the raw text
+        var trimmed = line.Trim();
+        if (string.IsNullOrEmpty(trimmed)) return;
+
+        await _lock.WaitAsync();
+        try
+        {
+            var s      = _settingsMonitor.CurrentValue;
+            var today  = DateOnly.FromDateTime(DateTime.Now);
+            var writer = await GetOrCreateWriterAsync(host, today, s.LogPath);
+
+            await writer.WriteLineAsync(
+                $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} {trimmed}");
+            await writer.FlushAsync();
+
+            // Purge old files (best-effort, once per write call, guarded by lock)
+            PurgeOldFiles(host, today, s.LogPath, s.LogRetainDays);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "ConsoleLogService: write failed for host {Host}", host);
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    // ── Private helpers ────────────────────────────────────────────────────
+
+    private async Task<StreamWriter> GetOrCreateWriterAsync(string host, DateOnly today, string logPath)
+    {
+        // Reuse existing writer if same host + same day
+        if (_writers.TryGetValue(host, out var entry) && entry.Date == today)
+            return entry.Writer;
+
+        // Close stale writer (new day or first call)
+        if (_writers.TryGetValue(host, out var old))
+        {
+            try { await old.Writer.DisposeAsync(); } catch { }
+            _writers.Remove(host);
+        }
+
+        Directory.CreateDirectory(logPath);
+
+        // Sanitise host for use in filename (replace characters not valid in filenames)
+        var safeHost = string.Concat(host.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
+        var fileName = $"console-{safeHost}-{today:yyyy-MM-dd}.log";
+        var filePath = Path.Combine(logPath, fileName);
+
+        var writer = new StreamWriter(filePath, append: true, encoding: System.Text.Encoding.UTF8)
+        {
+            AutoFlush = false
+        };
+
+        _writers[host] = (writer, today);
+        return writer;
+    }
+
+    private void PurgeOldFiles(string host, DateOnly today, string logPath, int retainDays)
+    {
+        if (retainDays <= 0 || !Directory.Exists(logPath)) return;
+
+        var safeHost = string.Concat(host.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
+        var cutoff   = today.AddDays(-retainDays);
+
+        try
+        {
+            foreach (var file in Directory.EnumerateFiles(logPath, $"console-{safeHost}-*.log"))
+            {
+                var name     = Path.GetFileNameWithoutExtension(file);
+                // Extract date part: last 10 chars of "console-{host}-{yyyy-MM-dd}"
+                var datePart = name.Length >= 10 ? name[^10..] : string.Empty;
+                if (DateOnly.TryParseExact(datePart, "yyyy-MM-dd",
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        System.Globalization.DateTimeStyles.None, out var fileDate)
+                    && fileDate < cutoff)
+                {
+                    File.Delete(file);
+                    _logger.LogDebug("ConsoleLogService: deleted old log {File}", file);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "ConsoleLogService: purge failed for host {Host}", host);
+        }
+    }
+}

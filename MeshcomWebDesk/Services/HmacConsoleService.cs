@@ -20,6 +20,7 @@ public class HmacConsoleService : IConsoleService, IAsyncDisposable
 {
     private readonly IOptionsMonitor<MeshcomSettings> _settingsMonitor;
     private readonly ILogger<HmacConsoleService> _logger;
+    private readonly ConsoleLogService _consoleLog;
 
     private TcpClient?        _tcp;
     private StreamReader?     _reader;
@@ -35,10 +36,12 @@ public class HmacConsoleService : IConsoleService, IAsyncDisposable
 
     public HmacConsoleService(
         IOptionsMonitor<MeshcomSettings> settingsMonitor,
-        ILogger<HmacConsoleService> logger)
+        ILogger<HmacConsoleService> logger,
+        ConsoleLogService consoleLog)
     {
         _settingsMonitor = settingsMonitor;
         _logger          = logger;
+        _consoleLog      = consoleLog;
     }
 
     public async Task ConnectAsync(string? hostOverride = null)
@@ -201,6 +204,19 @@ public class HmacConsoleService : IConsoleService, IAsyncDisposable
         {
             if (Lines.Count >= 500) Lines.RemoveAt(0);
             Lines.Add(line);
+        }
+        if (!string.IsNullOrEmpty(ConnectedHost))
+        {
+            var s       = _settingsMonitor.CurrentValue;
+            var enabled = s.ConsoleLogEnabled;
+            if (!enabled && s.Nodes.Count > 0)
+            {
+                var node = s.Nodes.FirstOrDefault(n =>
+                    string.Equals(n.DeviceIp, ConnectedHost, StringComparison.OrdinalIgnoreCase));
+                enabled = node?.ConsoleLogEnabled ?? false;
+            }
+            if (enabled)
+                _ = _consoleLog.WriteAsync(ConnectedHost, true, line);
         }
     }
 

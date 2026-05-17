@@ -14,6 +14,7 @@ public class TelnetService : IConsoleService, IAsyncDisposable
 {
     private readonly IOptionsMonitor<MeshcomSettings> _settingsMonitor;
     private readonly ILogger<TelnetService> _logger;
+    private readonly ConsoleLogService _consoleLog;
 
     private TcpClient?    _tcp;
     private SslStream?    _ssl;
@@ -39,10 +40,11 @@ public class TelnetService : IConsoleService, IAsyncDisposable
 
     public event Action? OnChange;
 
-    public TelnetService(IOptionsMonitor<MeshcomSettings> settings, ILogger<TelnetService> logger)
+    public TelnetService(IOptionsMonitor<MeshcomSettings> settings, ILogger<TelnetService> logger, ConsoleLogService consoleLog)
     {
         _settingsMonitor = settings;
         _logger          = logger;
+        _consoleLog      = consoleLog;
     }
 
     /// <summary>Implements <see cref="IConsoleService.ConnectAsync"/> (legacy single-parameter overload).</summary>
@@ -308,6 +310,19 @@ public class TelnetService : IConsoleService, IAsyncDisposable
         {
             if (Lines.Count >= 500) Lines.RemoveAt(0);
             Lines.Add(line);
+        }
+        if (!string.IsNullOrEmpty(ConnectedHost))
+        {
+            var s       = _settingsMonitor.CurrentValue;
+            var enabled = s.ConsoleLogEnabled;
+            if (!enabled && s.Nodes.Count > 0)
+            {
+                var node = s.Nodes.FirstOrDefault(n =>
+                    string.Equals(n.DeviceIp, ConnectedHost, StringComparison.OrdinalIgnoreCase));
+                enabled = node?.ConsoleLogEnabled ?? false;
+            }
+            if (enabled)
+                _ = _consoleLog.WriteAsync(ConnectedHost, true, line);
         }
     }
 

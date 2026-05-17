@@ -331,4 +331,11 @@ public class MeshcomSettings
 
     /// <summary>Baud rate for serial console mode. Default: 115200.</summary>
     public int SerialBaudRate { get; set; } = 115200;
+
+    /// <summary>
+    /// When true, all console output is written to a daily log file in the log directory
+    /// (console-{IP}-{date}.log). Used in legacy single-node and serial mode.
+    /// For multi-node TLS/NET mode, ConsoleLogEnabled is set per NodeProfile.
+    /// </summary>
+    public bool ConsoleLogEnabled { get; set; } = false;
 }

@@ -151,6 +151,16 @@
                                 </button>
                             }
                         </div>
+
+                        @* ── Console Log ── *@
+                        <label>
+                            @Loc.T("Console-Log", "Console Log")<br />
+                            <small>@Loc.T("Konsolenausgabe dieses Nodes in Datei sichern (console-{IP}-{datum}.log)", "Save this node's console output to file (console-{IP}-{date}.log)")</small>
+                        </label>
+                        <label class="settings-toggle">
+                            <input type="checkbox" @bind="node.ConsoleLogEnabled" />
+                            <span>@(node.ConsoleLogEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
+                        </label>
                     </div>
                 </div>
             }
@@ -265,6 +275,15 @@
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.LogUdpTraffic" />
                     <span>@(_model.LogUdpTraffic ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
+                </label>
+
+                <label>
+                    @Loc.T("Console-Log (Serial / Legacy)", "Console Log (Serial / Legacy)")<br />
+                    <small>@Loc.T("Konsolenausgabe in Datei sichern (console-{host}-{datum}.log). Für TLS/NET-Console pro Node konfigurierbar.", "Save console output to file (console-{host}-{date}.log). For TLS/NET Console configurable per node.")</small>
+                </label>
+                <label class="settings-toggle">
+                    <input type="checkbox" @bind="_model.ConsoleLogEnabled" />
+                    <span>@(_model.ConsoleLogEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                 </label>
             </div>
             }
@@ -2906,11 +2925,13 @@
                     ListenPort            = n.ListenPort,
                     IsPrimary             = n.IsPrimary,
                     TelnetCertThumbprint  = n.TelnetCertThumbprint,
-                    TelnetPassword        = n.TelnetPassword
+                    TelnetPassword        = n.TelnetPassword,
+                    ConsoleLogEnabled     = n.ConsoleLogEnabled
                 }).ToList(),
                 LogPath             = s.LogPath,
                 LogRetainDays       = s.LogRetainDays,
                 LogUdpTraffic       = s.LogUdpTraffic,
+                ConsoleLogEnabled   = s.ConsoleLogEnabled,
                 MonitorMaxMessages  = s.MonitorMaxMessages,
                 TabMaxMessages      = s.TabMaxMessages,
                 MhMaxAgeHours       = s.MhMaxAgeHours,
@@ -3027,6 +3048,7 @@
         public string LogPath             { get; set; } = string.Empty;
         public int    LogRetainDays       { get; set; } = 30;
         public bool   LogUdpTraffic       { get; set; }
+        public bool   ConsoleLogEnabled   { get; set; }
         public int    MonitorMaxMessages  { get; set; } = 1000;
         public int    TabMaxMessages       { get; set; } = 500;
         public int    MhMaxAgeHours       { get; set; } = 0;
@@ -3129,8 +3151,6 @@
         public string TelnetCertThumbprint    { get; set; } = string.Empty;
         public string SerialPortName          { get; set; } = string.Empty;
         public int    SerialBaudRate          { get; set; } = 115200;
-
-        // Multi-node
         public List<NodeProfile> Nodes { get; set; } = [];
 
         // Quick Texts
@@ -3261,6 +3281,7 @@
             TelnetCertThumbprint    = TelnetCertThumbprint,
             SerialPortName          = SerialPortName,
             SerialBaudRate          = SerialBaudRate,
+            ConsoleLogEnabled       = ConsoleLogEnabled,
             QuickTexts = QuickTexts,
             GroupLabels = GroupLabels
         };
