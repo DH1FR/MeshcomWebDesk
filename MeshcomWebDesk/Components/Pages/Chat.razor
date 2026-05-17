@@ -16,6 +16,7 @@
 @inject MeshcomWebDesk.Services.QsoSummaryService QsoSummaryService
 @inject TelnetService TelnetService
 @inject SerialConsoleService SerialConsoleService
+@inject HmacConsoleService HmacConsoleService
 @inject NodeManager NodeManager
 @implements IDisposable
 
@@ -421,10 +422,18 @@
         </button>
         @if (TelnetService.IsEnabled)
         {
-            var consoleConnected = _settings.ConsoleMode == "serial"
-                ? SerialConsoleService.IsConnected
-                : TelnetService.IsConnected;
-            var consoleIcon = _settings.ConsoleMode == "serial" ? "🔌" : "🖥️";
+            var consoleConnected = _settings.ConsoleMode switch
+            {
+                "serial" => SerialConsoleService.IsConnected,
+                "hmac"   => HmacConsoleService.IsConnected,
+                _        => TelnetService.IsConnected
+            };
+            var consoleIcon = _settings.ConsoleMode switch
+            {
+                "serial" => "🔌",
+                "hmac"   => "🔐",
+                _        => "🖥️"
+            };
             <button class="status-mute-btn @(consoleConnected ? "" : "status-mute-off")"
                     @onclick="ToggleTelnetAsync"
                     title="@(consoleConnected ? Loc.T("Console verbunden – klicken zum Trennen", "Console connected – click to disconnect") : Loc.T("Console getrennt – klicken zum Verbinden", "Console disconnected – click to connect"))">
@@ -1242,9 +1251,12 @@
 
     private async Task ToggleTelnetAsync()
     {
-        IConsoleService console = _settings.ConsoleMode == "serial"
-            ? SerialConsoleService
-            : TelnetService;
+        IConsoleService console = _settings.ConsoleMode switch
+        {
+            "serial" => SerialConsoleService,
+            "hmac"   => HmacConsoleService,
+            _        => TelnetService
+        };
         if (console.IsConnected)
             await console.DisconnectAsync();
         else
