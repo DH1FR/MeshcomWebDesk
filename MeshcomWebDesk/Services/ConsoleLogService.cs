@@ -48,6 +48,8 @@ public class ConsoleLogService
                 $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} {trimmed}");
             await writer.FlushAsync();
 
+            _logger.LogDebug("ConsoleLogService: wrote line for host {Host}", host);
+
             // Purge old files (best-effort, once per write call, guarded by lock)
             PurgeOldFiles(host, today, s.LogPath, s.LogRetainDays);
         }

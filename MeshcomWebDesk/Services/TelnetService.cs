@@ -323,6 +323,9 @@ public class TelnetService : IConsoleService, IAsyncDisposable
             }
             if (enabled)
                 _ = _consoleLog.WriteAsync(ConnectedHost, true, line);
+            else
+                _logger.LogDebug("ConsoleLog skipped – ConsoleLogEnabled=false for host {Host} (GlobalFlag={Global}, Nodes={NodeCount})",
+                    ConnectedHost, s.ConsoleLogEnabled, s.Nodes.Count);
         }
     }
 
