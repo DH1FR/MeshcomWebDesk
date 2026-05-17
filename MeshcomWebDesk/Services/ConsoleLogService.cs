@@ -53,7 +53,8 @@ public class ConsoleLogService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "ConsoleLogService: write failed for host {Host}", host);
+            _logger.LogWarning(ex, "ConsoleLogService: write failed for host {Host} – logPath={LogPath}",
+                host, _settingsMonitor.CurrentValue.LogPath);
         }
         finally
         {
@@ -75,6 +76,10 @@ public class ConsoleLogService
             try { await old.Writer.DisposeAsync(); } catch { }
             _writers.Remove(host);
         }
+
+        // Fall back to the application base directory when no log path is configured
+        if (string.IsNullOrWhiteSpace(logPath))
+            logPath = AppContext.BaseDirectory;
 
         Directory.CreateDirectory(logPath);
 
