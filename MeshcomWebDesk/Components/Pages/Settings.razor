@@ -524,6 +524,12 @@
                     <span>@(_model.AutoReplyEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                 </label>
 
+                <label>@Loc.T("Antwort-Verzögerung (Sek.)", "Reply Delay (sec.)")</label>
+                <div class="settings-input-hint">
+                    <input type="number" @bind="_model.ReplyDelaySeconds" min="0" max="30" style="width:80px" />
+                    <span class="settings-hint">@Loc.T("Verzögerung vor Bot-Antwort und Auto-Reply (0–30 Sek., Standard: 3)", "Delay before bot reply and auto-reply (0–30 sec., default: 3)")</span>
+                </div>
+
                 <label>Auto-Reply Text</label>
                 <div class="settings-input-hint">
                     <input type="text" @bind="_model.AutoReplyText" />
@@ -2411,6 +2417,7 @@
             TimeOffsetHours     = s.TimeOffsetHours,
             AutoReplyEnabled    = s.AutoReplyEnabled,
             AutoReplyText       = s.AutoReplyText,
+            ReplyDelaySeconds   = s.ReplyDelaySeconds,
             BotEnabled          = s.BotEnabled,
             BotCommands         = s.BotCommands
                 .Select(c => new BotCommandEntry { Name = c.Name, Response = c.Response, Description = c.Description })
@@ -2956,6 +2963,7 @@
                 TimeOffsetHours     = s.TimeOffsetHours,
                 AutoReplyEnabled    = s.AutoReplyEnabled,
                 AutoReplyText       = s.AutoReplyText,
+                ReplyDelaySeconds   = s.ReplyDelaySeconds,
                 BotEnabled          = s.BotEnabled,
                 BotCommands         = s.BotCommands
                     .Select(c => new BotCommandEntry { Name = c.Name, Response = c.Response, Description = c.Description })
@@ -3073,6 +3081,7 @@
         public double TimeOffsetHours     { get; set; } = 0;
         public bool   AutoReplyEnabled    { get; set; }
         public string AutoReplyText       { get; set; } = string.Empty;
+        public int    ReplyDelaySeconds   { get; set; } = 3;
         public bool   BotEnabled          { get; set; }
         public List<BotCommandEntry> BotCommands { get; set; } = [];
         public bool   BeaconEnabled       { get; set; }
@@ -3210,6 +3219,7 @@
             TimeOffsetHours     = TimeOffsetHours,
             AutoReplyEnabled    = AutoReplyEnabled,
             AutoReplyText       = AutoReplyText,
+            ReplyDelaySeconds   = Math.Clamp(ReplyDelaySeconds, 0, 30),
             BotEnabled          = BotEnabled,
             BotCommands         = BotCommands,
             BeaconEnabled       = BeaconEnabled,

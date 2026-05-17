@@ -119,6 +119,12 @@ public class MeshcomSettings
         "---=== MeshcomWebDesk - https://github.com/DH1FR/MeshcomWebDesk ===---";
 
     /// <summary>
+    /// Delay in seconds before an automatic reply (bot command or auto-reply) is sent.
+    /// Simulates a more natural response time. Range 0–30, default 3.
+    /// </summary>
+    public int ReplyDelaySeconds { get; set; } = 3;
+
+    /// <summary>
     /// When true, incoming direct messages starting with -- are interpreted as bot commands.
     /// Default is false.
     /// </summary>

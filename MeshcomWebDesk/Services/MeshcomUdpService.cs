@@ -386,6 +386,9 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         // Subtract 1 minute so {last-qso} only shows QSOs clearly before the current exchange,
         // not messages from the same session/minute window.
         var text = await ExpandVariablesAsync(_settings.AutoReplyText, callsign, before: triggerTimestamp);
+        var autoReplyDelay = Math.Clamp(_settings.ReplyDelaySeconds, 0, 30);
+        if (autoReplyDelay > 0)
+            await Task.Delay(TimeSpan.FromSeconds(autoReplyDelay));
         _logger.LogInformation("Auto-reply to new contact {Callsign} via node {NodeId}", callsign, nodeId);
         await SendMessageAsync(callsign, text, sourceNodeId: nodeId);
     }
@@ -407,6 +410,10 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             var parts = SplitMessage(reply);
             _logger.LogInformation("Bot reply to {From} via node {NodeId} ({Parts} part(s)): {Preview}",
                 message.From, message.NodeId, parts.Count, reply.Length > 80 ? reply[..80] + "…" : reply);
+
+            var botDelay = Math.Clamp(_settings.ReplyDelaySeconds, 0, 30);
+            if (botDelay > 0)
+                await Task.Delay(TimeSpan.FromSeconds(botDelay));
 
             for (var i = 0; i < parts.Count; i++)
             {

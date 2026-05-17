@@ -77,6 +77,7 @@ public class SettingsService
                 ["TimeOffsetHours"]     = s.TimeOffsetHours,
                 ["AutoReplyEnabled"]    = s.AutoReplyEnabled,
                 ["AutoReplyText"]       = s.AutoReplyText,
+                ["ReplyDelaySeconds"]   = s.ReplyDelaySeconds,
                 ["BotEnabled"]         = s.BotEnabled,
                 ["BotCommands"]        = new JsonArray(s.BotCommands.Select(c => (JsonNode?)new JsonObject
                 {
