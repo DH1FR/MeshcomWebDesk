@@ -306,8 +306,7 @@ public class ChatService
             AppendToMonitor(message, state);
             if (tab != null)
             {
-                tab.Messages.Add(message);
-                tab.MessageCount = tab.Messages.Count;
+                AppendToTab(tab, message);
                 tab.UnreadCount++;
             }
         }
@@ -348,8 +347,7 @@ public class ChatService
         lock (_lock)
         {
             AppendToMonitor(message, state);
-            tab.Messages.Add(message);
-            tab.MessageCount = tab.Messages.Count;
+            AppendToTab(tab, message);
         }
         NotifyChange();
     }
@@ -629,6 +627,9 @@ public class ChatService
                         || _settings.Groups.Contains(tab.Key, StringComparer.OrdinalIgnoreCase);
                     if (tabAllowed)
                     {
+                        var max = _settings.TabMaxMessages;
+                        if (max > 0 && tab.Messages.Count > max)
+                            tab.Messages.RemoveRange(0, tab.Messages.Count - max);
                         tab.MessageCount = tab.Messages.Count;
                         state.Tabs[tab.Key] = tab;
                     }
@@ -661,6 +662,9 @@ public class ChatService
                         || _settings.Groups.Contains(tab.Key, StringComparer.OrdinalIgnoreCase);
                     if (tabAllowed)
                     {
+                        var max = _settings.TabMaxMessages;
+                        if (max > 0 && tab.Messages.Count > max)
+                            tab.Messages.RemoveRange(0, tab.Messages.Count - max);
                         tab.MessageCount = tab.Messages.Count;
                         primaryState.Tabs[tab.Key] = tab;
                     }
@@ -890,6 +894,15 @@ public class ChatService
         if (state.Messages.Count > _settings.MonitorMaxMessages)
             state.Messages.RemoveRange(0, state.Messages.Count - _settings.MonitorMaxMessages);
         _ = _sink.WriteAsync(message);
+    }
+
+    private void AppendToTab(ChatTab tab, MeshcomMessage message)
+    {
+        tab.Messages.Add(message);
+        var max = _settings.TabMaxMessages;
+        if (max > 0 && tab.Messages.Count > max)
+            tab.Messages.RemoveRange(0, tab.Messages.Count - max);
+        tab.MessageCount = tab.Messages.Count;
     }
 
     private ChatTab GetOrCreateTab(NodeState state, string key, Guid? nodeId, out bool wasNewDirect)

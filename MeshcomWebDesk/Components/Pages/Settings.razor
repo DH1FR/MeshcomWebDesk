@@ -279,6 +279,12 @@
                 <input type="number" min="10" @bind="_model.MonitorMaxMessages" />
 
                 <label>
+                    @Loc.T("Tab-Limit (Nachrichten)", "Tab Limit (Messages)")<br />
+                    <small>@Loc.T("Max. Nachrichten pro Chat-Tab. Älteste werden gelöscht. 0 = unbegrenzt.", "Max. messages per chat tab. Oldest are removed first. 0 = unlimited.")</small>
+                </label>
+                <input type="number" min="0" @bind="_model.TabMaxMessages" />
+
+                <label>
                     @Loc.T("MH-Liste: Max. Alter (Stunden)", "MH List: Max. Age (Hours)")<br />
                     <small>@Loc.T("Einträge älter als x Stunden werden automatisch gelöscht. 0 = deaktiviert. (z. B. 24 = 1 Tag, 168 = 1 Woche)", "Entries older than x hours are automatically removed. 0 = disabled. (e.g. 24 = 1 day, 168 = 1 week)")</small>
                 </label>
@@ -2363,6 +2369,7 @@
             LogRetainDays       = s.LogRetainDays,
             LogUdpTraffic       = s.LogUdpTraffic,
             MonitorMaxMessages  = s.MonitorMaxMessages,
+            TabMaxMessages      = s.TabMaxMessages,
             MhMaxAgeHours       = s.MhMaxAgeHours,
             GroupFilterEnabled  = s.GroupFilterEnabled,
             GroupsText          = string.Join("\n", s.Groups),
@@ -2905,6 +2912,7 @@
                 LogRetainDays       = s.LogRetainDays,
                 LogUdpTraffic       = s.LogUdpTraffic,
                 MonitorMaxMessages  = s.MonitorMaxMessages,
+                TabMaxMessages      = s.TabMaxMessages,
                 MhMaxAgeHours       = s.MhMaxAgeHours,
                 GroupFilterEnabled  = s.GroupFilterEnabled,
                 GroupsText          = string.Join("\n", s.Groups),
@@ -3020,6 +3028,7 @@
         public int    LogRetainDays       { get; set; } = 30;
         public bool   LogUdpTraffic       { get; set; }
         public int    MonitorMaxMessages  { get; set; } = 1000;
+        public int    TabMaxMessages       { get; set; } = 500;
         public int    MhMaxAgeHours       { get; set; } = 0;
         public bool   GroupFilterEnabled  { get; set; }
         public string GroupsText          { get; set; } = string.Empty;
@@ -3154,6 +3163,7 @@
             LogRetainDays       = LogRetainDays,
             LogUdpTraffic       = LogUdpTraffic,
             MonitorMaxMessages  = MonitorMaxMessages,
+            TabMaxMessages      = TabMaxMessages,
             MhMaxAgeHours       = MhMaxAgeHours,
             GroupFilterEnabled  = GroupFilterEnabled,
             Groups              = GroupsText

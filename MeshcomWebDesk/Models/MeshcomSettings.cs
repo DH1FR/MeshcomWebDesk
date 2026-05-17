@@ -49,6 +49,12 @@ public class MeshcomSettings
     public int MonitorMaxMessages { get; set; } = 1000;
 
     /// <summary>
+    /// Maximum number of messages kept per chat tab. Oldest entries are dropped first.
+    /// 0 = unlimited. Default is 500.
+    /// </summary>
+    public int TabMaxMessages { get; set; } = 500;
+
+    /// <summary>
     /// When true, only groups listed in <see cref="Groups"/> automatically get a chat tab.
     /// When false (default), every incoming group message opens a tab regardless of <see cref="Groups"/>.
     /// </summary>
