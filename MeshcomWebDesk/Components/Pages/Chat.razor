@@ -1432,6 +1432,19 @@
         if (_activeTab == null) return;
         if (ChatService.TxCooldownRemaining > 0) return;
         var isBroadcast = _activeTab.Key == "*" || _activeTab.Key.TrimStart('#').Equals("alle", StringComparison.OrdinalIgnoreCase);
+        var isGroup     = _activeTab.Key.StartsWith('#');
+
+        // Confirm before sending any message to a group or broadcast tab.
+        if (isBroadcast || isGroup)
+        {
+            var target   = isBroadcast ? "alle" : _activeTab.Key;
+            var question = Loc.T(
+                $"Nachricht an \"{target}\" senden? Gehört das vielleicht in ein direktes Tab?",
+                $"Send message to \"{target}\"? Should this go to a direct tab instead?");
+            var confirmed = await JS.InvokeAsync<bool>("confirm", question);
+            if (!confirmed) return;
+        }
+
         var destination = isBroadcast ? "*" : _activeTab.Key.TrimStart('#');
         var tabKey = isBroadcast ? "*" : _activeTab.Key;
         await UdpService.SendMessageAsync(destination, text, tabKey, sourceNodeId: _activeNodeId);
