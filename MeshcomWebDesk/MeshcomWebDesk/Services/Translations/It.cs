@@ -5,8 +5,11 @@ internal static class It
 {
     public static readonly Dictionary<string, string> Strings = new(StringComparer.Ordinal)
     {
+        // Chat – ping confirmation
+        ["This usually belongs in a direct tab."] = "Di solito appartiene a una scheda diretta.",
+
         // General
-        ["Accept"]                  = "Accetta",
+        ["Accept"]
         ["Actions"]                 = "Azioni",
         ["Active"]                  = "Attivo",
         ["Add"]                     = "Aggiungi",

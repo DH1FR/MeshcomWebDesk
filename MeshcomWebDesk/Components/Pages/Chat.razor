@@ -1440,10 +1440,13 @@
         if (isPing && (isBroadcast || isGroup))
         {
             var target   = isBroadcast ? "alle" : _activeTab.Key;
-            var question = Loc.T(
-                $"Ping an \"{target}\" senden? Das gehört meistens in ein direktes Tab.",
-                $"Send ping to \"{target}\"? This usually belongs in a direct tab.");
-            var confirmed = await JS.InvokeAsync<bool>("confirm", question);
+            var prefix   = Loc.T(
+                $"Ping an \"{target}\" senden?",
+                $"Send ping to \"{target}\"?");
+            var suffix   = Loc.T(
+                "Das gehört meistens in ein direktes Tab.",
+                "This usually belongs in a direct tab.");
+            var confirmed = await JS.InvokeAsync<bool>("confirm", $"{prefix} {suffix}");
             if (!confirmed) return;
         }
 
