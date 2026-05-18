@@ -791,8 +791,11 @@
                     </span>
                 </div>
 
-                <label>@Loc.T("Interval (Stunden, min. 8)", "Interval (Hours, min. 8)")</label>
-                <input type="number" min="8" @bind="_model.BeaconIntervalHours" />
+                <label>@Loc.T("Interval (Stunden)", "Interval (Hours)")</label>
+                <div class="settings-input-hint">
+                    <input type="number" min="1" @bind="_model.BeaconIntervalHours" />
+                    <span class="settings-hint">⚠️ @Loc.T("Bitte Bakenzeiten mit Bedacht wählen.", "Please choose beacon intervals carefully.")</span>
+                </div>
 
                 <label>@Loc.T("Bake testen", "Test Beacon")</label>
                 <div style="display:flex; gap:8px; align-items:center;">
