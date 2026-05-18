@@ -175,9 +175,20 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                             Status.LastSnr = message.Snr;
                         }
 
-                        // Skip node echoes of our own sent messages (already recorded as outgoing).
-                        // Still extract own GPS position and node metadata from the echo if present.
-                        if (string.Equals(message.From, myCallsign, StringComparison.OrdinalIgnoreCase))
+                        // Skip src_type:"node" relay echoes from foreign callsigns for regular messages.
+                        // The node forwards every received LoRa packet twice – once as src_type:"node"
+                        // (relay confirmation) and once as src_type:"lora" (the authoritative copy).
+                        // Processing the node copy first would occupy the msg_id in the dedup cache and
+                        // cause the real lora packet to be dropped as a duplicate.
+                        // EXCEPTION: ACKs must never be skipped – the firmware may deliver an ACK only
+                        // as src_type:"node" (no second lora copy), so skipping it loses the delivery tick.
+                        if (message.IsNodePacket &&
+                            !message.IsAck &&
+                            !string.Equals(message.From, myCallsign, StringComparison.OrdinalIgnoreCase))
+                        {
+                            _logger.LogDebug("Skipping node relay echo from foreign station {From} (src_type=node)", message.From);
+                        }
+                        else if (string.Equals(message.From, myCallsign, StringComparison.OrdinalIgnoreCase))
                         {
                             if (message.Latitude.HasValue && message.Longitude.HasValue)
                             {
@@ -378,6 +389,9 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         // Subtract 1 minute so {last-qso} only shows QSOs clearly before the current exchange,
         // not messages from the same session/minute window.
         var text = await ExpandVariablesAsync(_settings.AutoReplyText, callsign, before: triggerTimestamp);
+        var autoReplyDelay = Math.Clamp(_settings.ReplyDelaySeconds, 0, 30);
+        if (autoReplyDelay > 0)
+            await Task.Delay(TimeSpan.FromSeconds(autoReplyDelay));
         _logger.LogInformation("Auto-reply to new contact {Callsign} via node {NodeId}", callsign, nodeId);
         await SendMessageAsync(callsign, text, sourceNodeId: nodeId);
     }
@@ -400,9 +414,14 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             _logger.LogInformation("Bot reply to {From} via node {NodeId} ({Parts} part(s)): {Preview}",
                 message.From, message.NodeId, parts.Count, reply.Length > 80 ? reply[..80] + "…" : reply);
 
+            var botDelay = Math.Clamp(_settings.ReplyDelaySeconds, 0, 30);
+            if (botDelay > 0)
+                await Task.Delay(TimeSpan.FromSeconds(botDelay));
+
             for (var i = 0; i < parts.Count; i++)
             {
-                // Reply via the same node that received the command
+                // Reply via the same node that received the command (message.NodeId is the
+                // own hardware node that forwarded the LoRa packet to WebDesk via UDP).
                 await SendMessageAsync(message.From, parts[i], sourceNodeId: message.NodeId);
                 if (i < parts.Count - 1)
                     await Task.Delay(TimeSpan.FromSeconds(2));

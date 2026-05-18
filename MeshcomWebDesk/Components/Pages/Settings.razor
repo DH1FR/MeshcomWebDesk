@@ -16,6 +16,7 @@
 @inject ChatService ChatService
 @inject TelnetService TelnetService
 @inject SerialConsoleService SerialConsoleService
+@inject MeshcomWebDesk.Models.ResolvedLogPath ResolvedLogPath
 @implements IDisposable
 
 <PageTitle>@Loc.T("Einstellungen", "Settings") – MeshCom WebDesk</PageTitle>
@@ -151,6 +152,16 @@
                                 </button>
                             }
                         </div>
+
+                        @* ── Console Log ── *@
+                        <label>
+                            @Loc.T("Console-Log", "Console Log")<br />
+                            <small>@Loc.T("Konsolenausgabe dieses Nodes in Datei sichern (console-{IP}-{datum}.log)", "Save this node's console output to file (console-{IP}-{date}.log)")</small>
+                        </label>
+                        <label class="settings-toggle">
+                            <input type="checkbox" @bind="node.ConsoleLogEnabled" />
+                            <span>@(node.ConsoleLogEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
+                        </label>
                     </div>
                 </div>
             }
@@ -254,7 +265,12 @@
             @if (IsOpen("log")) {
             <div class="settings-grid">
                 <label>@Loc.T("Log-Pfad", "Log Path")</label>
-                <input type="text" @bind="_model.LogPath" />
+                <input type="text" @bind="_model.LogPath" placeholder="@ResolvedLogPath.Path" />
+                @if (string.IsNullOrWhiteSpace(_model.LogPath))
+                {
+                    <span></span>
+                    <small style="color:#8b949e">@Loc.T("Leer = Standard-Pfad wird verwendet:", "Empty = default path is used:") <code>@ResolvedLogPath.Path</code></small>
+                }
 
                 <label>@Loc.T("Log-Aufbewahrung (Tage)", "Log Retention (Days)")</label>
                 <input type="number" min="1" @bind="_model.LogRetainDays" />
@@ -265,6 +281,15 @@
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.LogUdpTraffic" />
                     <span>@(_model.LogUdpTraffic ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
+                </label>
+
+                <label>
+                    @Loc.T("Console-Log (Serial / Legacy)", "Console Log (Serial / Legacy)")<br />
+                    <small>@Loc.T("Konsolenausgabe in Datei sichern (console-{host}-{datum}.log). Für TLS/NET-Console pro Node konfigurierbar.", "Save console output to file (console-{host}-{date}.log). For TLS/NET Console configurable per node.")</small>
+                </label>
+                <label class="settings-toggle">
+                    <input type="checkbox" @bind="_model.ConsoleLogEnabled" />
+                    <span>@(_model.ConsoleLogEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                 </label>
             </div>
             }
@@ -277,6 +302,12 @@
             <div class="settings-grid">
                 <label>@Loc.T("Monitor-Limit (Einträge)", "Monitor Limit (Entries)")</label>
                 <input type="number" min="10" @bind="_model.MonitorMaxMessages" />
+
+                <label>
+                    @Loc.T("Tab-Limit (Nachrichten)", "Tab Limit (Messages)")<br />
+                    <small>@Loc.T("Max. Nachrichten pro Chat-Tab. Älteste werden gelöscht. 0 = unbegrenzt.", "Max. messages per chat tab. Oldest are removed first. 0 = unlimited.")</small>
+                </label>
+                <input type="number" min="0" @bind="_model.TabMaxMessages" />
 
                 <label>
                     @Loc.T("MH-Liste: Max. Alter (Stunden)", "MH List: Max. Age (Hours)")<br />
@@ -383,6 +414,12 @@
                                @onchange="@(() => _model.ConsoleMode = "serial")" />
                         🔌 @Loc.T("Seriell Console", "Serial Console")
                     </label>
+                    <label style="display:flex; gap:.3rem; align-items:center; cursor:pointer;">
+                        <input type="radio" name="consoleMode" value="hmac"
+                               checked="@(_model.ConsoleMode == "hmac")"
+                               @onchange="@(() => _model.ConsoleMode = "hmac")" />
+                        🔐 NET Console
+                    </label>
                 </div>
 
                 @if (_model.ConsoleMode == "tls")
@@ -434,6 +471,20 @@
                                "Requirement: The node must have 'enable Telnet console' (port 2323) enabled.")
                     </div>
                 }
+                else if (_model.ConsoleMode == "hmac")
+                {
+                    <label>@Loc.T("Port", "Port")</label>
+                    <input type="number" @bind="_model.TelnetPort" min="1" max="65535" />
+
+                    <label>@Loc.T("Passwort", "Password")</label>
+                    <input type="password" @bind="_model.TelnetPassword" placeholder="••••••••" autocomplete="new-password" />
+
+                    <span></span>
+                    <div style="font-size:.8rem; color:#8b949e;">
+                        @Loc.T("NET Console: Verbindung ohne TLS, Authentifizierung per HMAC-SHA256 Challenge-Response.",
+                               "NET Console: Connection without TLS, authentication via HMAC-SHA256 challenge-response.")
+                    </div>
+                }
                 else
                 {
                     <label>@Loc.T("COM-Port", "COM Port")</label>
@@ -472,6 +523,12 @@
                     <input type="checkbox" @bind="_model.AutoReplyEnabled" />
                     <span>@(_model.AutoReplyEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                 </label>
+
+                <label>@Loc.T("Antwort-Verzögerung (Sek.)", "Reply Delay (sec.)")</label>
+                <div class="settings-input-hint">
+                    <input type="number" @bind="_model.ReplyDelaySeconds" min="0" max="30" style="width:80px" />
+                    <span class="settings-hint">@Loc.T("Verzögerung vor Bot-Antwort und Auto-Reply (0–30 Sek., Standard: 3)", "Delay before bot reply and auto-reply (0–30 sec., default: 3)")</span>
+                </div>
 
                 <label>Auto-Reply Text</label>
                 <div class="settings-input-hint">
@@ -734,8 +791,11 @@
                     </span>
                 </div>
 
-                <label>@Loc.T("Interval (Stunden, min. 8)", "Interval (Hours, min. 8)")</label>
-                <input type="number" min="8" @bind="_model.BeaconIntervalHours" />
+                <label>@Loc.T("Interval (Stunden)", "Interval (Hours)")</label>
+                <div class="settings-input-hint">
+                    <input type="number" min="1" @bind="_model.BeaconIntervalHours" />
+                    <span class="settings-hint">⚠️ @Loc.T("Bitte Bakenzeiten mit Bedacht wählen.", "Please choose beacon intervals carefully.")</span>
+                </div>
 
                 <label>@Loc.T("Bake testen", "Test Beacon")</label>
                 <div style="display:flex; gap:8px; align-items:center;">
@@ -2338,11 +2398,15 @@
                 ListenPort            = n.ListenPort,
                 IsPrimary             = n.IsPrimary,
                 TelnetCertThumbprint  = n.TelnetCertThumbprint,
-                TelnetPassword        = n.TelnetPassword
+                TelnetPassword        = n.TelnetPassword,
+                ConsoleLogEnabled     = n.ConsoleLogEnabled
             }).ToList(),
+            LogPath             = s.LogPath,
             LogRetainDays       = s.LogRetainDays,
             LogUdpTraffic       = s.LogUdpTraffic,
+            ConsoleLogEnabled   = s.ConsoleLogEnabled,
             MonitorMaxMessages  = s.MonitorMaxMessages,
+            TabMaxMessages      = s.TabMaxMessages,
             MhMaxAgeHours       = s.MhMaxAgeHours,
             GroupFilterEnabled  = s.GroupFilterEnabled,
             GroupsText          = string.Join("\n", s.Groups),
@@ -2356,6 +2420,7 @@
             TimeOffsetHours     = s.TimeOffsetHours,
             AutoReplyEnabled    = s.AutoReplyEnabled,
             AutoReplyText       = s.AutoReplyText,
+            ReplyDelaySeconds   = s.ReplyDelaySeconds,
             BotEnabled          = s.BotEnabled,
             BotCommands         = s.BotCommands
                 .Select(c => new BotCommandEntry { Name = c.Name, Response = c.Response, Description = c.Description })
@@ -2879,12 +2944,15 @@
                     ListenPort            = n.ListenPort,
                     IsPrimary             = n.IsPrimary,
                     TelnetCertThumbprint  = n.TelnetCertThumbprint,
-                    TelnetPassword        = n.TelnetPassword
+                    TelnetPassword        = n.TelnetPassword,
+                    ConsoleLogEnabled     = n.ConsoleLogEnabled
                 }).ToList(),
                 LogPath             = s.LogPath,
                 LogRetainDays       = s.LogRetainDays,
                 LogUdpTraffic       = s.LogUdpTraffic,
+                ConsoleLogEnabled   = s.ConsoleLogEnabled,
                 MonitorMaxMessages  = s.MonitorMaxMessages,
+                TabMaxMessages      = s.TabMaxMessages,
                 MhMaxAgeHours       = s.MhMaxAgeHours,
                 GroupFilterEnabled  = s.GroupFilterEnabled,
                 GroupsText          = string.Join("\n", s.Groups),
@@ -2898,6 +2966,7 @@
                 TimeOffsetHours     = s.TimeOffsetHours,
                 AutoReplyEnabled    = s.AutoReplyEnabled,
                 AutoReplyText       = s.AutoReplyText,
+                ReplyDelaySeconds   = s.ReplyDelaySeconds,
                 BotEnabled          = s.BotEnabled,
                 BotCommands         = s.BotCommands
                     .Select(c => new BotCommandEntry { Name = c.Name, Response = c.Response, Description = c.Description })
@@ -2999,7 +3068,9 @@
         public string LogPath             { get; set; } = string.Empty;
         public int    LogRetainDays       { get; set; } = 30;
         public bool   LogUdpTraffic       { get; set; }
+        public bool   ConsoleLogEnabled   { get; set; }
         public int    MonitorMaxMessages  { get; set; } = 1000;
+        public int    TabMaxMessages       { get; set; } = 500;
         public int    MhMaxAgeHours       { get; set; } = 0;
         public bool   GroupFilterEnabled  { get; set; }
         public string GroupsText          { get; set; } = string.Empty;
@@ -3013,6 +3084,7 @@
         public double TimeOffsetHours     { get; set; } = 0;
         public bool   AutoReplyEnabled    { get; set; }
         public string AutoReplyText       { get; set; } = string.Empty;
+        public int    ReplyDelaySeconds   { get; set; } = 3;
         public bool   BotEnabled          { get; set; }
         public List<BotCommandEntry> BotCommands { get; set; } = [];
         public bool   BeaconEnabled       { get; set; }
@@ -3100,8 +3172,6 @@
         public string TelnetCertThumbprint    { get; set; } = string.Empty;
         public string SerialPortName          { get; set; } = string.Empty;
         public int    SerialBaudRate          { get; set; } = 115200;
-
-        // Multi-node
         public List<NodeProfile> Nodes { get; set; } = [];
 
         // Quick Texts
@@ -3134,6 +3204,7 @@
             LogRetainDays       = LogRetainDays,
             LogUdpTraffic       = LogUdpTraffic,
             MonitorMaxMessages  = MonitorMaxMessages,
+            TabMaxMessages      = TabMaxMessages,
             MhMaxAgeHours       = MhMaxAgeHours,
             GroupFilterEnabled  = GroupFilterEnabled,
             Groups              = GroupsText
@@ -3151,6 +3222,7 @@
             TimeOffsetHours     = TimeOffsetHours,
             AutoReplyEnabled    = AutoReplyEnabled,
             AutoReplyText       = AutoReplyText,
+            ReplyDelaySeconds   = Math.Clamp(ReplyDelaySeconds, 0, 30),
             BotEnabled          = BotEnabled,
             BotCommands         = BotCommands,
             BeaconEnabled       = BeaconEnabled,
@@ -3231,6 +3303,7 @@
             TelnetCertThumbprint    = TelnetCertThumbprint,
             SerialPortName          = SerialPortName,
             SerialBaudRate          = SerialBaudRate,
+            ConsoleLogEnabled       = ConsoleLogEnabled,
             QuickTexts = QuickTexts,
             GroupLabels = GroupLabels
         };

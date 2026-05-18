@@ -79,6 +79,9 @@ builder.Host.UseSerilog((context, config) => config
 
 // Bind MeshCom settings from configuration
 builder.Services.Configure<MeshcomSettings>(meshcomSection);
+// Register the resolved log path so services (e.g. ConsoleLogService) can use it
+// independent of whether appsettings.override.json has overwritten LogPath with "".
+builder.Services.AddSingleton(new ResolvedLogPath(logPath));
 // Decrypt sensitive fields (connection strings, tokens, passwords) after loading.
 // Values encrypted by SettingsService carry a "dp:" prefix; plain-text values pass through.
 builder.Services.AddSingleton<IPostConfigureOptions<MeshcomSettings>,
@@ -117,6 +120,8 @@ builder.Services.AddSingleton<UpdateCheckService>();
 builder.Services.AddSingleton<ElevationService>();
 builder.Services.AddSingleton<TelnetService>();
 builder.Services.AddSingleton<SerialConsoleService>();
+builder.Services.AddSingleton<HmacConsoleService>();
+builder.Services.AddSingleton<ConsoleLogService>();
 builder.Services.AddHttpClient("MeshcomGateway").ConfigurePrimaryHttpMessageHandler(
     () => new HttpClientHandler { AllowAutoRedirect = true });
 builder.Services.AddSingleton<GatewayService>();

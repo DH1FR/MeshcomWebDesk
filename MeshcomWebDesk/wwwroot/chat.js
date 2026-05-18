@@ -209,6 +209,8 @@ window.meshcomChat = (function () {
         setSettingsSections: (csv) => localStorage.setItem('meshcom-settings-sections', csv ?? ''),
         getWelcomedVersion:  () => localStorage.getItem('meshcom-welcomed-version') || '',
         setWelcomedVersion:  (v) => localStorage.setItem('meshcom-welcomed-version', v || ''),
+        getLoraHighlight:    () => localStorage.getItem('meshcom-lora-highlight') === '1',
+        setLoraHighlight:    (v) => localStorage.setItem('meshcom-lora-highlight', v ? '1' : '0'),
         showWelcomeDialog:   (version, storageKey, txtQuestion, txtYes, txtNo, author) => {
             if (document.getElementById('welcome-dialog-overlay')) return;
             var overlay = document.createElement('div');
@@ -239,18 +241,70 @@ window.meshcomChat = (function () {
 
         // ── Nachricht in Zwischenablage kopieren ──
         copyToClipboard: (text) => {
+            // Try modern Clipboard API first (works on desktop and iOS when called
+            // directly from a trusted gesture – may fail via Blazor SignalR)
             if (navigator.clipboard && navigator.clipboard.writeText) {
-                return navigator.clipboard.writeText(text);
+                return navigator.clipboard.writeText(text).catch(() => {
+                    meshcomChat._copyDialog(text);
+                });
             }
-            // Fallback für ältere Browser
-            var ta = document.createElement('textarea');
-            ta.value = text;
-            ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px';
-            document.body.appendChild(ta);
-            ta.select();
-            document.execCommand('copy');
-            document.body.removeChild(ta);
+            meshcomChat._copyDialog(text);
             return Promise.resolve();
+        },
+
+        _copyDialog: (text) => {
+            // iOS Safari: show a small modal with the text pre-selected so the user
+            // can tap the native "Copy" menu. This is the only reliable method when
+            // the Clipboard API is blocked (no trusted gesture via SignalR/Blazor).
+            var isIos = /iP(hone|ad|od)/.test(navigator.userAgent);
+
+            if (!isIos) {
+                // Desktop / Android fallback via execCommand
+                var ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;font-size:16px';
+                document.body.appendChild(ta);
+                ta.focus();
+                ta.select();
+                try { document.execCommand('copy'); } catch(e) { }
+                document.body.removeChild(ta);
+                return;
+            }
+
+            // iOS: show overlay dialog with pre-selected text
+            var overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center';
+
+            var box = document.createElement('div');
+            box.style.cssText = 'background:#1e2535;border-radius:12px;padding:16px;width:90%;max-width:400px;box-shadow:0 4px 24px rgba(0,0,0,.5)';
+
+            var label = document.createElement('div');
+            label.textContent = 'Text markieren und kopieren:';
+            label.style.cssText = 'color:#aab;font-size:13px;margin-bottom:8px';
+
+            var input = document.createElement('input');
+            input.type = 'text';
+            input.value = text;
+            input.readOnly = true;
+            input.style.cssText = 'width:100%;box-sizing:border-box;font-size:15px;padding:8px;border-radius:6px;border:1px solid #445;background:#111827;color:#eee';
+
+            var closeBtn = document.createElement('button');
+            closeBtn.textContent = '✕ Schließen';
+            closeBtn.style.cssText = 'margin-top:12px;padding:6px 16px;border-radius:6px;border:none;background:#374151;color:#eee;font-size:14px;cursor:pointer';
+
+            box.appendChild(label);
+            box.appendChild(input);
+            box.appendChild(closeBtn);
+            overlay.appendChild(box);
+            document.body.appendChild(overlay);
+
+            // Pre-select text so user only needs to tap "Copy"
+            input.focus();
+            input.setSelectionRange(0, input.value.length);
+
+            var dismiss = () => { if (overlay.parentNode) document.body.removeChild(overlay); };
+            closeBtn.addEventListener('click', dismiss);
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) dismiss(); });
         },
 
         // ── SendBar: fügt Text an der aktuellen Cursorposition ein ──

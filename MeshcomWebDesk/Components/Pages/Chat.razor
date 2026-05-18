@@ -16,6 +16,7 @@
 @inject MeshcomWebDesk.Services.QsoSummaryService QsoSummaryService
 @inject TelnetService TelnetService
 @inject SerialConsoleService SerialConsoleService
+@inject HmacConsoleService HmacConsoleService
 @inject NodeManager NodeManager
 @implements IDisposable
 
@@ -153,7 +154,7 @@
                             </span>
                             @if (msg.IsOutgoing)
                             {
-                                <span class="msg-call">@_myCallsign:</span>
+                                <span class="msg-call">@msg.From:</span>
                             }
                             else
                             {
@@ -421,10 +422,13 @@
         </button>
         @if (TelnetService.IsEnabled)
         {
-            var consoleConnected = _settings.ConsoleMode == "serial"
-                ? SerialConsoleService.IsConnected
-                : TelnetService.IsConnected;
-            var consoleIcon = _settings.ConsoleMode == "serial" ? "🔌" : "🖥️";
+            var consoleConnected = _settings.ConsoleMode switch
+            {
+                "serial" => SerialConsoleService.IsConnected,
+                "hmac"   => HmacConsoleService.IsConnected,
+                _        => TelnetService.IsConnected
+            };
+            var consoleIcon = "🖥️";
             <button class="status-mute-btn @(consoleConnected ? "" : "status-mute-off")"
                     @onclick="ToggleTelnetAsync"
                     title="@(consoleConnected ? Loc.T("Console verbunden – klicken zum Trennen", "Console connected – click to disconnect") : Loc.T("Console getrennt – klicken zum Verbinden", "Console disconnected – click to connect"))">
@@ -891,7 +895,7 @@
     private List<RecentPartner> _recentPartners = [];
     private bool _recentPartnersLoaded;
     private bool _isInitialized;
-    private DateTime _lastNotificationTime = DateTime.MinValue;
+    private readonly Dictionary<Guid?, DateTime> _lastNotificationTime = new();
     private string _monitorFilter = string.Empty;
     private IReadOnlyList<MeshcomMessage> _cachedFilteredMessages = [];
     private CancellationTokenSource? _filterDebounce;
@@ -994,6 +998,10 @@
         NodeManager.OnSelectedNodeChanged += OnNodeChanged;
         // Restore active tab from service memory so the first render already shows the correct tab
         _activeTabKey = ChatService.GetActiveTabKey(_activeNodeId);
+        // Server-seitig gespeicherte Tab-Reihenfolge vor dem ersten Render anwenden
+        var serverOrder = ChatService.GetTabOrder(_activeNodeId);
+        if (serverOrder.Count > 0)
+            _tabOrder = [.. serverOrder];
         RefreshData();
         _isInitialized = true;
     }
@@ -1053,15 +1061,20 @@
             }
             catch (JSException) { }
 
-            // Restore saved tab order
+            // Restore saved tab order – localStorage als Fallback wenn server-seitig noch nichts gespeichert
             try
             {
-                var order = await JS.InvokeAsync<string[]?>("meshcomChat.getTabOrder");
-                if (order != null && order.Length > 0)
+                if (_tabOrder.Count == 0)
                 {
-                    _tabOrder = [.. order];
-                    ApplyTabOrder();
-                    needsRender = true;
+                    var order = await JS.InvokeAsync<string[]?>("meshcomChat.getTabOrder");
+                    if (order != null && order.Length > 0)
+                    {
+                        _tabOrder = [.. order];
+                        // Reihenfolge auch server-seitig sichern damit nächster Reload kein JS braucht
+                        ChatService.SetTabOrder(_activeNodeId, _tabOrder);
+                        ApplyTabOrder();
+                        needsRender = true;
+                    }
                 }
             }
             catch (JSException) { }
@@ -1220,9 +1233,10 @@
             string.Equals(m.To, _myCallsign, StringComparison.OrdinalIgnoreCase));
         if (latestDirect != null)
         {
-            if (_isInitialized && _soundEnabled && latestDirect.Timestamp > _lastNotificationTime)
+            var lastTime = _lastNotificationTime.GetValueOrDefault(_activeNodeId, DateTime.MinValue);
+            if (_isInitialized && _soundEnabled && latestDirect.Timestamp > lastTime)
                 _playSound = true;
-            _lastNotificationTime = latestDirect.Timestamp;
+            _lastNotificationTime[_activeNodeId] = latestDirect.Timestamp;
         }
     }
 
@@ -1242,9 +1256,12 @@
 
     private async Task ToggleTelnetAsync()
     {
-        IConsoleService console = _settings.ConsoleMode == "serial"
-            ? SerialConsoleService
-            : TelnetService;
+        IConsoleService console = _settings.ConsoleMode switch
+        {
+            "serial" => SerialConsoleService,
+            "hmac"   => HmacConsoleService,
+            _        => TelnetService
+        };
         if (console.IsConnected)
             await console.DisconnectAsync();
         else
@@ -1254,6 +1271,7 @@
 
     private void HandleNewDirectTab(string callsign, MeshcomMessage message)
     {
+        if (message.NodeId != _activeNodeId) return;
         if (_voiceEnabled == true)
             SpeakDirectMessage(callsign);
         InvokeAsync(StateHasChanged);
@@ -1262,6 +1280,7 @@
     // Folgenachrichten ans eigene Rufzeichen (Tab bereits offen): TTS nur wenn Cooldown abgelaufen
     private void HandleDirectMessage(string callsign, MeshcomMessage message)
     {
+        if (message.NodeId != _activeNodeId) return;
         if (_voiceEnabled != true) return;
         SpeakDirectMessage(callsign);
         InvokeAsync(StateHasChanged);
@@ -1375,7 +1394,8 @@
 
     private async Task CopyMessageAsync(string text)
     {
-        await JS.InvokeVoidAsync("meshcomChat.copyToClipboard", text);
+        try { await JS.InvokeVoidAsync("meshcomChat.copyToClipboard", text); }
+        catch { /* clipboard not available (e.g. iOS Safari outside gesture context) */ }
     }
 
     private void CreateNewTab()
@@ -1412,6 +1432,24 @@
         if (_activeTab == null) return;
         if (ChatService.TxCooldownRemaining > 0) return;
         var isBroadcast = _activeTab.Key == "*" || _activeTab.Key.TrimStart('#').Equals("alle", StringComparison.OrdinalIgnoreCase);
+        var isGroup     = _activeTab.Key.StartsWith('#');
+
+        // Confirm before sending ping to a group or broadcast tab.
+        var isPing = text.Trim().Equals("ping", StringComparison.OrdinalIgnoreCase)
+                  || text.Trim().Equals("--ping", StringComparison.OrdinalIgnoreCase);
+        if (isPing && (isBroadcast || isGroup))
+        {
+            var target   = isBroadcast ? "alle" : _activeTab.Key;
+            var prefix   = Loc.T(
+                $"Ping an \"{target}\" senden?",
+                $"Send ping to \"{target}\"?");
+            var suffix   = Loc.T(
+                "Das gehört meistens in ein direktes Tab.",
+                "This usually belongs in a direct tab.");
+            var confirmed = await JS.InvokeAsync<bool>("confirm", $"{prefix} {suffix}");
+            if (!confirmed) return;
+        }
+
         var destination = isBroadcast ? "*" : _activeTab.Key.TrimStart('#');
         var tabKey = isBroadcast ? "*" : _activeTab.Key;
         await UdpService.SendMessageAsync(destination, text, tabKey, sourceNodeId: _activeNodeId);
@@ -1777,6 +1815,8 @@
         _tabs.RemoveAt(fromIdx);
         _tabs.Insert(toIdx, tab);
         _tabOrder = _tabs.Select(t => t.Key).ToList();
+        // Server-seitig persistieren (überlebt Browser-Reload und Neustart)
+        ChatService.SetTabOrder(_activeNodeId, _tabOrder);
         _ = JS.InvokeVoidAsync("meshcomChat.setTabOrder", _tabOrder).AsTask();
         StateHasChanged();
     }
@@ -1994,6 +2034,7 @@
 
     private static string AckCssClass(MeshcomMessage m)
     {
+        if (m.IsAcknowledged && m.IsLoraDelivered && m.IsGatewayDelivered) return "msg-ack ack-cloud-ok ack-ok";
         if (m.IsAcknowledged && m.IsGatewayDelivered) return "msg-ack ack-cloud-ok";
         if (m.IsAcknowledged)                         return "msg-ack ack-ok";
         if (m.SequenceNumber != null)                 return "msg-ack ack-sent";
@@ -2005,6 +2046,7 @@
         // Gruppe / Broadcast: kein ACK erwartet → sofort Wolke
         var isGroupOrBcast = m.To == "*" || m.To.StartsWith('#');
 
+        if (m.IsAcknowledged && m.IsLoraDelivered && m.IsGatewayDelivered) return "✓✓ ☁️✓";
         if (m.IsAcknowledged && m.IsGatewayDelivered) return "☁️✓";
         if (m.IsAcknowledged)                         return "✓✓";
         if (isGroupOrBcast && m.SequenceNumber != null) return "☁️";
@@ -2016,6 +2058,8 @@
     {
         var isGroupOrBcast = m.To == "*" || m.To.StartsWith('#');
 
+        if (m.IsAcknowledged && m.IsLoraDelivered && m.IsGatewayDelivered)
+            return "✓✓ ☁️✓ Zugestellt via LoRa (direkt) + Gateway";
         if (m.IsAcknowledged && m.IsGatewayDelivered)
             return "☁️✓ Über Gateway zugestellt";
         if (m.IsAcknowledged)

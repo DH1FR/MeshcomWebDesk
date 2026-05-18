@@ -9,7 +9,9 @@ public class SerialConsoleService : IConsoleService, IAsyncDisposable
 {
     private readonly IOptionsMonitor<MeshcomSettings> _settingsMonitor;
     private readonly ILogger<SerialConsoleService> _logger;
+    private readonly ConsoleLogService _consoleLog;
 
+    private string _connectedPort = string.Empty;
     private SerialPort? _port;
     private CancellationTokenSource? _cts;
     private readonly SemaphoreSlim _lock = new(1, 1);
@@ -20,10 +22,12 @@ public class SerialConsoleService : IConsoleService, IAsyncDisposable
 
     public SerialConsoleService(
         IOptionsMonitor<MeshcomSettings> settingsMonitor,
-        ILogger<SerialConsoleService> logger)
+        ILogger<SerialConsoleService> logger,
+        ConsoleLogService consoleLog)
     {
         _settingsMonitor = settingsMonitor;
         _logger = logger;
+        _consoleLog = consoleLog;
     }
 
     /// <summary>
@@ -79,6 +83,7 @@ public class SerialConsoleService : IConsoleService, IAsyncDisposable
             _port.DtrEnable = false;
             _port.RtsEnable = false;
             IsConnected = true;
+            _connectedPort = portName;
             AppendLine($"● Verbunden mit {settings.SerialPortName} @ {settings.SerialBaudRate} Baud");
             OnChange?.Invoke();
 
@@ -183,6 +188,13 @@ public class SerialConsoleService : IConsoleService, IAsyncDisposable
             if (Lines.Count >= 500) Lines.RemoveAt(0);
             Lines.Add(text);
         }
+        if (!string.IsNullOrEmpty(_connectedPort))
+        {
+            var s       = _settingsMonitor.CurrentValue;
+            var enabled = s.ConsoleLogEnabled;
+            if (enabled)
+                _ = _consoleLog.WriteAsync(_connectedPort, true, text);
+        }
         OnChange?.Invoke();
     }
 
@@ -199,6 +211,7 @@ public class SerialConsoleService : IConsoleService, IAsyncDisposable
         });
         _port = null;
         IsConnected = false;
+        _connectedPort = string.Empty;
     }
 
     public async ValueTask DisposeAsync()

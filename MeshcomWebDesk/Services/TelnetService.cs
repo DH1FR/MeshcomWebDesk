@@ -14,6 +14,7 @@ public class TelnetService : IConsoleService, IAsyncDisposable
 {
     private readonly IOptionsMonitor<MeshcomSettings> _settingsMonitor;
     private readonly ILogger<TelnetService> _logger;
+    private readonly ConsoleLogService _consoleLog;
 
     private TcpClient?    _tcp;
     private SslStream?    _ssl;
@@ -26,6 +27,8 @@ public class TelnetService : IConsoleService, IAsyncDisposable
 
     public bool    IsConnected           { get; private set; }
     public bool    IsEnabled             => _settingsMonitor.CurrentValue.TelnetEnabled;
+    /// <summary>Host to which the current connection was established. Empty when not connected.</summary>
+    public string  ConnectedHost         { get; private set; } = string.Empty;
     /// <summary>
     /// Set when an unknown (first-connect) certificate is received.
     /// Callers (Settings page, Telnet page) can read this and offer a "Trust &amp; save" button.
@@ -37,10 +40,11 @@ public class TelnetService : IConsoleService, IAsyncDisposable
 
     public event Action? OnChange;
 
-    public TelnetService(IOptionsMonitor<MeshcomSettings> settings, ILogger<TelnetService> logger)
+    public TelnetService(IOptionsMonitor<MeshcomSettings> settings, ILogger<TelnetService> logger, ConsoleLogService consoleLog)
     {
         _settingsMonitor = settings;
         _logger          = logger;
+        _consoleLog      = consoleLog;
     }
 
     /// <summary>Implements <see cref="IConsoleService.ConnectAsync"/> (legacy single-parameter overload).</summary>
@@ -174,6 +178,7 @@ public class TelnetService : IConsoleService, IAsyncDisposable
             }
 
             IsConnected = true;
+            ConnectedHost = host;
             AppendLine($"[Verbunden mit {host}:{port}]");
             _cts = new CancellationTokenSource();
             _ = ReadLoopAsync(_cts.Token);
@@ -198,8 +203,9 @@ public class TelnetService : IConsoleService, IAsyncDisposable
     {
         _cts?.Cancel();
         await DisposeConnectionAsync();
-        IsConnected = false;
-        LastLine    = string.Empty;
+        IsConnected   = false;
+        ConnectedHost = string.Empty;
+        LastLine      = string.Empty;
         AppendLine("[Getrennt]");
         OnChange?.Invoke();
         _logger.LogInformation("Telnet disconnected");
@@ -304,6 +310,22 @@ public class TelnetService : IConsoleService, IAsyncDisposable
         {
             if (Lines.Count >= 500) Lines.RemoveAt(0);
             Lines.Add(line);
+        }
+        if (!string.IsNullOrEmpty(ConnectedHost))
+        {
+            var s       = _settingsMonitor.CurrentValue;
+            var enabled = s.ConsoleLogEnabled;
+            if (!enabled && s.Nodes.Count > 0)
+            {
+                var node = s.Nodes.FirstOrDefault(n =>
+                    string.Equals(n.DeviceIp, ConnectedHost, StringComparison.OrdinalIgnoreCase));
+                enabled = node?.ConsoleLogEnabled ?? false;
+            }
+            if (enabled)
+                _ = _consoleLog.WriteAsync(ConnectedHost, true, line);
+            else
+                _logger.LogWarning("ConsoleLog skipped – host='{Host}' GlobalFlag={Global} Nodes={NodeCount}",
+                    ConnectedHost, s.ConsoleLogEnabled, s.Nodes.Count);
         }
     }
 

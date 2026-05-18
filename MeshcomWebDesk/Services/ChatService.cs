@@ -23,6 +23,8 @@ public class ChatService
         public ConcurrentDictionary<string, HeardStation> MhList     { get; } = new(StringComparer.OrdinalIgnoreCase);
         public List<MeshcomMessage>                        Messages   { get; } = [];
         public string                                      ActiveTabKey { get; set; } = string.Empty;
+        /// <summary>User-defined tab display order (list of tab keys). Empty = natural insertion order.</summary>
+        public List<string>                                TabOrder   { get; set; } = [];
     }
 
     private readonly ConcurrentDictionary<Guid, NodeState> _nodeState = new();
@@ -186,6 +188,18 @@ public class ChatService
         }
     }
 
+    /// <summary>Returns the persisted tab order for a node. Empty list = no saved order.</summary>
+    public IReadOnlyList<string> GetTabOrder(Guid? nodeId)
+    {
+        lock (_lock) { return ResolveState(nodeId).TabOrder.ToList(); }
+    }
+
+    /// <summary>Saves the tab order for a node so it survives the next snapshot cycle.</summary>
+    public void SetTabOrder(Guid? nodeId, IEnumerable<string> order)
+    {
+        lock (_lock) { ResolveState(nodeId).TabOrder = [.. order]; }
+    }
+
     /// <summary>All messages sorted newest-first (legacy/primary node).</summary>
     public IReadOnlyList<MeshcomMessage> AllMessages => GetAllMessages(null);
 
@@ -292,8 +306,7 @@ public class ChatService
             AppendToMonitor(message, state);
             if (tab != null)
             {
-                tab.Messages.Add(message);
-                tab.MessageCount = tab.Messages.Count;
+                AppendToTab(tab, message);
                 tab.UnreadCount++;
             }
         }
@@ -334,8 +347,7 @@ public class ChatService
         lock (_lock)
         {
             AppendToMonitor(message, state);
-            tab.Messages.Add(message);
-            tab.MessageCount = tab.Messages.Count;
+            AppendToTab(tab, message);
         }
         NotifyChange();
     }
@@ -452,29 +464,45 @@ public class ChatService
 
     public void MarkMessageAcknowledged(string sequenceNumber, Guid? nodeId, string? ackSender = null, bool isGateway = false)
     {
-        var messages = ResolveState(nodeId).Messages;
-        lock (_lock)
+        bool Found(IEnumerable<MeshcomMessage> messages)
         {
-            var msg = messages.FirstOrDefault(m =>
-                m.IsOutgoing && m.SequenceNumber == sequenceNumber);
-
-            if (msg == null && ackSender != null)
+            lock (_lock)
             {
-                var cutoff = DateTime.Now.AddMinutes(-10);
-                msg = messages.FirstOrDefault(m =>
-                    m.IsOutgoing &&
-                    !m.IsAcknowledged &&
-                    m.Timestamp >= cutoff &&
-                    string.Equals(m.To, ackSender, StringComparison.OrdinalIgnoreCase));
-            }
+                var msg = messages.FirstOrDefault(m =>
+                    m.IsOutgoing && m.SequenceNumber == sequenceNumber);
 
-            if (msg != null)
-            {
-                msg.SequenceNumber    = sequenceNumber;
-                msg.IsAcknowledged    = true;
-                msg.IsGatewayDelivered = isGateway;
+                if (msg == null && ackSender != null)
+                {
+                    var cutoff = DateTime.Now.AddMinutes(-10);
+                    msg = messages.FirstOrDefault(m =>
+                        m.IsOutgoing &&
+                        m.Timestamp >= cutoff &&
+                        string.Equals(m.To, ackSender, StringComparison.OrdinalIgnoreCase));
+                }
+
+                if (msg != null)
+                {
+                    msg.SequenceNumber  = sequenceNumber;
+                    msg.IsAcknowledged  = true;
+                    // Accumulate delivery flags – never clear a flag that was already set.
+                    if (isGateway)  msg.IsGatewayDelivered = true;
+                    else            msg.IsLoraDelivered    = true;
+                    return true;
+                }
+                return false;
             }
         }
+
+        // Search the node that received the ACK first, then fall back to all other nodes.
+        // In multi-node setups the outgoing message may have been sent from a different node
+        // than the one that received the ACK (e.g. DH1FR-99 sent Pong, DH1FR-2 ACKs it back
+        // and the ACK arrives at DH1FR-2's WebDesk – but the Pong lives in DH1FR-99's state).
+        if (!Found(ResolveState(nodeId).Messages))
+        {
+            foreach (var state in _nodeState.Values)
+                if (Found(state.Messages)) break;
+        }
+
         NotifyChange();
     }
 
@@ -571,7 +599,8 @@ public class ChatService
                                     .Select(t => new ChatTab { NodeId = t.NodeId, Key = t.Key, Title = t.Title, Messages = t.Messages.ToList() })
                                     .ToList(),
                 MhList          = primaryState.MhList.Values.ToList(),
-                MonitorMessages = primaryState.Messages.ToList()
+                MonitorMessages = primaryState.Messages.ToList(),
+                TabOrder        = primaryState.TabOrder.ToList()
             };
 
             // Persist every known node state into NodeSnapshots
@@ -582,7 +611,8 @@ public class ChatService
                     Tabs            = state.Tabs.Values
                                         .Select(t => new ChatTab { NodeId = t.NodeId, Key = t.Key, Title = t.Title, Messages = t.Messages.ToList() })
                                         .ToList(),
-                    MonitorMessages = state.Messages.ToList()
+                    MonitorMessages = state.Messages.ToList(),
+                    TabOrder        = state.TabOrder.ToList()
                 };
             }
 
@@ -613,10 +643,15 @@ public class ChatService
                         || _settings.Groups.Contains(tab.Key, StringComparer.OrdinalIgnoreCase);
                     if (tabAllowed)
                     {
+                        var max = _settings.TabMaxMessages;
+                        if (max > 0 && tab.Messages.Count > max)
+                            tab.Messages.RemoveRange(0, tab.Messages.Count - max);
                         tab.MessageCount = tab.Messages.Count;
                         state.Tabs[tab.Key] = tab;
                     }
                 }
+
+                state.TabOrder = entry.TabOrder.Count > 0 ? [.. entry.TabOrder] : [];
             }
 
             // ── Restore MH list + primary fallback (legacy single-node snapshots) ──
@@ -643,10 +678,15 @@ public class ChatService
                         || _settings.Groups.Contains(tab.Key, StringComparer.OrdinalIgnoreCase);
                     if (tabAllowed)
                     {
+                        var max = _settings.TabMaxMessages;
+                        if (max > 0 && tab.Messages.Count > max)
+                            tab.Messages.RemoveRange(0, tab.Messages.Count - max);
                         tab.MessageCount = tab.Messages.Count;
                         primaryState.Tabs[tab.Key] = tab;
                     }
                 }
+
+                primaryState.TabOrder = snapshot.TabOrder.Count > 0 ? [.. snapshot.TabOrder] : [];
             }
         }
 
@@ -870,6 +910,15 @@ public class ChatService
         if (state.Messages.Count > _settings.MonitorMaxMessages)
             state.Messages.RemoveRange(0, state.Messages.Count - _settings.MonitorMaxMessages);
         _ = _sink.WriteAsync(message);
+    }
+
+    private void AppendToTab(ChatTab tab, MeshcomMessage message)
+    {
+        tab.Messages.Add(message);
+        var max = _settings.TabMaxMessages;
+        if (max > 0 && tab.Messages.Count > max)
+            tab.Messages.RemoveRange(0, tab.Messages.Count - max);
+        tab.MessageCount = tab.Messages.Count;
     }
 
     private ChatTab GetOrCreateTab(NodeState state, string key, Guid? nodeId, out bool wasNewDirect)

@@ -60,4 +60,10 @@ public class NodeProfile
     /// <c>--passwd</c> on the node console).  Empty = no authentication required.
     /// </summary>
     public string TelnetPassword { get; set; } = string.Empty;
+
+    /// <summary>
+    /// When true, all console output for this node is written to a daily log file
+    /// in the configured log directory (console-{IP}-{date}.log).
+    /// </summary>
+    public bool ConsoleLogEnabled { get; set; } = false;
 }

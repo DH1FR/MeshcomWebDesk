@@ -49,6 +49,12 @@ public class MeshcomSettings
     public int MonitorMaxMessages { get; set; } = 1000;
 
     /// <summary>
+    /// Maximum number of messages kept per chat tab. Oldest entries are dropped first.
+    /// 0 = unlimited. Default is 500.
+    /// </summary>
+    public int TabMaxMessages { get; set; } = 500;
+
+    /// <summary>
     /// When true, only groups listed in <see cref="Groups"/> automatically get a chat tab.
     /// When false (default), every incoming group message opens a tab regardless of <see cref="Groups"/>.
     /// </summary>
@@ -111,6 +117,12 @@ public class MeshcomSettings
     /// </summary>
     public string AutoReplyText { get; set; } =
         "---=== MeshcomWebDesk - https://github.com/DH1FR/MeshcomWebDesk ===---";
+
+    /// <summary>
+    /// Delay in seconds before an automatic reply (bot command or auto-reply) is sent.
+    /// Simulates a more natural response time. Range 0–30, default 3.
+    /// </summary>
+    public int ReplyDelaySeconds { get; set; } = 3;
 
     /// <summary>
     /// When true, incoming direct messages starting with -- are interpreted as bot commands.
@@ -305,7 +317,7 @@ public class MeshcomSettings
     /// <summary>When true, a Console tab is shown.</summary>
     public bool TelnetEnabled { get; set; } = false;
 
-    /// <summary>Console mode: "tls" (default) or "serial".</summary>
+    /// <summary>Console mode: "tls" (default), "serial", or "hmac" (NET Console).</summary>
     public string ConsoleMode { get; set; } = "tls";
 
     /// <summary>TCP port for the TLS Telnet connection. Default: 2323.</summary>
@@ -325,4 +337,11 @@ public class MeshcomSettings
 
     /// <summary>Baud rate for serial console mode. Default: 115200.</summary>
     public int SerialBaudRate { get; set; } = 115200;
+
+    /// <summary>
+    /// When true, all console output is written to a daily log file in the log directory
+    /// (console-{IP}-{date}.log). Used in legacy single-node and serial mode.
+    /// For multi-node TLS/NET mode, ConsoleLogEnabled is set per NodeProfile.
+    /// </summary>
+    public bool ConsoleLogEnabled { get; set; } = false;
 }
