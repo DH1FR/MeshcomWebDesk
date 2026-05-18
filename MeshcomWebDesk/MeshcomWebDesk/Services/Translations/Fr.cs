@@ -8,6 +8,9 @@ internal static class Fr
         // Chat – ping confirmation
         ["This usually belongs in a direct tab."] = "Cela appartient généralement à un onglet direct.",
 
+        // Beacon
+        ["Please choose beacon intervals carefully."] = "Veuillez choisir les intervalles de balise avec soin.",
+
         // General
         ["Accept"]                  = "Accepter",
         ["Actions"]                 = "Actions",
