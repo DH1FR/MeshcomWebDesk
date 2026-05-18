@@ -1347,6 +1347,36 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
  ## 📋 Changelog
 
+### v1.10.2 *(in development)*
+- **feat:** 🔔 **Ping confirmation dialog** – a browser confirmation is shown when sending `ping` or `--ping` to a group or broadcast tab, preventing accidental transmissions
+- **feat:** ✓✓ **Combined ACK display** – the ACK indicator now shows LoRa and Gateway delivery combined (`✓✓ ☁️✓`); users can see whether their message arrived via LoRa, the gateway, or both
+- **feat:** 🖥️ **NET Console** (renamed from HMAC Console) – new HMAC-TCP console mode; renamed consistently throughout the UI and settings
+- **feat:** 📝 **Per-node console log** – console output can optionally be saved to a daily rolling log file per node; old files are deleted automatically after the configured retention period
+- **feat:** 🤖 **Configurable bot/auto-reply delay** – reply delay configurable from 0 to 30 seconds (default: 3 s)
+- **feat:** 📡 **Beacon interval restriction removed** – the 8-hour minimum has been removed; freely configurable from 1 hour; hint text reminds users to choose intervals responsibly
+- **feat:** 💬 **Server-side tab order persistence** – chat tab order is stored server-side and survives page reloads
+- **feat:** 💬 **Tab message limit** (`TabMaxMessages`) – each chat tab can be limited to a maximum number of messages to prevent unbounded memory growth
+- **feat:** 🌐 **French TTS support** – French (`fr-FR`) added to the browser TTS locale map
+- **feat:** 🌐 **Full i18n coverage** – all new UI texts fully translated into DE / EN / IT / ES / FR
+- **fix:** ✓ **ACK not shown in tab** – ACK packets were incorrectly blocked by the `src_type=node` relay filter; now correctly exempt
+- **fix:** ✓ **Cross-node ACK matching** – ACK checkmark now searches all node states so multi-node setups mark messages as delivered correctly
+- **fix:** 💬 **Relay echo deduplication** – relay echoes from foreign callsigns are skipped to prevent deduplication collisions
+- **fix:** 🔊 **Notification sound on node switch** – sound and TTS are now scoped per node; no tone plays on node switch without new messages
+- **fix:** 🤖 **Bot/auto-reply node routing** – bot and auto-reply messages always use the own primary hardware node
+- **fix:** 💬 **Outgoing message callsign (multi-node)** – outgoing messages show the correct `msg.From` per node
+- **fix:** 🖥️ **Console connected IP** – console header now shows the actually connected IP (`ConnectedHost`)
+- **fix:** ⚙️ **Gateway Source not saved** – `GatewayServer` setting was reset to default on every restart; now correctly persisted
+- **fix:** 🐳 **Docker build failure** – broken dictionary entries in IT/ES/FR translation files fixed
+
+### v1.10.1
+- **feat:** 🤖 **AI Search: Default date range** – date range pre-filled to the last 90 days when opening the global AI search
+- **feat:** 🤖 **AI Search: Echo deduplication** – group messages deduplicated before prompt construction; reduces token usage and improves answer quality
+- **feat:** 🤖 **AI Search: Automatic model selection** – new `auto` option picks between `gpt-4o-mini`, `gpt-4.1-mini` and `gpt-4.1` depending on prompt size
+- **feat:** 🤖 **AI Search: Expanded message scope** – global search now includes all direct messages, own group messages and @-mentions; raw JSON status packets and ACKs are filtered out
+- **fix:** 🤖 **AI Search: Timestamp fix** – timestamps from MySQL now correctly treated as local time (`DateTimeKind.Local`); no more UTC shift in AI answers and QSO history
+- **fix:** 📊 **Telemetry mapping limit** – the entry limit of 3 was incorrectly applied to the measurement mapping instead of the send-time schedule; mapping entries are now unlimited (send times: max. 6)
+- **fix:** 🏷️ **Group Labels growing** – the group labels list was duplicated on every app start; now starts empty with buttons to restore defaults, add missing entries or clear the list
+
 ### v1.10.0
 - **feat:** 🌐 **Multi-language UI** – interface now available in **Français 🇫🇷**, **Italiano 🇮🇹** and **Español 🇪🇸** in addition to Deutsch and English; language is switched in **Settings → Language** and takes effect instantly without a page reload
 - **feat:** 🖧 **Multi-Node support** – configure multiple MeshCom nodes simultaneously; each node has its own UDP connection, callsign, chat tabs, monitor feed, and console credentials; node profiles are managed under **Settings → Further Nodes**
