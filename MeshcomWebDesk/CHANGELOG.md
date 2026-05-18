@@ -1,6 +1,6 @@
 ﻿# Changelog
 
-## [1.11.0] – in development (dev)
+## [1.10.2] – in development (dev)
 
 ### Features
 - **Ping confirmation dialog**: A browser confirmation is shown when sending `ping` or `--ping` to a group or broadcast tab, preventing accidental transmissions.
