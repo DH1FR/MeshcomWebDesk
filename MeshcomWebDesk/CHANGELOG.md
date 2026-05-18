@@ -1,9 +1,34 @@
 ﻿# Changelog
 
-## [1.10.2] – in development (dev)
+## [1.11.0] – in development (dev)
+
+### Features
+- **Ping confirmation dialog**: A browser confirmation is shown when sending `ping` or `--ping` to a group or broadcast tab, preventing accidental transmissions.
+- **Combined ACK display**: The ACK indicator now shows LoRa and Gateway delivery combined (`✓✓ ☁️✓`) – users can see whether their message arrived via LoRa, the gateway, or both.
+- **NET Console** (renamed from HMAC Console): New HMAC-TCP console mode added; renamed consistently throughout the UI and settings.
+- **Per-node console log**: Console output can optionally be saved to a daily rolling log file per node. Old files are automatically deleted after the configured retention period.
+- **Configurable bot/auto-reply delay**: Reply delay configurable from 0 to 30 seconds (default: 3 s).
+- **Beacon interval restriction removed**: The 8-hour minimum interval has been removed. The interval is freely configurable from 1 hour. A hint text reminds users to choose intervals responsibly.
+- **Server-side tab order persistence**: Chat tab order is now stored server-side and survives page reloads.
+- **Tab message limit** (`TabMaxMessages`): Each chat tab can be limited to a maximum number of messages to prevent unbounded memory growth.
+- **French TTS support**: French (`fr-FR`) added to the browser TTS locale map.
+- **Full i18n coverage**: All new UI texts are fully translated into DE / EN / IT / ES / FR.
 
 ### Bugfixes
 - **Fix Gateway Source not saved**: The `GatewayServer` setting (OE / DL source selection) was missing from `SettingsService.SaveMeshcomSettingsAsync` and was therefore reset to the default on every restart.
+- **Fix ACK not shown in tab**: ACK packets were incorrectly filtered by the `src_type=node` relay filter; they are now exempt so the checkmark is set correctly.
+- **Fix cross-node ACK matching**: The ACK checkmark now searches all node states, so multi-node setups correctly mark outgoing messages as delivered.
+- **Fix relay echo deduplication**: Relay echoes from foreign callsigns are skipped to prevent deduplication collisions with genuine LoRa reception.
+- **Fix notification sound on node switch**: Sound and TTS notifications are now scoped per node; no tone is played when switching nodes without new messages.
+- **Fix bot/auto-reply node routing**: Bot and auto-reply messages always use the own primary hardware node.
+- **Fix outgoing message callsign (multi-node)**: Outgoing messages now show the correct `msg.From` per node instead of the global callsign.
+- **Fix console connected IP display**: The console header now shows the actually connected IP (`ConnectedHost`).
+- **Fix console log path resolution**: `ConsoleLogService` now uses the startup-resolved log path (`ResolvedLogPath`) instead of reading an empty override value.
+- **Fix console log settings persistence**: `ConsoleLogEnabled` is correctly saved and loaded for both global and per-node settings.
+- **Fix iOS Safari clipboard copy**: Fallback implementation for `NotAllowedError` on iOS Safari.
+- **Fix LoRa highlight state lost on tab switch**: LoRa highlight state is now persisted in `localStorage`.
+- **Fix translation syntax errors in IT/ES/FR**: A broken dictionary entry (`Accept` key split from its value) caused Docker build failures; fixed in all three files.
+- **Fix French TTS locale missing**: French was not in the `speakText` locale map and fell back to German; now correctly uses `fr-FR`.
 
 ---
 
