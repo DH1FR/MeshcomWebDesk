@@ -9,7 +9,7 @@ internal static class Es
         ["This usually belongs in a direct tab."] = "Esto normalmente pertenece a una pestaña directa.",
 
         // General
-        ["Accept"]
+        ["Accept"]                  = "Aceptar",
         ["Actions"]                 = "Acciones",
         ["Active"]                  = "Activo",
         ["Add"]                     = "Añadir",

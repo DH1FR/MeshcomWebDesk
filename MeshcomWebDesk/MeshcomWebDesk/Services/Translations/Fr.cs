@@ -9,7 +9,7 @@ internal static class Fr
         ["This usually belongs in a direct tab."] = "Cela appartient généralement à un onglet direct.",
 
         // General
-        ["Accept"]
+        ["Accept"]                  = "Accepter",
         ["Actions"]                 = "Actions",
         ["Active"]                  = "Actif",
         ["Add"]                     = "Ajouter",

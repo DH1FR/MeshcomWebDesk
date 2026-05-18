@@ -9,7 +9,7 @@ internal static class It
         ["This usually belongs in a direct tab."] = "Di solito appartiene a una scheda diretta.",
 
         // General
-        ["Accept"]
+        ["Accept"]                  = "Accetta",
         ["Actions"]                 = "Azioni",
         ["Active"]                  = "Attivo",
         ["Add"]                     = "Aggiungi",
