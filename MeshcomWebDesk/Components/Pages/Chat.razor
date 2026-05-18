@@ -1434,13 +1434,15 @@
         var isBroadcast = _activeTab.Key == "*" || _activeTab.Key.TrimStart('#').Equals("alle", StringComparison.OrdinalIgnoreCase);
         var isGroup     = _activeTab.Key.StartsWith('#');
 
-        // Confirm before sending any message to a group or broadcast tab.
-        if (isBroadcast || isGroup)
+        // Confirm before sending ping to a group or broadcast tab.
+        var isPing = text.Trim().Equals("ping", StringComparison.OrdinalIgnoreCase)
+                  || text.Trim().Equals("--ping", StringComparison.OrdinalIgnoreCase);
+        if (isPing && (isBroadcast || isGroup))
         {
             var target   = isBroadcast ? "alle" : _activeTab.Key;
             var question = Loc.T(
-                $"Nachricht an \"{target}\" senden? Gehört das vielleicht in ein direktes Tab?",
-                $"Send message to \"{target}\"? Should this go to a direct tab instead?");
+                $"Ping an \"{target}\" senden? Das gehört meistens in ein direktes Tab.",
+                $"Send ping to \"{target}\"? This usually belongs in a direct tab.");
             var confirmed = await JS.InvokeAsync<bool>("confirm", question);
             if (!confirmed) return;
         }
