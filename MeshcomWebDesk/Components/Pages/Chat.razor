@@ -1196,7 +1196,8 @@
         if (_disposed) return;
         try
         {
-            _activeTabMessages = ChatService.GetTabMessages(_activeTabKey, _activeNodeId);
+            if (!string.IsNullOrEmpty(_activeTabKey))
+                _activeTabMessages = ChatService.GetTabMessages(_activeTabKey, _activeNodeId);
             await InvokeAsync(StateHasChanged);
         }
         catch (Exception) { }
@@ -1229,8 +1230,8 @@
         }
 
         // Create a snapshot of the active tab's messages for thread-safe rendering
-        _activeTabMessages = _activeTab != null
-            ? ChatService.GetTabMessages(_activeTabKey, _activeNodeId)
+        _activeTabMessages = (_activeTab != null && !string.IsNullOrEmpty(_activeTabKey))
+            ? ChatService.GetTabMessages(_activeTabKey!, _activeNodeId)
             : [];
 
         if (!string.IsNullOrEmpty(_activeTabKey))

@@ -776,6 +776,7 @@ public class ChatService
 
     public IReadOnlyList<MeshcomMessage> GetTabMessages(string key, Guid? nodeId)
     {
+        if (string.IsNullOrEmpty(key)) return [];
         if (!ResolveState(nodeId).Tabs.TryGetValue(key, out var tab))
             return [];
         lock (_lock) { return tab.Messages.ToList(); }
