@@ -1026,8 +1026,10 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
 
             // Monitor whether the node echoes back the packet within 5 seconds.
             // Only for direct messages – group/broadcast destinations never echo back.
-            var isGroupOrBcast = destination == "*" || destination.StartsWith('#') ||
-                                 string.Equals(destination, "CQCQCQ", StringComparison.OrdinalIgnoreCase);
+            // Note: destination is already stripped of '#' prefix (e.g. "9" for group #9),
+            // so we check tabKey/resolvedTabKey which still carries the '#' prefix.
+            var isGroupOrBcast = resolvedTabKey == "*" || resolvedTabKey.StartsWith('#') ||
+                                 string.Equals(resolvedTabKey, "CQCQCQ", StringComparison.OrdinalIgnoreCase);
             if (!isGroupOrBcast)
             {
                 _ = Task.Run(async () =>
