@@ -988,7 +988,7 @@
         _myCallsign = _settings.MyCallsign;
         _status = UdpService.Status;
         ChatService.OnChange += OnChatChanged;
-        ChatService.OnEchoTimeout += OnChatChanged;
+        ChatService.OnEchoTimeout += OnEchoTimeout;
         UdpService.OnStatusChange += OnStatusChanged;
         ChatService.OnWatchlistHit += HandleWatchlistHit;
         ChatService.OnCqHeard += HandleCqHeard;
@@ -1185,6 +1185,21 @@
         {
             // Component may be disposed or circuit disconnected – safe to ignore
         }
+    }
+
+    /// <summary>
+    /// Lightweight handler for node-echo timeouts – only re-renders the current
+    /// message list without a full RefreshData() to avoid disturbing the TX cooldown timer.
+    /// </summary>
+    private async void OnEchoTimeout()
+    {
+        if (_disposed) return;
+        try
+        {
+            _activeTabMessages = ChatService.GetTabMessages(_activeTabKey, _activeNodeId);
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception) { }
     }
 
     private void OnTelnetChanged()
@@ -1517,7 +1532,7 @@
         _dotNetRef?.Dispose();
         Loc.OnChange -= OnLocChange;
         ChatService.OnChange -= OnChatChanged;
-        ChatService.OnEchoTimeout -= OnChatChanged;
+        ChatService.OnEchoTimeout -= OnEchoTimeout;
         UdpService.OnStatusChange -= OnStatusChanged;
         ChatService.OnWatchlistHit -= HandleWatchlistHit;
         ChatService.OnCqHeard -= HandleCqHeard;
