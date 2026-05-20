@@ -289,11 +289,13 @@ public class ChatService
         else if (string.Equals(message.To, myCallsign, StringComparison.OrdinalIgnoreCase) || isDirectToNode)
         {
             // Direct message to this node (regardless of whether NodeProfile.Callsign matches exactly)
-            tabKey = message.From;
+            // Guard: From can be null/empty for malformed packets – fall back to "*" (Alle) tab
+            tabKey = !string.IsNullOrEmpty(message.From) ? message.From : "*";
         }
         else
         {
-            tabKey = "#" + message.To;
+            // Guard: To can be null for malformed packets – fall back to "*" (Alle) tab
+            tabKey = !string.IsNullOrEmpty(message.To) ? "#" + message.To : "*";
         }
 
         // For group messages, only auto-create a tab if the filter is disabled or the group is whitelisted.
@@ -649,6 +651,7 @@ public class ChatService
                 state.Tabs.Clear();
                 foreach (var tab in entry.Tabs)
                 {
+                    if (string.IsNullOrEmpty(tab.Key)) continue;
                     bool isGroup   = tab.Key.StartsWith('#');
                     bool tabAllowed = !isGroup
                         || !_settings.GroupFilterEnabled
@@ -684,6 +687,7 @@ public class ChatService
                 primaryState.Tabs.Clear();
                 foreach (var tab in snapshot.Tabs)
                 {
+                    if (string.IsNullOrEmpty(tab.Key)) continue;
                     bool isGroup   = tab.Key.StartsWith('#');
                     bool tabAllowed = !isGroup
                         || !_settings.GroupFilterEnabled
