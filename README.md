@@ -24,6 +24,9 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 > 💾 **Ready-to-run binaries** (Windows & Linux) – no build required:  
 > 👉 [**Download latest release**](https://github.com/DH1FR/MeshcomWebDesk/releases/latest)
 
+> 🧪 **Development branch (`dev`):** Contains the latest features and fixes – may be unstable.  
+> To try it: `git clone -b dev https://github.com/DH1FR/MeshcomWebDesk.git`
+
 ---
 
 <p align="center">
