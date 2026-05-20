@@ -504,6 +504,7 @@ h1:focus {
 .ack-ok        { color: #3fb950; font-weight: 700; }
 .ack-cloud     { color: #a0c4ff; }
 .ack-cloud-ok  { color: #3fb950; font-weight: 700; }
+.ack-no-echo   { color: #f85149; font-weight: 700; }
 
 /* ===== Send Bar Wrapper (Quick Texts) ===== */
 .send-bar-wrap {

@@ -988,6 +988,7 @@
         _myCallsign = _settings.MyCallsign;
         _status = UdpService.Status;
         ChatService.OnChange += OnChatChanged;
+        ChatService.OnEchoTimeout += OnChatChanged;
         UdpService.OnStatusChange += OnStatusChanged;
         ChatService.OnWatchlistHit += HandleWatchlistHit;
         ChatService.OnCqHeard += HandleCqHeard;
@@ -1516,6 +1517,7 @@
         _dotNetRef?.Dispose();
         Loc.OnChange -= OnLocChange;
         ChatService.OnChange -= OnChatChanged;
+        ChatService.OnEchoTimeout -= OnChatChanged;
         UdpService.OnStatusChange -= OnStatusChanged;
         ChatService.OnWatchlistHit -= HandleWatchlistHit;
         ChatService.OnCqHeard -= HandleCqHeard;
@@ -2037,6 +2039,7 @@
         if (m.IsAcknowledged && m.IsLoraDelivered && m.IsGatewayDelivered) return "msg-ack ack-cloud-ok ack-ok";
         if (m.IsAcknowledged && m.IsGatewayDelivered) return "msg-ack ack-cloud-ok";
         if (m.IsAcknowledged)                         return "msg-ack ack-ok";
+        if (m.NodeEchoReceived == false)              return "msg-ack ack-no-echo";
         if (m.SequenceNumber != null)                 return "msg-ack ack-sent";
         return "msg-ack ack-pending";
     }
@@ -2049,6 +2052,7 @@
         if (m.IsAcknowledged && m.IsLoraDelivered && m.IsGatewayDelivered) return "✓✓ ☁️✓";
         if (m.IsAcknowledged && m.IsGatewayDelivered) return "☁️✓";
         if (m.IsAcknowledged)                         return "✓✓";
+        if (m.NodeEchoReceived == false)              return "⚠️";
         if (isGroupOrBcast && m.SequenceNumber != null) return "☁️";
         if (m.SequenceNumber != null)                 return "✓";
         return "⏳";
@@ -2064,6 +2068,8 @@
             return "☁️✓ Über Gateway zugestellt";
         if (m.IsAcknowledged)
             return "✓✓ Zugestellt (LoRa ACK)";
+        if (m.NodeEchoReceived == false)
+            return "⚠️ Node-Echo ausgeblieben – UDP-Paket wurde möglicherweise nicht vom Node empfangen!";
         if (isGroupOrBcast && m.SequenceNumber != null)
             return "☁️ Gesendet – kein ACK für Gruppe/Broadcast erwartet";
         if (m.SequenceNumber != null)

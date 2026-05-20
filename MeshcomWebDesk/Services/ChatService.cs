@@ -80,6 +80,15 @@ public class ChatService
     public event Action? OnChange;
 
     /// <summary>
+    /// Raised when a node-echo timeout occurred – an outgoing UDP packet was
+    /// not confirmed by the node within the expected time window.
+    /// </summary>
+    public event Action? OnEchoTimeout;
+
+    /// <summary>Triggers an echo-timeout notification to all subscribers (e.g. Chat UI).</summary>
+    public void NotifyEchoTimeout() => OnEchoTimeout?.Invoke();
+
+    /// <summary>
     /// Raised only when the MH list itself changes (station added, removed, position or
     /// telemetry updated). Map and MH-page subscribe to this instead of <see cref="OnChange"/>
     /// to avoid rebuilding on every chat message.
@@ -443,7 +452,10 @@ public class ChatService
                 (m.SequenceNumber == null || m.SequenceNumber == "TX") &&
                 string.Equals(m.To.TrimStart('#'), destination.TrimStart('#'), StringComparison.OrdinalIgnoreCase));
             if (msg != null)
-                msg.SequenceNumber = sequenceNumber;
+            {
+                msg.SequenceNumber   = sequenceNumber;
+                msg.NodeEchoReceived = true;   // Node hat UDP-Paket empfangen und verarbeitet
+            }
         }
         NotifyChange();
     }

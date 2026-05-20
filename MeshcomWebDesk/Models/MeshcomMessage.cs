@@ -78,6 +78,13 @@ public class MeshcomMessage
     /// <summary>True once a delivery ACK for this outgoing message has been received.</summary>
     public bool IsAcknowledged { get; set; }
 
+    /// <summary>
+    /// True once the local node echoed back the outgoing message (src_type:"node"),
+    /// confirming the UDP packet was received and processed by the node.
+    /// Null = monitoring not yet timed out, False = timeout elapsed without echo.
+    /// </summary>
+    public bool? NodeEchoReceived { get; set; }
+
     /// <summary>True when at least one ACK was received directly over LoRa.</summary>
     public bool IsLoraDelivered { get; set; }
 

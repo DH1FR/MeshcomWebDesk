@@ -197,7 +197,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                             }
                             // Assign node-assigned sequence number to matching outgoing message
                             if (message.SequenceNumber != null)
-                                _chatService.AssignOutgoingSequence(message.To, message.SequenceNumber);
+                                _chatService.AssignOutgoingSequence(message.To, message.SequenceNumber, message.NodeId);
                             // Capture node firmware + hardware from src_type:"node" packets
                             bool metaChanged = false;
                             if (!string.IsNullOrEmpty(message.Firmware) && Status.NodeFirmware != message.Firmware)
@@ -1012,7 +1012,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             NotifyStatusChange();
 
             var resolvedTabKey = tabKey ?? destination;
-            _chatService.AddOutgoingMessage(new MeshcomMessage
+            var outgoing = new MeshcomMessage
             {
                 From           = fromCallsign,
                 To             = resolvedTabKey,
@@ -1021,6 +1021,22 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                 RawData        = json,
                 SequenceNumber = "TX",
                 NodeId         = selectedNodeId
+            };
+            _chatService.AddOutgoingMessage(outgoing);
+
+            // Monitor whether the node echoes back the packet within 5 seconds.
+            // If no echo arrives (NodeEchoReceived stays null) → mark as False so the UI can warn.
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(5));
+                if (outgoing.NodeEchoReceived == null)
+                {
+                    outgoing.NodeEchoReceived = false;
+                    _logger.LogWarning(
+                        "Node-Echo ausgeblieben – UDP-Paket wurde möglicherweise nicht vom Node empfangen. Ziel={Dst} Text=\"{Text}\"",
+                        destination, text);
+                    _chatService.NotifyEchoTimeout();
+                }
             });
         }
         catch (Exception ex)
