@@ -1025,19 +1025,29 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             _chatService.AddOutgoingMessage(outgoing);
 
             // Monitor whether the node echoes back the packet within 5 seconds.
-            // If no echo arrives (NodeEchoReceived stays null) → mark as False so the UI can warn.
-            _ = Task.Run(async () =>
+            // Only for direct messages – group/broadcast destinations never echo back.
+            var isGroupOrBcast = destination == "*" || destination.StartsWith('#') ||
+                                 string.Equals(destination, "CQCQCQ", StringComparison.OrdinalIgnoreCase);
+            if (!isGroupOrBcast)
             {
-                await Task.Delay(TimeSpan.FromSeconds(5));
-                if (outgoing.NodeEchoReceived == null)
+                _ = Task.Run(async () =>
                 {
-                    outgoing.NodeEchoReceived = false;
-                    _logger.LogWarning(
-                        "Node-Echo ausgeblieben – UDP-Paket wurde möglicherweise nicht vom Node empfangen. Ziel={Dst} Text=\"{Text}\"",
-                        destination, text);
-                    _chatService.NotifyEchoTimeout();
-                }
-            });
+                    await Task.Delay(TimeSpan.FromSeconds(5));
+                    if (outgoing.NodeEchoReceived == null)
+                    {
+                        outgoing.NodeEchoReceived = false;
+                        _logger.LogWarning(
+                            "Node-Echo ausgeblieben – UDP-Paket wurde möglicherweise nicht vom Node empfangen. Ziel={Dst} Text=\"{Text}\"",
+                            destination, text);
+                        _chatService.NotifyEchoTimeout();
+                    }
+                });
+            }
+            else
+            {
+                // Gruppe/Broadcast: kein Echo erwartet → sofort als gesendet markieren
+                outgoing.NodeEchoReceived = true;
+            }
         }
         catch (Exception ex)
         {
