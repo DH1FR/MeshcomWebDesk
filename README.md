@@ -1350,6 +1350,12 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
  ## 📋 Changelog
 
+### v1.10.3
+- **fix:** 🐛 **Chat-Absturz beim Tab-Klick** – `ArgumentNullException` beim Öffnen der Chat-Seite behoben; Ursache war ein Tab mit `Key = null` der durch ein eingehendes UDP-Paket ohne `From`-Feld angelegt wurde und ab v1.10.2 durch die server-seitige Tab-Persistenz dauerhaft gespeichert blieb
+- **fix:** 🐛 **Null-Key Tab verhindert** – `message.From` und `message.To` werden in `AddIncomingMessage` jetzt auf null/leer geprüft; fehlerhafte Pakete landen harmlos im `*` (Alle)-Tab statt einen ungültigen Tab zu erzeugen
+- **fix:** 🐛 **Snapshot-Restore überspringt ungültige Tabs** – beim Wiederherstellen gespeicherter Tab-Zustände werden Tabs mit leerem oder null Key übersprungen; verhindert dass ein einmalig gespeicherter Fehler-Tab bei jedem App-Start den Crash erneut auslöst
+- **fix:** 🐛 **`ArgumentNullException` in `_lastNotificationTime`** – `Dictionary<Guid?, DateTime>` erlaubt keinen `null`-Key; wenn `_activeNodeId` beim ersten Laden noch `null` ist (kein Node verbunden) führte der Lookup zum Absturz; Dictionary auf `Dictionary<Guid, DateTime>` umgestellt, `null` wird durch `Guid.Empty` ersetzt
+
 ### v1.10.2 *(in development)*
 - **feat:** 🔔 **Ping confirmation dialog** – a browser confirmation is shown when sending `ping` or `--ping` to a group or broadcast tab, preventing accidental transmissions
 - **feat:** ✓✓ **Combined ACK display** – the ACK indicator now shows LoRa and Gateway delivery combined (`✓✓ ☁️✓`); users can see whether their message arrived via LoRa, the gateway, or both
