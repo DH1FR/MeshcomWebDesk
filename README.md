@@ -1358,7 +1358,8 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 - **feat:** 🤖 **Configurable bot/auto-reply delay** – reply delay configurable from 0 to 30 seconds (default: 3 s)
 - **feat:** 📡 **Beacon interval restriction removed** – the 8-hour minimum has been removed; freely configurable from 1 hour; hint text reminds users to choose intervals responsibly
 - **feat:** 💬 **Server-side tab order persistence** – chat tab order is stored server-side and survives page reloads
-- **feat:** 💬 **Tab message limit** (`TabMaxMessages`) – each chat tab can be limited to a maximum number of messages to prevent unbounded memory growth
+- **feat:** ⚠️ **Node-Echo Timeout Monitoring** – detects whether an outgoing UDP message was actually received by the node; outgoing messages show `⚠️` with tooltip when the node echo is missing after 5 seconds; not shown for group/broadcast messages (no echo expected)
+- **feat:** 💬 **Tab message limit** (`TabMaxMessages`)
 - **feat:** 🌐 **French TTS support** – French (`fr-FR`) added to the browser TTS locale map
 - **feat:** 🌐 **Full i18n coverage** – all new UI texts fully translated into DE / EN / IT / ES / FR
 - **fix:** ✓ **ACK not shown in tab** – ACK packets were incorrectly blocked by the `src_type=node` relay filter; now correctly exempt
