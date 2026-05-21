@@ -814,6 +814,7 @@ This client communicates with the MeshCom node using the **EXTUDP JSON protocol*
 4. Group / broadcast messages: no ACK expected → `☁️` after node echo
 5. Gateway ACK received (src_type `udp`) → `☁️✓`
 6. Both LoRa ACK **and** Gateway ACK received → `✓✓ ☁️✓` (direct LoRa + Gateway confirmed)
+7. Node echo missing after 5 seconds → `⚠️` (UDP packet possibly not received by node)
 
 | Icon | Meaning |
 |------|--------|
@@ -823,6 +824,7 @@ This client communicates with the MeshCom node using the **EXTUDP JSON protocol*
 | `☁️` | Sent via group/broadcast – no ACK expected |
 | `☁️✓` | Delivered – Gateway ACK only |
 | `✓✓ ☁️✓` | Delivered – LoRa ACK **and** Gateway ACK |
+| `⚠️` | Node echo missing – UDP packet possibly not received by node |
 
 ### Hardware IDs (`hw_id`)
 
@@ -1677,7 +1679,7 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 - Full relay path display in monitor
 
 ### v1.1.0
-- ACK delivery tracking (`⏳` / `✓` / `✓✓` / `☁️` / `☁️✓` / `✓✓ ☁️✓`)
+- ACK delivery tracking (`⏳` / `✓` / `✓✓` / `☁️` / `☁️✓` / `✓✓ ☁️✓` / `⚠️`)
 - MH list with GPS distance, battery level and hardware badge
 - Web-based Settings editor
 - Multi-language UI (de / en / it / es)
