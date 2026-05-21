@@ -58,12 +58,11 @@
         </span>
         <div style="display:flex;gap:.4rem">
             @* ── Node Switcher (TLS only, multi-node mode) ── *@
-            @if (!_isSerial && NodeManager.MultiNodeEnabled)
+            @if (!_isSerial && NodeManager.MultiNodeEnabled && !Console.IsConnected)
             {
                 <select class="node-switcher-select"
                         value="@_consoleNodeId"
                         @onchange="OnNodeChanged"
-                        disabled="@Console.IsConnected"
                         title="@Loc.T("Node wählen", "Select node")">
                     @foreach (var node in NodeManager.Nodes)
                     {

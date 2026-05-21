@@ -24,6 +24,9 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 > 💾 **Ready-to-run binaries** (Windows & Linux) – no build required:  
 > 👉 [**Download latest release**](https://github.com/DH1FR/MeshcomWebDesk/releases/latest)
 
+> 🧪 **Development branch (`dev`):** Contains the latest features and fixes – may be unstable.  
+> To try it: `git clone -b dev https://github.com/DH1FR/MeshcomWebDesk.git`
+
 ---
 
 <p align="center">
@@ -811,6 +814,7 @@ This client communicates with the MeshCom node using the **EXTUDP JSON protocol*
 4. Group / broadcast messages: no ACK expected → `☁️` after node echo
 5. Gateway ACK received (src_type `udp`) → `☁️✓`
 6. Both LoRa ACK **and** Gateway ACK received → `✓✓ ☁️✓` (direct LoRa + Gateway confirmed)
+7. Node echo missing after 5 seconds → `⚠️` (UDP packet possibly not received by node)
 
 | Icon | Meaning |
 |------|--------|
@@ -820,6 +824,7 @@ This client communicates with the MeshCom node using the **EXTUDP JSON protocol*
 | `☁️` | Sent via group/broadcast – no ACK expected |
 | `☁️✓` | Delivered – Gateway ACK only |
 | `✓✓ ☁️✓` | Delivered – LoRa ACK **and** Gateway ACK |
+| `⚠️` | Node echo missing – UDP packet possibly not received by node |
 
 ### Hardware IDs (`hw_id`)
 
@@ -1347,6 +1352,12 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
  ## 📋 Changelog
 
+### v1.10.3
+- **fix:** 🐛 **Chat-Absturz beim Tab-Klick** – `ArgumentNullException` beim Öffnen der Chat-Seite behoben; Ursache war ein Tab mit `Key = null` der durch ein eingehendes UDP-Paket ohne `From`-Feld angelegt wurde und ab v1.10.2 durch die server-seitige Tab-Persistenz dauerhaft gespeichert blieb
+- **fix:** 🐛 **Null-Key Tab verhindert** – `message.From` und `message.To` werden in `AddIncomingMessage` jetzt auf null/leer geprüft; fehlerhafte Pakete landen harmlos im `*` (Alle)-Tab statt einen ungültigen Tab zu erzeugen
+- **fix:** 🐛 **Snapshot-Restore überspringt ungültige Tabs** – beim Wiederherstellen gespeicherter Tab-Zustände werden Tabs mit leerem oder null Key übersprungen; verhindert dass ein einmalig gespeicherter Fehler-Tab bei jedem App-Start den Crash erneut auslöst
+- **fix:** 🐛 **`ArgumentNullException` in `_lastNotificationTime`** – `Dictionary<Guid?, DateTime>` erlaubt keinen `null`-Key; wenn `_activeNodeId` beim ersten Laden noch `null` ist (kein Node verbunden) führte der Lookup zum Absturz; Dictionary auf `Dictionary<Guid, DateTime>` umgestellt, `null` wird durch `Guid.Empty` ersetzt
+
 ### v1.10.2 *(in development)*
 - **feat:** 🔔 **Ping confirmation dialog** – a browser confirmation is shown when sending `ping` or `--ping` to a group or broadcast tab, preventing accidental transmissions
 - **feat:** ✓✓ **Combined ACK display** – the ACK indicator now shows LoRa and Gateway delivery combined (`✓✓ ☁️✓`); users can see whether their message arrived via LoRa, the gateway, or both
@@ -1355,7 +1366,8 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 - **feat:** 🤖 **Configurable bot/auto-reply delay** – reply delay configurable from 0 to 30 seconds (default: 3 s)
 - **feat:** 📡 **Beacon interval restriction removed** – the 8-hour minimum has been removed; freely configurable from 1 hour; hint text reminds users to choose intervals responsibly
 - **feat:** 💬 **Server-side tab order persistence** – chat tab order is stored server-side and survives page reloads
-- **feat:** 💬 **Tab message limit** (`TabMaxMessages`) – each chat tab can be limited to a maximum number of messages to prevent unbounded memory growth
+- **feat:** ⚠️ **Node-Echo Timeout Monitoring** – detects whether an outgoing UDP message was actually received by the node; outgoing messages show `⚠️` with tooltip when the node echo is missing after 5 seconds; not shown for group/broadcast messages (no echo expected)
+- **feat:** 💬 **Tab message limit** (`TabMaxMessages`)
 - **feat:** 🌐 **French TTS support** – French (`fr-FR`) added to the browser TTS locale map
 - **feat:** 🌐 **Full i18n coverage** – all new UI texts fully translated into DE / EN / IT / ES / FR
 - **fix:** ✓ **ACK not shown in tab** – ACK packets were incorrectly blocked by the `src_type=node` relay filter; now correctly exempt
@@ -1667,7 +1679,7 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 - Full relay path display in monitor
 
 ### v1.1.0
-- ACK delivery tracking (`⏳` / `✓` / `✓✓` / `☁️` / `☁️✓` / `✓✓ ☁️✓`)
+- ACK delivery tracking (`⏳` / `✓` / `✓✓` / `☁️` / `☁️✓` / `✓✓ ☁️✓` / `⚠️`)
 - MH list with GPS distance, battery level and hardware badge
 - Web-based Settings editor
 - Multi-language UI (de / en / it / es)

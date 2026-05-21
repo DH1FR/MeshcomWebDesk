@@ -513,7 +513,7 @@ internal static class Fr
         ["Import failed: invalid JSON format."] = "Importation échouée : format JSON invalide.",
         ["Import JSON file (replaces existing entries)"] = "Importer fichier JSON (remplace les entrées existantes)",
         ["Inactive"]                = "Inactif",
-        ["Interval (Hours, min. 8)"] = "Intervalle (heures, min. 8)",
+        ["Interval (Hours, min. 1)"] = "Intervalle (heures, min. 1)",
         ["JSON File"]               = "Fichier JSON",
         ["JSON-Key: key from the JSON file. Label: display name in the message. Unit: e.\u00a0g. °C, kW, hPa. Dec.: decimal places."] = "Clé JSON : clé du fichier JSON. Libellé : nom affiché dans le message. Unité : p.\u00a0ex. °C, kW, hPa. Déc. : décimales.",
         ["Label"]                   = "Libellé",

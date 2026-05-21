@@ -895,7 +895,7 @@
     private List<RecentPartner> _recentPartners = [];
     private bool _recentPartnersLoaded;
     private bool _isInitialized;
-    private readonly Dictionary<Guid?, DateTime> _lastNotificationTime = new();
+    private readonly Dictionary<Guid, DateTime> _lastNotificationTime = new();
     private string _monitorFilter = string.Empty;
     private IReadOnlyList<MeshcomMessage> _cachedFilteredMessages = [];
     private CancellationTokenSource? _filterDebounce;
@@ -988,6 +988,7 @@
         _myCallsign = _settings.MyCallsign;
         _status = UdpService.Status;
         ChatService.OnChange += OnChatChanged;
+        ChatService.OnEchoTimeout += OnEchoTimeout;
         UdpService.OnStatusChange += OnStatusChanged;
         ChatService.OnWatchlistHit += HandleWatchlistHit;
         ChatService.OnCqHeard += HandleCqHeard;
@@ -1186,6 +1187,22 @@
         }
     }
 
+    /// <summary>
+    /// Lightweight handler for node-echo timeouts – only re-renders the current
+    /// message list without a full RefreshData() to avoid disturbing the TX cooldown timer.
+    /// </summary>
+    private async void OnEchoTimeout()
+    {
+        if (_disposed) return;
+        try
+        {
+            if (!string.IsNullOrEmpty(_activeTabKey))
+                _activeTabMessages = ChatService.GetTabMessages(_activeTabKey, _activeNodeId);
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception) { }
+    }
+
     private void OnTelnetChanged()
     {
         if (_disposed) return;
@@ -1213,8 +1230,8 @@
         }
 
         // Create a snapshot of the active tab's messages for thread-safe rendering
-        _activeTabMessages = _activeTab != null
-            ? ChatService.GetTabMessages(_activeTabKey, _activeNodeId)
+        _activeTabMessages = (_activeTab != null && !string.IsNullOrEmpty(_activeTabKey))
+            ? ChatService.GetTabMessages(_activeTabKey!, _activeNodeId)
             : [];
 
         if (!string.IsNullOrEmpty(_activeTabKey))
@@ -1233,10 +1250,11 @@
             string.Equals(m.To, _myCallsign, StringComparison.OrdinalIgnoreCase));
         if (latestDirect != null)
         {
-            var lastTime = _lastNotificationTime.GetValueOrDefault(_activeNodeId, DateTime.MinValue);
+            var notifyKey = _activeNodeId ?? Guid.Empty;
+            var lastTime = _lastNotificationTime.GetValueOrDefault(notifyKey, DateTime.MinValue);
             if (_isInitialized && _soundEnabled && latestDirect.Timestamp > lastTime)
                 _playSound = true;
-            _lastNotificationTime[_activeNodeId] = latestDirect.Timestamp;
+            _lastNotificationTime[notifyKey] = latestDirect.Timestamp;
         }
     }
 
@@ -1516,6 +1534,7 @@
         _dotNetRef?.Dispose();
         Loc.OnChange -= OnLocChange;
         ChatService.OnChange -= OnChatChanged;
+        ChatService.OnEchoTimeout -= OnEchoTimeout;
         UdpService.OnStatusChange -= OnStatusChanged;
         ChatService.OnWatchlistHit -= HandleWatchlistHit;
         ChatService.OnCqHeard -= HandleCqHeard;
@@ -2037,6 +2056,7 @@
         if (m.IsAcknowledged && m.IsLoraDelivered && m.IsGatewayDelivered) return "msg-ack ack-cloud-ok ack-ok";
         if (m.IsAcknowledged && m.IsGatewayDelivered) return "msg-ack ack-cloud-ok";
         if (m.IsAcknowledged)                         return "msg-ack ack-ok";
+        if (m.NodeEchoReceived == false)              return "msg-ack ack-no-echo";
         if (m.SequenceNumber != null)                 return "msg-ack ack-sent";
         return "msg-ack ack-pending";
     }
@@ -2049,6 +2069,7 @@
         if (m.IsAcknowledged && m.IsLoraDelivered && m.IsGatewayDelivered) return "✓✓ ☁️✓";
         if (m.IsAcknowledged && m.IsGatewayDelivered) return "☁️✓";
         if (m.IsAcknowledged)                         return "✓✓";
+        if (m.NodeEchoReceived == false)              return "⚠️";
         if (isGroupOrBcast && m.SequenceNumber != null) return "☁️";
         if (m.SequenceNumber != null)                 return "✓";
         return "⏳";
@@ -2064,6 +2085,8 @@
             return "☁️✓ Über Gateway zugestellt";
         if (m.IsAcknowledged)
             return "✓✓ Zugestellt (LoRa ACK)";
+        if (m.NodeEchoReceived == false)
+            return "⚠️ Node-Echo ausgeblieben – UDP-Paket wurde möglicherweise nicht vom Node empfangen!";
         if (isGroupOrBcast && m.SequenceNumber != null)
             return "☁️ Gesendet – kein ACK für Gruppe/Broadcast erwartet";
         if (m.SequenceNumber != null)
