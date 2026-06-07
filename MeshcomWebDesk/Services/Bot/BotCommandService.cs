@@ -58,7 +58,7 @@ public class BotCommandService
     public IEnumerable<IBotCommand> AllCommands =>
         _builtinCommands.Concat(
             _settings.BotCommands
-                .Where(e => !string.IsNullOrWhiteSpace(e.Name))
+                .Where(e => e is not null && !string.IsNullOrWhiteSpace(e.Name))
                 .Select(e => new ConfiguredBotCommand(e)));
 
     /// <summary>

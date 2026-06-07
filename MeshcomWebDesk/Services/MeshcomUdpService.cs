@@ -421,7 +421,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                 var cmdName = raw.Equals("ping", StringComparison.OrdinalIgnoreCase)
                     ? "ping"
                     : raw.TrimStart('-').TrimStart('—').Split(' ', 2)[0].ToLowerInvariant();
-                if (cmdName is not ("ping" or "version"))
+                if (cmdName is not ("ping" or "version" or "help"))
                 {
                     _logger.LogDebug("Bot is disabled – ignoring command from {From}", message.From);
                     return;
