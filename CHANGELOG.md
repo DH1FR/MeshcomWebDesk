@@ -1,6 +1,6 @@
 ﻿# Changelog
 
-## [1.12.3] – in development (dev)
+## [1.12.3] – 2026-06-07
 
 ### Features
 - **AI Search**: Smarter token management – messages trimmed by token estimate; warning + "Search in previous period" button when older messages are excluded.
