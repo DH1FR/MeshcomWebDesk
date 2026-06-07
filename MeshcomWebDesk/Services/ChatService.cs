@@ -108,7 +108,7 @@ public class ChatService
     /// Value = time of first receipt. Entries older than <see cref="DedupWindow"/> are pruned on each check.
     /// </summary>
     private readonly Dictionary<string, DateTime> _seenMessageKeys = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly TimeSpan DedupWindow = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan DedupWindow = TimeSpan.FromMinutes(30);
 
     /// <summary>Raised when a message is added or a tab changes.</summary>
     public event Action? OnChange;
@@ -854,6 +854,14 @@ public class ChatService
                 ? $"{nodePrefix}:seq:{message.From}:{message.SequenceNumber}"
                 : $"{nodePrefix}:txt:{message.From}:{message.To}:{message.Text}";
 
+        // Text-based fallback key: same content may arrive once with msg_id and once without.
+        // Storing and checking both keys catches such cross-format duplicates.
+        string? txtKey = (!string.IsNullOrEmpty(message.From) &&
+                          !string.IsNullOrEmpty(message.To)   &&
+                          !string.IsNullOrEmpty(message.Text))
+            ? $"{nodePrefix}:txt:{message.From}:{message.To}:{message.Text}"
+            : null;
+
         lock (_lock)
         {
             var now    = DateTime.Now;
@@ -869,8 +877,12 @@ public class ChatService
 
             if (_seenMessageKeys.ContainsKey(key))
                 return true;
+            if (txtKey != null && _seenMessageKeys.ContainsKey(txtKey))
+                return true;
 
             _seenMessageKeys[key] = now;
+            if (txtKey != null && txtKey != key)
+                _seenMessageKeys[txtKey] = now;
             return false;
         }
     }
