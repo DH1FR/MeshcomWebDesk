@@ -178,6 +178,20 @@ public sealed class NodeManager
     }
 
     /// <summary>
+    /// Returns true when <paramref name="callsign"/> matches any own node callsign
+    /// or the primary <see cref="MeshcomSettings.MyCallsign"/>.
+    /// Used by the bot trigger so commands addressed to secondary-node SSIDs
+    /// are processed regardless of which node forwarded the packet first.
+    /// </summary>
+    public bool IsOwnCallsign(string? callsign)
+    {
+        if (string.IsNullOrEmpty(callsign)) return false;
+        var s = _settingsMonitor.CurrentValue;
+        if (string.Equals(callsign, s.MyCallsign, StringComparison.OrdinalIgnoreCase)) return true;
+        return s.Nodes.Any(n => string.Equals(callsign, n.Callsign, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
     /// Returns the own callsign that matches the node identified by <paramref name="remoteAddress"/>.
     /// Falls back to <see cref="MeshcomSettings.MyCallsign"/> when:
     /// <list type="bullet">
