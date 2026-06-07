@@ -377,7 +377,7 @@ public class ChatService
         CheckCq(message, tabKey, myCallsign);
 
         if (!message.IsBroadcast &&
-            (_nodeManager?.IsOwnCallsign(message.To) ?? string.Equals(message.To, myCallsign, StringComparison.OrdinalIgnoreCase)) &&
+            string.Equals(message.To, myCallsign, StringComparison.OrdinalIgnoreCase) &&
             MeshcomWebDesk.Services.Bot.BotCommandService.IsCommand(message.Text))
             OnBotCommand?.Invoke(message);
     }
