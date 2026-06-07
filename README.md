@@ -1469,7 +1469,7 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
  ## 📋 Changelog
 
- ### v1.12.3 *(in development)*
+ ### v1.12.3 *(2026-06-07)*
 - **feat:** 🔍 **AI Search: smarter token management** – messages trimmed by token estimate to avoid rate-limit errors; warning shown when older messages are excluded; "Search in previous period" button to continue the search further back
 - **feat:** 🔍 **AI Search: noise filter** – bot commands and JSON system messages excluded from AI search and summary context
 - **feat:** 📅 **DatePicker component** – reusable date picker used in AI search date fields
