@@ -416,16 +416,8 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             _logger.LogDebug("Bot command received from {From}: {Text}", message.From, message.Text);
             if (!_settings.BotEnabled)
             {
-                // ping and version always respond regardless of BotEnabled (diagnostic commands).
-                var raw = message.Text?.Trim() ?? string.Empty;
-                var cmdName = raw.Equals("ping", StringComparison.OrdinalIgnoreCase)
-                    ? "ping"
-                    : raw.TrimStart('-').TrimStart('—').Split(' ', 2)[0].ToLowerInvariant();
-                if (cmdName is not ("ping" or "version" or "help"))
-                {
-                    _logger.LogDebug("Bot is disabled – ignoring command from {From}", message.From);
-                    return;
-                }
+                _logger.LogDebug("Bot is disabled – ignoring command from {From}", message.From);
+                return;
             }
 
             var reply = await _botCommandService.ExecuteAsync(message.Text!, message.From, message);
