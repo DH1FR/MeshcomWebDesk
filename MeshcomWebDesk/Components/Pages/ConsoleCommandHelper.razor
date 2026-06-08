@@ -63,7 +63,7 @@
                         var batteryPercent = cmd.Name.Equals("proz", StringComparison.OrdinalIgnoreCase)
                             ? ParseBatteryPercent(curVal)
                             : null;
-                        <div class="cch-card @(cmd.Type == ConsoleCommandType.Toggle ? (IsOn(cmd.Name) ? "cch-card-on" : "cch-card-off") : "")">
+                        <div class="cch-card @(cmd.Type == ConsoleCommandType.Toggle ? (IsActive(cmd.Name) ? "cch-card-on" : "cch-card-off") : "")">
                             <div class="cch-card-top">
                                 <code class="cch-cmd-name">--@cmd.Name</code>
                                 @if (curVal == "?")
@@ -94,14 +94,28 @@
                                 @switch (cmd.Type)
                                 {
                                     case ConsoleCommandType.Toggle:
-                                        <button class="cch-toggle-btn @(IsOn(cmd.Name) ? "cch-toggle-btn-on" : "cch-toggle-btn-off")"
+                                        <button class="cch-toggle-btn @(IsActive(cmd.Name) ? "cch-toggle-btn-on" : "cch-toggle-btn-off")"
                                                 @onclick="() => SendToggleAsync(cmd)"
                                                 disabled="@(!CmdHelper.IsConnected)">
                                             <span class="cch-toggle-track">
                                                 <span class="cch-toggle-thumb"></span>
                                             </span>
-                                            <span>@(IsOn(cmd.Name) ? "ON" : "OFF")</span>
+                                            <span>@(IsActive(cmd.Name) ? "ON" : "OFF")</span>
                                         </button>
+                                        @if (cmd.Options.Length > 0)
+                                        {
+                                            <div class="cch-option-row">
+                                                @foreach (var opt in cmd.Options)
+                                                {
+                                                    var isSelected = string.Equals(curVal, opt, StringComparison.OrdinalIgnoreCase);
+                                                    <button class="cch-option-btn @(isSelected ? "cch-option-btn-active" : "")"
+                                                            @onclick="() => SendOptionAsync(cmd, opt)"
+                                                            disabled="@(!CmdHelper.IsConnected)">
+                                                        @opt
+                                                    </button>
+                                                }
+                                            </div>
+                                        }
                                         break;
 
                                     case ConsoleCommandType.Value:
@@ -442,6 +456,13 @@
     private bool IsOn(string name)
         => CmdHelper.CurrentValues.TryGetValue(name, out var v) && v.Equals("on", StringComparison.OrdinalIgnoreCase);
 
+    // True when the value is anything other than "off" or unknown – covers "on" and option values like "srv OE".
+    private bool IsActive(string name)
+        => CmdHelper.CurrentValues.TryGetValue(name, out var v)
+           && !string.IsNullOrEmpty(v)
+           && !v.Equals("off", StringComparison.OrdinalIgnoreCase)
+           && v != "?";
+
     private static string GroupIcon(ConsoleCommandGroup g) => g switch
     {
         ConsoleCommandGroup.LoRa       => "📡",
@@ -479,9 +500,15 @@
 
     private async Task SendToggleAsync(ConsoleCommandDef cmd)
     {
-        var newVal = IsOn(cmd.Name) ? "off" : "on";
+        var newVal = IsActive(cmd.Name) ? "off" : "on";
         await CmdHelper.SendCommandAsync(cmd.Name, newVal);
         ShowToast($"--{cmd.Name} {newVal}");
+    }
+
+    private async Task SendOptionAsync(ConsoleCommandDef cmd, string option)
+    {
+        await CmdHelper.SendCommandAsync(cmd.Name, option);
+        ShowToast($"--{cmd.Name} {option}");
     }
 
     private async Task SendValueAsync(ConsoleCommandDef cmd)
