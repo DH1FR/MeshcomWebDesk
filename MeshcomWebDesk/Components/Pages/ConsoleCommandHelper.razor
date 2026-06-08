@@ -422,16 +422,23 @@
                 snap = [.. svc.Lines];
             if (_showMh && !_mhComplete)
             {
-                var entries = MhParser.Parse(snap, _mhFromLine);
+                // When Lines is cycling at the 500-item cap, _mhFromLine equals snap.Count
+                // and Skip returns nothing. Fall back to searching backwards for the last
+                // table start so the response is still found.
+                int mhFrom = _mhFromLine < snap.Count
+                    ? _mhFromLine
+                    : FindLastTableStart(snap);
+                var entries = MhParser.Parse(snap, mhFrom);
                 if (entries.Count > 0)
                 {
                     _mhEntries = entries;
-                    _mhComplete = snap.Skip(_mhFromLine).Any(l => l.TrimStart().StartsWith("\\"));
+                    _mhComplete = snap.Skip(mhFrom).Any(l => l.TrimStart().StartsWith("\\"));
                 }
             }
             if (_showHelp)
             {
-                var filtered = snap.Skip(_helpFromLine)
+                int helpFrom = _helpFromLine < snap.Count ? _helpFromLine : 0;
+                var filtered = snap.Skip(helpFrom)
                     .Where(l => string.IsNullOrWhiteSpace(l)
                              || l.TrimStart().StartsWith("--")
                              || l.Contains("commands", StringComparison.OrdinalIgnoreCase))
@@ -462,6 +469,17 @@
            && !string.IsNullOrEmpty(v)
            && !v.Equals("off", StringComparison.OrdinalIgnoreCase)
            && v != "?";
+
+    // Searches backwards for the last MH table opening line (/---).
+    // Used when the Lines ring-buffer is cycling at its cap so the stored
+    // absolute index (_mhFromLine) equals snap.Count and Skip returns nothing.
+    private static int FindLastTableStart(List<string> snap)
+    {
+        for (int i = snap.Count - 1; i >= 0; i--)
+            if (snap[i].TrimStart().StartsWith("/---"))
+                return i;
+        return 0;
+    }
 
     private static string GroupIcon(ConsoleCommandGroup g) => g switch
     {
