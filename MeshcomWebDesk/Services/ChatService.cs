@@ -845,21 +845,22 @@ public class ChatService
     /// </summary>
     private bool IsDuplicate(MeshcomMessage message)
     {
-        // Node prefix ensures messages from different nodes are never cross-deduplicated.
-        var nodePrefix = message.NodeId?.ToString("N") ?? "legacy";
-
+        // Keys are global (no node prefix): msg_id, seq number, and text are all
+        // sender-assigned and unique per message regardless of which node received it.
+        // Using a node prefix previously caused the same message received by two
+        // connected nodes to produce different keys and appear twice in the UI.
         string key = !string.IsNullOrEmpty(message.MsgId)
-            ? $"{nodePrefix}:mid:{message.MsgId}"
+            ? $"mid:{message.MsgId}"
             : !string.IsNullOrEmpty(message.SequenceNumber)
-                ? $"{nodePrefix}:seq:{message.From}:{message.SequenceNumber}"
-                : $"{nodePrefix}:txt:{message.From}:{message.To}:{message.Text}";
+                ? $"seq:{message.From}:{message.SequenceNumber}"
+                : $"txt:{message.From}:{message.To}:{message.Text}";
 
         // Text-based fallback key: same content may arrive once with msg_id and once without.
         // Storing and checking both keys catches such cross-format duplicates.
         string? txtKey = (!string.IsNullOrEmpty(message.From) &&
                           !string.IsNullOrEmpty(message.To)   &&
                           !string.IsNullOrEmpty(message.Text))
-            ? $"{nodePrefix}:txt:{message.From}:{message.To}:{message.Text}"
+            ? $"txt:{message.From}:{message.To}:{message.Text}"
             : null;
 
         lock (_lock)
