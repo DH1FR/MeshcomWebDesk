@@ -230,6 +230,18 @@ public sealed class ConsoleCommandHelperService : IDisposable
         // Aktive Console einmalig festhalten – verhindert Wechsel während der Verarbeitung
         var console = ActiveConsole;
 
+        // Bei Verbindungstrennung alle offenen Requests verwerfen
+        if (!console.IsConnected)
+        {
+            lock (_pendingLock)
+            {
+                foreach (var p in _pending) p.Cts.Cancel();
+                _pending.Clear();
+            }
+            OnChange?.Invoke();
+            return;
+        }
+
         List<string> snapshot;
         lock (console.Lines)
             snapshot = [.. console.Lines];

@@ -393,6 +393,14 @@
             }
         }
         var svc = CmdHelper.ActiveConsolePublic;
+        if (svc is not null && !svc.IsConnected)
+        {
+            _showHelp = false;
+            _showMh   = false;
+            _mhComplete    = false;
+            _helpFromLine  = 0;
+            _mhFromLine    = 0;
+        }
         if (svc is not null && ((_showMh && !_mhComplete) || _showHelp))
         {
             List<string> snap;
