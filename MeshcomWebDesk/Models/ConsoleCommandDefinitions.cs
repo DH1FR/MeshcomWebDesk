@@ -170,6 +170,9 @@ public static class ConsoleCommandDefinitions
         new() { Name = "display",      Group = ConsoleCommandGroup.Debug, Type = ConsoleCommandType.Toggle,
                 Description = "Display aktiv",
                 ParsePattern = @"\.\.\.DISPLAY\s+(on|off)", OptimisticUpdate = true },
+        new() { Name = "setcont",      Group = ConsoleCommandGroup.Debug, Type = ConsoleCommandType.Toggle,
+                Description = "Kontinuierliche Ausgabe",
+                ParsePattern = @"SETCONT\s+(on|off)", OptimisticUpdate = true },
         new() { Name = "posted",       Group = ConsoleCommandGroup.Debug, Type = ConsoleCommandType.Action,
                 Description = "Posted-Status anzeigen" },
 
