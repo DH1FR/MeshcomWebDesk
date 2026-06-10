@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Extensions.Options;
 using MeshcomWebDesk.Models;
 using MeshcomWebDesk.Services.Weather;
@@ -24,10 +25,24 @@ public class WeatherStatusCommand : IBotCommand
 
     public Task<string> ExecuteAsync(string[] args, string senderCallsign)
     {
-        var ws = _settings.Value.WeatherApi;
+        var s  = _settings.Value;
+        var ws = s.WeatherApi;
 
         if (ws.Provider == WeatherProvider.None)
+        {
+            // Fallback: read weather values from the telemetry file when telemetry is active
+            // and the mapping contains entries with a WeatherRole (or auto-detectable unit).
+            if (s.TelemetryEnabled
+                && !string.IsNullOrWhiteSpace(s.TelemetryFilePath)
+                && s.TelemetryMapping.Count > 0)
+            {
+                var telemetryReply = ReadWeatherFromTelemetryFile(s);
+                if (telemetryReply is not null)
+                    return Task.FromResult(telemetryReply);
+            }
+
             return Task.FromResult("Wetter-API deaktiviert.");
+        }
 
         var sb = new System.Text.StringBuilder();
 
@@ -67,5 +82,68 @@ public class WeatherStatusCommand : IBotCommand
         }
 
         return Task.FromResult(sb.ToString());
+    }
+
+    /// <summary>
+    /// Reads weather values (temp, humidity, pressure) from the telemetry JSON file using
+    /// the WeatherRole field (or unit-based auto-detection) of each TelemetryMapping entry.
+    /// Returns null when the file is missing, unreadable, or contains no weather-role fields.
+    /// </summary>
+    private static string? ReadWeatherFromTelemetryFile(MeshcomSettings s)
+    {
+        try
+        {
+            if (!File.Exists(s.TelemetryFilePath))
+                return null;
+
+            using var doc = JsonDocument.Parse(File.ReadAllText(s.TelemetryFilePath));
+            var root = doc.RootElement;
+
+            var sb = new System.Text.StringBuilder("Weather (Telemetrie) |");
+            bool any = false;
+
+            foreach (var entry in s.TelemetryMapping)
+            {
+                var role = entry.WeatherRole.Trim().ToLowerInvariant();
+                if (role == string.Empty)
+                {
+                    var unitNorm = entry.Unit.Trim().TrimStart('°').ToLowerInvariant();
+                    if      (unitNorm is "c")            role = "temp";
+                    else if (unitNorm is "%")            role = "humidity";
+                    else if (unitNorm is "hpa" or "mbar") role = "pressure";
+                }
+
+                if (role == string.Empty) continue;
+                if (!root.TryGetProperty(entry.JsonKey, out var prop)) continue;
+
+                double value;
+                if (prop.ValueKind == JsonValueKind.Number)
+                    value = prop.GetDouble();
+                else if (prop.ValueKind == JsonValueKind.String
+                      && double.TryParse(prop.GetString(),
+                             System.Globalization.NumberStyles.Float,
+                             System.Globalization.CultureInfo.InvariantCulture, out var parsed))
+                    value = parsed;
+                else continue;
+
+                switch (role)
+                {
+                    case "temp":     sb.Append($" T={value:F1}°C"); break;
+                    case "humidity": sb.Append($" H={value:F0}%");  break;
+                    case "pressure": sb.Append($" P={value:F0}hPa"); break;
+                }
+                any = true;
+            }
+
+            if (!any) return null;
+
+            var modified = File.GetLastWriteTimeUtc(s.TelemetryFilePath);
+            sb.Append($" ({modified:HH:mm}z)");
+            return sb.ToString();
+        }
+        catch
+        {
+            return null;
+        }
     }
 }
