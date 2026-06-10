@@ -85,9 +85,9 @@ public class WeatherStatusCommand : IBotCommand
     }
 
     /// <summary>
-    /// Reads weather values (temp, humidity, pressure) from the telemetry JSON file using
-    /// the WeatherRole field (or unit-based auto-detection) of each TelemetryMapping entry.
-    /// Returns null when the file is missing, unreadable, or contains no weather-role fields.
+    /// Builds the full telemetry string from the JSON file using all TelemetryMapping entries
+    /// (same logic as BuildTelemetryString in MeshcomUdpService).
+    /// Returns null when the file is missing, unreadable, or no values could be read.
     /// </summary>
     private static string? ReadWeatherFromTelemetryFile(MeshcomSettings s)
     {
@@ -97,23 +97,11 @@ public class WeatherStatusCommand : IBotCommand
                 return null;
 
             using var doc = JsonDocument.Parse(File.ReadAllText(s.TelemetryFilePath));
-            var root = doc.RootElement;
-
-            var sb = new System.Text.StringBuilder("Weather (Telemetrie) |");
-            bool any = false;
+            var root  = doc.RootElement;
+            var parts = new List<string>();
 
             foreach (var entry in s.TelemetryMapping)
             {
-                var role = entry.WeatherRole.Trim().ToLowerInvariant();
-                if (role == string.Empty)
-                {
-                    var unitNorm = entry.Unit.Trim().TrimStart('°').ToLowerInvariant();
-                    if      (unitNorm is "c")            role = "temp";
-                    else if (unitNorm is "%")            role = "humidity";
-                    else if (unitNorm is "hpa" or "mbar") role = "pressure";
-                }
-
-                if (role == string.Empty) continue;
                 if (!root.TryGetProperty(entry.JsonKey, out var prop)) continue;
 
                 double value;
@@ -126,20 +114,13 @@ public class WeatherStatusCommand : IBotCommand
                     value = parsed;
                 else continue;
 
-                switch (role)
-                {
-                    case "temp":     sb.Append($" T={value:F1}°C"); break;
-                    case "humidity": sb.Append($" H={value:F0}%");  break;
-                    case "pressure": sb.Append($" P={value:F0}hPa"); break;
-                }
-                any = true;
+                var decimals  = Math.Max(0, entry.Decimals);
+                var formatted = value.ToString($"F{decimals}", System.Globalization.CultureInfo.InvariantCulture);
+                var label     = string.IsNullOrWhiteSpace(entry.Label) ? entry.JsonKey : entry.Label;
+                parts.Add($"{label}={formatted}{entry.Unit}");
             }
 
-            if (!any) return null;
-
-            var modified = File.GetLastWriteTimeUtc(s.TelemetryFilePath);
-            sb.Append($" ({modified:HH:mm}z)");
-            return sb.ToString();
+            return parts.Count > 0 ? string.Join(" ", parts) : null;
         }
         catch
         {
