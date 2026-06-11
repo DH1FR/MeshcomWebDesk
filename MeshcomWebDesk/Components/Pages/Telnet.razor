@@ -547,16 +547,20 @@
                 snap = [.. Console.Lines];
             if (_showMh && !_mhComplete)
             {
-                var entries = MhParser.Parse(snap, _mhFromLine);
+                int mhFrom = _mhFromLine < snap.Count
+                    ? _mhFromLine
+                    : FindLastTableStart(snap);
+                var entries = MhParser.Parse(snap, mhFrom);
                 if (entries.Count > 0)
                 {
                     _mhEntries = entries;
-                    _mhComplete = snap.Skip(_mhFromLine).Any(l => l.TrimStart().StartsWith("\\"));
+                    _mhComplete = snap.Skip(mhFrom).Any(l => l.TrimStart().StartsWith("\\"));
                 }
             }
             if (_showHelp)
             {
-                var filtered = snap.Skip(_helpFromLine)
+                int helpFrom = _helpFromLine < snap.Count ? _helpFromLine : 0;
+                var filtered = snap.Skip(helpFrom)
                     .Where(l => string.IsNullOrWhiteSpace(l)
                              || l.TrimStart().StartsWith("--")
                              || l.Contains("commands", StringComparison.OrdinalIgnoreCase))
@@ -608,6 +612,14 @@
         _helpDisplayLines = [];
         _showHelp = true;
         await Console.SendLineAsync("--help");
+    }
+
+    private static int FindLastTableStart(List<string> snap)
+    {
+        for (int i = snap.Count - 1; i >= 0; i--)
+            if (snap[i].TrimStart().StartsWith("/---"))
+                return i;
+        return 0;
     }
 
     private static string RssiClass(string rssiStr) => MhParser.RssiClass(rssiStr);
