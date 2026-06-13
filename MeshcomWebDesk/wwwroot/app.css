@@ -1900,6 +1900,15 @@ h1:focus {
     color: #f85149;
 }
 
+.settings-warning {
+    background: #2b1f0d;
+    border: 1px solid #6e4e20;
+    border-radius: 6px;
+    padding: 0.6rem 1rem;
+    font-size: 0.88rem;
+    color: #e3a537;
+}
+
 .settings-section {
     background: #16213e;
     border: 1px solid #0f3460;
