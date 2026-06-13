@@ -284,18 +284,26 @@
             <div class="settings-grid">
                 <label>@Loc.T("Log-Pfad", "Log Path")</label>
                 <input type="text" @bind="_model.LogPath" placeholder="@ResolvedLogPath.Path" />
-                <span></span>
-                <small style="color:#8b949e">
-                    @if (string.IsNullOrWhiteSpace(_model.LogPath))
-                    {
-                        @Loc.T("Leer = Standard-Pfad wird verwendet:", "Empty = default path is used:")
-                    }
-                    else
-                    {
-                        @Loc.T("Effektiver Pfad (nach Neustart):", "Effective path (after restart):")
-                    }
-                    <code>@(string.IsNullOrWhiteSpace(_model.LogPath) ? ResolvedLogPath.Path : System.IO.Path.GetFullPath(_model.LogPath))</code>
-                </small>
+                @if (LogPathError != null)
+                {
+                    <span></span>
+                    <small style="color:#f85149">❌ @LogPathError</small>
+                }
+                else
+                {
+                    <span></span>
+                    <small style="color:#8b949e">
+                        @if (string.IsNullOrWhiteSpace(_model.LogPath))
+                        {
+                            @Loc.T("Leer = Standard-Pfad wird verwendet:", "Empty = default path is used:")
+                        }
+                        else
+                        {
+                            @Loc.T("Effektiver Pfad (nach Neustart):", "Effective path (after restart):")
+                        }
+                        <code>@(string.IsNullOrWhiteSpace(_model.LogPath) ? ResolvedLogPath.Path : System.IO.Path.GetFullPath(_model.LogPath))</code>
+                    </small>
+                }
 
                 <label>@Loc.T("Log-Aufbewahrung (Tage)", "Log Retention (Days)")</label>
                 <input type="number" min="1" @bind="_model.LogRetainDays" />
@@ -407,20 +415,26 @@
             <div class="settings-grid">
                 <label>@Loc.T("Datenpfad", "Data Path")</label>
                 <input type="text" @bind="_model.DataPath" />
-                <span></span>
-                <small style="color:#8b949e">
-                    @Loc.T("Aktuell aktiver Pfad:", "Currently active path:") <code>@SettingsService.EffectiveDataPath</code>
-                    @{
-                        var _newDataResolved = string.IsNullOrWhiteSpace(_model.DataPath)
-                            ? System.IO.Path.GetTempPath()
-                            : System.IO.Path.GetFullPath(_model.DataPath);
-                    }
-                    @if (!string.Equals(_newDataResolved, SettingsService.EffectiveDataPath,
-                            OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
-                    {
-                        <br />@Loc.T("Pfadänderung wird erst nach Neustart wirksam.", "Path change takes effect only after a restart.")
-                    }
-                </small>
+                @if (DataPathError != null)
+                {
+                    <span></span>
+                    <small style="color:#f85149">❌ @DataPathError</small>
+                }
+                else
+                {
+                    var _newDataResolved = string.IsNullOrWhiteSpace(_model.DataPath)
+                        ? System.IO.Path.GetTempPath()
+                        : System.IO.Path.GetFullPath(_model.DataPath);
+                    <span></span>
+                    <small style="color:#8b949e">
+                        @Loc.T("Aktuell aktiver Pfad:", "Currently active path:") <code>@SettingsService.EffectiveDataPath</code>
+                        @if (!string.Equals(_newDataResolved, SettingsService.EffectiveDataPath,
+                                OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+                        {
+                            <br />@Loc.T("Pfadänderung wird erst nach Neustart wirksam.", "Path change takes effect only after a restart.")
+                        }
+                    </small>
+                }
             </div>
             }
         </div>
@@ -2101,7 +2115,7 @@
             {
                 <div class="settings-success">✅ @Loc.T("Einstellungen gespeichert.", "Settings saved.")</div>
             }
-            <button class="btn-save" @onclick="SaveAsync">💾 @Loc.T("Speichern", "Save")</button>
+            <button class="btn-save" @onclick="SaveAsync" disabled="@HasPathSyntaxError">💾 @Loc.T("Speichern", "Save")</button>
         </div>
 
     </div>
@@ -2113,6 +2127,10 @@
     private bool _restored;
     private string? _errorMessage;
     private List<string> _pathWarnings = [];
+
+    private string? LogPathError  => SettingsService.ValidatePathSyntax(_model.LogPath);
+    private string? DataPathError => SettingsService.ValidatePathSyntax(_model.DataPath);
+    private bool    HasPathSyntaxError => LogPathError != null || DataPathError != null;
     private bool   _sendingNow;
     private string? _sendResult;
     private string  _autoReplyTestCallsign = string.Empty;
@@ -2228,13 +2246,17 @@
             Loc.T("Datenpfad (Einstellungsspeicherung)", "data path (settings storage)"));
         if (dataErr is not null) _pathWarnings.Add(dataErr);
 
-        var effectiveLogPath = string.IsNullOrWhiteSpace(_model.LogPath)
-            ? ResolvedLogPath.Path
-            : System.IO.Path.GetFullPath(_model.LogPath);
-        var logErr = await SettingsService.CheckWritabilityAsync(
-            effectiveLogPath,
-            Loc.T("Log-Pfad", "log path"));
-        if (logErr is not null) _pathWarnings.Add(logErr);
+        if (LogPathError == null)
+        {
+            var effectiveLogPath = string.IsNullOrWhiteSpace(_model.LogPath)
+                ? ResolvedLogPath.Path
+                : System.IO.Path.GetFullPath(_model.LogPath);
+            var logErr = await SettingsService.CheckWritabilityAsync(
+                effectiveLogPath,
+                Loc.T("Log-Pfad", "log path"),
+                createIfMissing: true);
+            if (logErr is not null) _pathWarnings.Add(logErr);
+        }
     }
 
     private async Task SendTelemetryNowAsync()
@@ -2912,6 +2934,11 @@
     {
         _saved        = false;
         _errorMessage = null;
+        if (HasPathSyntaxError)
+        {
+            _errorMessage = LogPathError ?? DataPathError;
+            return;
+        }
         try
         {
             var saved = _model.ToSettings();

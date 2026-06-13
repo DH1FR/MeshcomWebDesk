@@ -39,10 +39,44 @@ public class SettingsService
     /// Probes whether <paramref name="directory"/> can be created and written to.
     /// Returns null on success, or a human-readable error message on failure.
     /// </summary>
-    public static async Task<string?> CheckWritabilityAsync(string directory, string context)
+    /// <summary>
+    /// Checks whether <paramref name="path"/> is syntactically valid for the current OS.
+    /// Returns null when valid (including empty/null, which means "use default").
+    /// </summary>
+    public static string? ValidatePathSyntax(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return null;
+        try
+        {
+            Path.GetFullPath(path);
+            return null;
+        }
+        catch (ArgumentException)
+        {
+            return "Ungültige Zeichen im Pfad.";
+        }
+        catch (NotSupportedException)
+        {
+            return "Ungültiger Pfad (Doppelpunkt an falscher Position).";
+        }
+        catch (PathTooLongException)
+        {
+            return "Pfad ist zu lang.";
+        }
+    }
+
+    /// <summary>
+    /// Probes whether <paramref name="directory"/> is writable by writing a temp file.
+    /// When <paramref name="createIfMissing"/> is true the directory is created first
+    /// (use for LogPath, where Serilog does the same on startup).
+    /// Returns null on success, or a human-readable error string on failure.
+    /// </summary>
+    public static async Task<string?> CheckWritabilityAsync(string directory, string context,
+                                                            bool createIfMissing = false)
     {
         try
         {
+            if (createIfMissing) Directory.CreateDirectory(directory);
             var testFile = Path.Combine(directory, ".write-test");
             await File.WriteAllTextAsync(testFile, "ok");
             File.Delete(testFile);
