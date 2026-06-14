@@ -1900,6 +1900,15 @@ h1:focus {
     color: #f85149;
 }
 
+.settings-warning {
+    background: #2b1f0d;
+    border: 1px solid #6e4e20;
+    border-radius: 6px;
+    padding: 0.6rem 1rem;
+    font-size: 0.88rem;
+    color: #e3a537;
+}
+
 .settings-section {
     background: #16213e;
     border: 1px solid #0f3460;
@@ -3418,6 +3427,22 @@ details[open] .cch-group-title::before { transform: rotate(90deg); }
 .cch-action-btn:hover { background: #30363d; }
 .cch-action-btn-danger { background: #3d1f1f; color: #f85149; border-color: #f8514944; }
 .cch-action-btn-danger:hover { background: #5c2020; }
+
+/* Toggle option buttons (e.g. srv OE / srv DL for --gateway) */
+.cch-option-row { display: flex; gap: .35rem; margin-top: .4rem; flex-wrap: wrap; }
+.cch-option-btn {
+    padding: .18rem .5rem;
+    border-radius: 6px;
+    border: 1px solid #30363d;
+    background: #161b22;
+    color: #8b949e;
+    font-size: .78rem;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+}
+.cch-option-btn:hover:not(:disabled) { background: #30363d; color: #c9d1d9; }
+.cch-option-btn-active { background: #1a3a2a; color: #56d364; border-color: #238636; }
+.cch-option-btn:disabled { opacity: .45; cursor: not-allowed; }
 
 /* Confirm overlay */
 .cch-overlay {

@@ -114,6 +114,9 @@
 
     protected override void OnParametersSet()
     {
+        _qrzInfo   = null;
+        _firstName = null;
+
         // Refresh QRZ first name from cache on every render so it shows without hover
         if (SettingsOptions.CurrentValue.Qrz.Enabled &&
             QrzService.TryGetCached(Callsign, out var info) && info is not null)

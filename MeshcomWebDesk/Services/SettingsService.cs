@@ -16,9 +16,12 @@ namespace MeshcomWebDesk.Services;
 /// </summary>
 public class SettingsService
 {
+    private readonly string _dataPath;
     private readonly string _overridePath;
     private readonly ILogger<SettingsService> _logger;
     private readonly ISettingsProtector _protector;
+
+    public string EffectiveDataPath => _dataPath;
 
     public SettingsService(IConfiguration config, ILogger<SettingsService> logger,
                            ISettingsProtector protector)
@@ -26,9 +29,71 @@ public class SettingsService
         var dataPath  = config.GetValue<string>($"{MeshcomSettings.SectionName}:DataPath")
                         ?? Path.GetTempPath();
         Directory.CreateDirectory(dataPath);
-        _overridePath = Path.Combine(dataPath, "appsettings.override.json");
+        _dataPath     = Path.GetFullPath(dataPath);
+        _overridePath = Path.Combine(_dataPath, "appsettings.override.json");
         _logger       = logger;
         _protector    = protector;
+    }
+
+    /// <summary>
+    /// Probes whether <paramref name="directory"/> can be created and written to.
+    /// Returns null on success, or a human-readable error message on failure.
+    /// </summary>
+    /// <summary>
+    /// Checks whether <paramref name="path"/> is syntactically valid for the current OS.
+    /// Returns null when valid (including empty/null, which means "use default").
+    /// </summary>
+    public static string? ValidatePathSyntax(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return null;
+        try
+        {
+            Path.GetFullPath(path);
+            return null;
+        }
+        catch (ArgumentException)
+        {
+            return "Ungültige Zeichen im Pfad.";
+        }
+        catch (NotSupportedException)
+        {
+            return "Ungültiger Pfad (Doppelpunkt an falscher Position).";
+        }
+        catch (PathTooLongException)
+        {
+            return "Pfad ist zu lang.";
+        }
+    }
+
+    /// <summary>
+    /// Probes whether <paramref name="directory"/> is writable by writing a temp file.
+    /// When <paramref name="createIfMissing"/> is true the directory is created first
+    /// (use for LogPath, where Serilog does the same on startup).
+    /// Returns null on success, or a human-readable error string on failure.
+    /// </summary>
+    public static async Task<string?> CheckWritabilityAsync(string directory, string context,
+                                                            bool createIfMissing = false)
+    {
+        try
+        {
+            if (createIfMissing) Directory.CreateDirectory(directory);
+            var testFile = Path.Combine(directory, ".write-test");
+            await File.WriteAllTextAsync(testFile, "ok");
+            File.Delete(testFile);
+            return null;
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return $"{context}: Verzeichnis nicht gefunden – {directory}";
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return $"{context}: Kein Schreibzugriff – {directory}";
+        }
+        catch (Exception ex)
+        {
+            return $"{context}: {ex.Message} ({directory})";
+        }
     }
 
     /// <summary>
@@ -274,7 +339,23 @@ public class SettingsService
         };
 
         var output = root.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
-        await File.WriteAllTextAsync(_overridePath, output + Environment.NewLine, Encoding.UTF8);
+        try
+        {
+            await File.WriteAllTextAsync(_overridePath, output + Environment.NewLine, Encoding.UTF8);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            throw new InvalidOperationException(
+                $"Kein Schreibzugriff auf die Einstellungsdatei '{_overridePath}'. " +
+                $"Bitte sicherstellen, dass der Prozess Schreibrechte auf den DataPath-Ordner hat " +
+                $"(Docker: Volume korrekt gemountet? Windows: Ordnerberechtigungen prüfen).");
+        }
+        catch (DirectoryNotFoundException)
+        {
+            throw new InvalidOperationException(
+                $"Verzeichnis '{Path.GetDirectoryName(_overridePath)}' nicht gefunden. " +
+                $"DataPath prüfen – der Ordner muss vorhanden oder vom Prozess erstellbar sein.");
+        }
         _logger.LogInformation("Settings saved to {Path}", _overridePath);
     }
 }

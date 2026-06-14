@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Extensions.Options;
 using MeshcomWebDesk.Models;
 using MeshcomWebDesk.Services.Weather;
@@ -24,10 +25,24 @@ public class WeatherStatusCommand : IBotCommand
 
     public Task<string> ExecuteAsync(string[] args, string senderCallsign)
     {
-        var ws = _settings.Value.WeatherApi;
+        var s  = _settings.Value;
+        var ws = s.WeatherApi;
 
         if (ws.Provider == WeatherProvider.None)
+        {
+            // Fallback: read weather values from the telemetry file when telemetry is active
+            // and the mapping contains entries with a WeatherRole (or auto-detectable unit).
+            if (s.TelemetryEnabled
+                && !string.IsNullOrWhiteSpace(s.TelemetryFilePath)
+                && s.TelemetryMapping.Count > 0)
+            {
+                var telemetryReply = ReadWeatherFromTelemetryFile(s);
+                if (telemetryReply is not null)
+                    return Task.FromResult(telemetryReply);
+            }
+
             return Task.FromResult("Wetter-API deaktiviert.");
+        }
 
         var sb = new System.Text.StringBuilder();
 
@@ -67,5 +82,49 @@ public class WeatherStatusCommand : IBotCommand
         }
 
         return Task.FromResult(sb.ToString());
+    }
+
+    /// <summary>
+    /// Builds the full telemetry string from the JSON file using all TelemetryMapping entries
+    /// (same logic as BuildTelemetryString in MeshcomUdpService).
+    /// Returns null when the file is missing, unreadable, or no values could be read.
+    /// </summary>
+    private static string? ReadWeatherFromTelemetryFile(MeshcomSettings s)
+    {
+        try
+        {
+            if (!File.Exists(s.TelemetryFilePath))
+                return null;
+
+            using var doc = JsonDocument.Parse(File.ReadAllText(s.TelemetryFilePath));
+            var root  = doc.RootElement;
+            var parts = new List<string>();
+
+            foreach (var entry in s.TelemetryMapping)
+            {
+                if (!root.TryGetProperty(entry.JsonKey, out var prop)) continue;
+
+                double value;
+                if (prop.ValueKind == JsonValueKind.Number)
+                    value = prop.GetDouble();
+                else if (prop.ValueKind == JsonValueKind.String
+                      && double.TryParse(prop.GetString(),
+                             System.Globalization.NumberStyles.Float,
+                             System.Globalization.CultureInfo.InvariantCulture, out var parsed))
+                    value = parsed;
+                else continue;
+
+                var decimals  = Math.Max(0, entry.Decimals);
+                var formatted = value.ToString($"F{decimals}", System.Globalization.CultureInfo.InvariantCulture);
+                var label     = string.IsNullOrWhiteSpace(entry.Label) ? entry.JsonKey : entry.Label;
+                parts.Add($"{label}={formatted}{entry.Unit}");
+            }
+
+            return parts.Count > 0 ? string.Join(" ", parts) : null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

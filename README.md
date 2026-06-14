@@ -29,17 +29,24 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
-## 🆕 What's New in v1.12.3
+## 🆕 What's New in v1.12.4
 
-> 📄 [Full release notes](docs/release-notes/v1.12.3.md)
+> 📄 [Full release notes](docs/release-notes/v1.12.4.md)
+
+### ⚙️ Settings: Path Validation & Error Reporting
+- **DataPath and LogPath writability check** – both paths are probed on every settings page load and again after saving; problems appear as amber warnings directly above the Save button.
+- **Inline path syntax validation** – invalid characters, malformed paths, or paths that are too long are flagged in red immediately below the input field; the Save button is disabled until corrected.
+- **Resolved absolute path shown** – the effective absolute path is displayed below each input so you always know where files will actually land, even when a relative path like `data` is entered.
+- **DataPath restart notice** – a hint is shown when the entered value differs from the currently active path (change takes effect after restart).
 
 ### 🔧 Bug Fixes & Improvements
-- **AI Search**: Improved model selection and token management; messages are trimmed by token estimate to avoid rate limit errors. Warning shown when older messages were excluded, with a button to search the previous period.
-- **AI Search**: Date inputs replaced with a reusable DatePicker component.
-- **AI Search**: Bot commands and JSON system messages are excluded from AI search and summary context.
-- **Console Command Helper**: MH list and help popup added.
-- **NET Console**: Renamed from TLS Console; TLS option removed from settings.
-- **Bug fixes**: Echo-timeout warning cleared correctly on sibling-node relay echo; console lines processed correctly when the telnet line buffer wraps around.
+- **Console Command Helper**: `--setcont` toggle added to Debug group; state reset correctly on node disconnect.
+- **`--gateway` command**: `srv OE` and `srv DL` gateway server options added.
+- **`--weather` command**: returns full telemetry data correctly even when the Weather API provider is disabled.
+- **MH / Help popup**: data displayed correctly when the telnet line ring-buffer is at the 500-entry cap or wraps around.
+- **Message deduplication**: window extended to 30 minutes; cross-format duplicate detection added; dedup keys are now global across all configured nodes.
+- **Bot commands**: `--ping` and `--version` available without BotEnabled (v1.12.3 behaviour restored); `--help` available even when the bot is disabled.
+- **CallsignPopup**: name fields reset correctly when the displayed callsign changes.
 
 ---
 
@@ -1468,6 +1475,18 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 ---
 
  ## 📋 Changelog
+
+ ### v1.12.4 *(2026-06-14)*
+- **feat:** ⚙️ **Settings: path writability check** – DataPath and LogPath probed on page load and after save; amber warnings shown above Save button on failure
+- **feat:** ⚙️ **Settings: inline path syntax validation** – invalid paths flagged in red below the input; Save button disabled until corrected; resolved absolute path shown below each field
+- **feat:** 🖥️ **Console Command Helper: `--setcont` toggle** – added to Debug group
+- **feat:** 🌐 **`--gateway`: `srv OE` / `srv DL`** – OE and DL gateway server options added
+- **fix:** 🌤️ **`--weather` with Weather API disabled** – full telemetry string returned correctly
+- **fix:** 🖥️ **MH / Help popup** – data visible when telnet line ring-buffer is at 500-cap or wraps around
+- **fix:** 🔄 **Message deduplication** – 30-minute window, cross-format detection, dedup keys global across all configured nodes
+- **fix:** 🤖 **Bot commands** – `--ping` and `--version` available without BotEnabled (v1.12.3 behaviour restored); `--help` available with bot disabled
+- **fix:** 🖥️ **Console Command Helper** – state reset correctly on node disconnect
+- **fix:** 💬 **CallsignPopup** – name fields reset when callsign changes
 
  ### v1.12.3 *(2026-06-07)*
 - **feat:** 🔍 **AI Search: smarter token management** – messages trimmed by token estimate to avoid rate-limit errors; warning shown when older messages are excluded; "Search in previous period" button to continue the search further back
