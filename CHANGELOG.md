@@ -1,5 +1,23 @@
 ﻿# Changelog
 
+## [1.12.4] – 2026-06-14
+
+### Features
+- **Settings: path writability check** – DataPath and LogPath probed on page load and after save; amber warnings shown above the Save button on failure.
+- **Settings: inline path syntax validation** – invalid paths flagged in red below the input field; Save button disabled until corrected; resolved absolute path shown below each field.
+- **Console Command Helper**: `--setcont` toggle added to Debug group.
+- **`--gateway` command**: `srv OE` and `srv DL` gateway server options added.
+
+### Bugfixes
+- `--weather` command returns full telemetry data correctly when the Weather API provider is disabled.
+- MH / Help popup: data visible when the telnet line ring-buffer is at the 500-entry cap or wraps around.
+- Message deduplication: window extended to 30 minutes; cross-format detection added; dedup keys global across all configured nodes.
+- Bot commands: `--ping` and `--version` available without BotEnabled (v1.12.3 behaviour restored); `--help` available with bot disabled.
+- Console Command Helper: state reset correctly on node disconnect.
+- CallsignPopup: name fields reset correctly when the displayed callsign changes.
+
+---
+
 ## [1.12.3] – 2026-06-07
 
 ### Features

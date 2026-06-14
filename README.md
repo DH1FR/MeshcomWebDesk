@@ -1476,7 +1476,7 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
  ## 📋 Changelog
 
- ### v1.12.4 *(dev)*
+ ### v1.12.4 *(2026-06-14)*
 - **feat:** ⚙️ **Settings: path writability check** – DataPath and LogPath probed on page load and after save; amber warnings shown above Save button on failure
 - **feat:** ⚙️ **Settings: inline path syntax validation** – invalid paths flagged in red below the input; Save button disabled until corrected; resolved absolute path shown below each field
 - **feat:** 🖥️ **Console Command Helper: `--setcont` toggle** – added to Debug group
