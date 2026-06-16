@@ -9,6 +9,7 @@
       - ./logs:/app/logs        # persist log files
       - ./keys:/app/keys        # persist Data Protection keys
       - ./data:/app/data        # persist chat state (tabs, MH list, monitor)
+      - ./scripts:/app/scripts  # writable directory for external bot command scripts
       - ./appsettings.json:/app/appsettings.json:ro   # config (read-only)
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
@@ -19,6 +20,7 @@
       - Meshcom__MyCallsign=DH1FR-2
       - Meshcom__LogPath=/app/logs
       - Meshcom__DataPath=/app/data
+      - Meshcom__BotExternalCommandsPath=/app/scripts
       # Optional: env vars override appsettings.json - only set if needed:
       # - Meshcom__GroupFilterEnabled=true
       # - Meshcom__Groups__0=#OE

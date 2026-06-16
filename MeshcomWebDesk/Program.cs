@@ -134,6 +134,10 @@ builder.Configuration.AddJsonFile(overrideFile, optional: true, reloadOnChange: 
 
 TryCreateDirectory(logPath, "LogPath");
 
+var botExternalCommandsPath = meshcomSection.GetValue<string>("BotExternalCommandsPath") ?? string.Empty;
+if (!string.IsNullOrWhiteSpace(botExternalCommandsPath))
+    TryCreateDirectory(botExternalCommandsPath, "BotExternalCommandsPath");
+
 var logFile = Path.Combine(logPath, "MeshcomWebDesk-.log");
 
 // Enable Static Web Assets when running directly from the build output (not published).
