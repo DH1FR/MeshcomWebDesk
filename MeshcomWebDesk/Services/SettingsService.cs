@@ -195,13 +195,17 @@ public class SettingsService
                 ["AutoReplyEnabled"]    = s.AutoReplyEnabled,
                 ["AutoReplyText"]       = s.AutoReplyText,
                 ["ReplyDelaySeconds"]   = s.ReplyDelaySeconds,
-                ["BotEnabled"]         = s.BotEnabled,
-                ["BotCommands"]        = new JsonArray(s.BotCommands.Select(c => (JsonNode?)new JsonObject
+                ["BotEnabled"]                  = s.BotEnabled,
+                ["BotCommands"]                 = new JsonArray(s.BotCommands.Select(c => (JsonNode?)new JsonObject
                 {
-                    ["Name"]        = c.Name,
-                    ["Response"]    = c.Response,
-                    ["Description"] = c.Description
+                    ["Name"]             = c.Name,
+                    ["Response"]         = c.Response,
+                    ["Description"]      = c.Description,
+                    ["IsExternal"]       = c.IsExternal,
+                    ["ExternalFileName"] = c.ExternalFileName,
+                    ["TimeoutSeconds"]   = c.TimeoutSeconds,
                 }).ToArray()),
+                ["BotExternalCommandsPath"]     = s.BotExternalCommandsPath,
                 ["BeaconEnabled"]       = s.BeaconEnabled,
                 ["BeaconGroup"]         = s.BeaconGroup,
                 ["BeaconText"]          = s.BeaconText,
