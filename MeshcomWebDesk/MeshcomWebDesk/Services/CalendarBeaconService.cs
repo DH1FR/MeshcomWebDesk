@@ -17,6 +17,7 @@ public sealed class CalendarBeaconService : BackgroundService
     private readonly IOptionsMonitor<MeshcomSettings> _optionsMonitor;
     private readonly IMeshcomSender _sender;
     private readonly IMeshcomVariableExpander _expander;
+    private readonly ExternalProcessRunner _runner;
 
     /// <summary>
     /// Tracks slots that have already been sent this session.
@@ -28,12 +29,14 @@ public sealed class CalendarBeaconService : BackgroundService
         ILogger<CalendarBeaconService> logger,
         IOptionsMonitor<MeshcomSettings> optionsMonitor,
         IMeshcomSender sender,
-        IMeshcomVariableExpander expander)
+        IMeshcomVariableExpander expander,
+        ExternalProcessRunner runner)
     {
         _logger         = logger;
         _optionsMonitor = optionsMonitor;
         _sender         = sender;
         _expander       = expander;
+        _runner         = runner;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -71,7 +74,8 @@ public sealed class CalendarBeaconService : BackgroundService
         foreach (var entry in entries)
         {
             if (!entry.Enabled) continue;
-            if (string.IsNullOrWhiteSpace(entry.Group) || string.IsNullOrWhiteSpace(entry.Text)) continue;
+            if (string.IsNullOrWhiteSpace(entry.Group)) continue;
+            if (!entry.IsExternal && string.IsNullOrWhiteSpace(entry.Text)) continue;
 
             try
             {
@@ -154,7 +158,17 @@ public sealed class CalendarBeaconService : BackgroundService
         int?                daysUntil  = null,
         int?                hoursUntil = null)
     {
-        var text = BuildText(entry, eventDate, now, daysUntil, hoursUntil);
+        var text = await BuildTextAsync(entry, eventDate, now, daysUntil, hoursUntil);
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            if (entry.IsExternal)
+                _logger.LogWarning(
+                    "CalendarBeacon \"{Title}\": external process returned no text, skipping.",
+                    entry.Title);
+            return;
+        }
+
         var dest = entry.Group.TrimStart('#');
         var tab  = entry.Group.StartsWith('#') ? entry.Group : null;
 
@@ -166,30 +180,38 @@ public sealed class CalendarBeaconService : BackgroundService
     }
 
     /// <summary>
-    /// Expands all placeholders in the entry text, including calendar-specific ones.
+    /// Returns the beacon text: calls an external process when <see cref="CalendarBeaconEntry.IsExternal"/>
+    /// is true, otherwise expands placeholders in the static <see cref="CalendarBeaconEntry.Text"/>.
     /// </summary>
-    private string BuildText(
+    private async Task<string?> BuildTextAsync(
         CalendarBeaconEntry entry,
         DateOnly            eventDate,
         DateTime            now,
         int?                daysUntil,
         int?                hoursUntil)
     {
-        // First expand standard variables ({mycall}, {date}, {time}, …)
-        var text = _expander.ExpandVariables(entry.Text);
+        if (entry.IsExternal)
+        {
+            var settings = _optionsMonitor.CurrentValue;
+            var json     = ExternalProcessRunner.BuildCalendarBeaconPayload(
+                               entry, eventDate, daysUntil, hoursUntil, settings);
+            return await _runner.RunAsync(
+                       settings.BotExternalCommandsPath,
+                       entry.ExternalFileName, json, entry.TimeoutSeconds);
+        }
 
-        var eventDt    = eventDate.ToDateTime(entry.EventTimeParsed);
-        var dDays      = daysUntil  ?? (int)Math.Max(0, Math.Round((eventDt - now).TotalDays));
-        var dHours     = hoursUntil ?? (int)Math.Max(0, Math.Round((eventDt - now).TotalHours));
+        // Static text with placeholder expansion
+        var text    = _expander.ExpandVariables(entry.Text);
+        var eventDt = eventDate.ToDateTime(entry.EventTimeParsed);
+        var dDays   = daysUntil  ?? (int)Math.Max(0, Math.Round((eventDt - now).TotalDays));
+        var dHours  = hoursUntil ?? (int)Math.Max(0, Math.Round((eventDt - now).TotalHours));
 
-        text = text
-            .Replace("{title}",       entry.Title,                              StringComparison.OrdinalIgnoreCase)
-            .Replace("{event_date}",  eventDate.ToString("dd.MM.yyyy"),         StringComparison.OrdinalIgnoreCase)
-            .Replace("{event_time}",  entry.EventTime,                           StringComparison.OrdinalIgnoreCase)
-            .Replace("{days_until}",  dDays.ToString(),                         StringComparison.OrdinalIgnoreCase)
-            .Replace("{hours_until}", dHours.ToString(),                        StringComparison.OrdinalIgnoreCase);
-
-        return text;
+        return text
+            .Replace("{title}",       entry.Title,                      StringComparison.OrdinalIgnoreCase)
+            .Replace("{event_date}",  eventDate.ToString("dd.MM.yyyy"), StringComparison.OrdinalIgnoreCase)
+            .Replace("{event_time}",  entry.EventTime,                  StringComparison.OrdinalIgnoreCase)
+            .Replace("{days_until}",  dDays.ToString(),                 StringComparison.OrdinalIgnoreCase)
+            .Replace("{hours_until}", dHours.ToString(),                StringComparison.OrdinalIgnoreCase);
     }
 
     // ── Recurrence calculation ────────────────────────────────────────────

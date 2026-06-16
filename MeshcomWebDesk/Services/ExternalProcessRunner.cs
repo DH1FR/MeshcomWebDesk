@@ -1,46 +1,41 @@
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
-using Microsoft.Extensions.Options;
 using MeshcomWebDesk.Models;
 
 namespace MeshcomWebDesk.Services;
 
 /// <summary>
-/// Launches an external process from <see cref="MeshcomSettings.BotExternalCommandsPath"/>,
+/// Launches an external process from a caller-supplied directory,
 /// writes a JSON payload to its stdin, and returns whatever the process writes to stdout.
-/// Used by bot commands with <see cref="BotCommandEntry.IsExternal"/> = true.
-/// Shared infrastructure — also intended for external calendar-beacon text generation (not yet implemented).
+/// Used by bot commands (<see cref="BotCommandEntry.IsExternal"/> = true) and
+/// calendar beacon entries (<see cref="CalendarBeaconEntry.IsExternal"/> = true).
 /// </summary>
 public sealed class ExternalProcessRunner
 {
     private static readonly HashSet<string> SupportedExtensions =
         [".exe", ".ps1", ".bat", ".cmd", ".py"];
 
-    private readonly IOptionsMonitor<MeshcomSettings> _settings;
     private readonly ILogger<ExternalProcessRunner> _logger;
 
-    public ExternalProcessRunner(
-        IOptionsMonitor<MeshcomSettings> settings,
-        ILogger<ExternalProcessRunner> logger)
+    public ExternalProcessRunner(ILogger<ExternalProcessRunner> logger)
     {
-        _settings = settings;
-        _logger   = logger;
+        _logger = logger;
     }
 
     /// <summary>
-    /// Launches the named file from the configured external-commands directory,
+    /// Launches <paramref name="fileName"/> from <paramref name="directory"/>,
     /// passes <paramref name="jsonPayload"/> on stdin (UTF-8), and returns trimmed stdout.
     /// Returns <c>null</c> when the process produces no output, exits with a non-zero code,
     /// or times out.
     /// </summary>
-    public async Task<string?> RunAsync(string fileName, string jsonPayload, int timeoutSeconds)
+    public async Task<string?> RunAsync(string directory, string fileName, string jsonPayload, int timeoutSeconds)
     {
-        var dir = _settings.CurrentValue.BotExternalCommandsPath;
+        var dir = directory;
 
         if (string.IsNullOrWhiteSpace(dir))
         {
-            _logger.LogWarning("ExternalProcessRunner: BotExternalCommandsPath is not configured.");
+            _logger.LogWarning("ExternalProcessRunner: scripts directory is not configured.");
             return null;
         }
 
@@ -148,6 +143,51 @@ public sealed class ExternalProcessRunner
         psi.WorkingDirectory           = workingDir;
 
         return psi;
+    }
+
+    /// <summary>
+    /// Serialises the calendar-beacon JSON payload written to the external process stdin.
+    /// </summary>
+    public static string BuildCalendarBeaconPayload(
+        CalendarBeaconEntry entry,
+        DateOnly            eventDate,
+        int?                daysUntil,
+        int?                hoursUntil,
+        MeshcomSettings     settings)
+    {
+        var eventDt = eventDate.ToDateTime(entry.EventTimeParsed);
+        var payload = new
+        {
+            @event = new
+            {
+                title      = entry.Title,
+                date       = eventDate.ToString("yyyy-MM-dd"),
+                time       = entry.EventTime,
+                dateTime   = eventDt.ToString("yyyy-MM-ddTHH:mm:ss"),
+                daysUntil,
+                hoursUntil,
+                group      = entry.Group,
+                recurrence = entry.RecurrenceType.ToString(),
+            },
+            station = new
+            {
+                myCall         = settings.MyCallsign,
+                version        = System.Reflection.Assembly
+                                     .GetExecutingAssembly()
+                                     .GetName().Version?.ToString(3),
+                txPowerDbm     = settings.TxPowerDbm,
+                frequencyMhz   = settings.FrequencyMhz,
+                antennaGainDbi = settings.AntennaGainDbi,
+                antennaType    = settings.AntennaType,
+                antennaHeightM = settings.AntennaHeightM,
+            },
+        };
+
+        return JsonSerializer.Serialize(payload, new JsonSerializerOptions
+        {
+            WriteIndented          = false,
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+        });
     }
 
     /// <summary>

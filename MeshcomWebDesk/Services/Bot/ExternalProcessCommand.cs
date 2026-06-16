@@ -36,7 +36,9 @@ internal sealed class ExternalProcessCommand : IBotCommand
         var json = ExternalProcessRunner.BuildBotPayload(
             _entry.Name, args, senderCallsign, context, _settings.CurrentValue);
 
-        var result = await _runner.RunAsync(_entry.ExternalFileName, json, _entry.TimeoutSeconds);
+        var result = await _runner.RunAsync(
+            _settings.CurrentValue.BotExternalCommandsPath,
+            _entry.ExternalFileName, json, _entry.TimeoutSeconds);
 
         return result ?? string.Empty;
     }

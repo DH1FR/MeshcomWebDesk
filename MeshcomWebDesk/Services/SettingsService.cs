@@ -225,7 +225,10 @@ public class SettingsService
                     ["ReferenceDate"]     = e.ReferenceDate,
                     ["AnnounceLeadDays"]  = e.AnnounceLeadDays,
                     ["AnnounceLeadHours"] = e.AnnounceLeadHours,
-                    ["AnnounceAtEvent"]   = e.AnnounceAtEvent
+                    ["AnnounceAtEvent"]   = e.AnnounceAtEvent,
+                    ["IsExternal"]        = e.IsExternal,
+                    ["ExternalFileName"]  = e.ExternalFileName,
+                    ["TimeoutSeconds"]    = e.TimeoutSeconds
                 }).ToArray()),
                 ["TelemetryEnabled"]       = s.TelemetryEnabled,
                 ["TelemetryFilePath"]      = s.TelemetryFilePath,
