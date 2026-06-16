@@ -132,10 +132,17 @@ public class MeshcomSettings
 
     /// <summary>
     /// User-defined bot commands appended to the built-in ones.
-    /// Each entry maps a --name to a static response text.
+    /// Each entry maps a --name to a static response text or an external process.
     /// Response text supports the same {variable} placeholders as AutoReplyText.
     /// </summary>
     public List<BotCommandEntry> BotCommands { get; set; } = [];
+
+    /// <summary>
+    /// Directory that contains executable files for external bot commands.
+    /// Only files inside this directory may be executed (no path traversal).
+    /// Supported extensions: .exe, .ps1, .bat, .cmd, .py.
+    /// </summary>
+    public string BotExternalCommandsPath { get; set; } = string.Empty;
 
     /// <summary>
     /// When true, a beacon message is sent periodically to <see cref="BeaconGroup"/>.
