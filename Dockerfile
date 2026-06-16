@@ -32,15 +32,15 @@ COPY --from=build /app/publish .
 
 # Pre-create writable data directories so the app starts cleanly even when
 # running as a non-root user or before a bind-mount is populated by Docker.
-RUN mkdir -p /app/logs /app/data /app/keys /app/scripts \
-    && chmod 777 /app/logs /app/data /app/keys /app/scripts
+RUN mkdir -p /app/logs /app/data /app/keys /app/bot-scripts \
+    && chmod 777 /app/logs /app/data /app/keys /app/bot-scripts
 
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS=http://+:5162
 ENV DOTNET_RUNNING_IN_CONTAINER=true
 ENV Meshcom__LogPath=/app/logs
 ENV Meshcom__DataPath=/app/data
-ENV Meshcom__BotExternalCommandsPath=/app/scripts
+ENV Meshcom__BotExternalCommandsPath=/app/bot-scripts
 ENV TZ=Europe/Berlin
 
 EXPOSE 5162

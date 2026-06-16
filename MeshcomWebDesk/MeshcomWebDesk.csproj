@@ -39,7 +39,7 @@
     <None Update="data\**\*">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
-    <None Update="scripts\**\*">
+    <None Update="bot-scripts\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

@@ -404,7 +404,7 @@ Automatically announces recurring events (e.g. club meetings) to a configured gr
   }
   ```
 
-  **Example Python script** (ships as `scripts/bot-command-example.py` next to the executable; Docker: inside the `./scripts` volume):
+  **Example Python script** (ships as `bot-scripts/bot-command-example.py` next to the executable; Docker: inside the `./bot-scripts` volume):
   ```python
   import json, sys
 
@@ -1317,9 +1317,9 @@ environment:
 > **Settings saved via the UI** are written to `DataPath/appsettings.override.json` (inside the `./data` volume).  
 > The `appsettings.json` mount stays **read-only** (`:ro`) – no container rebuild needed after UI changes.
 
-> **External bot command scripts** are placed in `./scripts/` on the host (mapped to `/app/scripts` in the container).  
-> The example script `bot-command-example.py` is included in the image under `/app/scripts/` and is available at startup.  
-> To persist your own scripts across container rebuilds, copy them to the host `./scripts/` directory before running `docker compose up -d`.
+> **External bot command scripts** are placed in `./bot-scripts/` on the host (mapped to `/app/bot-scripts` in the container).  
+> The example script `bot-command-example.py` is included in the image under `/app/bot-scripts/` and is available at startup.  
+> To persist your own scripts across container rebuilds, copy them to the host `./bot-scripts/` directory before running `docker compose up -d`.
 
 After any change to `docker-compose.yml` or `appsettings.json`:
 
