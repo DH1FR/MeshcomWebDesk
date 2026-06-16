@@ -346,6 +346,58 @@ Automatically announces recurring events (e.g. club meetings) to a configured gr
   - `Name` – command name without `--` (e.g. `info`)
   - Response – reply text; supports all {variable} placeholders ({mycall}, {mylocator}, {callsign}, {locator}, {version}, {rssi}, {snr}, {hw}, {route}, {hops}, {srctype}, {srctype-label}, {date}, {time}, {telemetry}, {last-qso}, {my-tx-power}, {my-eirp}, {my-antenna}, {my-antenna-type}, {my-antenna-height}, {my-freq})
   - `Description` – optional short text shown in `--help` output
+- **External process commands** ⚙️ – tick the **⚙️ External** checkbox in the command table to run an arbitrary executable or script instead of returning a static response:
+  - The script receives a **JSON payload on stdin** (UTF-8) and writes the reply to **stdout**
+  - **Empty stdout** → no reply is sent (useful for conditional responses)
+  - **Exit code ≠ 0** → error is logged, no reply is sent
+  - All scripts must reside in the **External Commands Directory** (`BotExternalCommandsPath`); path traversal is blocked
+  - Supported file types: `.exe`, `.ps1` (PowerShell), `.bat` / `.cmd`, `.py` (Python)
+  - The reply may still contain `{variable}` placeholders – they are expanded by the WebDesk after the script exits
+  - Configurable **timeout** per command (default 10 s)
+
+  **JSON payload written to stdin:**
+  ```json
+  {
+    "command": "digi",
+    "args":    ["arg1", "arg2"],
+    "sender":  "OE5XYZ-7",
+    "message": {
+      "rssi": -87, "snr": 4.2,
+      "route": "OE1XAR-62,DB0TAW-13", "hops": 2,
+      "srcType": "lora", "timestamp": "2026-06-16T14:32:00",
+      "lat": 48.2, "lon": 16.3, "alt": 220
+    },
+    "station": {
+      "myCall": "OE5ABC-1", "version": "1.13.0",
+      "txPowerDbm": 20, "frequencyMhz": 433.175,
+      "antennaGainDbi": 2.15, "antennaType": "Dipol", "antennaHeightM": 5.0
+    }
+  }
+  ```
+
+  **Example Python script** (`scripts/examples/bot-command-example.py`):
+  ```python
+  import json, sys
+
+  payload = json.loads(sys.stdin.read())
+  sender  = payload["sender"]
+  args    = payload.get("args", [])
+  rssi    = (payload.get("message") or {}).get("rssi")
+
+  reply = f"Hallo {sender}! RSSI: {rssi} dBm. Args: {args}"
+  print(reply, end="")
+  ```
+
+  **Settings example:**
+
+  | Field | Value |
+  |---|---|
+  | Name | `digi` |
+  | ⚙️ External | ✓ |
+  | Filename | `bot-command-example.py` |
+  | Timeout (s) | `10` |
+  | Description | `Digipeater info` |
+
 - **Test button** in Settings – enter any command (e.g. `--ping`) and an optional sender callsign; the bot executes the command locally (dry-run, no UDP send) and shows the exact reply including all expanded `{variable}` placeholders
 - **📤 Export / 📥 Import** – export all user-defined bot commands as `MeshComWebDesk-bot-commands.json` (browser download); import a previously exported or hand-edited file to replace the current list; filename editable before export
 - **Developer extension**: implement `IBotCommand` and register via `services.AddSingleton<IBotCommand, MyCommand>()` in `Program.cs`
@@ -585,7 +637,7 @@ Clicking it opens a modal dialog with **four tabs**:
   | **Console** | `TelnetEnabled`, `ConsoleMode`, `TelnetPort`, `TelnetPassword`, `TelnetCertThumbprint`, `SerialPortName`, `SerialBaudRate` |
   | **Chat & Groups** | `Groups`, `WatchCallsigns`, watch options, `GroupLabels`, `OwnMessagesAlignLeft`, `TxCooldownSeconds`, `GatewayHighlightEnabled` |
   | **Auto-Reply** | `AutoReplyEnabled`, `AutoReplyText` |
-  | **Bot** | `BotEnabled`, all user-defined bot commands |
+  | **Bot** | `BotEnabled`, `BotExternalCommandsPath`, all user-defined bot commands (incl. external process fields) |
   | **Quick Texts** | All quick-text entries |
   | **Beacon** | `BeaconEnabled`, `BeaconGroup`, `BeaconText`, `BeaconIntervalHours` |
   | **Telemetry** | `TelemetryEnabled`, `TelemetryFilePath`, `TelemetryGroup`, `TelemetryScheduleHours`, `TelemetryMapping`, `TelemetryApiEnabled`, `TelemetryApiKey` |
@@ -712,15 +764,17 @@ MeshcomWebDesk/              ← Blazor Server (ASP.NET Core host)
       WebhookService.cs        ← HTTP POST fire-and-forget on message / position / telemetry events
       QrzService.cs             ← QRZ.com XML API: session login, callsign lookup, in-memory cache
       QsoSummaryService.cs      ← AI-based QSO summary: reads messages from MySQL, calls AI API, stores result in qso_summaries table; token usage tracking; balance check
+      ExternalProcessRunner.cs  ← Singleton: launches external scripts from BotExternalCommandsPath; JSON on stdin → reply from stdout; path-traversal guard, timeout, .exe/.ps1/.bat/.cmd/.py support
       Bot/
-        IBotCommand.cs         ← Interface for all bot commands (Name, Description, ExecuteAsync)
-        BotCommandService.cs   ← Dispatcher: parses --name [args], builds --help, hot-reloads user commands from config; normalises bare "ping" keyword
-        VersionCommand.cs      ← --version: returns app version
-        TimeCommand.cs         ← --time: returns current date/time
-        MhCommand.cs           ← --mh: returns MH list count + callsigns
-        PingCommand.cs         ← --ping / bare "ping": pong with RSSI, SNR, relay route and receive timestamp
-        EchoCommand.cs         ← --echo <text>: echoes arguments back to the sender
-        ConfiguredBotCommand.cs← Wrapper for BotCommands entries from appsettings.json
+        IBotCommand.cs          ← Interface for all bot commands (Name, Description, ExecuteAsync)
+        BotCommandService.cs    ← Dispatcher: parses --name [args], builds --help, hot-reloads user commands from config; normalises bare "ping" keyword
+        VersionCommand.cs       ← --version: returns app version
+        TimeCommand.cs          ← --time: returns current date/time
+        MhCommand.cs            ← --mh: returns MH list count + callsigns
+        PingCommand.cs          ← --ping / bare "ping": pong with RSSI, SNR, relay route and receive timestamp
+        EchoCommand.cs          ← --echo <text>: echoes arguments back to the sender
+        ConfiguredBotCommand.cs ← Wrapper for static BotCommands entries from appsettings.json
+        ExternalProcessCommand.cs← IBotCommand implementation that delegates to ExternalProcessRunner
       Database/
         IMonitorDataSink.cs    ← Interface: WriteAsync(MeshcomMessage)
         MySqlMonitorSink.cs    ← MySQL / MariaDB write sink (MySqlConnector)
@@ -757,9 +811,12 @@ All settings in `MeshcomWebDesk/appsettings.json`:
   "DataPath":           "C:\\Temp\\MeshcomData", // persistent state directory
   "AutoReplyEnabled":   false,           // send auto-reply on first contact
   "AutoReplyText":      "...",           // auto-reply text; {version} → app version
-  "BotEnabled":         false,           // enable remote command bot (-- prefix)
+  "BotEnabled":               false,     // enable remote command bot (-- prefix)
+  "BotExternalCommandsPath":  "scripts", // directory for external bot command scripts (relative or absolute)
   "BotCommands": [                       // user-defined bot commands (built-in: --help/--version/--time/--mh)
-    { "Name": "info", "Response": "QTH: Wien, HW: {hw}, 73 de {mycall}!", "Description": "Stationsinfo" }
+    { "Name": "info",  "Response": "QTH: Wien, HW: {hw}, 73 de {mycall}!", "Description": "Stationsinfo" },
+    // External process example (IsExternal=true → ExternalFileName used instead of Response):
+    { "Name": "digi",  "IsExternal": true, "ExternalFileName": "bot-command-example.py", "TimeoutSeconds": 10, "Description": "Digipeater info" }
   ],
   "BeaconEnabled":      false,           // send periodic beacon (Bake)
   "BeaconGroup":        "#262",          // target group for beacon
