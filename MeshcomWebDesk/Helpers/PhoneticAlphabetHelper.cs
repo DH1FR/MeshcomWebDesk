@@ -26,10 +26,11 @@ public static class PhoneticAlphabetHelper
     // Single digits spoken in the respective UI language
     private static readonly Dictionary<string, string[]> Digits = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["de"] = ["Null", "Eins", "Zwei", "Drei", "Vier", "Fünf", "Sechs", "Sieben", "Acht", "Neun"],
-        ["en"] = ["Zero", "One",  "Two",  "Three","Four", "Five", "Six",   "Seven",  "Eight","Nine"],
-        ["it"] = ["Zero", "Uno",  "Due",  "Tre",  "Quattro","Cinque","Sei","Sette",  "Otto", "Nove"],
-        ["es"] = ["Cero", "Uno",  "Dos",  "Tres", "Cuatro","Cinco","Seis","Siete",  "Ocho", "Nueve"],
+        ["de"] = ["Null", "Eins", "Zwei", "Drei", "Vier",    "Fünf",  "Sechs", "Sieben", "Acht", "Neun"],
+        ["en"] = ["Zero", "One",  "Two",  "Three","Four",    "Five",  "Six",   "Seven",  "Eight","Nine"],
+        ["fr"] = ["Zéro", "Un",   "Deux", "Trois","Quatre",  "Cinq",  "Six",   "Sept",   "Huit", "Neuf"],
+        ["it"] = ["Zero", "Uno",  "Due",  "Tre",  "Quattro", "Cinque","Sei",   "Sette",  "Otto", "Nove"],
+        ["es"] = ["Cero", "Uno",  "Dos",  "Tres", "Cuatro",  "Cinco", "Seis",  "Siete",  "Ocho", "Nueve"],
     };
 
     // Numbers 1–99 spoken as a whole word per language (index = number)
@@ -68,6 +69,7 @@ public static class PhoneticAlphabetHelper
     {
         ["de"] = "Strich",
         ["en"] = "Stroke",
+        ["fr"] = "Tiret",
         ["it"] = "Tratto",
         ["es"] = "Guión",
     };
@@ -123,6 +125,10 @@ public static class PhoneticAlphabetHelper
     /// <summary>Speaks a number 1–99 as a whole word in the given language.</summary>
     private static string SpellNumber(int n, string lang)
     {
+        // French has irregular 70-99 that don't fit the tens-table pattern
+        if (lang.Equals("fr", StringComparison.OrdinalIgnoreCase))
+            return SpellNumberFrench(n);
+
         var teens = Teens.TryGetValue(lang, out var t) ? t : Teens["de"];
         var tens  = Tens.TryGetValue(lang,  out var x) ? x : Tens["de"];
 
@@ -142,6 +148,37 @@ public static class PhoneticAlphabetHelper
             "es" => ComposeSpanish(n, tenPart, unitPart),
             _    => $"{tenPart} {unitPart}"
         };
+    }
+
+    private static string SpellNumberFrench(int n)
+    {
+        // 0-19 spoken directly
+        string[] fr = ["", "Un", "Deux", "Trois", "Quatre", "Cinq", "Six", "Sept", "Huit", "Neuf",
+                        "Dix", "Onze", "Douze", "Treize", "Quatorze", "Quinze", "Seize",
+                        "Dix-sept", "Dix-huit", "Dix-neuf"];
+        if (n <= 19) return fr[n];
+
+        // 20-69: Vingt/Trente/…  [+ -et-Un for x1, + -Deux/Trois/… otherwise]
+        if (n < 70)
+        {
+            string[] tensNames = ["", "", "Vingt", "Trente", "Quarante", "Cinquante", "Soixante"];
+            var ten  = tensNames[n / 10];
+            var unit = n % 10;
+            if (unit == 0) return ten;
+            if (unit == 1) return $"{ten}-et-Un";
+            return $"{ten}-{fr[unit]}";
+        }
+
+        // 70-79: Soixante + dix…dix-neuf  (71 = Soixante-et-Onze)
+        if (n < 80)
+            return n == 71 ? "Soixante-et-Onze" : $"Soixante-{fr[n - 60]}";
+
+        // 80: Quatre-vingts; 81-89: Quatre-vingt-Un…
+        if (n == 80) return "Quatre-vingts";
+        if (n < 90)  return $"Quatre-vingt-{fr[n - 80]}";
+
+        // 90-99: Quatre-vingt-Dix…Quatre-vingt-Dix-neuf
+        return $"Quatre-vingt-{fr[n - 80]}";
     }
 
     // Italian: venti+uno = ventuno (drop trailing vowel of tens before vowel)

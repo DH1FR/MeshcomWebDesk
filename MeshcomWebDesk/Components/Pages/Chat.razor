@@ -1321,9 +1321,13 @@
         _lastDirectSpeechTime[callsign] = now;
         var phonetic  = PhoneticAlphabetHelper.Spell(callsign, Loc.Current);
         var firstName = QrzFirstName(callsign);
-        var text = Loc.T(
-            $"Nachricht von {phonetic}{(firstName != null ? ". " + firstName : "")}",
-            $"Message from {phonetic}{(firstName != null ? ". " + firstName : "")}");
+        var sfx  = firstName != null ? ". " + firstName : "";
+        var text = Loc.TtsT(
+            $"Nachricht von {phonetic}{sfx}",
+            $"Message from {phonetic}{sfx}",
+            $"Message de {phonetic}{sfx}",
+            $"Messaggio da {phonetic}{sfx}",
+            $"Mensaje de {phonetic}{sfx}");
         // Direct message has highest priority – prepend before any watchlist entries
         var existing = _pendingSpeech.ToArray();
         _pendingSpeech.Clear();
@@ -1893,9 +1897,12 @@
                     {
                         _watchlistLastTts[callsign] = DateTime.Now;
                         var phonetic = PhoneticAlphabetHelper.Spell(callsign, Loc.Current);
-                        _pendingSpeech.Enqueue(Loc.T(
+                        _pendingSpeech.Enqueue(Loc.TtsT(
                             $"{phonetic} ist aktiv",
-                            $"{phonetic} received"));
+                            $"{phonetic} received",
+                            $"{phonetic} reçu",
+                            $"{phonetic} ricevuto",
+                            $"{phonetic} recibido"));
                     }
                 }
                 StateHasChanged();
@@ -1932,9 +1939,12 @@
                 {
                     var phonetic = PhoneticAlphabetHelper.Spell(callsign, Loc.Current);
                     var groupSpelled = string.Join(" ", group.ToCharArray());
-                    _pendingSpeech.Enqueue(Loc.T(
+                    _pendingSpeech.Enqueue(Loc.TtsT(
                         $"C Q C Q von {phonetic} in Gruppe {groupSpelled}",
-                        $"C Q C Q from {phonetic} in group {groupSpelled}"));
+                        $"C Q C Q from {phonetic} in group {groupSpelled}",
+                        $"C Q C Q de {phonetic} dans le groupe {groupSpelled}",
+                        $"C Q C Q da {phonetic} nel gruppo {groupSpelled}",
+                        $"C Q C Q de {phonetic} en el grupo {groupSpelled}"));
                 }
                 StateHasChanged();
             });
