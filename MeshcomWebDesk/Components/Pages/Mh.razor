@@ -84,21 +84,21 @@
             <table class="mh-table">
                 <thead>
                     <tr>
-                        <th>@Loc.T("Rufzeichen", "Callsign")</th>
+                        <th class="mh-th-sort" @onclick='() => SortBy("Callsign")'>@Loc.T("Rufzeichen", "Callsign")@SortIcon("Callsign")</th>
                         @if (SettingsOptions.Value.Qrz.Enabled)
                         {
-                            <th>@Loc.T("Name / Ort", "Name / Location")</th>
+                            <th class="mh-th-sort" @onclick='() => SortBy("QrzName")'>@Loc.T("Name / Ort", "Name / Location")@SortIcon("QrzName")</th>
                         }
-                        <th>@Loc.T("Zuletzt gehört", "Last Heard")</th>
-                        <th class="col-center">@Loc.T("Anz.", "Cnt.")</th>
+                        <th class="mh-th-sort" @onclick='() => SortBy("LastHeard")'>@Loc.T("Zuletzt gehört", "Last Heard")@SortIcon("LastHeard")</th>
+                        <th class="col-center mh-th-sort" @onclick='() => SortBy("MessageCount")'>@Loc.T("Anz.", "Cnt.")@SortIcon("MessageCount")</th>
                         <th>@Loc.T("Letzte Nachricht", "Last Message")</th>
                         <th>@Loc.T("GPS-Position", "GPS Position")</th>
-                        <th class="col-center">@Loc.T("Höhe", "Alt.")</th>
-                        <th class="col-center">@Loc.T("Entfernung", "Distance")</th>
-                        <th class="col-center">🔋</th>
-                        <th class="col-center">RSSI</th>
-                        <th class="col-center">SNR</th>
-                        <th class="col-center" title="Hops (0=direkt)">🔁</th>
+                        <th class="col-center mh-th-sort" @onclick='() => SortBy("Altitude")'>@Loc.T("Höhe", "Alt.")@SortIcon("Altitude")</th>
+                        <th class="col-center mh-th-sort" @onclick='() => SortBy("Distance")'>@Loc.T("Entfernung", "Distance")@SortIcon("Distance")</th>
+                        <th class="col-center mh-th-sort" @onclick='() => SortBy("Battery")'>🔋@SortIcon("Battery")</th>
+                        <th class="col-center mh-th-sort" @onclick='() => SortBy("Rssi")'>RSSI@SortIcon("Rssi")</th>
+                        <th class="col-center mh-th-sort" @onclick='() => SortBy("Snr")'>SNR@SortIcon("Snr")</th>
+                        <th class="col-center mh-th-sort" title="Hops (0=direkt)" @onclick='() => SortBy("HopCount")'>🔁@SortIcon("HopCount")</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -324,10 +324,55 @@
     private string? _cardCallsign;
     private readonly Dictionary<string, QrzInfo?> _qrzData = new(StringComparer.OrdinalIgnoreCase);
 
-    private IReadOnlyList<HeardStation> FilteredStations =>
-        string.IsNullOrWhiteSpace(_searchText)
-            ? _stations
-            : _stations.Where(MatchesSearch).ToList();
+    private IReadOnlyList<HeardStation> FilteredStations
+    {
+        get
+        {
+            IEnumerable<HeardStation> source = string.IsNullOrWhiteSpace(_searchText)
+                ? _stations
+                : _stations.Where(MatchesSearch);
+            return ApplySort(source).ToList();
+        }
+    }
+
+    private IEnumerable<HeardStation> ApplySort(IEnumerable<HeardStation> source)
+    {
+        var asc = ChatService.MhSortAscending;
+        return ChatService.MhSortColumn switch
+        {
+            "Callsign"     => asc ? source.OrderBy(s => s.Callsign)      : source.OrderByDescending(s => s.Callsign),
+            "QrzName"      => asc ? source.OrderBy(QrzSortKey)           : source.OrderByDescending(QrzSortKey),
+            "MessageCount" => asc ? source.OrderBy(s => s.MessageCount)  : source.OrderByDescending(s => s.MessageCount),
+            "Altitude"     => asc ? source.OrderBy(s => s.Altitude)      : source.OrderByDescending(s => s.Altitude),
+            "Distance"     => asc ? source.OrderBy(CalcDistance)         : source.OrderByDescending(CalcDistance),
+            "Battery"      => asc ? source.OrderBy(s => s.Battery)       : source.OrderByDescending(s => s.Battery),
+            "Rssi"         => asc ? source.OrderBy(s => s.LastRssi)      : source.OrderByDescending(s => s.LastRssi),
+            "Snr"          => asc ? source.OrderBy(s => s.LastSnr)       : source.OrderByDescending(s => s.LastSnr),
+            "HopCount"     => asc ? source.OrderBy(s => s.HopCount)      : source.OrderByDescending(s => s.HopCount),
+            _              => asc ? source.OrderBy(s => s.LastHeard)     : source.OrderByDescending(s => s.LastHeard),
+        };
+    }
+
+    private string QrzSortKey(HeardStation s) =>
+        _qrzData.TryGetValue(s.Callsign, out var q) && q is not null
+            ? $"{q.FirstName} {q.Location}".Trim()
+            : string.Empty;
+
+    private void SortBy(string column)
+    {
+        if (ChatService.MhSortColumn == column)
+            ChatService.MhSortAscending = !ChatService.MhSortAscending;
+        else
+        {
+            ChatService.MhSortColumn = column;
+            ChatService.MhSortAscending = column is "Callsign" or "QrzName" or "HopCount";
+        }
+        RebuildSearchCache();
+    }
+
+    private string SortIcon(string column) =>
+        ChatService.MhSortColumn != column ? "" :
+        ChatService.MhSortAscending ? " ▲" : " ▼";
 
     private void RebuildSearchCache() =>
         _cachedFilteredStations = FilteredStations;
