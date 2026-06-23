@@ -18,18 +18,21 @@ public class BotCommandService
     private readonly ExternalProcessRunner _runner;
     private readonly IOptionsMonitor<MeshcomSettings> _settingsMonitor;
     private readonly LanguageService _lang;
+    private readonly AppLicenseService _license;
     private MeshcomSettings _settings;
 
     public BotCommandService(
         IEnumerable<IBotCommand> builtinCommands,
         IOptionsMonitor<MeshcomSettings> settings,
         LanguageService lang,
-        ExternalProcessRunner runner)
+        ExternalProcessRunner runner,
+        AppLicenseService license)
     {
         _builtinCommands = builtinCommands.ToList();
         _runner          = runner;
         _settingsMonitor = settings;
         _lang            = lang;
+        _license         = license;
         _settings        = settings.CurrentValue;
         settings.OnChange(s => _settings = s);
     }
@@ -68,7 +71,7 @@ public class BotCommandService
             _settings.BotCommands
                 .Where(e => e is not null && !string.IsNullOrWhiteSpace(e.Name))
                 .Select(e => e.IsExternal
-                    ? (IBotCommand)new ExternalProcessCommand(e, _runner, _settingsMonitor)
+                    ? (IBotCommand)new ExternalProcessCommand(e, _runner, _settingsMonitor, _license)
                     : new ConfiguredBotCommand(e)));
 
     /// <summary>
