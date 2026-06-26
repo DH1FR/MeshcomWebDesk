@@ -29,24 +29,28 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
-## 🆕 What's New in v1.12.4
+## 🆕 What's New in v1.13.0
 
-> 📄 [Full release notes](docs/release-notes/v1.12.4.md)
+### 🤖 External Bot Commands
+- Bot commands can now delegate execution to an external process (`.exe`, `.ps1`, `.bat`, `.cmd`, `.py`).
+- The process receives a JSON payload on stdin and returns the reply text on stdout.
+- Configurable timeout per command; Python example script included in `bot-scripts/`.
+- **License required** – a 🔒 badge is shown in Settings when configured without a valid license.
 
-### ⚙️ Settings: Path Validation & Error Reporting
-- **DataPath and LogPath writability check** – both paths are probed on every settings page load and again after saving; problems appear as amber warnings directly above the Save button.
-- **Inline path syntax validation** – invalid characters, malformed paths, or paths that are too long are flagged in red immediately below the input field; the Save button is disabled until corrected.
-- **Resolved absolute path shown** – the effective absolute path is displayed below each input so you always know where files will actually land, even when a relative path like `data` is entered.
-- **DataPath restart notice** – a hint is shown when the entered value differs from the currently active path (change takes effect after restart).
+### 📅 External Calendar Beacon Processes
+- Calendar beacon entries can now also generate their text via an external process.
+- Full event context (title, date, days/hours until event) is passed as JSON payload.
+- **License required** – same license gate as external bot commands.
 
-### 🔧 Bug Fixes & Improvements
-- **Console Command Helper**: `--setcont` toggle added to Debug group; state reset correctly on node disconnect.
-- **`--gateway` command**: `srv OE` and `srv DL` gateway server options added.
-- **`--weather` command**: returns full telemetry data correctly even when the Weather API provider is disabled.
-- **MH / Help popup**: data displayed correctly when the telnet line ring-buffer is at the 500-entry cap or wraps around.
-- **Message deduplication**: window extended to 30 minutes; cross-format duplicate detection added; dedup keys are now global across all configured nodes.
-- **Bot commands**: `--ping` and `--version` available without BotEnabled (v1.12.3 behaviour restored); `--help` available even when the bot is disabled.
-- **CallsignPopup**: name fields reset correctly when the displayed callsign changes.
+### 🗣️ Multilingual Voice Announcements
+- Voice announcements now available in French, Italian, and Spanish (in addition to German and English).
+
+### 📋 MH List: Persistent Column Sorting
+- Sort column and direction are remembered across page reloads and sessions.
+
+### 🔧 Bug Fixes
+- **Linux settings reload** – `IConfiguration` force-reloaded after save; fixes race condition where new values were not picked up immediately.
+- **MQTT group destination** – leading `#` stripped from group destinations to prevent malformed topic paths.
 
 ---
 
@@ -1566,6 +1570,14 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 ---
 
  ## 📋 Changelog
+
+ ### v1.13.0 *(2026-06-26)*
+- **feat:** 🤖 **External bot commands** – delegate bot command execution to external processes (`.exe`, `.ps1`, `.bat`, `.cmd`, `.py`); JSON payload on stdin, reply text on stdout; configurable timeout; license required
+- **feat:** 📅 **External calendar beacon processes** – calendar beacons can generate text via external process; full event context passed as JSON; license required
+- **feat:** 🗣️ **Multilingual voice announcements** – French, Italian, Spanish added alongside German and English
+- **feat:** 📋 **MH list persistent column sorting** – sort state remembered across reloads and sessions
+- **fix:** 🔄 **Linux settings reload** – `IConfiguration` force-reloaded after save to fix race condition
+- **fix:** 📡 **MQTT group destination** – leading `#` stripped to prevent malformed topic paths
 
  ### v1.12.4 *(2026-06-14)*
 - **feat:** ⚙️ **Settings: path writability check** – DataPath and LogPath probed on page load and after save; amber warnings shown above Save button on failure
