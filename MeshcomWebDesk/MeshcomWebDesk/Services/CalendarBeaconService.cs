@@ -18,6 +18,7 @@ public sealed class CalendarBeaconService : BackgroundService
     private readonly IMeshcomSender _sender;
     private readonly IMeshcomVariableExpander _expander;
     private readonly ExternalProcessRunner _runner;
+    private readonly AppLicenseService _license;
 
     /// <summary>
     /// Tracks slots that have already been sent this session.
@@ -30,13 +31,15 @@ public sealed class CalendarBeaconService : BackgroundService
         IOptionsMonitor<MeshcomSettings> optionsMonitor,
         IMeshcomSender sender,
         IMeshcomVariableExpander expander,
-        ExternalProcessRunner runner)
+        ExternalProcessRunner runner,
+        AppLicenseService license)
     {
         _logger         = logger;
         _optionsMonitor = optionsMonitor;
         _sender         = sender;
         _expander       = expander;
         _runner         = runner;
+        _license        = license;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -192,6 +195,14 @@ public sealed class CalendarBeaconService : BackgroundService
     {
         if (entry.IsExternal)
         {
+            if (!_license.IsLicensed)
+            {
+                _logger.LogWarning(
+                    "CalendarBeacon \"{Title}\": external process requires a license, skipping.",
+                    entry.Title);
+                return null;
+            }
+
             var settings = _optionsMonitor.CurrentValue;
             var json     = ExternalProcessRunner.BuildCalendarBeaconPayload(
                                entry, eventDate, daysUntil, hoursUntil, settings);
