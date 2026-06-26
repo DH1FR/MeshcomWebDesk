@@ -134,6 +134,10 @@ builder.Configuration.AddJsonFile(overrideFile, optional: true, reloadOnChange: 
 
 TryCreateDirectory(logPath, "LogPath");
 
+var botExternalCommandsPath = meshcomSection.GetValue<string>("BotExternalCommandsPath") ?? string.Empty;
+if (!string.IsNullOrWhiteSpace(botExternalCommandsPath))
+    TryCreateDirectory(botExternalCommandsPath, "BotExternalCommandsPath");
+
 var logFile = Path.Combine(logPath, "MeshcomWebDesk-.log");
 
 // Enable Static Web Assets when running directly from the build output (not published).
@@ -188,6 +192,7 @@ builder.Services.AddSingleton<IBotCommand, MhCommand>();
 builder.Services.AddSingleton<IBotCommand, PingCommand>();
 builder.Services.AddSingleton<IBotCommand, EchoCommand>();
 builder.Services.AddSingleton<IBotCommand, MeshcomWebDesk.Services.Bot.WeatherStatusCommand>();
+builder.Services.AddSingleton<ExternalProcessRunner>();
 builder.Services.AddSingleton<BotCommandService>();
 builder.Services.AddSingleton<MeshcomUdpService>();
 builder.Services.AddSingleton<DataPersistenceService>();

@@ -15,13 +15,24 @@ namespace MeshcomWebDesk.Services.Bot;
 public class BotCommandService
 {
     private readonly IReadOnlyList<IBotCommand> _builtinCommands;
+    private readonly ExternalProcessRunner _runner;
+    private readonly IOptionsMonitor<MeshcomSettings> _settingsMonitor;
     private readonly LanguageService _lang;
+    private readonly AppLicenseService _license;
     private MeshcomSettings _settings;
 
-    public BotCommandService(IEnumerable<IBotCommand> builtinCommands, IOptionsMonitor<MeshcomSettings> settings, LanguageService lang)
+    public BotCommandService(
+        IEnumerable<IBotCommand> builtinCommands,
+        IOptionsMonitor<MeshcomSettings> settings,
+        LanguageService lang,
+        ExternalProcessRunner runner,
+        AppLicenseService license)
     {
         _builtinCommands = builtinCommands.ToList();
+        _runner          = runner;
+        _settingsMonitor = settings;
         _lang            = lang;
+        _license         = license;
         _settings        = settings.CurrentValue;
         settings.OnChange(s => _settings = s);
     }
@@ -59,7 +70,9 @@ public class BotCommandService
         _builtinCommands.Concat(
             _settings.BotCommands
                 .Where(e => e is not null && !string.IsNullOrWhiteSpace(e.Name))
-                .Select(e => new ConfiguredBotCommand(e)));
+                .Select(e => e.IsExternal
+                    ? (IBotCommand)new ExternalProcessCommand(e, _runner, _settingsMonitor, _license)
+                    : new ConfiguredBotCommand(e)));
 
     /// <summary>
     /// Parses and executes a bot command. Returns the reply text.

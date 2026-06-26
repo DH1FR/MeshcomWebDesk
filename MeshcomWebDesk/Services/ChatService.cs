@@ -259,6 +259,11 @@ public class ChatService
     /// <summary>Most recently heard stations (primary node only), sorted by last heard descending.</summary>
     public IReadOnlyList<HeardStation> MhList => GetPrimaryState().MhList.Values.OrderByDescending(s => s.LastHeard).ToList();
 
+    /// <summary>Sort column key for the MH list view. Persists across navigation.</summary>
+    public string MhSortColumn { get; set; } = "LastHeard";
+    /// <summary>Sort direction for the MH list view. Persists across navigation.</summary>
+    public bool MhSortAscending { get; set; } = false;
+
     /// <summary>Most recently heard stations for a specific node, sorted by last heard descending.</summary>
     public IReadOnlyList<HeardStation> GetMhList(Guid? nodeId) =>
         ResolveState(nodeId).MhList.Values.OrderByDescending(s => s.LastHeard).ToList();

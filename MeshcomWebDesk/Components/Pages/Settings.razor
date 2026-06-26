@@ -629,6 +629,11 @@
                                     <input type="checkbox" @bind="_model.BotEnabled" />
                                     <span>@(_model.BotEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                                 </label>
+
+                                <label>@Loc.T("Verzeichnis externer Befehle", "External Commands Directory")</label>
+                                <input type="text" @bind="_model.BotExternalCommandsPath"
+                                       placeholder="C:\MeshcomScripts"
+                                       title="@Loc.T("Verzeichnis mit ausführbaren Dateien für externe Bot-Befehle (.exe, .ps1, .bat, .cmd, .py)", "Directory containing executable files for external bot commands (.exe, .ps1, .bat, .cmd, .py)")" />
                             </div>
 
                             <div style="margin-top:1rem">
@@ -641,7 +646,9 @@
                                     <thead>
                                         <tr>
                                             <th>@Loc.T("Name (--…)", "Name (--…)")</th>
-                                            <th>@Loc.T("Antwort", "Response")</th>
+                                            <th style="width:36px;text-align:center" title="@Loc.T("Externer Prozess", "External Process")">⚙️</th>
+                                            <th>@Loc.T("Antwort / Dateiname", "Response / Filename")</th>
+                                            <th style="width:60px" title="@Loc.T("Timeout (Sek.)", "Timeout (sec.)")">⏱</th>
                                             <th>@Loc.T("Beschreibung (--help)", "Description (--help)")</th>
                                             <th></th>
                                         </tr>
@@ -651,7 +658,35 @@
                                         {
                                             <tr>
                                                 <td><input type="text" @bind="cmd.Name" placeholder="info" style="width:100%;font-family:monospace" /></td>
-                                                <td><input type="text" @bind="cmd.Response" placeholder="QTH: Wien, 73 de {mycall}" style="width:100%" /></td>
+                                                <td style="text-align:center">
+                                                    <input type="checkbox" @bind="cmd.IsExternal"
+                                                           title="@Loc.T("Externer Prozess aus dem konfigurierten Verzeichnis", "External process from the configured directory")" />
+                                                    @if (cmd.IsExternal && !AppLicenseService.IsLicensed)
+                                                    {
+                                                        <span title="@Loc.T("Lizenz erforderlich – Befehl wird nicht ausgeführt", "License required – command will not execute")"
+                                                              style="cursor:help">🔒</span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    @if (cmd.IsExternal)
+                                                    {
+                                                        <input type="text" @bind="cmd.ExternalFileName"
+                                                               placeholder="script.ps1"
+                                                               style="width:100%;font-family:monospace"
+                                                               title="@Loc.T("Dateiname im Verzeichnis externer Befehle (.exe .ps1 .bat .cmd .py)", "File name in external commands directory (.exe .ps1 .bat .cmd .py)")" />
+                                                    }
+                                                    else
+                                                    {
+                                                        <input type="text" @bind="cmd.Response" placeholder="QTH: Wien, 73 de {mycall}" style="width:100%" />
+                                                    }
+                                                </td>
+                                                <td>
+                                                    @if (cmd.IsExternal)
+                                                    {
+                                                        <input type="number" @bind="cmd.TimeoutSeconds" min="1" max="300" style="width:100%"
+                                                               title="@Loc.T("Maximale Wartezeit in Sekunden", "Maximum wait time in seconds")" />
+                                                    }
+                                                </td>
                                                 <td><input type="text" @bind="cmd.Description" placeholder="@Loc.T("Stationsinfo", "Station info")" style="width:100%" /></td>
                                                 <td><button type="button" class="btn-remove" @onclick="() => _model.BotCommands.Remove(cmd)">✕</button></td>
                                             </tr>
@@ -850,20 +885,47 @@
                         <label>@Loc.T("Gruppe","Group")</label>
                         <input type="text" @bind="e.Group" placeholder="#262" />
 
-                        <label>@Loc.T("Bakentext","Beacon Text")</label>
-                        <div class="settings-input-hint">
-                            <input type="text" @bind="e.Text" />
-                            @{ var _eParts = MessageValidator.CountParts(e.Text); }
-                            @if (_eParts > 1)
+                        <label>⚙️ @Loc.T("Externer Prozess","External Process")</label>
+                        <label class="settings-toggle">
+                            <input type="checkbox" @bind="e.IsExternal"
+                                   title="@Loc.T("Bakentext wird von einem externen Prozess erzeugt", "Beacon text is generated by an external process")" />
+                            <span>@(e.IsExternal ? Loc.T("Aktiv","Active") : Loc.T("Inaktiv","Inactive"))</span>
+                            @if (e.IsExternal && !AppLicenseService.IsLicensed)
                             {
-                                <span class="settings-hint char-warn">⚠ @Loc.T("Text zu lang", "Text too long") – @_eParts @Loc.T("Pakete (wird automatisch aufgeteilt)", "packets (split automatically)")</span>
+                                <span title="@Loc.T("Lizenz erforderlich – Bake wird nicht ausgeführt", "License required – beacon will not execute")"
+                                      style="cursor:help;margin-left:.25rem">🔒</span>
                             }
-                            <span class="settings-hint">
-                                @Loc.T("Variablen:","Variables:")
-                                <code>{mycall}</code>, <code>{title}</code>, <code>{event_date}</code>,
-                                <code>{event_time}</code>, <code>{days_until}</code>, <code>{hours_until}</code>
-                            </span>
-                        </div>
+                        </label>
+
+                        @if (e.IsExternal)
+                        {
+                            <label>@Loc.T("Dateiname","Filename")</label>
+                            <input type="text" @bind="e.ExternalFileName"
+                                   placeholder="beacon.ps1"
+                                   style="font-family:monospace"
+                                   title="@Loc.T("Dateiname im Verzeichnis externer Befehle (.exe .ps1 .bat .cmd .py)", "File name in external commands directory (.exe .ps1 .bat .cmd .py)")" />
+
+                            <label>@Loc.T("Timeout (s)","Timeout (s)")</label>
+                            <input type="number" @bind="e.TimeoutSeconds" min="1" max="300"
+                                   title="@Loc.T("Maximale Wartezeit in Sekunden", "Maximum wait time in seconds")" />
+                        }
+                        else
+                        {
+                            <label>@Loc.T("Bakentext","Beacon Text")</label>
+                            <div class="settings-input-hint">
+                                <input type="text" @bind="e.Text" />
+                                @{ var _eCalParts = MessageValidator.CountParts(e.Text); }
+                                @if (_eCalParts > 1)
+                                {
+                                    <span class="settings-hint char-warn">⚠ @Loc.T("Text zu lang", "Text too long") – @_eCalParts @Loc.T("Pakete (wird automatisch aufgeteilt)", "packets (split automatically)")</span>
+                                }
+                                <span class="settings-hint">
+                                    @Loc.T("Variablen:","Variables:")
+                                    <code>{mycall}</code>, <code>{title}</code>, <code>{event_date}</code>,
+                                    <code>{event_time}</code>, <code>{days_until}</code>, <code>{hours_until}</code>
+                                </span>
+                            </div>
+                        }
 
                         <label>@Loc.T("Wiederholung","Recurrence")</label>
                         <select @bind="e.RecurrenceType">
@@ -2794,15 +2856,16 @@
             AutoReplyEnabled    = s.AutoReplyEnabled,
             AutoReplyText       = s.AutoReplyText,
             ReplyDelaySeconds   = s.ReplyDelaySeconds,
-            BotEnabled          = s.BotEnabled,
-            BotCommands         = s.BotCommands
-                .Select(c => new BotCommandEntry { Name = c.Name, Response = c.Response, Description = c.Description })
+            BotEnabled                  = s.BotEnabled,
+            BotCommands                 = s.BotCommands
+                .Select(c => new BotCommandEntry { Name = c.Name, Response = c.Response, Description = c.Description, IsExternal = c.IsExternal, ExternalFileName = c.ExternalFileName, TimeoutSeconds = c.TimeoutSeconds })
                 .ToList(),
-            BeaconEnabled       = s.BeaconEnabled,
-            BeaconGroup         = s.BeaconGroup,
-            BeaconText          = s.BeaconText,
-            BeaconIntervalHours = s.BeaconIntervalHours,
-            CalendarBeacons     = s.CalendarBeacons
+            BotExternalCommandsPath     = s.BotExternalCommandsPath,
+            BeaconEnabled               = s.BeaconEnabled,
+            BeaconGroup                 = s.BeaconGroup,
+            BeaconText                  = s.BeaconText,
+            BeaconIntervalHours         = s.BeaconIntervalHours,
+            CalendarBeacons             = s.CalendarBeacons
                 .Select(e => new MeshcomWebDesk.Models.CalendarBeaconEntry
                 {
                     Id                = e.Id,
@@ -2818,7 +2881,10 @@
                     ReferenceDate     = e.ReferenceDate,
                     AnnounceLeadDays  = e.AnnounceLeadDays,
                     AnnounceLeadHours = e.AnnounceLeadHours,
-                    AnnounceAtEvent   = e.AnnounceAtEvent
+                    AnnounceAtEvent   = e.AnnounceAtEvent,
+                    IsExternal        = e.IsExternal,
+                    ExternalFileName  = e.ExternalFileName,
+                    TimeoutSeconds    = e.TimeoutSeconds
                 })
                 .ToList(),
             TelemetryEnabled       = s.TelemetryEnabled,
@@ -3373,11 +3439,12 @@
                 AutoReplyEnabled    = s.AutoReplyEnabled,
                 AutoReplyText       = s.AutoReplyText,
                 ReplyDelaySeconds   = s.ReplyDelaySeconds,
-                BotEnabled          = s.BotEnabled,
-                BotCommands         = s.BotCommands
-                    .Select(c => new BotCommandEntry { Name = c.Name, Response = c.Response, Description = c.Description })
+                BotEnabled                  = s.BotEnabled,
+                BotCommands                 = s.BotCommands
+                    .Select(c => new BotCommandEntry { Name = c.Name, Response = c.Response, Description = c.Description, IsExternal = c.IsExternal, ExternalFileName = c.ExternalFileName, TimeoutSeconds = c.TimeoutSeconds })
                     .ToList(),
-                BeaconEnabled       = s.BeaconEnabled,
+                BotExternalCommandsPath     = s.BotExternalCommandsPath,
+                BeaconEnabled               = s.BeaconEnabled,
                 BeaconGroup         = s.BeaconGroup,
                 BeaconText          = s.BeaconText,
                 BeaconIntervalHours = s.BeaconIntervalHours,
@@ -3397,7 +3464,10 @@
                         ReferenceDate     = e.ReferenceDate,
                         AnnounceLeadDays  = e.AnnounceLeadDays,
                         AnnounceLeadHours = e.AnnounceLeadHours,
-                        AnnounceAtEvent   = e.AnnounceAtEvent
+                        AnnounceAtEvent   = e.AnnounceAtEvent,
+                        IsExternal        = e.IsExternal,
+                        ExternalFileName  = e.ExternalFileName,
+                        TimeoutSeconds    = e.TimeoutSeconds
                     })
                     .ToList(),
                 TelemetryEnabled       = s.TelemetryEnabled,
@@ -3510,9 +3580,10 @@
         public bool   AutoReplyEnabled    { get; set; }
         public string AutoReplyText       { get; set; } = string.Empty;
         public int    ReplyDelaySeconds   { get; set; } = 3;
-        public bool   BotEnabled          { get; set; }
+        public bool   BotEnabled                  { get; set; }
         public List<BotCommandEntry> BotCommands { get; set; } = [];
-        public bool   BeaconEnabled       { get; set; }
+        public string BotExternalCommandsPath    { get; set; } = string.Empty;
+        public bool   BeaconEnabled              { get; set; }
         public string BeaconGroup         { get; set; } = string.Empty;
         public string BeaconText          { get; set; } = string.Empty;
         public int    BeaconIntervalHours { get; set; } = 8;
@@ -3658,9 +3729,10 @@
             AutoReplyEnabled    = AutoReplyEnabled,
             AutoReplyText       = AutoReplyText,
             ReplyDelaySeconds   = Math.Clamp(ReplyDelaySeconds, 0, 30),
-            BotEnabled          = BotEnabled,
-            BotCommands         = BotCommands,
-            BeaconEnabled       = BeaconEnabled,
+            BotEnabled                  = BotEnabled,
+            BotCommands                 = BotCommands,
+            BotExternalCommandsPath     = BotExternalCommandsPath,
+            BeaconEnabled               = BeaconEnabled,
             BeaconGroup         = BeaconGroup,
             BeaconText          = BeaconText,
             BeaconIntervalHours = BeaconIntervalHours,

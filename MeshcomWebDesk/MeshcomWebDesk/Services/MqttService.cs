@@ -255,13 +255,16 @@ public sealed class MqttService : IHostedService, IAsyncDisposable
         var prefix = cfg.TopicPrefix;
 
         string destination;
+        string? tabKey = null;
         if (topic == $"{prefix}/send/broadcast")
         {
             destination = "*";
         }
         else if (topic.StartsWith($"{prefix}/send/group/", StringComparison.OrdinalIgnoreCase))
         {
-            destination = "#" + topic[($"{prefix}/send/group/").Length..];
+            var group = topic[($"{prefix}/send/group/").Length..];
+            destination = group;       // wire: no '#' (node expects "26299", not "#26299")
+            tabKey = "#" + group;      // tab routing: keep '#' prefix
         }
         else if (topic.StartsWith($"{prefix}/send/dm/", StringComparison.OrdinalIgnoreCase))
         {
@@ -273,14 +276,14 @@ public sealed class MqttService : IHostedService, IAsyncDisposable
         }
 
         // Expand variables; for DM pass the destination callsign so {callsign}, {dest-name} etc. resolve.
-        var callsign = destination.StartsWith('#') || destination == "*" ? null : destination;
+        var callsign = tabKey != null || destination == "*" ? null : destination;
         text = _expander.ExpandVariables(text, callsign);
 
         if (cfg.LogRequests)
             _logger.LogInformation("MQTT → MeshCom send to {Dest}: {Text}", destination, text);
         else
             _logger.LogDebug("MQTT → MeshCom send to {Dest}: {Text}", destination, text);
-        await _sender.SendMessageAsync(destination, text);
+        await _sender.SendMessageAsync(destination, text, tabKey);
     }
 
     private static string? BuildPublishTopic(string prefix, string eventType, MeshcomMessage msg)
