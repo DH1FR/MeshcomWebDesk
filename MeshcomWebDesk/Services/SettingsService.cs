@@ -20,6 +20,7 @@ public class SettingsService
     private readonly string _overridePath;
     private readonly ILogger<SettingsService> _logger;
     private readonly ISettingsProtector _protector;
+    private readonly IConfigurationRoot? _configRoot;
 
     public string EffectiveDataPath => _dataPath;
 
@@ -33,6 +34,7 @@ public class SettingsService
         _overridePath = Path.Combine(_dataPath, "appsettings.override.json");
         _logger       = logger;
         _protector    = protector;
+        _configRoot   = config as IConfigurationRoot;
     }
 
     /// <summary>
@@ -363,6 +365,9 @@ public class SettingsService
                 $"Verzeichnis '{Path.GetDirectoryName(_overridePath)}' nicht gefunden. " +
                 $"DataPath prüfen – der Ordner muss vorhanden oder vom Prozess erstellbar sein.");
         }
+        // inotify on Linux doesn't always fire for in-place file writes, so we force reload
+        // instead of relying on reloadOnChange to propagate changes to IOptionsMonitor.
+        _configRoot?.Reload();
         _logger.LogInformation("Settings saved to {Path}", _overridePath);
     }
 }
