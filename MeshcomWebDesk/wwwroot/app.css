@@ -1111,6 +1111,9 @@ h1:focus {
 
 .mh-table .col-center { text-align: center; }
 
+.mh-th-sort { cursor: pointer; user-select: none; }
+.mh-th-sort:hover { color: #c9d1d9; background: #1c2128; }
+
 .mh-row { border-bottom: 1px solid #21262d; transition: background 0.1s; }
 .mh-row:hover { background: #161b22; }
 .mh-row:last-child { border-bottom: none; }

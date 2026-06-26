@@ -57,6 +57,21 @@ public class LanguageService
             _    => _translations.TryGetValue(_lang, out var dict) && dict.TryGetValue(en, out var t) ? t : en
         };
 
+    /// <summary>
+    /// Returns the TTS announcement string for the active language.
+    /// Used for dynamic strings (with interpolated callsigns) that cannot be in the static dictionary.
+    /// </summary>
+    public string TtsT(string de, string en, string fr, string it, string es) =>
+        _lang switch
+        {
+            "de" => de,
+            "en" => en,
+            "fr" => fr,
+            "it" => it,
+            "es" => es,
+            _    => en
+        };
+
     private static string Normalize(string? lang)
     {
         var l = lang?.ToLowerInvariant();

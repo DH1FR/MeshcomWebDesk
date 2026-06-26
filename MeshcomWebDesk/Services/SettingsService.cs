@@ -20,6 +20,7 @@ public class SettingsService
     private readonly string _overridePath;
     private readonly ILogger<SettingsService> _logger;
     private readonly ISettingsProtector _protector;
+    private readonly IConfigurationRoot? _configRoot;
 
     public string EffectiveDataPath => _dataPath;
 
@@ -33,6 +34,7 @@ public class SettingsService
         _overridePath = Path.Combine(_dataPath, "appsettings.override.json");
         _logger       = logger;
         _protector    = protector;
+        _configRoot   = config as IConfigurationRoot;
     }
 
     /// <summary>
@@ -195,13 +197,17 @@ public class SettingsService
                 ["AutoReplyEnabled"]    = s.AutoReplyEnabled,
                 ["AutoReplyText"]       = s.AutoReplyText,
                 ["ReplyDelaySeconds"]   = s.ReplyDelaySeconds,
-                ["BotEnabled"]         = s.BotEnabled,
-                ["BotCommands"]        = new JsonArray(s.BotCommands.Select(c => (JsonNode?)new JsonObject
+                ["BotEnabled"]                  = s.BotEnabled,
+                ["BotCommands"]                 = new JsonArray(s.BotCommands.Select(c => (JsonNode?)new JsonObject
                 {
-                    ["Name"]        = c.Name,
-                    ["Response"]    = c.Response,
-                    ["Description"] = c.Description
+                    ["Name"]             = c.Name,
+                    ["Response"]         = c.Response,
+                    ["Description"]      = c.Description,
+                    ["IsExternal"]       = c.IsExternal,
+                    ["ExternalFileName"] = c.ExternalFileName,
+                    ["TimeoutSeconds"]   = c.TimeoutSeconds,
                 }).ToArray()),
+                ["BotExternalCommandsPath"]     = s.BotExternalCommandsPath,
                 ["BeaconEnabled"]       = s.BeaconEnabled,
                 ["BeaconGroup"]         = s.BeaconGroup,
                 ["BeaconText"]          = s.BeaconText,
@@ -221,7 +227,10 @@ public class SettingsService
                     ["ReferenceDate"]     = e.ReferenceDate,
                     ["AnnounceLeadDays"]  = e.AnnounceLeadDays,
                     ["AnnounceLeadHours"] = e.AnnounceLeadHours,
-                    ["AnnounceAtEvent"]   = e.AnnounceAtEvent
+                    ["AnnounceAtEvent"]   = e.AnnounceAtEvent,
+                    ["IsExternal"]        = e.IsExternal,
+                    ["ExternalFileName"]  = e.ExternalFileName,
+                    ["TimeoutSeconds"]    = e.TimeoutSeconds
                 }).ToArray()),
                 ["TelemetryEnabled"]       = s.TelemetryEnabled,
                 ["TelemetryFilePath"]      = s.TelemetryFilePath,
@@ -356,6 +365,9 @@ public class SettingsService
                 $"Verzeichnis '{Path.GetDirectoryName(_overridePath)}' nicht gefunden. " +
                 $"DataPath prüfen – der Ordner muss vorhanden oder vom Prozess erstellbar sein.");
         }
+        // inotify on Linux doesn't always fire for in-place file writes, so we force reload
+        // instead of relying on reloadOnChange to propagate changes to IOptionsMonitor.
+        _configRoot?.Reload();
         _logger.LogInformation("Settings saved to {Path}", _overridePath);
     }
 }
