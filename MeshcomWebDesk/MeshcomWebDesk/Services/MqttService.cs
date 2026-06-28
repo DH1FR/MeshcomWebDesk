@@ -237,8 +237,14 @@ public sealed class MqttService : IHostedService, IAsyncDisposable
         try
         {
             using var doc = JsonDocument.Parse(body);
-            if (doc.RootElement.TryGetProperty("text", out var t))
-                text = t.GetString();
+            foreach (var prop in doc.RootElement.EnumerateObject())
+            {
+                if (prop.Name.Equals("text", StringComparison.OrdinalIgnoreCase))
+                {
+                    text = prop.Value.GetString();
+                    break;
+                }
+            }
         }
         catch
         {
