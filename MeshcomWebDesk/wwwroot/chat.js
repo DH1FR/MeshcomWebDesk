@@ -514,34 +514,6 @@ window.meshcomChat = (function () {
 
             // Erste Messung verzögert
             setTimeout(scheduleUpdate, 150);
-
-            // RAF-basiertes Update für ResizeObserver (Layout bereits stabil)
-            function scheduleUpdate() {
-                if (rafId) return;
-                rafId = requestAnimationFrame(function () { rafId = 0; update(); });
-            }
-
-            // Verzögertes Update für DOM-Mutationen: auf iPad/Safari ist das Layout
-            // nach einer Mutation im RAF noch nicht fertig berechnet.
-            function scheduleUpdateDelayed() {
-                if (timerId) clearTimeout(timerId);
-                timerId = setTimeout(function () {
-                    timerId = 0;
-                    if (rafId) cancelAnimationFrame(rafId);
-                    rafId = requestAnimationFrame(function () { rafId = 0; update(); });
-                }, 120);
-            }
-
-            // Reagiert auf Größenänderung des Containers (z.B. Fenster-Resize)
-            new ResizeObserver(scheduleUpdate).observe(bar);
-
-            // Reagiert auf Textänderungen innerhalb der Statusleiste (Daten kommen nach)
-            new MutationObserver(scheduleUpdateDelayed).observe(bar, {
-                subtree: true, childList: true, characterData: true, attributes: true
-            });
-
-            // Erste Messung ebenfalls verzögert
-            setTimeout(scheduleUpdate, 120);
         }
     };
 }());

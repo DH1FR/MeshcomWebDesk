@@ -254,12 +254,12 @@
             {
                 @if (_loraHighlight)
                 {
-                    var cl = ClassifyLine(line);
+                    var cl = ClassifyLine(StripAnsi(line));
                     <div class="telnet-line @cl.Css" title="@cl.Hint">@((MarkupString)cl.Html)</div>
                 }
                 else
                 {
-                    <div class="telnet-line">@line</div>
+                    <div class="telnet-line">@AnsiToHtml(line)</div>
                 }
             }
         }
@@ -501,6 +501,75 @@
     private int _otaCountdown = -1;  // -1 = dialog hidden
     private bool _rebootConfirm = false;
 
+    // ── ANSI rendering ────────────────────────────────────────────────────────
+
+    // Matches CSI sequences (ESC[params+letter) and two-char ESC sequences.
+    // Group 1 = SGR params, Group 2 = command letter (only 'm' = SGR color/style).
+    private static readonly System.Text.RegularExpressions.Regex _ansiRegex =
+        new(@"\x1B(?:\[([0-9;?]*)([A-Za-z])|[^\[])|\uFFFD|[\u0080-\u009F]",
+            System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    private static readonly Dictionary<int, string> _ansiFg = new()
+    {
+        {30,"#4a4a4a"},{31,"#c0392b"},{32,"#27ae60"},{33,"#d4a017"},
+        {34,"#2980b9"},{35,"#8e44ad"},{36,"#16a085"},{37,"#bdc3c7"},
+        {90,"#7f8c8d"},{91,"#e74c3c"},{92,"#2ecc71"},{93,"#f1c40f"},
+        {94,"#5dade2"},{95,"#a569bd"},{96,"#1abc9c"},{97,"#f0f0f0"},
+    };
+
+    private static readonly Dictionary<int, string> _ansiBg = new()
+    {
+        {40,"#000"},{41,"#c0392b"},{42,"#27ae60"},{43,"#d4a017"},
+        {44,"#2980b9"},{45,"#8e44ad"},{46,"#16a085"},{47,"#bdc3c7"},
+        {100,"#555"},{101,"#e74c3c"},{102,"#2ecc71"},{103,"#f1c40f"},
+        {104,"#5dade2"},{105,"#a569bd"},{106,"#1abc9c"},{107,"#f0f0f0"},
+    };
+
+    private static MarkupString AnsiToHtml(string line)
+    {
+        if (line.IndexOf('\x1B') < 0 && line.IndexOf('\uFFFD') < 0 && !line.Any(c => c >= '\u0080' && c <= '\u009F'))
+            return (MarkupString)System.Net.WebUtility.HtmlEncode(line);
+
+        var sb       = new System.Text.StringBuilder();
+        int pos      = 0;
+        bool spanOpen = false;
+
+        foreach (System.Text.RegularExpressions.Match m in _ansiRegex.Matches(line))
+        {
+            if (m.Index > pos)
+                sb.Append(System.Net.WebUtility.HtmlEncode(line[pos..m.Index]));
+            pos = m.Index + m.Length;
+
+            if (m.Groups[2].Value != "m") continue;  // skip non-SGR (cursor movement etc.)
+
+            var paramStr = m.Groups[1].Value;
+            var codes = string.IsNullOrEmpty(paramStr)
+                ? new[] { 0 }
+                : paramStr.Split(';').Select(s => int.TryParse(s, out var n) ? n : 0).ToArray();
+
+            if (spanOpen) { sb.Append("</span>"); spanOpen = false; }
+            if (codes.All(c => c == 0)) continue;   // pure reset
+
+            var style = new System.Text.StringBuilder();
+            if (codes.Contains(1)) style.Append("font-weight:bold;");
+            foreach (var code in codes)
+                if (_ansiFg.TryGetValue(code, out var fg)) { style.Append($"color:{fg};"); break; }
+            foreach (var code in codes)
+                if (_ansiBg.TryGetValue(code, out var bg)) { style.Append($"background:{bg};"); break; }
+
+            if (style.Length > 0) { sb.Append($"<span style=\"{style}\">"); spanOpen = true; }
+        }
+
+        if (pos < line.Length)
+            sb.Append(System.Net.WebUtility.HtmlEncode(line[pos..]));
+        if (spanOpen) sb.Append("</span>");
+        return (MarkupString)sb.ToString();
+    }
+
+    private static string StripAnsi(string line) =>
+        line.IndexOf('\x1B') < 0 && line.IndexOf('\uFFFD') < 0 && !line.Any(c => c >= '\u0080' && c <= '\u009F')
+            ? line : _ansiRegex.Replace(line, "");
+
     private async Task RebootConfirmedAsync()
     {
         _rebootConfirm = false;
@@ -544,7 +613,7 @@
         {
             List<string> snap;
             lock (Console.Lines)
-                snap = [.. Console.Lines];
+                snap = Console.Lines.Select(StripAnsi).ToList();
             if (_showMh && !_mhComplete)
             {
                 int mhFrom = _mhFromLine < snap.Count

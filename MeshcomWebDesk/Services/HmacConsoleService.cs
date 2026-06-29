@@ -1,6 +1,7 @@
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
 using MeshcomWebDesk.Models;
 
@@ -172,6 +173,11 @@ public class HmacConsoleService : IConsoleService, IAsyncDisposable
 
     // ── Private Hilfsmethoden ──────────────────────────────────────────────────
 
+    // Strips all ANSI/VT escape sequences plus C1 control bytes (including those
+    // that arrive as UTF-8 replacement chars � when firmware uses raw 8-bit CSI).
+    private static readonly Regex AnsiStripRegex = new(
+        @"\x1B(?:\[[0-9;?]*[A-Za-z]|[^\[])|\uFFFD|[\u0080-\u009F]", RegexOptions.Compiled);
+
     private async Task ReadLoopAsync(CancellationToken ct)
     {
         try
@@ -180,7 +186,8 @@ public class HmacConsoleService : IConsoleService, IAsyncDisposable
             {
                 var line = await _reader.ReadLineAsync(ct);
                 if (line == null) break;   // Verbindung geschlossen
-                AppendLine(line);
+                if (AnsiStripRegex.Replace(line, "").Length == 0) continue;  // skip visually empty (e.g. cursor-only sequences)
+                AppendLine(line);   // store raw with ANSI codes for color rendering in UI
                 OnChange?.Invoke();
             }
         }
@@ -228,7 +235,7 @@ public class HmacConsoleService : IConsoleService, IAsyncDisposable
                 enabled = node?.ConsoleLogEnabled ?? false;
             }
             if (enabled)
-                _ = _consoleLog.WriteAsync(ConnectedHost, true, line);
+                _ = _consoleLog.WriteAsync(ConnectedHost, true, AnsiStripRegex.Replace(line, ""));
         }
     }
 
