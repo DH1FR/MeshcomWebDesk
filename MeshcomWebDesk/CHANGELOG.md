@@ -1,5 +1,15 @@
 ﻿# Changelog
 
+## [1.13.1] – released
+
+### Bugfixes
+- **Fix node echo not recognized with relay path in dst**: Newer firmware versions include via-nodes in the `dst` field of the echo packet (e.g. `"DB0KH-11,DH1FR-99"` instead of `"DH1FR-99"`), causing the node-echo timeout warning to fire on every send. Only the final callsign is now used for matching.
+- **Fix ANSI / C1 control chars in NET Console output**: Firmware v4.35p routes Serial debug output through the NET Console, including ANSI escape sequences and raw C1 control bytes (0x9B etc.). The strip regex now covers the full C1 range (U+0080–U+009F).
+- **Fix MQTT send payload with mixed-case `text` key**: `TryGetProperty("text")` was case-sensitive and silently dropped payloads using `"Text"` or `"TEXT"`. The lookup now uses `OrdinalIgnoreCase`.
+- **Fix Python 3 missing from Docker image / HamQSL endpoint in prop.py**: `python3` was missing from the runtime image; added and symlinked as `python`. `prop.py` switches from the deprecated `solar.php` endpoint (returns a GIF) to `solarxml.php`.
+
+---
+
 ## [1.11.0] – in development (dev)
 
 ### Features

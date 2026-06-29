@@ -29,28 +29,13 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
-## 🆕 What's New in v1.13.0
-
-### 🤖 External Bot Commands
-- Bot commands can now delegate execution to an external process (`.exe`, `.ps1`, `.bat`, `.cmd`, `.py`).
-- The process receives a JSON payload on stdin and returns the reply text on stdout.
-- Configurable timeout per command; Python example script included in `bot-scripts/`.
-- **License required** – a 🔒 badge is shown in Settings when configured without a valid license.
-
-### 📅 External Calendar Beacon Processes
-- Calendar beacon entries can now also generate their text via an external process.
-- Full event context (title, date, days/hours until event) is passed as JSON payload.
-- **License required** – same license gate as external bot commands.
-
-### 🗣️ Multilingual Voice Announcements
-- Voice announcements now available in French, Italian, and Spanish (in addition to German and English).
-
-### 📋 MH List: Persistent Column Sorting
-- Sort column and direction are remembered across page reloads and sessions.
+## 🆕 What's New in v1.13.1
 
 ### 🔧 Bug Fixes
-- **Linux settings reload** – `IConfiguration` force-reloaded after save; fixes race condition where new values were not picked up immediately.
-- **MQTT group destination** – leading `#` stripped from group destinations to prevent malformed topic paths.
+- **Node echo not recognized with relay path** – Newer firmware versions include via-nodes in the `dst` field of the echo packet (e.g. `"DB0KH-11,DH1FR-99"`), causing a false "UDP packet possibly not received" warning on every send. Fixed.
+- **ANSI / C1 control chars in NET Console output** – Firmware v4.35p routes Serial debug output through the NET Console including ANSI escape sequences and raw C1 bytes. The strip regex now covers the full C1 range.
+- **MQTT send payload with mixed-case `text` key** – Payloads using `"Text"` or `"TEXT"` were silently dropped. The key lookup is now case-insensitive.
+- **Python 3 missing from Docker image / HamQSL endpoint** – `python3` is now included in the Docker runtime image. `prop.py` switches from the deprecated `solar.php` to `solarxml.php`.
 
 ---
 
