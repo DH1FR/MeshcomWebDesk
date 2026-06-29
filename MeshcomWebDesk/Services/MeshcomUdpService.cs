@@ -210,7 +210,12 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                             // Assign node-assigned sequence number to matching outgoing message.
                             // Group messages echo back without {NNN}, so SequenceNumber may be null –
                             // call AssignOutgoingSequence unconditionally to still set NodeEchoReceived.
-                            _chatService.AssignOutgoingSequence(message.To, message.SequenceNumber, message.NodeId);
+                            // Newer firmware includes the relay path in dst ("DB0KH-11,DH1FR-99") –
+                            // strip via-nodes and use only the final destination for matching.
+                            var echoDst = message.To.Contains(',')
+                                ? message.To.Split(',').Last().Trim()
+                                : message.To;
+                            _chatService.AssignOutgoingSequence(echoDst, message.SequenceNumber, message.NodeId);
                             // Capture node firmware + hardware from src_type:"node" packets
                             bool metaChanged = false;
                             if (!string.IsNullOrEmpty(message.Firmware) && Status.NodeFirmware != message.Firmware)
