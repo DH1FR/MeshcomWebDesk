@@ -211,8 +211,9 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                             // Group messages echo back without {NNN}, so SequenceNumber may be null –
                             // call AssignOutgoingSequence unconditionally to still set NodeEchoReceived.
                             // message.To is already the final destination (via-nodes are stripped
-                            // into ViaPath during parsing).
-                            _chatService.AssignOutgoingSequence(message.To, message.SequenceNumber, message.NodeId);
+                            // into ViaPath during parsing); forward ViaPath so the original TX row
+                            // in the monitor can be updated with the routing the node chose.
+                            _chatService.AssignOutgoingSequence(message.To, message.SequenceNumber, message.NodeId, message.ViaPath);
                             // Capture node firmware + hardware from src_type:"node" packets
                             bool metaChanged = false;
                             if (!string.IsNullOrEmpty(message.Firmware) && Status.NodeFirmware != message.Firmware)

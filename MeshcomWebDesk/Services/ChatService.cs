@@ -482,9 +482,12 @@ public class ChatService
     /// outgoing message sent to <paramref name="destination"/> that has no sequence yet.
     /// </summary>
     public void AssignOutgoingSequence(string destination, string? sequenceNumber) =>
-        AssignOutgoingSequence(destination, sequenceNumber, null);
+        AssignOutgoingSequence(destination, sequenceNumber, null, null);
 
-    public void AssignOutgoingSequence(string destination, string? sequenceNumber, Guid? nodeId)
+    public void AssignOutgoingSequence(string destination, string? sequenceNumber, Guid? nodeId) =>
+        AssignOutgoingSequence(destination, sequenceNumber, nodeId, null);
+
+    public void AssignOutgoingSequence(string destination, string? sequenceNumber, Guid? nodeId, string? viaPath)
     {
         bool Found(IEnumerable<MeshcomMessage> messages)
         {
@@ -499,6 +502,9 @@ public class ChatService
                 if (sequenceNumber != null)
                     msg.SequenceNumber = sequenceNumber;
                 msg.NodeEchoReceived = true;
+                // The node echo is the first point where the actual via-routing becomes known
+                if (viaPath != null)
+                    msg.ViaPath = viaPath;
                 return true;
             }
         }
