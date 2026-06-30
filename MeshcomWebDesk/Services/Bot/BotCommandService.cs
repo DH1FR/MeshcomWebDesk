@@ -112,15 +112,15 @@ public class BotCommandService
             c => string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase));
 
         return cmd is null
-            ? $"{_lang.T("Unbekannter Befehl", "Unknown command")}: --{name}. {_lang.T("Mit --help erhältst Du alle Befehle.", "Use --help to see all commands.")}"
+            ? $"{_lang.T("Unbekannter Befehl", "Unknown command")}: >{name}. {_lang.T("Mit >help erhältst Du alle Befehle.", "Use >help to see all commands.")}"
             : await cmd.ExecuteAsync(args, senderCallsign, context);
     }
 
     private string BuildHelp()
     {
-        var sb = new StringBuilder($"{_lang.T("Befehle", "Commands")}: --help");
+        var sb = new StringBuilder($"{_lang.T("Befehle", "Commands")}: >help");
         foreach (var cmd in AllCommands)
-            sb.Append($", --{cmd.Name}");
+            sb.Append($", >{cmd.Name}");
         return sb.ToString();
     }
 }
