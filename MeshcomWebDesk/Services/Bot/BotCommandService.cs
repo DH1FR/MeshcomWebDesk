@@ -50,6 +50,7 @@ public class BotCommandService
         text != null &&
         (IsHyphenCommand(text) ||
          IsEmDashCommand(text) ||
+         IsGreaterThanCommand(text) ||
          text.Trim().Equals("ping", StringComparison.OrdinalIgnoreCase));
 
     private static bool IsHyphenCommand(string text) =>
@@ -60,6 +61,11 @@ public class BotCommandService
     private static bool IsEmDashCommand(string text) =>
         text.Length > 1 &&
         text[0] == '\u2014' &&
+        char.IsLetter(text[1]);
+
+    private static bool IsGreaterThanCommand(string text) =>
+        text.Length > 1 &&
+        text[0] == '>' &&
         char.IsLetter(text[1]);
 
     /// <summary>
@@ -89,6 +95,8 @@ public class BotCommandService
         if (text.StartsWith("--", StringComparison.Ordinal))
             body = text.Length > 2 ? text[2..] : string.Empty;
         else if (text.Length > 0 && text[0] == '\u2014')
+            body = text.Length > 1 ? text[1..] : string.Empty;
+        else if (text.Length > 0 && text[0] == '>')
             body = text.Length > 1 ? text[1..] : string.Empty;
         else
             body = text;
