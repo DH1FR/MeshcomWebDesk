@@ -210,12 +210,9 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                             // Assign node-assigned sequence number to matching outgoing message.
                             // Group messages echo back without {NNN}, so SequenceNumber may be null –
                             // call AssignOutgoingSequence unconditionally to still set NodeEchoReceived.
-                            // Newer firmware includes the relay path in dst ("DB0KH-11,DH1FR-99") –
-                            // strip via-nodes and use only the final destination for matching.
-                            var echoDst = message.To.Contains(',')
-                                ? message.To.Split(',').Last().Trim()
-                                : message.To;
-                            _chatService.AssignOutgoingSequence(echoDst, message.SequenceNumber, message.NodeId);
+                            // message.To is already the final destination (via-nodes are stripped
+                            // into ViaPath during parsing).
+                            _chatService.AssignOutgoingSequence(message.To, message.SequenceNumber, message.NodeId);
                             // Capture node firmware + hardware from src_type:"node" packets
                             bool metaChanged = false;
                             if (!string.IsNullOrEmpty(message.Firmware) && Status.NodeFirmware != message.Firmware)
@@ -1144,6 +1141,13 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             var sender    = commaIdx >= 0 ? src[..commaIdx] : src;
             var relayPath = commaIdx >= 0 ? src : null;
 
+            // Newer firmware reports via-routing in dst ("DB0FRI-12,DH1FR-2") – the last
+            // callsign is the actual destination; preserve the full path for display.
+            var dstCommaIdx = dst.IndexOf(',');
+            var viaPath     = dstCommaIdx >= 0 ? dst : null;
+            if (dstCommaIdx >= 0)
+                dst = dst[(dst.LastIndexOf(',') + 1)..].Trim();
+
             // Extract sequence number from {NNN} before stripping it
             string? seqNum = null;
             if (!isPositionBeacon && !isTelemetry)
@@ -1286,6 +1290,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                 MsgId            = msgId,
                 SequenceNumber   = seqNum,
                 RelayPath        = relayPath,
+                ViaPath          = viaPath,
                 SrcType          = srcType,
                 HwId             = hwId,
                 Battery          = battery,

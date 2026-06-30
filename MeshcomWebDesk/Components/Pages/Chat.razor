@@ -273,6 +273,15 @@
                             @if (!string.IsNullOrEmpty(m.To))
                             {
                                 <span class="mon-arrow">→</span>
+                                @* Show each via-routing hop inline (newer firmware reports them in "dst") *@
+                                @if (m.ViaPath != null)
+                                {
+                                    foreach (var hop in m.ViaPath.Split(',').SkipLast(1))
+                                    {
+                                        <span class="mon-relay-node" title="@hop.Trim()">@hop.Trim()</span>
+                                        <span class="mon-relay-arrow">⟶</span>
+                                    }
+                                }
                                 if (m.IsBroadcast)
                                 {
                                     <span class="mon-call mon-bcast">@Loc.T("alle", "all")</span>
