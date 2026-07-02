@@ -118,6 +118,16 @@
                                         }
                                         @if (cmd.ExtraTextPlaceholder != null)
                                         {
+                                            var extraKnown = cmd.ExtraValueKey != null
+                                                && CmdHelper.CurrentValues.TryGetValue(cmd.ExtraValueKey, out var ekv)
+                                                && !string.IsNullOrEmpty(ekv) ? ekv : null;
+                                            @if (extraKnown != null)
+                                            {
+                                                <div class="cch-extra-current">
+                                                    <span class="cch-extra-current-label">Aktuell:</span>
+                                                    <span class="cch-value-badge cch-value-known">@extraKnown</span>
+                                                </div>
+                                            }
                                             <div class="cch-input-row">
                                                 <input class="cch-input" type="text"
                                                        @bind="_extraValues[cmd.Name]"
@@ -418,6 +428,13 @@
             {
                 if (string.IsNullOrEmpty(_editValues.GetValueOrDefault(def.Name)))
                     _editValues[def.Name] = val;
+            }
+            if (def.ExtraValueKey != null
+                && CmdHelper.CurrentValues.TryGetValue(def.ExtraValueKey, out var extraVal)
+                && !string.IsNullOrEmpty(extraVal)
+                && string.IsNullOrEmpty(_extraValues.GetValueOrDefault(def.Name)))
+            {
+                _extraValues[def.Name] = extraVal;
             }
         }
         var svc = CmdHelper.ActiveConsolePublic;

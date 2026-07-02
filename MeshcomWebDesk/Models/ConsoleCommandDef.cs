@@ -90,6 +90,13 @@ public sealed class ConsoleCommandDef
     /// </summary>
     public string? ExtraTextPlaceholder { get; init; }
 
+    /// <summary>
+    /// Wenn gesetzt, wird der zuletzt gesendete Nicht-Toggle-Wert (also kein on/off)
+    /// unter diesem Schlüssel in CurrentValues gespeichert.
+    /// Bei Wert "NONE" wird der Schlüssel geleert.
+    /// </summary>
+    public string? ExtraValueKey { get; init; }
+
     /// <summary>Vollständiger Befehlsstring mit "--" Präfix.</summary>
     public string Command => $"--{Name}";
 }
