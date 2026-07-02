@@ -116,6 +116,17 @@
                                                 }
                                             </div>
                                         }
+                                        @if (cmd.ExtraTextPlaceholder != null)
+                                        {
+                                            <div class="cch-input-row">
+                                                <input class="cch-input" type="text"
+                                                       @bind="_extraValues[cmd.Name]"
+                                                       placeholder="@cmd.ExtraTextPlaceholder" />
+                                                <button class="cch-send-btn"
+                                                        @onclick="() => SendExtraValueAsync(cmd)"
+                                                        disabled="@(!CmdHelper.IsConnected || string.IsNullOrWhiteSpace(_extraValues.GetValueOrDefault(cmd.Name)))">✓</button>
+                                            </div>
+                                        }
                                         break;
 
                                     case ConsoleCommandType.Value:
@@ -340,6 +351,7 @@
         Enum.GetValues<ConsoleCommandGroup>();
 
     private readonly Dictionary<string, string> _editValues = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> _extraValues = new(StringComparer.OrdinalIgnoreCase);
     private ConsoleCommandDef? _confirmCmd;
     private string _toast = string.Empty;
     private bool _toastIsError;
@@ -386,6 +398,8 @@
         foreach (var def in ConsoleCommandDefinitions.All)
         {
             _editValues[def.Name] = CmdHelper.CurrentValues.TryGetValue(def.Name, out var v) ? v : string.Empty;
+            if (def.ExtraTextPlaceholder != null)
+                _extraValues[def.Name] = string.Empty;
         }
     }
 
@@ -521,6 +535,15 @@
         var newVal = IsActive(cmd.Name) ? "off" : "on";
         await CmdHelper.SendCommandAsync(cmd.Name, newVal);
         ShowToast($"--{cmd.Name} {newVal}");
+    }
+
+    private async Task SendExtraValueAsync(ConsoleCommandDef cmd)
+    {
+        var val = _extraValues.GetValueOrDefault(cmd.Name, string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(val)) return;
+        await CmdHelper.SendCommandAsync(cmd.Name, val);
+        ShowToast($"--{cmd.Name} {val}");
+        _extraValues[cmd.Name] = string.Empty;
     }
 
     private async Task SendOptionAsync(ConsoleCommandDef cmd, string option)
