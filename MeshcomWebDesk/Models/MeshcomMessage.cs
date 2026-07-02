@@ -99,6 +99,13 @@ public class MeshcomMessage
     /// </summary>
     public string? RelayPath { get; set; }
 
+    /// <summary>
+    /// Full via-routing path from the "dst" field when newer firmware reports it
+    /// (e.g. "DB0FRI-12,DH1FR-2"). The last entry is the final destination, already
+    /// stored alone in <see cref="To"/>. Null when no via-routing was reported.
+    /// </summary>
+    public string? ViaPath { get; set; }
+
     /// <summary>Source type from the JSON "src_type" field: "lora", "udp", or "node".</summary>
     public string? SrcType { get; set; }
 

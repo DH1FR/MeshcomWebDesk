@@ -1,5 +1,16 @@
 ﻿# Changelog
 
+## [1.13.2] – released
+
+### Features
+- **`>` as alternative bot command prefix**: Bot commands can now be triggered with `>` in addition to `--` (e.g. `>ping`, `>help`). The `>` prefix is the native syntax introduced in MeshCom firmware 4.35p.
+- **Bot replies use `>` syntax**: Help output, unknown-command messages and license notices now display `>help`, `>ping` etc. instead of `--help` / `--ping`.
+- **Via-routing in monitor (firmware 4.35p)**: Newer firmware encodes the via-routing path inside the `dst` JSON field (e.g. `"DB0FRI-12,DH1FR-2"`). The monitor now parses this and renders it as `→ DB0FRI-12 ⟶ DH1FR-2`, mirroring the existing relay-hop display for the source path.
+- **Via-routing on outgoing messages**: When the local node echoes back a sent message, the via-path reported in the echo is applied retroactively to the already-displayed TX row in the monitor.
+- **Console Command Helper – `via` and `viadebug`**: `--via on/off` (enable/disable via-routing) and `--viadebug on/off` (via-routing debug output) are now available as Console Command Helper entries. The via-node callsign can be set directly in the helper via a text field (`--via OE1KBC-24` / `--via NONE`).
+
+---
+
 ## [1.13.1] – released
 
 ### Bugfixes

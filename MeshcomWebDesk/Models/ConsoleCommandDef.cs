@@ -84,6 +84,12 @@ public sealed class ConsoleCommandDef
     /// </summary>
     public bool OptimisticUpdate { get; init; }
 
+    /// <summary>
+    /// Wenn gesetzt, zeigt ein Toggle-Befehl zusätzlich ein Text-Eingabefeld an.
+    /// Der eingegebene Wert wird als Parameter an den Befehl gesendet (z.B. --via OE5XYZ).
+    /// </summary>
+    public string? ExtraTextPlaceholder { get; init; }
+
     /// <summary>Vollständiger Befehlsstring mit "--" Präfix.</summary>
     public string Command => $"--{Name}";
 }

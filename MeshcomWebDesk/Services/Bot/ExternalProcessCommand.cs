@@ -38,7 +38,7 @@ internal sealed class ExternalProcessCommand : IBotCommand
     public async Task<string> ExecuteAsync(string[] args, string senderCallsign, MeshcomMessage? context)
     {
         if (!_license.IsLicensed)
-            return $"--{_entry.Name}: external commands require a license.";
+            return $">{_entry.Name}: external commands require a license.";
 
         var json = ExternalProcessRunner.BuildBotPayload(
             _entry.Name, args, senderCallsign, context, _settings.CurrentValue);
