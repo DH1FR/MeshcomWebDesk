@@ -29,13 +29,12 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
-## 🆕 What's New in v1.13.1
+## 🆕 What's New in v1.13.2
 
-### 🔧 Bug Fixes
-- **Node echo not recognized with relay path** – Newer firmware versions include via-nodes in the `dst` field of the echo packet (e.g. `"DB0KH-11,DH1FR-99"`), causing a false "UDP packet possibly not received" warning on every send. Fixed.
-- **ANSI / C1 control chars in NET Console output** – Firmware v4.35p routes Serial debug output through the NET Console including ANSI escape sequences and raw C1 bytes. The strip regex now covers the full C1 range.
-- **MQTT send payload with mixed-case `text` key** – Payloads using `"Text"` or `"TEXT"` were silently dropped. The key lookup is now case-insensitive.
-- **Python 3 missing from Docker image / HamQSL endpoint** – `python3` is now included in the Docker runtime image. `prop.py` switches from the deprecated `solar.php` to `solarxml.php`.
+### ✨ Features
+- **`>` as alternative bot command prefix** – Bot commands now work with `>` in addition to `--` (e.g. `>ping`, `>help`). This matches the native syntax introduced in MeshCom firmware 4.35p.
+- **Via-routing shown in monitor** – Firmware 4.35p encodes the via-path in the `dst` JSON field. The monitor now renders it as `→ DB0FRI-12 ⟶ DH1FR-2`, including on outgoing TX messages once the node echo arrives.
+- **Console Command Helper: `via` & `viadebug`** – `--via on/off` and `--viadebug on/off` are now accessible from the Console Command Helper. The via-node callsign can be entered directly in the UI (`--via OE1KBC-24` / `--via NONE`).
 
 ---
 
