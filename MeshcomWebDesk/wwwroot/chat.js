@@ -264,7 +264,11 @@ window.meshcomChat = (function () {
             // iOS Safari: show a small modal with the text pre-selected so the user
             // can tap the native "Copy" menu. This is the only reliable method when
             // the Clipboard API is blocked (no trusted gesture via SignalR/Blazor).
-            var isIos = /iP(hone|ad|od)/.test(navigator.userAgent);
+            // Since iPadOS 13, Safari on iPad reports a desktop macOS user-agent
+            // (no "iPad" substring) unless the user opted into the mobile site.
+            // Detect it via touch support on a Mac-reported platform as well.
+            var isIos = /iP(hone|ad|od)/.test(navigator.userAgent)
+                || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
             if (!isIos) {
                 // Desktop / Android fallback via execCommand
