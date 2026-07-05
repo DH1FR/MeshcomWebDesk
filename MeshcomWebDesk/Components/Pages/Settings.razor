@@ -1248,6 +1248,15 @@
                     </label>
                     <input type="number" min="5" max="60" style="width:6rem" @bind="_model.WeatherApi.PollIntervalMinutes" />
 
+                    <label>
+                        @Loc.T("Anfragen loggen", "Log Requests")<br />
+                        <small>@Loc.T("Jeder Abruf (Request &amp; Antwort) wird in die Log-Datei geschrieben.", "Every request &amp; response is written to the log file.")</small>
+                    </label>
+                    <label class="settings-toggle">
+                        <input type="checkbox" @bind="_model.WeatherApi.LogRequests" />
+                        <span>@(_model.WeatherApi.LogRequests ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
+                    </label>
+
                     @* Lizenzschlüssel-Feld deaktiviert – keine Lizenz erforderlich *@
                 }
             </div>
@@ -2358,7 +2367,8 @@
                 PollIntervalMinutes = _model.WeatherApi.PollIntervalMinutes,
                 ApiKey              = string.IsNullOrEmpty(_model.WeatherApi.ApiKey)
                                         ? liveKey
-                                        : _model.WeatherApi.ApiKey
+                                        : _model.WeatherApi.ApiKey,
+                LogRequests         = _model.WeatherApi.LogRequests
             };
             await WeatherPollingService.PollAsync(pollSettings, CancellationToken.None);
             if (WeatherPollingService.LastData?.Fields is { Count: > 0 } fields)
@@ -2977,6 +2987,7 @@
                 ApiKey             = s.WeatherApi.ApiKey,
                 StationId          = s.WeatherApi.StationId,
                 PollIntervalMinutes= s.WeatherApi.PollIntervalMinutes,
+                LogRequests        = s.WeatherApi.LogRequests,
             },
             LicenseToken            = s.LicenseToken
         };
@@ -3395,6 +3406,7 @@
             imported.Mqtt             ??= new();
             imported.Qrz              ??= new();
             imported.Ai               ??= new();
+            imported.WeatherApi       ??= new();
 
             // Load imported settings into form model (same mapping as OnInitialized)
             var s = imported;
@@ -3521,6 +3533,8 @@
                 AiSummaryDays      = s.Ai.SummaryDays,
                 AiMaxMessages      = s.Ai.MaxMessages,
                 AiLogRequests      = s.Ai.LogRequests,
+                WeatherApi              = s.WeatherApi,
+                LicenseToken            = s.LicenseToken,
                 TxPowerDbm              = s.TxPowerDbm,
                 CableType               = s.CableType,
                 CableLengthM            = s.CableLengthM,

@@ -23,7 +23,7 @@ public class WUndergroundProvider : IWeatherProvider
         _logger = logger;
     }
 
-    public async Task<WeatherData?> FetchAsync(string apiKey, string stationId, CancellationToken ct = default)
+    public async Task<WeatherData?> FetchAsync(string apiKey, string stationId, CancellationToken ct = default, bool logRequests = false)
     {
         if (string.IsNullOrWhiteSpace(apiKey) || string.IsNullOrWhiteSpace(stationId))
             throw new InvalidOperationException(
@@ -35,8 +35,11 @@ public class WUndergroundProvider : IWeatherProvider
             var url = $"{BaseUrl}?stationId={Uri.EscapeDataString(stationId)}" +
                       $"&format=json&units=m&apiKey={Uri.EscapeDataString(apiKey)}" +
                       $"&numericPrecision=decimal";
+            var maskedUrl = url.Replace(apiKey, "***");
 
-            _logger.LogDebug("WUnderground fetch: {Url}", url.Replace(apiKey, "***"));
+            _logger.LogDebug("WUnderground fetch: {Url}", maskedUrl);
+            if (logRequests)
+                _logger.LogInformation("WUnderground >> GET {Url}", maskedUrl);
 
             using var response = await client.GetAsync(url, ct);
             var json = await response.Content.ReadAsStringAsync(ct);
@@ -45,7 +48,8 @@ public class WUndergroundProvider : IWeatherProvider
                 throw new InvalidOperationException(
                     $"Weather Underground HTTP {(int)response.StatusCode}: {json.Trim()}");
 
-            _logger.LogInformation("WUnderground raw response: {Json}", json);
+            if (logRequests)
+                _logger.LogInformation("WUnderground << {Status} {Response}", (int)response.StatusCode, json);
 
             var result = ParseResponse(json);
             if (result == null)

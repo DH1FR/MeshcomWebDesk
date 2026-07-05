@@ -49,6 +49,8 @@ public interface IWeatherProvider
     /// <summary>
     /// Fetches the latest observation from the provider.
     /// Returns null if the data could not be retrieved.
+    /// When <paramref name="logRequests"/> is true, the request (masked API key) and raw
+    /// response are written to the log at Information level.
     /// </summary>
-    Task<WeatherData?> FetchAsync(string apiKey, string stationId, CancellationToken ct = default);
+    Task<WeatherData?> FetchAsync(string apiKey, string stationId, CancellationToken ct = default, bool logRequests = false);
 }

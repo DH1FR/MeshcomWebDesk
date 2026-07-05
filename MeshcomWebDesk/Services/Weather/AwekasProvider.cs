@@ -23,7 +23,7 @@ public class AwekasProvider : IWeatherProvider
         _logger = logger;
     }
 
-    public async Task<WeatherData?> FetchAsync(string apiKey, string stationId, CancellationToken ct = default)
+    public async Task<WeatherData?> FetchAsync(string apiKey, string stationId, CancellationToken ct = default, bool logRequests = false)
     {
         if (string.IsNullOrWhiteSpace(apiKey))
             throw new InvalidOperationException("AWEKAS: API-Key muss eingetragen sein.");
@@ -34,6 +34,10 @@ public class AwekasProvider : IWeatherProvider
 
         var client = _httpClientFactory.CreateClient("WeatherApi");
         var url = $"{ApiUrl}?key={Uri.EscapeDataString(decodedKey)}";
+        var maskedUrl = url.Replace(Uri.EscapeDataString(decodedKey), "***");
+
+        if (logRequests)
+            _logger.LogInformation("AWEKAS >> GET {Url}", maskedUrl);
 
         using var response = await client.GetAsync(url, ct);
         var json = await response.Content.ReadAsStringAsync(ct);
@@ -41,7 +45,8 @@ public class AwekasProvider : IWeatherProvider
         if (!response.IsSuccessStatusCode)
             throw new InvalidOperationException($"AWEKAS HTTP {(int)response.StatusCode}: {json.Trim()}");
 
-        _logger.LogInformation("AWEKAS Antwort: {Json}", json);
+        if (logRequests)
+            _logger.LogInformation("AWEKAS << {Status} {Response}", (int)response.StatusCode, json);
 
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;

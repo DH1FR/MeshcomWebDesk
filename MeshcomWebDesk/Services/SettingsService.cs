@@ -342,6 +342,7 @@ public class SettingsService
                     ["ApiKey"]              = EncryptOrKeepExisting(s.WeatherApi.ApiKey, "WeatherApi", "ApiKey"),
                     ["StationId"]           = s.WeatherApi.StationId,
                     ["PollIntervalMinutes"] = s.WeatherApi.PollIntervalMinutes,
+                    ["LogRequests"]         = s.WeatherApi.LogRequests,
                 },
                 ["LicenseToken"] = s.LicenseToken
             }

@@ -16,6 +16,9 @@ public class WeatherApiSettings
 
     /// <summary>Polling interval in minutes. Minimum 5, default 15.</summary>
     public int PollIntervalMinutes { get; set; } = 15;
+
+    /// <summary>When true, every request (masked API key) and raw response is written to the log at Information level.</summary>
+    public bool LogRequests { get; set; } = false;
 }
 
 /// <summary>Supported weather data providers.</summary>
