@@ -827,6 +827,29 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             var fileContent = File.ReadAllText(s.TelemetryFilePath);
             using var doc = JsonDocument.Parse(fileContent);
             var root  = doc.RootElement;
+
+            // The Weather API writes an _observed timestamp into the file. When provider
+            // fetches keep failing, the file stays untouched – without this check the old
+            // values would be rebroadcast as current indefinitely.
+            if (s.WeatherApi.Provider != WeatherProvider.None &&
+                root.TryGetProperty("_observed", out var observedProp) &&
+                observedProp.ValueKind == JsonValueKind.String &&
+                DateTime.TryParse(observedProp.GetString(),
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.AssumeUniversal |
+                    System.Globalization.DateTimeStyles.AdjustToUniversal, out var observedUtc))
+            {
+                var maxAge = TimeSpan.FromMinutes(Math.Max(60, s.WeatherApi.PollIntervalMinutes * 3));
+                var age    = DateTime.UtcNow - observedUtc;
+                if (age > maxAge)
+                {
+                    _logger.LogWarning(
+                        "Telemetry file {Path} is stale (observed {Observed:u}, age {Age:F0} min > max {Max:F0} min) – not sending",
+                        s.TelemetryFilePath, observedUtc, age.TotalMinutes, maxAge.TotalMinutes);
+                    return null;
+                }
+            }
+
             var parts = new List<string>();
 
             foreach (var entry in s.TelemetryMapping)

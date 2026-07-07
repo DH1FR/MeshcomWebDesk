@@ -45,6 +45,10 @@ public class AwekasProvider : IWeatherProvider
         if (!response.IsSuccessStatusCode)
             throw new InvalidOperationException($"AWEKAS HTTP {(int)response.StatusCode}: {json.Trim()}");
 
+        if (string.IsNullOrWhiteSpace(json))
+            throw new InvalidOperationException(
+                $"AWEKAS: Leere Antwort erhalten (HTTP {(int)response.StatusCode}).");
+
         if (logRequests)
             _logger.LogInformation("AWEKAS << {Status} {Response}", (int)response.StatusCode, json);
 

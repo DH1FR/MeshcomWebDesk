@@ -48,6 +48,12 @@ public class WUndergroundProvider : IWeatherProvider
                 throw new InvalidOperationException(
                     $"Weather Underground HTTP {(int)response.StatusCode}: {json.Trim()}");
 
+            // WU returns HTTP 204 with an empty body when the station has not
+            // reported within the last ~60 minutes.
+            if ((int)response.StatusCode == 204 || string.IsNullOrWhiteSpace(json))
+                throw new InvalidOperationException(
+                    $"Weather Underground: Station {stationId} hat in den letzten 60 Minuten keine Daten gemeldet (HTTP {(int)response.StatusCode}, leere Antwort).");
+
             if (logRequests)
                 _logger.LogInformation("WUnderground << {Status} {Response}", (int)response.StatusCode, json);
 
@@ -78,8 +84,16 @@ public class WUndergroundProvider : IWeatherProvider
             //     "humidity":..., "winddir":..., "uv":..., "solarRadiation":... } ] }
 
             using var doc = JsonDocument.Parse(json);
-            var obs = doc.RootElement
-                         .GetProperty("observations")[0];
+
+            if (!doc.RootElement.TryGetProperty("observations", out var obsArr) ||
+                obsArr.ValueKind != JsonValueKind.Array ||
+                obsArr.GetArrayLength() == 0)
+            {
+                _logger.LogWarning("WUnderground: response contains no observations (station not reporting?): {Json}", json);
+                return null;
+            }
+
+            var obs = obsArr[0];
 
             var data = new WeatherData { ProviderName = Name };
 
