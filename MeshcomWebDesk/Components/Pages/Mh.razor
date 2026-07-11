@@ -547,8 +547,8 @@
 
     private static string RssiClass(int? rssi) => rssi switch
     {
-        > -70 => "rssi-good",
-        > -90 => "rssi-fair",
+        > SignalHelper.RssiGoodDbm => "rssi-good",
+        > SignalHelper.RssiWeakDbm => "rssi-fair",
         null  => "",
         _     => "rssi-weak"
     };

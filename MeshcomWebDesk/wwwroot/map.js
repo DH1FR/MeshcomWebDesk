@@ -9,22 +9,29 @@ window.meshcomMap = (function () {
     var _coverageLayer   = null;
     var _fsplLayer       = null;
     var _lastBounds      = null;
-    var _stationMarkers  = {};
+    var _stationMarkers  = {};   // remote stations, keyed by uppercase callsign
+    var _ownMarker       = null;
+    var _ownKey          = null;
+    var _segEntries      = [];   // drawn relay segments (for focus mode)
+    var _focusCall       = null; // uppercase callsign whose links are highlighted
     var _initialFitDone  = false;
     var _readyToSave     = false;
     var _dotNet          = null;
     var STORAGE_KEY      = 'meshcom_map_view';
 
+    // Signal thresholds; overwritten from C# (SignalHelper) via init()
+    var _sig = { rssiGood: -105, rssiWeak: -115, snrGood: 0, snrWeak: -10 };
+
     function esc(s) {
         return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
-    function formatTelemAge(mins) {
+    function formatAge(mins) {
         if (mins == null || mins < 0) return '';
         if (mins <  2)    return 'gerade';
-        if (mins <  60)   return 'vor ' + Math.round(mins)      + '\u202Fmin';
-        if (mins < 1440)  return 'vor ' + Math.round(mins / 60) + '\u202Fh';
-        return 'vor ' + Math.round(mins / 1440) + '\u202Fd';
+        if (mins <  60)   return 'vor ' + Math.round(mins)      + ' min';
+        if (mins < 1440)  return 'vor ' + Math.round(mins / 60) + ' h';
+        return 'vor ' + Math.round(mins / 1440) + ' d';
     }
 
     function saveView() {
@@ -35,18 +42,41 @@ window.meshcomMap = (function () {
         } catch (e) { }
     }
 
+    // ── Signal rating ─────────────────────────────────────────────────
+    // Tier: 0 = unknown, 1 = good, 2 = fair, 3 = weak.
+    // Rated by the worse of RSSI and SNR (mirrors SignalHelper.Rate in C#).
+    function sigTier(rssi, snr) {
+        var t = 0;
+        if (rssi != null) t = Math.max(t, rssi > _sig.rssiGood ? 1 : rssi > _sig.rssiWeak ? 2 : 3);
+        if (snr  != null) t = Math.max(t, snr  > _sig.snrGood  ? 1 : snr  > _sig.snrWeak  ? 2 : 3);
+        return t;
+    }
+
+    function tierColor(t) {
+        return t === 1 ? '#39d353' : t === 2 ? '#f0c060' : t === 3 ? '#ff6b6b' : '#b0bec5';
+    }
+
+    function tierClass(t) {
+        return t === 1 ? 'sig-good' : t === 2 ? 'sig-ok' : t === 3 ? 'sig-weak' : 'sig-none';
+    }
+
+    // Lines from stations heard long ago fade out (full < 15 min → 0.3 at 24 h)
+    function ageFade(mins) {
+        if (mins == null) return 1;
+        if (mins <= 15)   return 1;
+        if (mins >= 1440) return 0.3;
+        return 1 - 0.7 * (mins - 15) / (1440 - 15);
+    }
+
     // APRS-style marker: filled circle (signal colour) + optional relay ring + callsign label
-    function stationIcon(callsign, rssi, hopCount, hasTelem, isGateway) {
-        var sigClass = rssi == null ? 'sig-none'
-                     : rssi > -90  ? 'sig-good'
-                     : rssi > -105 ? 'sig-ok'
-                     :               'sig-weak';
+    function stationIcon(callsign, tier, hopCount, hasTelem, isGateway) {
+        var sigClass   = tierClass(tier);
         var relayClass = hopCount > 1 ? ' aprs-relay-2'
                        : hopCount > 0 ? ' aprs-relay-1'
                        :                '';
         var gwClass   = isGateway ? ' aprs-gateway' : '';
-        var gwIcon    = isGateway ? '<span class="aprs-gw-icon">\uD83C\uDF10</span>' : '';
-        var telemIcon = hasTelem ? '<span class="aprs-telem-icon">\uD83C\uDF21\uFE0F</span>' : '';
+        var gwIcon    = isGateway ? '<span class="aprs-gw-icon">🌐</span>' : '';
+        var telemIcon = hasTelem ? '<span class="aprs-telem-icon">🌡️</span>' : '';
         var html = '<div class="aprs-wrap">'
                  + '<div class="aprs-dot ' + sigClass + relayClass + gwClass + '"></div>'
                  + '<div class="aprs-label' + (isGateway ? ' aprs-label-gateway' : '') + '">' + gwIcon + esc(callsign) + telemIcon + '</div>'
@@ -56,8 +86,8 @@ window.meshcomMap = (function () {
 
     // Own position: gold diamond + label (+ green gateway ring when isGateway)
     function ownIcon(callsign, hasTelem, isGateway) {
-        var telemIcon = hasTelem ? '<span class="aprs-telem-icon">\uD83C\uDF21\uFE0F</span>' : '';
-        var gwIcon    = isGateway ? '<span class="aprs-gw-icon">\uD83C\uDF10</span>' : '';
+        var telemIcon = hasTelem ? '<span class="aprs-telem-icon">🌡️</span>' : '';
+        var gwIcon    = isGateway ? '<span class="aprs-gw-icon">🌐</span>' : '';
         var gwRing    = isGateway ? ' aprs-own-gateway' : '';
         var html = '<div class="aprs-wrap">'
                  + '<div class="aprs-dot aprs-own' + gwRing + '"></div>'
@@ -66,21 +96,130 @@ window.meshcomMap = (function () {
         return L.divIcon({ className: '', html: html, iconAnchor: [7, 7] });
     }
 
-    // RSSI → line colour (vivid versions for better map contrast)
-    function rssiColor(rssi) {
-        if (rssi == null)    return '#b0bec5';
-        if (rssi > -90)      return '#39d353';
-        if (rssi > -105)     return '#f0c060';
-        return '#ff6b6b';
+    function buildStationPopup(s) {
+        var qrzLine = '';
+        if (s.qrzName || s.qrzLoc) {
+            qrzLine = '<br><span style="font-size:11px;color:#aaa">';
+            if (s.qrzName) qrzLine += esc(s.qrzName);
+            if (s.qrzName && s.qrzLoc) qrzLine += ', ';
+            if (s.qrzLoc)  qrzLine += esc(s.qrzLoc);
+            qrzLine += '</span>';
+        }
+        var badgeLine = '';
+        if (s.hwName || s.firmware) {
+            badgeLine = '<br>';
+            if (s.hwName)   badgeLine += '<span style="display:inline-block;font-size:10px;font-weight:600;background:#0f3460;color:#79c0ff;border-radius:3px;padding:1px 4px;margin-right:3px">' + esc(s.hwName) + '</span>';
+            if (s.firmware) badgeLine += '<span style="display:inline-block;font-size:10px;font-weight:600;background:#1a2d1a;color:#7ee787;border-radius:3px;padding:1px 4px">' + esc(s.firmware) + '</span>';
+        }
+        var relayLine = '';
+        if (s.hopCount > 0 && s.relayPath) {
+            var hops = s.relayPath.split(',');
+            var relayText = hops.slice(1).map(function(h) { return esc(h.trim()); }).join(' ⟶ ');
+            relayLine = '<br><span style="font-size:11px;color:#8b949e">Via: ' + relayText + '</span>';
+        }
+        var telemLine = '';
+        if (s.temp != null || s.humidity != null || s.pressure != null) {
+            telemLine = '<br><span style="font-size:11px;color:#c8d8e8">';
+            if (s.temp     != null) telemLine += '🌡️ ' + s.temp.toFixed(1) + '°C';
+            if (s.humidity != null) telemLine += (s.temp != null ? '&nbsp;&nbsp;' : '') + '💧 ' + s.humidity.toFixed(0) + '%';
+            if (s.pressure != null) telemLine += '<br>🧭 ' + s.pressure.toFixed(1) + ' hPa';
+            telemLine += '</span>';
+            if (s.telemMins != null) {
+                telemLine += '<br><span style="font-size:10px;color:#6e7681">⏱ ' + formatAge(s.telemMins) + '</span>';
+            }
+        }
+        var signalLine = '';
+        if (s.rssi != null) {
+            signalLine = '<br>RSSI: ' + s.rssi + ' dBm' + (s.snr != null ? ' / SNR ' + s.snr.toFixed(1) + ' dB' : '');
+        } else if (s.snr != null) {
+            signalLine = '<br>SNR: ' + s.snr.toFixed(1) + ' dB';
+        }
+        var aprsLink = '<br><a href="https://aprs.fi/info/a/' + encodeURIComponent(s.callsign)
+            + '" target="_blank" rel="noopener" style="font-size:11px;color:#58a6ff">🔗 aprs.fi</a>';
+        var aiBtn = '<br><button onclick="meshcomMap.requestAiInfo(\'' + esc(s.callsign) + '\')" '
+            + 'id="ai-btn-' + esc(s.callsign.replace(/[^a-zA-Z0-9]/g,'-')) + '" '
+            + 'style="margin-top:5px;font-size:11px;background:#1a3a5c;color:#79c0ff;border:1px solid #3a6a8a;border-radius:4px;padding:2px 8px;cursor:pointer">🤖 KI-Info</button>'
+            + '<div id="ai-result-' + esc(s.callsign.replace(/[^a-zA-Z0-9]/g,'-')) + '" style="font-size:11px;margin-top:4px;color:#c9d1d9;max-width:260px;white-space:pre-wrap"></div>';
+        return '<b>' + esc(s.callsign) + '</b>' + (s.isGateway ? ' <span style="font-size:10px;font-weight:700;background:#0d2b1a;color:#3fb950;border-radius:3px;padding:1px 5px;margin-left:4px">GW</span>' : '') + qrzLine + badgeLine + relayLine + telemLine
+            + (s.text     ? '<br><span style="font-size:12px">' + esc(s.text) + '</span>' : '')
+            + signalLine
+            + (s.battery  != null ? '&nbsp;🔋 ' + s.battery + '%' : '')
+            + (s.alt      != null ? '<br>Alt: ' + s.alt + ' m' : '')
+            + (s.locator  ? '<br><span style="font-size:11px">QTH: <code>' + esc(s.locator) + '</code></span>' : '')
+            + '<br><a href="https://www.openstreetmap.org/?mlat=' + s.lat.toFixed(6) + '&mlon=' + s.lon.toFixed(6) + '&zoom=14" target="_blank" rel="noopener" style="font-size:11px;color:#58a6ff">'
+            + '📍 ' + s.lat.toFixed(4) + (s.lat >= 0 ? '°N' : '°S') + ' ' + s.lon.toFixed(4) + (s.lon >= 0 ? '°E' : '°W') + '</a>'
+            + aprsLink
+            + aiBtn;
+    }
+
+    function buildOwnPopup(ownCallsign, info) {
+        var ownPopup = '<b>' + esc(ownCallsign) + '</b>';
+        if (info.posSource)
+            ownPopup += '<br><span style="font-size:11px;color:#aaa">' + esc(info.isGateway && info.posSource === 'Node' ? 'GW' : info.posSource) + '</span>';
+        if (info.isGateway)
+            ownPopup += ' <span style="font-size:10px;font-weight:700;background:#0d2b1a;color:#3fb950;border-radius:3px;padding:1px 5px;margin-left:4px">GW</span>';
+        if (info.alt      != null)
+            ownPopup += '<br>Alt: ' + info.alt + ' m';
+        if (info.rssi     != null) {
+            ownPopup += '<br>RSSI: ' + info.rssi + ' dBm';
+            if (info.snr != null) ownPopup += ' / SNR: ' + info.snr.toFixed(1) + ' dB';
+        }
+        if (info.temp != null || info.humidity != null || info.pressure != null) {
+            ownPopup += '<br><span style="font-size:11px;color:#c8d8e8">';
+            if (info.temp     != null) ownPopup += '🌡️ ' + info.temp.toFixed(1) + '°C';
+            if (info.humidity != null) ownPopup += (info.temp != null ? '&nbsp;&nbsp;' : '') + '💧 ' + info.humidity.toFixed(0) + '%';
+            if (info.pressure != null) ownPopup += '<br>🧭 ' + info.pressure.toFixed(1) + ' hPa';
+            ownPopup += '</span>';
+            if (info.telemMins != null)
+                ownPopup += '<br><span style="font-size:10px;color:#6e7681">⏱ ' + formatAge(info.telemMins) + '</span>';
+        }
+        ownPopup += '<br>📨 RX ' + (info.rxCount || 0) + ' / TX ' + (info.txCount || 0);
+        if (info.beacon) {
+            ownPopup += '<br>🔵 Beacon';
+            if (info.beaconNext) ownPopup += ' · ' + esc(info.beaconNext);
+        }
+        if (info.deviceIp)
+            ownPopup += '<br><span style="font-size:10px;color:#6e7681">📡 '
+                      + esc(info.deviceIp) + ':' + (info.devicePort || '') + '</span>';
+        if (ownCallsign)
+            ownPopup += '<br><a href="https://aprs.fi/info/a/' + encodeURIComponent(ownCallsign)
+                      + '" target="_blank" rel="noopener" style="font-size:11px;color:#58a6ff">🔗 aprs.fi</a>';
+        return ownPopup;
+    }
+
+    // ── Focus mode: dim all segments not involving the focused callsign ──
+    function applyFocus() {
+        var focus = _focusCall;
+        _segEntries.forEach(function (e) {
+            var dim = focus != null && e.stations.indexOf(focus) === -1;
+            e.line.setStyle({ opacity: dim ? e.lineOpacity * 0.12 : e.lineOpacity });
+            e.halo.setStyle({ opacity: dim ? e.haloOpacity * 0.12 : e.haloOpacity });
+            if (e.arrow) {
+                var el = e.arrow.getElement && e.arrow.getElement();
+                if (el) el.style.opacity = dim ? 0.08 : 1;
+            }
+        });
+    }
+
+    function attachFocusHandlers(marker, key) {
+        marker.on('popupopen',  function () { _focusCall = key; applyFocus(); });
+        marker.on('popupclose', function () {
+            if (_focusCall === key) { _focusCall = null; applyFocus(); }
+        });
     }
 
     return {
-        init: function (elementId, ownLat, ownLon, dotNetRef) {
+        init: function (elementId, ownLat, ownLon, dotNetRef, sigThresholds) {
             if (_map) { _map.remove(); _map = null; }
             _lastBounds     = null;
             _initialFitDone = false;
             _readyToSave    = false;
             _dotNet         = dotNetRef;
+            _segEntries     = [];
+            _focusCall      = null;
+            _ownMarker      = null;
+            _ownKey         = null;
+            if (sigThresholds) _sig = sigThresholds;
 
             var saved = null;
             try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch (e) { }
@@ -108,153 +247,157 @@ window.meshcomMap = (function () {
             _map.on('moveend zoomend', saveView);
         },
 
-        updateMarkers: function (stations, ownCallsign, ownLat, ownLon, relayLines, showRelays, ownInfo) {
+        updateMarkers: function (stations, ownCallsign, ownLat, ownLon, segments, showRelays, ownInfo) {
             if (!_map) return;
-            _stationLayer.clearLayers();
-            _ownLayer.clearLayers();
             _relayLayer.clearLayers();
-            _stationMarkers = {};
+            _segEntries = [];
 
             var bounds = [];
 
-            // ── Relay polylines ───────────────────────────────────────────
+            // ── Aggregated relay segments ─────────────────────────────────
             if (showRelays) {
-                (relayLines || []).forEach(function (line) {
-                    if (!line.coords || line.coords.length < 2) return;
+                (segments || []).forEach(function (seg) {
+                    if (!seg.a || !seg.b) return;
+                    var coords = [seg.a, seg.b];
 
-                    // Weight: min 3px (new path) → max 8px (heavily used), logarithmic
-                    var weight    = Math.min(3 + Math.log(Math.max(line.count || 1, 1)) * 1.5, 8);
-                    var dashArray = line.partial ? '4, 8' : '12, 5';
-                    var opacity   = line.partial ? 0.50  : 0.90;
-                    var color     = rssiColor(line.rssi);
+                    // Weight: min 3px (new link) → max 8px (heavily used), logarithmic
+                    var weight    = Math.min(3 + Math.log(Math.max(seg.count || 1, 1)) * 1.5, 8);
+                    var dashArray = seg.partial ? '4, 8' : '12, 5';
+                    var fade      = ageFade(seg.ageMins);
 
-                    var label = esc(line.label);
-                    if (line.partial) label += ' <i>(unvollst. Pfad)</i>';
-                    if (line.count > 1) label += ' (' + line.count + '\xd7)';
+                    // Colour only the true final RF hop (quality measured at own node);
+                    // upstream hops have unknown link quality → neutral grey
+                    var color = seg.lastHop && (seg.rssi != null || seg.snr != null)
+                              ? tierColor(sigTier(seg.rssi, seg.snr))
+                              : '#90a4ae';
+
+                    var lineOpacity = (seg.partial ? 0.50 : 0.90) * fade;
+                    var haloOpacity = (seg.partial ? 0.25 : 0.55) * fade;
+
+                    var label = '<b>' + esc(seg.from) + ' ⟶ ' + esc(seg.to) + '</b>'
+                              + '<br>' + (seg.distKm != null ? seg.distKm.toFixed(1) + ' km · ' : '')
+                              + (seg.count || 1) + '×'
+                              + (seg.ageMins != null ? ' · ' + formatAge(seg.ageMins) : '');
+                    if (seg.rssi != null || seg.snr != null) {
+                        label += '<br>';
+                        if (seg.rssi != null) label += 'RSSI ' + seg.rssi + ' dBm';
+                        if (seg.snr  != null) label += (seg.rssi != null ? ' / ' : '') + 'SNR ' + seg.snr.toFixed(1) + ' dB';
+                    }
+                    if (!seg.lastHop) label += '<br><small>vorgelagerter Hop – Linkqualität unbekannt</small>';
+                    if (seg.partial)  label += '<br><i>unvollst. Pfad</i>';
 
                     // 1. Dark halo (drawn first = below) for contrast against map tiles
-                    L.polyline(line.coords, {
+                    var halo = L.polyline(coords, {
                         color:     'rgba(0,0,0,0.75)',
                         weight:    weight + 3,
-                        opacity:   line.partial ? 0.25 : 0.55,
+                        opacity:   haloOpacity,
                         dashArray: dashArray,
                         interactive: false
                     }).addTo(_relayLayer);
 
-                    // 2. Coloured line on top
-                    L.polyline(line.coords, {
+                    // 2. Coloured line on top; fresh traffic (< 2 min) animates
+                    var line = L.polyline(coords, {
                         color:     color,
                         weight:    weight,
-                        opacity:   opacity,
-                        dashArray: dashArray
+                        opacity:   lineOpacity,
+                        dashArray: dashArray,
+                        className: seg.ageMins != null && seg.ageMins <= 2 ? 'relay-live' : ''
                     })
                     .bindTooltip(label, { sticky: true, className: 'relay-tooltip' })
                     .addTo(_relayLayer);
+
+                    // 3. Direction arrow at the segment midpoint (skip very short hops)
+                    var arrow = null;
+                    if (seg.distKm == null || seg.distKm > 0.5) {
+                        var midLat = (seg.a[0] + seg.b[0]) / 2;
+                        var midLon = (seg.a[1] + seg.b[1]) / 2;
+                        var dLat   = seg.b[0] - seg.a[0];
+                        var dLon   = (seg.b[1] - seg.a[1]) * Math.cos(midLat * Math.PI / 180);
+                        var angle  = Math.atan2(-dLat, dLon) * 180 / Math.PI;
+                        arrow = L.marker([midLat, midLon], {
+                            icon: L.divIcon({
+                                className: '',
+                                html: '<div class="relay-arrow" style="transform:rotate(' + angle.toFixed(1) + 'deg);opacity:' + fade.toFixed(2) + '">➤</div>',
+                                iconSize:   [16, 16],
+                                iconAnchor: [8, 8]
+                            }),
+                            interactive: false,
+                            keyboard:    false
+                        }).addTo(_relayLayer);
+                    }
+
+                    _segEntries.push({
+                        stations:    seg.stations || [],
+                        line:        line,
+                        halo:        halo,
+                        arrow:       arrow,
+                        lineOpacity: lineOpacity,
+                        haloOpacity: haloOpacity
+                    });
                 });
             }
 
-            // ── Station markers ───────────────────────────────────────────            }
-
-            // ── Station markers ───────────────────────────────────────────
+            // ── Station markers (diff update: keeps open popups alive) ────
+            var seen = {};
             (stations || []).forEach(function (s) {
                 if (s.lat == null || s.lon == null) return;
 
-                var qrzLine = '';
-                if (s.qrzName || s.qrzLoc) {
-                    qrzLine = '<br><span style="font-size:11px;color:#aaa">';
-                    if (s.qrzName) qrzLine += esc(s.qrzName);
-                    if (s.qrzName && s.qrzLoc) qrzLine += ', ';
-                    if (s.qrzLoc)  qrzLine += esc(s.qrzLoc);
-                    qrzLine += '</span>';
-                }
-                var badgeLine = '';
-                if (s.hwName || s.firmware) {
-                    badgeLine = '<br>';
-                    if (s.hwName)   badgeLine += '<span style="display:inline-block;font-size:10px;font-weight:600;background:#0f3460;color:#79c0ff;border-radius:3px;padding:1px 4px;margin-right:3px">' + esc(s.hwName) + '</span>';
-                    if (s.firmware) badgeLine += '<span style="display:inline-block;font-size:10px;font-weight:600;background:#1a2d1a;color:#7ee787;border-radius:3px;padding:1px 4px">' + esc(s.firmware) + '</span>';
-                }
-                var relayLine = '';
-                if (s.hopCount > 0 && s.relayPath) {
-                    var hops = s.relayPath.split(',');
-                    var relayText = hops.slice(1).map(function(h) { return esc(h.trim()); }).join(' \u27f6 ');
-                    relayLine = '<br><span style="font-size:11px;color:#8b949e">Via: ' + relayText + '</span>';
-                }
-                var telemLine = '';
-                if (s.temp != null || s.humidity != null || s.pressure != null) {
-                    telemLine = '<br><span style="font-size:11px;color:#c8d8e8">';
-                    if (s.temp     != null) telemLine += '\uD83C\uDF21\uFE0F\u202F' + s.temp.toFixed(1) + '\u00b0C';
-                    if (s.humidity != null) telemLine += (s.temp != null ? '&nbsp;&nbsp;' : '') + '\uD83D\uDCA7\u202F' + s.humidity.toFixed(0) + '%';
-                    if (s.pressure != null) telemLine += '<br>\uD83E\uDDED\u202F' + s.pressure.toFixed(1) + '\u202FhPa';
-                    telemLine += '</span>';
-                    if (s.telemMins != null) {
-                        telemLine += '<br><span style="font-size:10px;color:#6e7681">\u23f1\u202F' + formatTelemAge(s.telemMins) + '</span>';
-                    }
-                }
-                var aprsLink = '<br><a href="https://aprs.fi/info/a/' + encodeURIComponent(s.callsign)
-                    + '" target="_blank" rel="noopener" style="font-size:11px;color:#58a6ff">🔗 aprs.fi</a>';
-                var aiBtn = '<br><button onclick="meshcomMap.requestAiInfo(\'' + esc(s.callsign) + '\')" '
-                    + 'id="ai-btn-' + esc(s.callsign.replace(/[^a-zA-Z0-9]/g,'-')) + '" '
-                    + 'style="margin-top:5px;font-size:11px;background:#1a3a5c;color:#79c0ff;border:1px solid #3a6a8a;border-radius:4px;padding:2px 8px;cursor:pointer">🤖 KI-Info</button>'
-                    + '<div id="ai-result-' + esc(s.callsign.replace(/[^a-zA-Z0-9]/g,'-')) + '" style="font-size:11px;margin-top:4px;color:#c9d1d9;max-width:260px;white-space:pre-wrap"></div>';
-                var popup = '<b>' + esc(s.callsign) + '</b>' + (s.isGateway ? ' <span style="font-size:10px;font-weight:700;background:#0d2b1a;color:#3fb950;border-radius:3px;padding:1px 5px;margin-left:4px">GW</span>' : '') + qrzLine + badgeLine + relayLine + telemLine
-                    + (s.text     ? '<br><span style="font-size:12px">' + esc(s.text) + '</span>' : '')
-                    + (s.rssi     != null ? '<br>RSSI: ' + s.rssi + ' dBm' : '')
-                    + (s.battery  != null ? '&nbsp;🔋 ' + s.battery + '%' : '')
-                    + (s.alt      != null ? '<br>Alt: ' + s.alt + ' m' : '')
-                    + (s.locator  ? '<br><span style="font-size:11px">QTH: <code>' + esc(s.locator) + '</code></span>' : '')
-                    + '<br><a href="https://www.openstreetmap.org/?mlat=' + s.lat.toFixed(6) + '&mlon=' + s.lon.toFixed(6) + '&zoom=14" target="_blank" rel="noopener" style="font-size:11px;color:#58a6ff">'
-                    + '📍 ' + s.lat.toFixed(4) + (s.lat >= 0 ? '°N' : '°S') + ' ' + s.lon.toFixed(4) + (s.lon >= 0 ? '°E' : '°W') + '</a>'
-                    + aprsLink
-                    + aiBtn;
+                var key   = s.callsign.toUpperCase();
+                var icon  = stationIcon(s.callsign, sigTier(s.rssi, s.snr), s.hopCount,
+                                        s.temp != null || s.humidity != null || s.pressure != null,
+                                        s.isGateway);
+                var popup = buildStationPopup(s);
 
-                var _m = L.marker([s.lat, s.lon], { icon: stationIcon(s.callsign, s.rssi, s.hopCount, s.temp != null || s.humidity != null || s.pressure != null, s.isGateway) })
-                    .bindPopup(popup)
-                    .addTo(_stationLayer);
-                _stationMarkers[s.callsign.toUpperCase()] = _m;
+                seen[key] = true;
+                var m = _stationMarkers[key];
+                if (m) {
+                    m.setLatLng([s.lat, s.lon]);
+                    m.setIcon(icon);
+                    m.setPopupContent(popup);
+                } else {
+                    m = L.marker([s.lat, s.lon], { icon: icon })
+                        .bindPopup(popup)
+                        .addTo(_stationLayer);
+                    attachFocusHandlers(m, key);
+                    _stationMarkers[key] = m;
+                }
                 bounds.push([s.lat, s.lon]);
             });
+            Object.keys(_stationMarkers).forEach(function (k) {
+                if (!seen[k]) {
+                    _stationLayer.removeLayer(_stationMarkers[k]);
+                    delete _stationMarkers[k];
+                }
+            });
 
+            // ── Own marker ────────────────────────────────────────────────
             if (ownLat != null && ownLon != null) {
-                var info = ownInfo || {};
-                var ownPopup = '<b>' + esc(ownCallsign) + '</b>';
-                if (info.posSource)
-                    ownPopup += '<br><span style="font-size:11px;color:#aaa">' + esc(info.isGateway && info.posSource === 'Node' ? 'GW' : info.posSource) + '</span>';
-                if (info.isGateway)
-                    ownPopup += ' <span style="font-size:10px;font-weight:700;background:#0d2b1a;color:#3fb950;border-radius:3px;padding:1px 5px;margin-left:4px">GW</span>';
-                if (info.alt      != null)
-                    ownPopup += '<br>Alt: ' + info.alt + ' m';
-                if (info.rssi     != null) {
-                    ownPopup += '<br>RSSI: ' + info.rssi + ' dBm';
-                    if (info.snr != null) ownPopup += ' / SNR: ' + info.snr.toFixed(1) + ' dB';
-                }
-                if (info.temp != null || info.humidity != null || info.pressure != null) {
-                    ownPopup += '<br><span style="font-size:11px;color:#c8d8e8">';
-                    if (info.temp     != null) ownPopup += '\uD83C\uDF21\uFE0F\u202F' + info.temp.toFixed(1) + '\u00b0C';
-                    if (info.humidity != null) ownPopup += (info.temp != null ? '&nbsp;&nbsp;' : '') + '\uD83D\uDCA7\u202F' + info.humidity.toFixed(0) + '%';
-                    if (info.pressure != null) ownPopup += '<br>\uD83E\uDDED\u202F' + info.pressure.toFixed(1) + '\u202FhPa';
-                    ownPopup += '</span>';
-                    if (info.telemMins != null)
-                        ownPopup += '<br><span style="font-size:10px;color:#6e7681">\u23f1\u202F' + formatTelemAge(info.telemMins) + '</span>';
-                }
-                ownPopup += '<br>\uD83D\uDCE8 RX ' + (info.rxCount || 0) + ' / TX ' + (info.txCount || 0);
-                if (info.beacon) {
-                    ownPopup += '<br>\uD83D\uDD35 Beacon';
-                    if (info.beaconNext) ownPopup += ' \u00b7 ' + esc(info.beaconNext);
-                }
-                if (info.deviceIp)
-                    ownPopup += '<br><span style="font-size:10px;color:#6e7681">\uD83D\uDCE1 '
-                              + esc(info.deviceIp) + ':' + (info.devicePort || '') + '</span>';
-                if (ownCallsign)
-                    ownPopup += '<br><a href="https://aprs.fi/info/a/' + encodeURIComponent(ownCallsign)
-                              + '" target="_blank" rel="noopener" style="font-size:11px;color:#58a6ff">🔗 aprs.fi</a>';
+                var info    = ownInfo || {};
+                var oIcon   = ownIcon(ownCallsign,
+                                      info.temp != null || info.humidity != null || info.pressure != null,
+                                      info.isGateway);
+                var oPopup  = buildOwnPopup(ownCallsign, info);
+                _ownKey     = ownCallsign ? ownCallsign.toUpperCase() : null;
 
-                var _ownM = L.marker([ownLat, ownLon], { icon: ownIcon(ownCallsign, info.temp != null || info.humidity != null || info.pressure != null, info.isGateway) })
-                    .bindPopup(ownPopup)
-                    .addTo(_ownLayer);
-                if (ownCallsign)
-                    _stationMarkers[ownCallsign.toUpperCase()] = _ownM;
+                if (_ownMarker) {
+                    _ownMarker.setLatLng([ownLat, ownLon]);
+                    _ownMarker.setIcon(oIcon);
+                    _ownMarker.setPopupContent(oPopup);
+                } else {
+                    _ownMarker = L.marker([ownLat, ownLon], { icon: oIcon })
+                        .bindPopup(oPopup)
+                        .addTo(_ownLayer);
+                    if (_ownKey) attachFocusHandlers(_ownMarker, _ownKey);
+                }
                 bounds.push([ownLat, ownLon]);
+            } else if (_ownMarker) {
+                _ownLayer.removeLayer(_ownMarker);
+                _ownMarker = null;
+                _ownKey    = null;
             }
+
+            // Re-apply focus dimming after the relay layer was rebuilt
+            if (_focusCall) applyFocus();
 
             if (bounds.length > 0) _lastBounds = bounds.slice();
 
@@ -310,6 +453,8 @@ window.meshcomMap = (function () {
             Object.keys(_stationMarkers).forEach(function (key) {
                 if (key.indexOf(q) !== -1) results.push(key);
             });
+            if (_ownKey && _ownKey.indexOf(q) !== -1 && results.indexOf(_ownKey) === -1)
+                results.push(_ownKey);
             results.sort();
             return results;
         },
@@ -317,7 +462,7 @@ window.meshcomMap = (function () {
         jumpToCallsign: function (callsign) {
             if (!_map || !callsign) return false;
             var key    = callsign.trim().toUpperCase();
-            var marker = _stationMarkers[key];
+            var marker = _stationMarkers[key] || (key === _ownKey ? _ownMarker : null);
             if (!marker) return false;
             _map.setView(marker.getLatLng(), Math.max(_map.getZoom(), 13));
             marker.openPopup();
@@ -348,18 +493,11 @@ window.meshcomMap = (function () {
 
         // ── Reichweiten-Wolke ─────────────────────────────────────────────
         // measuredPoints : [[lat,lon],…]  – real heard stations (blue hull)
-        // topoPoints     : [[lat,lon],…]  – LOS prediction polygon (yellow)
         // ownLat/ownLon  : own position (included in measured hull)
 
-        setCoverage: function (measuredPoints, topoPoints, ownLat, ownLon) {
+        setCoverage: function (measuredPoints, ownLat, ownLon) {
             if (!_map) return;
             _coverageLayer.clearLayers();
-
-            // Debug: log exactly what we received
-            console.log('[Coverage] setCoverage called:',
-                'measured=' + (measuredPoints ? measuredPoints.length : 'null'),
-                'topo='     + (topoPoints     ? topoPoints.length     : 'null'),
-                'own='      + ownLat + ',' + ownLon);
 
             if (!measuredPoints) {
                 if (_map.hasLayer(_coverageLayer)) _map.removeLayer(_coverageLayer);
@@ -413,12 +551,6 @@ window.meshcomMap = (function () {
             var linkBudget = eirpDbm - rxSensDbm - systemMarginDb;
             var d_km       = Math.pow(10, (linkBudget - 20 * Math.log10(freqMhz) - 32.44) / 20);
             var d_m        = d_km * 1000;
-
-            console.log('[FSPL] lat=' + lat + ' lon=' + lon +
-                ' eirp=' + eirpDbm.toFixed(2) + ' dBm' +
-                ' margin=' + systemMarginDb + ' dB' +
-                ' freq=' + freqMhz + ' MHz' +
-                ' d=' + d_km.toFixed(1) + ' km');
 
             _fsplLayer = L.layerGroup();
 
@@ -497,6 +629,4 @@ window.meshcomMap = (function () {
         var dx = a[0]-b[0], dy = a[1]-b[1];
         return dx*dx + dy*dy;
     }
-
-    // keep old closing line replaced above
 })();

@@ -2235,6 +2235,26 @@ h1:focus {
     align-self: stretch;
 }
 
+.map-ctrl-select {
+    background: #0f3460;
+    color: #a0c4ff;
+    border: 1px solid #1a4a8a;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.map-ctrl-select:hover:not(:disabled) {
+    background: #1a5a9a;
+    color: #fff;
+}
+
+.map-ctrl-select:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
 .map-search-input {
     background: #0a1628;
     color: #a0c4ff;
@@ -2412,7 +2432,22 @@ h1:focus {
 .leg-line-good    { border-color: #39d353; }
 .leg-line-ok      { border-color: #f0c060; }
 .leg-line-weak    { border-color: #ff6b6b; }
+.leg-line-neutral { border-color: #90a4ae; }
 .leg-line-partial { border-top: 2px dotted #b0bec5; opacity: 0.55; }
+
+.leg-arrow {
+    width: 28px;
+    text-align: center;
+    color: #eceff4;
+    font-size: 11px;
+    flex-shrink: 0;
+}
+
+.map-legend-note {
+    font-size: 10px;
+    color: #8b949e;
+    font-style: italic;
+}
 
 .leg-line-weight {
     width: 28px;
@@ -2472,6 +2507,27 @@ h1:focus {
 }
 .aprs-dot.aprs-relay-2 {
     box-shadow: 0 0 0 3px rgba(227, 179, 65, 0.45), 0 0 0 6px rgba(227, 179, 65, 0.2), 0 0 5px rgba(0, 0, 0, 0.7);
+}
+
+/* Direction arrow at relay segment midpoints */
+.relay-arrow {
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+    text-align: center;
+    font-size: 12px;
+    color: #eceff4;
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.9);
+    pointer-events: none;
+}
+
+/* Flowing dashes on relay segments with traffic in the last ~2 minutes */
+.relay-live {
+    animation: relay-dash-flow 1.2s linear infinite;
+}
+
+@keyframes relay-dash-flow {
+    to { stroke-dashoffset: -34; }
 }
 
 /* Relay path tooltip */

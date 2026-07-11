@@ -913,7 +913,7 @@ public class ChatService
             _ =>
             {
                 mhChanged = true;
-                return new HeardStation
+                var created = new HeardStation
                 {
                     Callsign         = message.From,
                     FirstHeard       = message.Timestamp,
@@ -941,6 +941,9 @@ public class ChatService
                     Pressure          = message.IsTelemetry ? message.Pressure  : null,
                     LastTelemetryTime = message.IsTelemetry ? message.Timestamp : null,
                 };
+                if (message.RelayPath is not null)
+                    RecordRelayPath(created, message.RelayPath, message.Timestamp);
+                return created;
             },
             (_, s) =>
             {
@@ -971,6 +974,7 @@ public class ChatService
                     else
                         s.RelayPathCount = 1;
                     s.LastRelayPath = message.RelayPath;
+                    RecordRelayPath(s, message.RelayPath, message.Timestamp);
                     mhChanged = true;
                 }
                 if (message.Latitude.HasValue)
@@ -993,6 +997,30 @@ public class ChatService
             });
 
         return mhChanged;
+    }
+
+    /// <summary>
+    /// Records a relay path observation in the station's bounded path history
+    /// (least recently seen path is evicted when the cap is reached).
+    /// </summary>
+    private static void RecordRelayPath(HeardStation s, string path, DateTime timestamp)
+    {
+        lock (s.RelayPathHistory)
+        {
+            var stat = s.RelayPathHistory.FirstOrDefault(p => p.Path == path);
+            if (stat is null)
+            {
+                if (s.RelayPathHistory.Count >= HeardStation.MaxRelayPathHistory)
+                {
+                    var oldest = s.RelayPathHistory.MinBy(p => p.LastSeen);
+                    if (oldest is not null) s.RelayPathHistory.Remove(oldest);
+                }
+                stat = new RelayPathStat { Path = path };
+                s.RelayPathHistory.Add(stat);
+            }
+            stat.Count++;
+            stat.LastSeen = timestamp;
+        }
     }
 
     private void AppendToMonitor(MeshcomMessage message, NodeState state)
