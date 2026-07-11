@@ -883,7 +883,13 @@
                     </div>
                     <div class="settings-grid" style="gap:.4rem .75rem">
                         <label>@Loc.T("Gruppe","Group")</label>
-                        <input type="text" @bind="e.Group" placeholder="#262" />
+                        <div class="settings-input-hint">
+                            <input type="text" @bind="e.Group" placeholder="#262" />
+                            @if (string.IsNullOrWhiteSpace(e.Group))
+                            {
+                                <span class="settings-hint char-warn">⚠ @Loc.T("Ohne Gruppe wird dieser Eintrag nicht gesendet!","Without a group this entry will not be sent!")</span>
+                            }
+                        </div>
 
                         <label>⚙️ @Loc.T("Externer Prozess","External Process")</label>
                         <label class="settings-toggle">
@@ -980,11 +986,24 @@
                         <input type="time" value="@e.EventTime"
                                @onchange="ev => e.EventTime = ev.Value?.ToString() ?? e.EventTime" />
 
-                        <label>@Loc.T("Ankündigung Tage vorher","Announce days before") (0=@Loc.T("aus","off"))</label>
-                        <input type="number" min="0" max="30" @bind="e.AnnounceLeadDays" />
-
-                        <label>@Loc.T("Ankündigung Stunden vorher","Announce hours before") (0=@Loc.T("aus","off"))</label>
-                        <input type="number" min="0" max="72" @bind="e.AnnounceLeadHours" />
+                        <label>
+                            @Loc.T("Ankündigungen vorher","Announce before")<br />
+                            <small>@Loc.T("Kommagetrennt, z. B. 3d, 24h, 2h (d=Tage, h=Stunden, m=Minuten). Leer = keine Vorankündigung.",
+                                          "Comma-separated, e. g. 3d, 24h, 2h (d=days, h=hours, m=minutes). Empty = no advance announcement.")</small>
+                        </label>
+                        <div class="settings-input-hint">
+                            <input type="text" @bind="e.AnnounceLeadTimes" placeholder="3d, 24h, 2h" />
+                            @{
+                                var _leadInvalid = (e.AnnounceLeadTimes ?? "")
+                                    .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                                    .Where(t => !MeshcomWebDesk.Models.CalendarBeaconEntry.TryParseLeadTime(t, out _))
+                                    .ToList();
+                            }
+                            @if (_leadInvalid.Count > 0)
+                            {
+                                <span class="settings-hint char-warn">⚠ @Loc.T("Ungültige Angabe:","Invalid value:") @string.Join(", ", _leadInvalid)</span>
+                            }
+                        </div>
 
                         <label>@Loc.T("Zum Terminzeitpunkt senden","Send at event time")</label>
                         <label class="settings-toggle">
@@ -998,9 +1017,16 @@
                             var nextLabel = nextDate == DateOnly.MaxValue
                                 ? Loc.T("–","–")
                                 : $"{nextDate.ToString("dd.MM.yyyy")} {e.EventTime}";
+                            var nextSend      = MeshcomWebDesk.Services.CalendarBeaconService.GetNextSendTime(e, DateTime.Now);
+                            var nextSendLabel = nextSend is null
+                                ? Loc.T("keine (nichts konfiguriert oder Termin vorbei)","none (nothing configured or event passed)")
+                                : nextSend.Value.ToString("dd.MM.yyyy HH:mm");
                         }
                         <label style="color:var(--text-secondary);font-size:.8rem">@Loc.T("Nächster Termin","Next event")</label>
                         <span style="font-size:.85rem;color:var(--accent)">📅 @nextLabel</span>
+
+                        <label style="color:var(--text-secondary);font-size:.8rem">@Loc.T("Nächste Aussendung","Next transmission")</label>
+                        <span style="font-size:.85rem;color:var(--accent)">📡 @nextSendLabel</span>
                     </div>
                 </div>
             }
@@ -2889,8 +2915,7 @@
                     WeekdayOrdinal    = e.WeekdayOrdinal,
                     EventTime         = e.EventTime,
                     ReferenceDate     = e.ReferenceDate,
-                    AnnounceLeadDays  = e.AnnounceLeadDays,
-                    AnnounceLeadHours = e.AnnounceLeadHours,
+                    AnnounceLeadTimes = e.AnnounceLeadTimes,
                     AnnounceAtEvent   = e.AnnounceAtEvent,
                     IsExternal        = e.IsExternal,
                     ExternalFileName  = e.ExternalFileName,
@@ -3474,8 +3499,7 @@
                         WeekdayOrdinal    = e.WeekdayOrdinal,
                         EventTime         = e.EventTime,
                         ReferenceDate     = e.ReferenceDate,
-                        AnnounceLeadDays  = e.AnnounceLeadDays,
-                        AnnounceLeadHours = e.AnnounceLeadHours,
+                        AnnounceLeadTimes = e.AnnounceLeadTimes,
                         AnnounceAtEvent   = e.AnnounceAtEvent,
                         IsExternal        = e.IsExternal,
                         ExternalFileName  = e.ExternalFileName,

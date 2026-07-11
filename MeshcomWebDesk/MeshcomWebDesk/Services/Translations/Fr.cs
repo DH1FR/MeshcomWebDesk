@@ -269,10 +269,17 @@ internal static class Fr
         ["Ordinal (1=first…)"]      = "Ordinal (1=premier…)",
         ["Day of Month"]            = "Jour du mois",
         ["Reference Date (anchor)"] = "Date de référence (ancre)",
-        ["Announce days before"]    = "Annoncer jours avant",
-        ["Announce hours before"]   = "Annoncer heures avant",
+        ["Announce before"]         = "Annoncer avant",
+        ["Comma-separated, e. g. 3d, 24h, 2h (d=days, h=hours, m=minutes). Empty = no advance announcement."]
+                                    = "Séparé par des virgules, p. ex. 3d, 24h, 2h (d=jours, h=heures, m=minutes). Vide = pas d'annonce préalable.",
+        ["Invalid value:"]          = "Valeur non valide :",
+        ["Without a group this entry will not be sent!"]
+                                    = "Sans groupe, cette entrée ne sera pas envoyée !",
         ["Send at event time"]      = "Envoyer à l'heure de l'événement",
         ["Next event"]              = "Prochain événement",
+        ["Next transmission"]       = "Prochaine transmission",
+        ["none (nothing configured or event passed)"]
+                                    = "aucune (rien de configuré ou événement passé)",
         ["Add Event"]               = "Ajouter événement",
         ["Variables:"]              = "Variables :",
         ["Title"]                   = "Titre",

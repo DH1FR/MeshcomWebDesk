@@ -269,10 +269,17 @@ internal static class It
         ["Ordinal (1=first…)"]      = "Ordinale (1=primo…)",
         ["Day of Month"]            = "Giorno del mese",
         ["Reference Date (anchor)"] = "Data di riferimento (ancora)",
-        ["Announce days before"]    = "Annuncia giorni prima",
-        ["Announce hours before"]   = "Annuncia ore prima",
+        ["Announce before"]         = "Annuncia prima",
+        ["Comma-separated, e. g. 3d, 24h, 2h (d=days, h=hours, m=minutes). Empty = no advance announcement."]
+                                    = "Separato da virgole, ad es. 3d, 24h, 2h (d=giorni, h=ore, m=minuti). Vuoto = nessun preannuncio.",
+        ["Invalid value:"]          = "Valore non valido:",
+        ["Without a group this entry will not be sent!"]
+                                    = "Senza gruppo questa voce non verrà inviata!",
         ["Send at event time"]      = "Invia all'ora dell'evento",
         ["Next event"]              = "Prossimo evento",
+        ["Next transmission"]       = "Prossima trasmissione",
+        ["none (nothing configured or event passed)"]
+                                    = "nessuna (niente configurato o evento passato)",
         ["Add Event"]               = "Aggiungi evento",
         ["Variables:"]              = "Variabili:",
         ["Title"]                   = "Titolo",
