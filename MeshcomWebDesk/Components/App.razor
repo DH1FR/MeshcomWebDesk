@@ -175,7 +175,11 @@
         window.speakText = function (text, lang) {
             // iOS/iPadOS: speechSynthesis from background callbacks is blocked by Apple.
             // Beep sounds (AudioContext) are used instead – skip TTS entirely on iOS.
-            var isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            // Since iPadOS 13, Safari on iPad reports a desktop macOS user-agent
+            // (no "iPad" substring) unless the user opted into the mobile site.
+            var isIos = (/iPad|iPhone|iPod/.test(navigator.userAgent)
+                || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1))
+                && !window.MSStream;
             if (isIos) return;
 
             try {

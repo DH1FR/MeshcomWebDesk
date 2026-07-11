@@ -1,5 +1,23 @@
 ﻿# Changelog
 
+## [1.13.3] – released
+
+### Features
+- **Calendar Beacon – multiple announcement lead times**: The separate "days before" / "hours before" fields are replaced by a comma-separated lead-time list per entry, e.g. `3d, 24h, 2h` (units: `d` = days, `h` = hours, `m` = minutes; no unit = hours). Any number of advance announcements per event; existing settings migrate automatically and slot keys stay compatible (no duplicate sends after the update). (#13, #14)
+- **Calendar Beacon – next-transmission preview**: The settings page shows date and time of the next scheduled transmission for each entry, in addition to the next event date.
+- **Weather API – optional request/response logging**: New *Log requests* toggle logs the masked request URL and raw provider response, matching the existing QRZ / MQTT / AI logging pattern.
+- **Console Command Helper – via node remembered**: The last-sent via node callsign is remembered.
+
+### Bugfixes
+- **Calendar Beacon – missing group warns**: Active entries without a target group were silently skipped; the settings page and the log now show a clear warning.
+- **Stale weather data no longer rebroadcast**: Telemetry sending checks the observation timestamp and skips outdated values; Weather Underground empty responses (HTTP 204) produce a clear error instead of a JSON parse failure; hanging requests fail fast (30 s timeout).
+- **iPad detection via touch heuristic**: Clipboard copy and TTS skip now also work on iPads that report themselves as macOS.
+- **Bot help prefix shortened**: `Befehle/Commands:` reduced to `Cmds:` to save LoRa payload space.
+- **Settings backup – CalendarBeacons null-guard on restore**: A backup file containing `"CalendarBeacons": null` no longer aborts the import.
+- **Release packaging**: Linux/macOS tarballs now extract into a `MeshcomWebDesk/` folder instead of flat into the current directory (install instructions updated).
+
+---
+
 ## [1.13.2] – released
 
 ### Features

@@ -18,7 +18,7 @@ public class SimulationProvider : IWeatherProvider
         _logger = logger;
     }
 
-    public Task<WeatherData?> FetchAsync(string apiKey, string stationId, CancellationToken ct = default)
+    public Task<WeatherData?> FetchAsync(string apiKey, string stationId, CancellationToken ct = default, bool logRequests = false)
     {
         _logger.LogInformation("SimulationProvider: generating test data (stationId={StationId})", stationId);
 

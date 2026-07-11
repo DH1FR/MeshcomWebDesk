@@ -81,6 +81,7 @@ jobs:
           chmod +x publish/linux-x64/MeshcomWebDesk
           chmod +x publish/linux-x64/install.sh
           tar -czf MeshcomWebDesk-${{ github.ref_name }}-linux-x64.tar.gz \
+            --transform='s|^\./|MeshcomWebDesk/|' \
             -C publish/linux-x64 .
 
       - name: Package macOS x64 tarball
@@ -88,6 +89,7 @@ jobs:
           cp deploy/appsettings.template.json publish/osx-x64/appsettings.json
           chmod +x publish/osx-x64/MeshcomWebDesk
           tar -czf MeshcomWebDesk-${{ github.ref_name }}-osx-x64.tar.gz \
+            --transform='s|^\./|MeshcomWebDesk/|' \
             -C publish/osx-x64 .
 
       - name: Package macOS arm64 tarball
@@ -95,6 +97,7 @@ jobs:
           cp deploy/appsettings.template.json publish/osx-arm64/appsettings.json
           chmod +x publish/osx-arm64/MeshcomWebDesk
           tar -czf MeshcomWebDesk-${{ github.ref_name }}-osx-arm64.tar.gz \
+            --transform='s|^\./|MeshcomWebDesk/|' \
             -C publish/osx-arm64 .
 
       - name: Package Linux arm64 tarball (Raspberry Pi 4+5)
@@ -105,6 +108,7 @@ jobs:
           chmod +x publish/linux-arm64/MeshcomWebDesk
           chmod +x publish/linux-arm64/install.sh
           tar -czf MeshcomWebDesk-${{ github.ref_name }}-linux-arm64.tar.gz \
+            --transform='s|^\./|MeshcomWebDesk/|' \
             -C publish/linux-arm64 .
 
       - name: Set release notes path

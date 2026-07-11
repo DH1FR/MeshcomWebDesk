@@ -186,6 +186,7 @@ public sealed class ConsoleCommandHelperService : IDisposable
             {
                 _logger.LogDebug("CCH optimistic update: {Cmd} = {Val}", commandName, value);
                 UpdateValue(commandName, value);
+                StoreExtraValue(def, value);
                 OnChange?.Invoke();
             }
             else
@@ -310,8 +311,11 @@ public sealed class ConsoleCommandHelperService : IDisposable
                     l.Contains(pc.Name, StringComparison.OrdinalIgnoreCase) &&
                     l.Contains(pc.SentValue, StringComparison.OrdinalIgnoreCase));
 
-                if (confirmed)
+                if (confirmed && def is not null)
+                {
                     UpdateValue(pc.Name, pc.SentValue);
+                    StoreExtraValue(def, pc.SentValue);
+                }
             }
 
             if (confirmed)
@@ -464,6 +468,21 @@ public sealed class ConsoleCommandHelperService : IDisposable
             return false;
         CurrentValues[name] = value;
         return true;
+    }
+
+    /// <summary>
+    /// Speichert den gesendeten Wert unter def.ExtraValueKey, wenn der Wert kein Toggle (on/off) ist.
+    /// Bei "NONE" wird der Key geleert (Via-Node gelöscht).
+    /// </summary>
+    private void StoreExtraValue(ConsoleCommandDef def, string value)
+    {
+        if (def.ExtraValueKey is not { } key) return;
+        if (value.Equals("on",   StringComparison.OrdinalIgnoreCase)) return;
+        if (value.Equals("off",  StringComparison.OrdinalIgnoreCase)) return;
+        if (value.Equals("NONE", StringComparison.OrdinalIgnoreCase))
+            CurrentValues.Remove(key);
+        else
+            CurrentValues[key] = value;
     }
 
     public void Dispose()

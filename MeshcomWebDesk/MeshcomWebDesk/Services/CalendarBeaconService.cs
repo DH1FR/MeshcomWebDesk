@@ -26,6 +26,9 @@ public sealed class CalendarBeaconService : BackgroundService
     /// </summary>
     private readonly HashSet<string> _sentSlots = [];
 
+    /// <summary>Entry-IDs, für die bereits eine "keine Gruppe"-Warnung geloggt wurde (verhindert Log-Spam im Minutentakt).</summary>
+    private readonly HashSet<string> _warnedNoGroup = [];
+
     public CalendarBeaconService(
         ILogger<CalendarBeaconService> logger,
         IOptionsMonitor<MeshcomSettings> optionsMonitor,
@@ -77,7 +80,14 @@ public sealed class CalendarBeaconService : BackgroundService
         foreach (var entry in entries)
         {
             if (!entry.Enabled) continue;
-            if (string.IsNullOrWhiteSpace(entry.Group)) continue;
+            if (string.IsNullOrWhiteSpace(entry.Group))
+            {
+                if (_warnedNoGroup.Add(entry.Id))
+                    _logger.LogWarning(
+                        "CalendarBeacon \"{Title}\" ({Id}): keine Gruppe konfiguriert – Eintrag wird übersprungen.",
+                        entry.Title, entry.Id);
+                continue;
+            }
             if (!entry.IsExternal && string.IsNullOrWhiteSpace(entry.Text)) continue;
 
             try
@@ -106,28 +116,16 @@ public sealed class CalendarBeaconService : BackgroundService
         var eventDt = nextDate.ToDateTime(entry.EventTimeParsed);
         bool sent   = false;
 
-        // ── Ankündigung: X Tage vorher ────────────────────────────────────
-        if (entry.AnnounceLeadDays > 0)
+        // ── Ankündigungen: konfigurierte Vorlaufzeiten ────────────────────
+        foreach (var lead in entry.AnnounceLeadTimesParsed)
         {
-            var leadDt    = eventDt.AddDays(-entry.AnnounceLeadDays);
-            var slotKey   = $"{entry.Id}:{nextDate:yyyy-MM-dd}-{entry.AnnounceLeadDays}d";
+            var leadDt  = eventDt - lead.Offset;
+            var slotKey = $"{entry.Id}:{nextDate:yyyy-MM-dd}-{lead.Tag}";
             if (IsCurrentMinute(leadDt, now) && _sentSlots.Add(slotKey))
             {
-                var daysUntil = (int)Math.Round((eventDt - now).TotalDays);
-                await SendAsync(entry, nextDate, now, daysUntil);
-                sent = true;
-            }
-        }
-
-        // ── Ankündigung: X Stunden vorher ─────────────────────────────────
-        if (entry.AnnounceLeadHours > 0)
-        {
-            var leadDt  = eventDt.AddHours(-entry.AnnounceLeadHours);
-            var slotKey = $"{entry.Id}:{nextDate:yyyy-MM-dd}-{entry.AnnounceLeadHours}h";
-            if (IsCurrentMinute(leadDt, now) && _sentSlots.Add(slotKey))
-            {
+                var daysUntil  = (int)Math.Round((eventDt - now).TotalDays);
                 var hoursUntil = (int)Math.Round((eventDt - now).TotalHours);
-                await SendAsync(entry, nextDate, now, hoursUntil: hoursUntil);
+                await SendAsync(entry, nextDate, now, daysUntil, hoursUntil);
                 sent = true;
             }
         }
@@ -245,6 +243,45 @@ public sealed class CalendarBeaconService : BackgroundService
         };
     }
 
+    /// <summary>
+    /// Berechnet den nächsten Sendezeitpunkt (Vorlauf-Ankündigung oder Aussendung zum
+    /// Terminzeitpunkt) nach <paramref name="now"/>. Liefert null, wenn keine Aussendung
+    /// ansteht (nichts konfiguriert oder einmaliger Termin vorbei).
+    /// </summary>
+    public static DateTime? GetNextSendTime(CalendarBeaconEntry e, DateTime now)
+    {
+        var leads = e.AnnounceLeadTimesParsed;
+        if (leads.Count == 0 && !e.AnnounceAtEvent) return null;
+
+        var maxOffset  = leads.Count > 0 ? leads.Max(l => l.Offset) : TimeSpan.Zero;
+        var from       = DateOnly.FromDateTime(now);
+        DateTime? best = null;
+
+        // Mehrere Vorkommen prüfen: bei Vorlaufzeiten über dem Wiederholungsintervall
+        // kann die Ankündigung eines späteren Termins vor der Aussendung des nächsten liegen.
+        for (int i = 0; i < 36; i++)
+        {
+            var date = GetNextOccurrence(e, from);
+            if (date == DateOnly.MaxValue) break;
+
+            var eventDt = date.ToDateTime(e.EventTimeParsed);
+            if (best is not null && eventDt - maxOffset > best) break;
+
+            foreach (var lead in leads)
+            {
+                var dt = eventDt - lead.Offset;
+                if (dt > now && (best is null || dt < best)) best = dt;
+            }
+            if (e.AnnounceAtEvent && eventDt > now && (best is null || eventDt < best))
+                best = eventDt;
+
+            if (e.RecurrenceType == CalendarRecurrence.Once) break;
+            from = date.AddDays(1);
+        }
+
+        return best;
+    }
+
     // ── Weekly ───────────────────────────────────────────────────────────
 
     private static DateOnly NextWeekly(DateOnly from, DayOfWeek dow)
@@ -356,11 +393,9 @@ public sealed class CalendarBeaconService : BackgroundService
             if (nextDate == DateOnly.MaxValue) continue;
             var eventDt = nextDate.ToDateTime(entry.EventTimeParsed);
 
-            if (entry.AnnounceLeadDays > 0 && IsCurrentMinute(eventDt.AddDays(-entry.AnnounceLeadDays), now))
-                _sentSlots.Add($"{entry.Id}:{nextDate:yyyy-MM-dd}-{entry.AnnounceLeadDays}d");
-
-            if (entry.AnnounceLeadHours > 0 && IsCurrentMinute(eventDt.AddHours(-entry.AnnounceLeadHours), now))
-                _sentSlots.Add($"{entry.Id}:{nextDate:yyyy-MM-dd}-{entry.AnnounceLeadHours}h");
+            foreach (var lead in entry.AnnounceLeadTimesParsed)
+                if (IsCurrentMinute(eventDt - lead.Offset, now))
+                    _sentSlots.Add($"{entry.Id}:{nextDate:yyyy-MM-dd}-{lead.Tag}");
 
             if (entry.AnnounceAtEvent && IsCurrentMinute(eventDt, now))
                 _sentSlots.Add($"{entry.Id}:{nextDate:yyyy-MM-dd}-T");

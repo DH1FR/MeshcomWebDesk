@@ -118,7 +118,7 @@ public class BotCommandService
 
     private string BuildHelp()
     {
-        var sb = new StringBuilder($"{_lang.T("Befehle", "Commands")}: >help");
+        var sb = new StringBuilder("Cmds: >help");
         foreach (var cmd in AllCommands)
             sb.Append($", >{cmd.Name}");
         return sb.ToString();

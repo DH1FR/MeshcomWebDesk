@@ -249,8 +249,8 @@ internal static class It
 
         // Settings – Calendar Beacon
         ["Calendar Beacon"]         = "Beacon calendario",
-        ["Sends beacon announcements for recurring events (e.\u00a0g. club meetings). Each entry can announce days/hours before and/or at the event time."]
-                                    = "Invia annunci beacon per eventi ricorrenti (es. serate del club). Ogni voce può annunciare giorni/ore prima e/o all'ora dell'evento.",
+        ["Sends beacon announcements for recurring events (e.\u00a0g. club meetings). Each entry can send any number of advance announcements (e. g. 3d, 24h, 2h before the event) and/or a transmission at the event time. All lead times are relative to the event start (“Time” field)."]
+                                    = "Invia annunci beacon per eventi ricorrenti (es. serate del club). Ogni voce può inviare un numero qualsiasi di preannunci (ad es. 3d, 24h, 2h prima dell'evento) e/o una trasmissione all'ora dell'evento. Tutti i tempi di anticipo si riferiscono all'inizio dell'evento (campo «Ora»).",
         ["Recurrence"]              = "Ricorrenza",
         ["Once"]                    = "Una volta",
         ["Weekly"]                  = "Settimanale",
@@ -269,10 +269,17 @@ internal static class It
         ["Ordinal (1=first…)"]      = "Ordinale (1=primo…)",
         ["Day of Month"]            = "Giorno del mese",
         ["Reference Date (anchor)"] = "Data di riferimento (ancora)",
-        ["Announce days before"]    = "Annuncia giorni prima",
-        ["Announce hours before"]   = "Annuncia ore prima",
+        ["Announce before"]         = "Annuncia prima",
+        ["Comma-separated, e. g. 3d, 24h, 2h (d=days, h=hours, m=minutes). Empty = no advance announcement."]
+                                    = "Separato da virgole, ad es. 3d, 24h, 2h (d=giorni, h=ore, m=minuti). Vuoto = nessun preannuncio.",
+        ["Invalid value:"]          = "Valore non valido:",
+        ["Without a group this entry will not be sent!"]
+                                    = "Senza gruppo questa voce non verrà inviata!",
         ["Send at event time"]      = "Invia all'ora dell'evento",
         ["Next event"]              = "Prossimo evento",
+        ["Next transmission"]       = "Prossima trasmissione",
+        ["none (nothing configured or event passed)"]
+                                    = "nessuna (niente configurato o evento passato)",
         ["Add Event"]               = "Aggiungi evento",
         ["Variables:"]              = "Variabili:",
         ["Title"]                   = "Titolo",

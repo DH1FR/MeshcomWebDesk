@@ -94,16 +94,84 @@ public class CalendarBeaconEntry
     // ── Wann soll die Bake gesendet werden? ───────────────────────────────
 
     /// <summary>
-    /// Ankündigung X Tage vor dem Termin (0 = deaktiviert).
-    /// Beispiel: 3 → Bake wird 3 Tage vorher um <see cref="EventTime"/> gesendet.
+    /// Veraltet: Ankündigung X Tage vor dem Termin (0 = deaktiviert).
+    /// Wird nur noch beim Einlesen alter Konfigurationen berücksichtigt und beim
+    /// Speichern nicht mehr geschrieben – siehe <see cref="AnnounceLeadTimes"/>.
     /// </summary>
     public int AnnounceLeadDays { get; set; } = 0;
 
     /// <summary>
-    /// Ankündigung X Stunden vor dem Termin (0 = deaktiviert).
-    /// Beispiel: 2 → Bake wird 2 Stunden vor Terminbeginn gesendet.
+    /// Veraltet: Ankündigung X Stunden vor dem Termin (0 = deaktiviert).
+    /// Wird nur noch beim Einlesen alter Konfigurationen berücksichtigt und beim
+    /// Speichern nicht mehr geschrieben – siehe <see cref="AnnounceLeadTimes"/>.
     /// </summary>
     public int AnnounceLeadHours { get; set; } = 2;
+
+    private string? _announceLeadTimes;
+
+    /// <summary>
+    /// Vorlaufzeiten für Ankündigungen als kommagetrennte Liste, z.&#160;B. "3d, 24h, 2h".
+    /// Einheiten: d = Tage, h = Stunden, m = Minuten; ohne Einheit gelten Stunden.
+    /// Leer = keine Vorankündigungen. Solange der Wert noch nie gespeichert wurde (null),
+    /// werden die alten Felder <see cref="AnnounceLeadDays"/>/<see cref="AnnounceLeadHours"/> übernommen.
+    /// </summary>
+    public string AnnounceLeadTimes
+    {
+        get => _announceLeadTimes ?? LegacyLeadTimes();
+        set => _announceLeadTimes = value;
+    }
+
+    private string LegacyLeadTimes()
+    {
+        var parts = new List<string>(2);
+        if (AnnounceLeadDays  > 0) parts.Add($"{AnnounceLeadDays}d");
+        if (AnnounceLeadHours > 0) parts.Add($"{AnnounceLeadHours}h");
+        return string.Join(", ", parts);
+    }
+
+    /// <summary>Geparste Vorlaufzeiten, absteigend sortiert (größter Vorlauf zuerst).</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public List<CalendarLeadTime> AnnounceLeadTimesParsed => ParseLeadTimes(AnnounceLeadTimes);
+
+    /// <summary>
+    /// Parst eine kommagetrennte Liste von Vorlaufzeiten ("3d, 24h, 2h").
+    /// Ungültige Angaben und Duplikate (gleicher Offset) werden ignoriert.
+    /// </summary>
+    public static List<CalendarLeadTime> ParseLeadTimes(string? raw)
+    {
+        var result = new List<CalendarLeadTime>();
+        if (string.IsNullOrWhiteSpace(raw)) return result;
+
+        foreach (var token in raw.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (TryParseLeadTime(token, out var lead) && !result.Any(l => l.Offset == lead.Offset))
+                result.Add(lead);
+        }
+
+        return result.OrderByDescending(l => l.Offset).ToList();
+    }
+
+    /// <summary>Parst eine einzelne Vorlaufzeit wie "3d", "24h", "30m" oder "5" (= Stunden).</summary>
+    public static bool TryParseLeadTime(string token, out CalendarLeadTime lead)
+    {
+        lead = default;
+        var t = token.Replace(" ", "");
+        if (t.Length == 0) return false;
+
+        char unit = char.IsAsciiDigit(t[^1]) ? 'h' : char.ToLowerInvariant(t[^1]);
+        var  num  = char.IsAsciiDigit(t[^1]) ? t : t[..^1];
+
+        if (unit is not ('d' or 'h' or 'm')) return false;
+        if (!int.TryParse(num, out var value) || value <= 0) return false;
+
+        lead = unit switch
+        {
+            'd' => new CalendarLeadTime(TimeSpan.FromDays(value),    $"{value}d"),
+            'm' => new CalendarLeadTime(TimeSpan.FromMinutes(value), $"{value}m"),
+            _   => new CalendarLeadTime(TimeSpan.FromHours(value),   $"{value}h"),
+        };
+        return true;
+    }
 
     /// <summary>Wenn true, wird die Bake auch genau zum Terminzeitpunkt gesendet.</summary>
     public bool AnnounceAtEvent { get; set; } = true;
@@ -128,3 +196,8 @@ public class CalendarBeaconEntry
     /// </summary>
     public int TimeoutSeconds { get; set; } = 10;
 }
+
+/// <summary>Eine einzelne Vorlaufzeit einer Ankündigung, z.&#160;B. 48 Stunden vor dem Termin.</summary>
+/// <param name="Offset">Zeitspanne vor dem Terminbeginn.</param>
+/// <param name="Tag">Normalisiertes Kürzel für Slot-Keys und Anzeige, z.&#160;B. "2d", "3h".</param>
+public readonly record struct CalendarLeadTime(TimeSpan Offset, string Tag);

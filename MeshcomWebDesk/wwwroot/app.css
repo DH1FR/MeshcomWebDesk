@@ -3347,6 +3347,8 @@ details[open] .cch-group-title::before { transform: rotate(90deg); }
 
 /* Input row */
 .cch-input-row { display: flex; gap: .35rem; align-items: center; }
+.cch-extra-current { display: flex; align-items: center; gap: .35rem; margin-bottom: .25rem; }
+.cch-extra-current-label { font-size: .72rem; color: #8b949e; }
 .cch-input {
     flex: 1;
     min-width: 0;

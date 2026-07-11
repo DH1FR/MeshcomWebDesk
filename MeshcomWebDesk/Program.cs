@@ -215,8 +215,9 @@ builder.Services.AddSingleton<ConsoleLogService>();
 builder.Services.AddSingleton<ConsoleCommandHelperService>();
 builder.Services.AddHttpClient("MeshcomGateway").ConfigurePrimaryHttpMessageHandler(
     () => new HttpClientHandler { AllowAutoRedirect = true });
-builder.Services.AddHttpClient("WeatherApi").ConfigurePrimaryHttpMessageHandler(
-    () => new HttpClientHandler { AllowAutoRedirect = true });
+builder.Services.AddHttpClient("WeatherApi", c => c.Timeout = TimeSpan.FromSeconds(30))
+    .ConfigurePrimaryHttpMessageHandler(
+        () => new HttpClientHandler { AllowAutoRedirect = true });
 builder.Services.AddSingleton<MeshcomWebDesk.Services.Weather.AwekasProvider>();
 builder.Services.AddSingleton<MeshcomWebDesk.Services.Weather.WUndergroundProvider>();
 builder.Services.AddSingleton<MeshcomWebDesk.Services.Weather.SimulationProvider>();

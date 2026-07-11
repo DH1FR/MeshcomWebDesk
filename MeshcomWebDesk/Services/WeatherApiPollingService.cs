@@ -121,7 +121,7 @@ public sealed class WeatherApiPollingService : IHostedService, IAsyncDisposable
         WeatherData? data;
         try
         {
-            data = await provider.FetchAsync(s.ApiKey, s.StationId, ct);
+            data = await provider.FetchAsync(s.ApiKey, s.StationId, ct, s.LogRequests);
         }
         catch (InvalidOperationException ex)
         {
