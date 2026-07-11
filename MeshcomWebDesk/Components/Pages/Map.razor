@@ -420,8 +420,13 @@
                     }
                 }
 
-                // Direct connections: ACK or direct chat received without relay
-                if (s.HopCount == 0 && s.DirectLinkConfirmed
+                // Direct RF links: any station heard without relay, beacons included —
+                // the RSSI/SNR of a directly heard packet is a real measurement of that link.
+                // Gateway-bridged stations (src_type "udp") are no RF link and only qualify
+                // once a direct chat/ACK confirmed them.
+                if (s.HopCount == 0
+                    && !string.Equals(s.Callsign, ownCall, StringComparison.OrdinalIgnoreCase)
+                    && (s.DirectLinkConfirmed || !string.Equals(s.LastSrcType, "udp", StringComparison.OrdinalIgnoreCase))
                     && posLookup.TryGetValue(s.Callsign, out var directPos)
                     && (!maxAge.HasValue || now - s.LastHeard <= maxAge.Value))
                 {
