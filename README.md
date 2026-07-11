@@ -29,12 +29,20 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
-## 🆕 What's New in v1.13.2
+## 🆕 What's New in v1.13.3
 
 ### ✨ Features
-- **`>` as alternative bot command prefix** – Bot commands now work with `>` in addition to `--` (e.g. `>ping`, `>help`). This matches the native syntax introduced in MeshCom firmware 4.35p.
-- **Via-routing shown in monitor** – Firmware 4.35p encodes the via-path in the `dst` JSON field. The monitor now renders it as `→ DB0FRI-12 ⟶ DH1FR-2`, including on outgoing TX messages once the node echo arrives.
-- **Console Command Helper: `via` & `viadebug`** – `--via on/off` and `--viadebug on/off` are now accessible from the Console Command Helper. The via-node callsign can be entered directly in the UI (`--via OE1KBC-24` / `--via NONE`).
+- **Calendar Beacon: multiple announcement lead times** – The separate "days before" / "hours before" fields are replaced by a comma-separated lead-time list per entry, e.g. `3d, 24h, 2h` (units: `d` = days, `h` = hours, `m` = minutes). Existing settings migrate automatically. (#13, #14)
+- **Calendar Beacon: next-transmission preview** – The settings page now shows date and time of the next scheduled transmission for each entry, in addition to the next event date.
+- **Weather API: optional request/response logging** – New *Log requests* toggle logs the masked request URL and raw provider response, matching the existing QRZ / MQTT / AI logging pattern.
+- **Console Command Helper: via node remembered** – The last-sent via node callsign is remembered in the Console Command Helper.
+
+### 🔧 Bug Fixes
+- **Calendar Beacon: missing group now warns** – Active entries without a target group were silently skipped; the settings page and the log now show a clear warning.
+- **Stale weather data no longer rebroadcast** – Telemetry sending checks the observation timestamp and skips outdated values; Weather Underground empty responses (HTTP 204) produce a clear error instead of a JSON parse failure; hanging requests fail fast (30 s timeout).
+- **iPad detection via touch heuristic** – Clipboard copy and TTS skip now also work on iPads that report themselves as macOS.
+- **Bot help prefix shortened** – `Befehle/Commands:` reduced to `Cmds:` to save LoRa payload space.
+- **Linux/macOS tarballs extract into a `MeshcomWebDesk/` folder** – Archives no longer unpack flat into the current directory.
 
 ---
 
@@ -1411,9 +1419,9 @@ Open browser: **http://localhost:5162**
 # Install .NET 10 Runtime (Debian / Ubuntu / Raspberry Pi OS)
 sudo apt-get update && sudo apt-get install -y aspnetcore-runtime-10.0
 
-# Extract archive
-mkdir meshcom && tar -xzf MeshcomWebDesk-vX.Y.Z-linux-x64.tar.gz -C meshcom
-cd meshcom
+# Extract archive (creates a MeshcomWebDesk/ folder)
+tar -xzf MeshcomWebDesk-vX.Y.Z-linux-x64.tar.gz
+cd MeshcomWebDesk
 
 # Edit configuration (MyCallsign, DeviceIp etc.)
 nano appsettings.json
@@ -1439,14 +1447,15 @@ systemctl restart meshcom-webdesk    # restart after config change
 - [.NET 10 ASP.NET Core Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) for macOS
 
 ```bash
-# Extract the archive (choose the right binary for your CPU)
+# Extract the archive (choose the right binary for your CPU;
+# creates a MeshcomWebDesk/ folder)
 # Apple Silicon (M1/M2/M3):
-tar -xzf MeshcomWebDesk-vX.Y.Z-osx-arm64.tar.gz -C ~/meshcom
+tar -xzf MeshcomWebDesk-vX.Y.Z-osx-arm64.tar.gz -C ~
 
 # Intel Mac:
-tar -xzf MeshcomWebDesk-vX.Y.Z-osx-x64.tar.gz -C ~/meshcom
+tar -xzf MeshcomWebDesk-vX.Y.Z-osx-x64.tar.gz -C ~
 
-cd ~/meshcom
+cd ~/MeshcomWebDesk
 
 # Edit configuration
 nano appsettings.json      # set DeviceIp, MyCallsign
