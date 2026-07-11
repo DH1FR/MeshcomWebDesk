@@ -249,8 +249,8 @@ internal static class Es
 
         // Settings – Calendar Beacon
         ["Calendar Beacon"]         = "Baliza de calendario",
-        ["Sends beacon announcements for recurring events (e.\u00a0g. club meetings). Each entry can announce days/hours before and/or at the event time."]
-                                    = "Envía anuncios de baliza para eventos recurrentes (p. ej. reuniones del club). Cada entrada puede anunciar días/horas antes y/o a la hora del evento.",
+        ["Sends beacon announcements for recurring events (e.\u00a0g. club meetings). Each entry can send any number of advance announcements (e. g. 3d, 24h, 2h before the event) and/or a transmission at the event time. All lead times are relative to the event start (“Time” field)."]
+                                    = "Envía anuncios de baliza para eventos recurrentes (p. ej. reuniones del club). Cada entrada puede enviar cualquier número de anuncios previos (p. ej. 3d, 24h, 2h antes del evento) y/o una transmisión a la hora del evento. Todos los plazos se refieren al inicio del evento (campo «Hora»).",
         ["Recurrence"]              = "Recurrencia",
         ["Once"]                    = "Una vez",
         ["Weekly"]                  = "Semanal",
