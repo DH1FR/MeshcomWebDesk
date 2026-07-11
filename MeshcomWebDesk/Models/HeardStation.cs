@@ -95,8 +95,9 @@ public class HeardStation
     /// (newest packet only), this keeps alternating paths visible on the map instead of
     /// flip-flopping. Bounded to <see cref="MaxRelayPathHistory"/> entries;
     /// the least recently seen path is evicted first.
+    /// Setter required so the persistence snapshot round-trips the history.
     /// </summary>
-    public List<RelayPathStat> RelayPathHistory { get; } = [];
+    public List<RelayPathStat> RelayPathHistory { get; set; } = [];
 
     // ── Telemetry (last received tele packet) ──────────────────────────────
 

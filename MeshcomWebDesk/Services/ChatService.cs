@@ -736,7 +736,20 @@ public class ChatService
             // MH list is always primary-only
             primaryState.MhList.Clear();
             foreach (var station in snapshot.MhList)
+            {
+                // Snapshots from before RelayPathHistory existed only carry LastRelayPath;
+                // seed the history from it so relay lines appear right after restart.
+                if (station.RelayPathHistory.Count == 0 && !string.IsNullOrEmpty(station.LastRelayPath))
+                {
+                    station.RelayPathHistory.Add(new RelayPathStat
+                    {
+                        Path     = station.LastRelayPath,
+                        Count    = Math.Max(station.RelayPathCount, 1),
+                        LastSeen = station.LastHeard
+                    });
+                }
                 primaryState.MhList[station.Callsign] = station;
+            }
 
             // If the new NodeSnapshots dict was empty (old snapshot file), fall back to
             // restoring the legacy Tabs/MonitorMessages into the primary state
