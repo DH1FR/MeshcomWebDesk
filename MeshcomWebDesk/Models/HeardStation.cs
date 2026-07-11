@@ -87,6 +87,17 @@ public class HeardStation
     /// </summary>
     public int RelayPathCount { get; set; }
 
+    /// <summary>Maximum number of distinct relay paths kept in <see cref="RelayPathHistory"/>.</summary>
+    public const int MaxRelayPathHistory = 8;
+
+    /// <summary>
+    /// Recently observed relay paths with usage counters. Unlike <see cref="LastRelayPath"/>
+    /// (newest packet only), this keeps alternating paths visible on the map instead of
+    /// flip-flopping. Bounded to <see cref="MaxRelayPathHistory"/> entries;
+    /// the least recently seen path is evicted first.
+    /// </summary>
+    public List<RelayPathStat> RelayPathHistory { get; } = [];
+
     // ── Telemetry (last received tele packet) ──────────────────────────────
 
     /// <summary>Last measured temperature in °C (Temp1 field of the tele packet).</summary>
@@ -103,4 +114,17 @@ public class HeardStation
     /// Used to display data freshness on the map.
     /// </summary>
     public DateTime? LastTelemetryTime { get; set; }
+}
+
+/// <summary>One observed relay path of a station with usage statistics.</summary>
+public class RelayPathStat
+{
+    /// <summary>Relay path as received (e.g. "OE1XAR-62,DL0VBK-12"); index 0 = origin.</summary>
+    public string Path { get; set; } = string.Empty;
+
+    /// <summary>Number of packets received via this path.</summary>
+    public int Count { get; set; }
+
+    /// <summary>UTC timestamp of the most recent packet via this path.</summary>
+    public DateTime LastSeen { get; set; }
 }

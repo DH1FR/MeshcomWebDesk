@@ -1,3 +1,5 @@
+using MeshcomWebDesk.Helpers;
+
 namespace MeshcomWebDesk.Models;
 
 public sealed record MhEntry(string Call, string Date, string Time, string Typ,
@@ -29,9 +31,9 @@ public static class MhParser
     public static string RssiClass(string rssiStr)
     {
         if (!int.TryParse(rssiStr, out var rssi)) return "";
-        return rssi >= -90  ? "mh-rssi-strong"
-             : rssi >= -100 ? "mh-rssi-good"
-             : rssi >= -115 ? "mh-rssi-weak"
+        return rssi >= SignalHelper.RssiStrongDbm ? "mh-rssi-strong"
+             : rssi >= SignalHelper.RssiGoodDbm   ? "mh-rssi-good"
+             : rssi >= SignalHelper.RssiWeakDbm   ? "mh-rssi-weak"
              : "mh-rssi-bad";
     }
 }

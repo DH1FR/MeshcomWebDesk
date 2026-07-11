@@ -2007,8 +2007,8 @@
 
     private static string RssiCssClass(int rssi) => rssi switch
     {
-        > -70 => "rssi-good",
-        > -90 => "rssi-fair",
+        > SignalHelper.RssiGoodDbm => "rssi-good",
+        > SignalHelper.RssiWeakDbm => "rssi-fair",
         _ => "rssi-weak"
     };
 
@@ -2169,8 +2169,8 @@
 
     private static string RssiStatusBadgeCss(int rssi) => rssi switch
     {
-        > -70 => "status-badge-ok",
-        > -90 => "status-badge-warn",
+        > SignalHelper.RssiGoodDbm => "status-badge-ok",
+        > SignalHelper.RssiWeakDbm => "status-badge-warn",
         _     => "status-badge-err"
     };
 

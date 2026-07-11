@@ -41,6 +41,20 @@
                 title="@Loc.T("Weiterleitungspfade ein/ausblenden", "Toggle relay paths")">
             🔗 @Loc.T("Pfade", "Paths")
         </button>
+        <select class="map-ctrl-select" value="@_timeFilterMins" @onchange="OnTimeFilterChangedAsync"
+                disabled="@(!_showRelayLines)"
+                title="@Loc.T("Pfade nach Alter filtern", "Filter paths by age")">
+            <option value="0">⏱ @Loc.T("Alle", "All")</option>
+            <option value="15">⏱ 15 min</option>
+            <option value="60">⏱ 1 h</option>
+            <option value="360">⏱ 6 h</option>
+        </select>
+        <button class="map-ctrl-btn @(_minCountFilter ? "map-ctrl-active" : "")"
+                @onclick="ToggleMinCountAsync"
+                disabled="@(!_showRelayLines)"
+                title="@Loc.T("Nur mehrfach genutzte Pfade anzeigen", "Show only paths used more than once")">
+            ≥2×
+        </button>
         <button class="map-ctrl-btn @(_showCoverage ? "map-ctrl-active" : "")"
                 @onclick="ToggleCoverageAsync"
                 title="@Loc.T("Reichweiten-Wolke ein/ausblenden", "Toggle coverage cloud")">
@@ -126,18 +140,22 @@
                     }
                     @if (_showRelayLines)
                     {
-                        <div class="map-legend-section">@Loc.T("Relay-Pfade", "Relay paths")</div>
+                        <div class="map-legend-section">@Loc.T("Verbindungen", "Links")</div>
                         <div class="map-legend-row">
                             <span class="leg-line leg-line-good"></span>
-                            <span>RSSI &gt; −90 dBm</span>
+                            <span>@Loc.T("Gut", "Good") (RSSI &gt; @SignalHelper.RssiGoodDbm dBm)</span>
                         </div>
                         <div class="map-legend-row">
                             <span class="leg-line leg-line-ok"></span>
-                            <span>RSSI −90 … −105 dBm</span>
+                            <span>@Loc.T("Brauchbar", "Fair") (@SignalHelper.RssiGoodDbm … @SignalHelper.RssiWeakDbm dBm)</span>
                         </div>
                         <div class="map-legend-row">
                             <span class="leg-line leg-line-weak"></span>
-                            <span>RSSI &lt; −105 dBm</span>
+                            <span>@Loc.T("Am Limit", "Marginal") (&lt; @SignalHelper.RssiWeakDbm dBm)</span>
+                        </div>
+                        <div class="map-legend-row">
+                            <span class="leg-line leg-line-neutral"></span>
+                            <span>@Loc.T("Vorgelagerter Hop (Qualität unbekannt)", "Upstream hop (quality unknown)")</span>
                         </div>
                         <div class="map-legend-row">
                             <span class="leg-line leg-line-partial"></span>
@@ -146,6 +164,13 @@
                         <div class="map-legend-row">
                             <span class="leg-line-weight"></span>
                             <span>@Loc.T("= Häufigkeit", "= frequency")</span>
+                        </div>
+                        <div class="map-legend-row">
+                            <span class="leg-arrow">➤</span>
+                            <span>@Loc.T("Flussrichtung, blass = alt", "Flow direction, faded = old")</span>
+                        </div>
+                        <div class="map-legend-row">
+                            <span class="map-legend-note">@Loc.T("Farbe = RSSI/SNR (schlechterer Wert), animiert = Paket < 2 min", "Colour = RSSI/SNR (worse value), animated = packet < 2 min")</span>
                         </div>
                     }
                 </div>
@@ -184,6 +209,8 @@
     private bool _showRelayLines   = true;
     private bool _showLegend       = true;
     private bool _showCoverage;
+    private int  _timeFilterMins;          // 0 = no age filter
+    private bool _minCountFilter;          // true = hide paths seen only once
     private string       _searchCallsign    = "";
     private bool         _searchNotFound;
     private List<string> _searchResults     = [];
@@ -242,7 +269,14 @@
                 await JS.InvokeVoidAsync("meshcomMap.init", "meshcom-map",
                     status.OwnLatitude.HasValue  ? (object)status.OwnLatitude.Value  : null,
                     status.OwnLongitude.HasValue ? (object)status.OwnLongitude.Value : null,
-                    _dotNetRef);
+                    _dotNetRef,
+                    new
+                    {
+                        rssiGood = SignalHelper.RssiGoodDbm,
+                        rssiWeak = SignalHelper.RssiWeakDbm,
+                        snrGood  = SignalHelper.SnrGoodDb,
+                        snrWeak  = SignalHelper.SnrWeakDb
+                    });
                 _mapInitialized = true;
                 await UpdateMarkersAsync();
                 StateHasChanged();
@@ -278,6 +312,7 @@
                     lon       = s.Longitude!.Value,
                     alt       = s.Altitude,
                     rssi      = s.LastRssi,
+                    snr       = s.LastSnr,
                     text      = s.LastMessage,
                     battery   = s.Battery,
                     hwName    = MeshcomLookup.HwName(s.HwId),
@@ -298,7 +333,9 @@
             })
             .ToArray();
 
-        // Build relay polylines: only when all hops have known GPS positions
+        // Build aggregated hop segments: every observed path (history, not just the
+        // newest one) is decomposed into A→B segments; identical segments from
+        // different stations/paths are merged so each link is drawn exactly once.
         var posLookup = mhList
             .Where(s => s.Latitude.HasValue && s.Longitude.HasValue)
             .ToDictionary(s => s.Callsign,
@@ -309,50 +346,110 @@
             ? [status.OwnLatitude.Value, status.OwnLongitude.Value]
             : null;
 
-        var relayLines = new List<object>();
+        var relaySegments = new List<object>();
         if (ownPos is not null)
         {
-            foreach (var s in mhList.Where(s => s.HopCount > 0 && !string.IsNullOrEmpty(s.LastRelayPath)))
+            var ownCall = SettingsMonitor.CurrentValue.MyCallsign;
+            var now     = DateTime.UtcNow;
+            var maxAge  = _timeFilterMins > 0 ? TimeSpan.FromMinutes(_timeFilterMins) : (TimeSpan?)null;
+            var segMap  = new Dictionary<string, SegmentAgg>(StringComparer.OrdinalIgnoreCase);
+
+            void AddSegment(string from, string to, double[] a, double[] b,
+                            int count, DateTime lastSeen, bool partial, bool isLastHop,
+                            int? rssi, double? snr, IEnumerable<string> involved)
             {
-                var hops    = s.LastRelayPath!.Split(',');
-                var coords  = new List<double[]>();
-                var skipped = 0;
+                var key = from.ToUpperInvariant() + ">" + to.ToUpperInvariant();
+                if (!segMap.TryGetValue(key, out var seg))
+                    segMap[key] = seg = new SegmentAgg { From = from, To = to, A = a, B = b };
 
-                foreach (var hop in hops)
+                seg.Count += count;
+                if (lastSeen > seg.LastSeen)
                 {
-                    if (posLookup.TryGetValue(hop.Trim(), out var p))
-                        coords.Add(p);
-                    else
-                        skipped++;
+                    seg.LastSeen = lastSeen;
+                    if (isLastHop && rssi is not null) { seg.Rssi = rssi; seg.Snr = snr; }
                 }
+                seg.Partial   |= partial;
+                seg.IsLastHop |= isLastHop;
+                foreach (var cs in involved) seg.Stations.Add(cs.Trim().ToUpperInvariant());
+            }
 
-                // Need at least the originating station to draw a meaningful line
-                if (coords.Count >= 1)
+            foreach (var s in mhList)
+            {
+                // Relayed paths from the observed-path history
+                RelayPathStat[] observations;
+                lock (s.RelayPathHistory) observations = [.. s.RelayPathHistory];
+
+                foreach (var obs in observations)
                 {
-                    coords.Add(ownPos);
-                    relayLines.Add(new
+                    if (maxAge.HasValue && now - obs.LastSeen > maxAge.Value) continue;
+
+                    // Node sequence: origin, relays…, own node as final receiver
+                    var hops = obs.Path.Split(',').Select(h => h.Trim()).ToList();
+                    hops.Add(ownCall);
+
+                    string?   prevName = null;
+                    double[]? prevPos  = null;
+                    var       skipped  = 0;
+
+                    for (var i = 0; i < hops.Count; i++)
                     {
-                        coords  = coords.ToArray(),
-                        rssi    = s.LastRssi,
-                        label   = string.Join(" ⟶ ", hops),
-                        count   = s.RelayPathCount,
-                        partial = skipped > 0
-                    });
+                        double[]? p;
+                        if (i == hops.Count - 1)
+                            p = ownPos;
+                        else if (!posLookup.TryGetValue(hops[i], out p))
+                            p = null;
+
+                        if (p is null) { skipped++; continue; }
+
+                        if (prevPos is not null)
+                        {
+                            // RSSI/SNR are measured at the own node and thus only valid
+                            // for the true final RF hop of the most recent path.
+                            var isFinalRfHop = i == hops.Count - 1 && skipped == 0;
+                            var hasQuality   = isFinalRfHop && obs.Path == s.LastRelayPath;
+                            AddSegment(prevName!, hops[i], prevPos, p,
+                                       obs.Count, obs.LastSeen,
+                                       skipped > 0, isFinalRfHop,
+                                       hasQuality ? s.LastRssi : null,
+                                       hasQuality ? s.LastSnr  : null,
+                                       hops);
+                        }
+                        prevName = hops[i];
+                        prevPos  = p;
+                        skipped  = 0;
+                    }
+                }
+
+                // Direct connections: ACK or direct chat received without relay
+                if (s.HopCount == 0 && s.DirectLinkConfirmed
+                    && posLookup.TryGetValue(s.Callsign, out var directPos)
+                    && (!maxAge.HasValue || now - s.LastHeard <= maxAge.Value))
+                {
+                    AddSegment(s.Callsign, ownCall, directPos, ownPos,
+                               Math.Max(s.RelayPathCount, 1), s.LastHeard,
+                               false, true, s.LastRssi, s.LastSnr,
+                               [s.Callsign, ownCall]);
                 }
             }
 
-            // Direct connections: ACK or direct chat received without relay, GPS position known
-            foreach (var s in mhList.Where(s => s.HopCount == 0 && s.DirectLinkConfirmed && posLookup.ContainsKey(s.Callsign)))
-            {
-                relayLines.Add(new
+            relaySegments = segMap.Values
+                .Where(g => !_minCountFilter || g.Count > 1)
+                .Select(g => (object)new
                 {
-                    coords  = new[] { posLookup[s.Callsign], ownPos },
-                    rssi    = s.LastRssi,
-                    label   = s.Callsign,
-                    count   = Math.Max(s.RelayPathCount, 1),
-                    partial = false
-                });
-            }
+                    from     = g.From,
+                    to       = g.To,
+                    a        = g.A,
+                    b        = g.B,
+                    count    = g.Count,
+                    ageMins  = (int)Math.Max((now - g.LastSeen).TotalMinutes, 0),
+                    partial  = g.Partial,
+                    lastHop  = g.IsLastHop,
+                    rssi     = g.Rssi,
+                    snr      = g.Snr,
+                    distKm   = GeoHelper.CalculateDistanceKm(g.A[0], g.A[1], g.B[0], g.B[1]),
+                    stations = g.Stations.ToArray()
+                })
+                .ToList();
         }
 
         _hasPositions = stations.Length > 0 || status.OwnLatitude.HasValue;
@@ -396,7 +493,7 @@
             cfg.MyCallsign,
             status.OwnLatitude,
             status.OwnLongitude,
-            relayLines,
+            relaySegments,
             _showRelayLines,
             ownInfo);
 
@@ -415,7 +512,6 @@
                     .ToArray();
                 await JS.InvokeVoidAsync("meshcomMap.setCoverage",
                     covPoints,
-                    null,
                     status.OwnLatitude.Value,
                     status.OwnLongitude.Value);
 
@@ -436,7 +532,7 @@
             }
             else
             {
-                await JS.InvokeVoidAsync("meshcomMap.setCoverage", null, null, null, null);
+                await JS.InvokeVoidAsync("meshcomMap.setCoverage", null, null, null);
                 await JS.InvokeVoidAsync("meshcomMap.removeFsplCircle");
                 _showCoverage = false;
             }
@@ -450,8 +546,35 @@
             await UpdateMarkersAsync();
     }
 
-    private static string RssiCss(int rssi) =>
-        rssi > -90 ? "rssi-good" : rssi > -105 ? "rssi-ok" : "rssi-weak";
+    private async Task OnTimeFilterChangedAsync(ChangeEventArgs e)
+    {
+        _timeFilterMins = int.TryParse(e.Value?.ToString(), out var mins) ? mins : 0;
+        if (_mapInitialized)
+            await UpdateMarkersAsync();
+    }
+
+    private async Task ToggleMinCountAsync()
+    {
+        _minCountFilter = !_minCountFilter;
+        if (_mapInitialized)
+            await UpdateMarkersAsync();
+    }
+
+    /// <summary>Aggregation bucket for one directed hop segment (A→B) on the map.</summary>
+    private sealed class SegmentAgg
+    {
+        public string   From = "";
+        public string   To   = "";
+        public double[] A    = [];
+        public double[] B    = [];
+        public int      Count;
+        public DateTime LastSeen;
+        public bool     Partial;
+        public bool     IsLastHop;
+        public int?     Rssi;
+        public double?  Snr;
+        public HashSet<string> Stations { get; } = new(StringComparer.OrdinalIgnoreCase);
+    }
 
     private async Task FitOwnAsync()
     {
@@ -616,7 +739,7 @@
 
         if (!_showCoverage)
         {
-            await JS.InvokeVoidAsync("meshcomMap.setCoverage", null, null, null, null);
+            await JS.InvokeVoidAsync("meshcomMap.setCoverage", null, null, null);
             await JS.InvokeVoidAsync("meshcomMap.removeFsplCircle");
             return;
         }
@@ -624,7 +747,7 @@
         var status = UdpService.Status;
         if (!status.OwnLatitude.HasValue || !status.OwnLongitude.HasValue)
         {
-            await JS.InvokeVoidAsync("meshcomMap.setCoverage", null, null, null, null);
+            await JS.InvokeVoidAsync("meshcomMap.setCoverage", null, null, null);
             await JS.InvokeVoidAsync("meshcomMap.removeFsplCircle");
             _showCoverage = false;
             return;
@@ -642,7 +765,6 @@
 
         await JS.InvokeVoidAsync("meshcomMap.setCoverage",
             measuredPoints,
-            null,
             status.OwnLatitude.Value,
             status.OwnLongitude.Value);
 
