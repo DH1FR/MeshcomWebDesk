@@ -1,4 +1,8 @@
-﻿<!DOCTYPE html>
+﻿@using Microsoft.Extensions.Options
+@using MeshcomWebDesk.Models
+@using MeshcomWebDesk.Services
+@inject IOptionsMonitor<MeshcomSettings> SettingsMonitor
+<!DOCTYPE html>
 <html lang="de">
 
 <head>
@@ -17,6 +21,8 @@
     <ResourcePreloader />
     <link rel="stylesheet" href="@Assets["app.css"]" />
     <link rel="stylesheet" href="@Assets["MeshcomWebDesk.styles.css"]" />
+    @* Active theme: overrides the dark token defaults from app.css (no FOUC) *@
+    <style id="theme-vars">@((MarkupString)_themeCss)</style>
     <ImportMap />
     <HeadOutlet />
 </head>
@@ -207,7 +213,43 @@
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/service-worker.js');
         }
+
+        // ── Theming helpers (Settings → Erscheinungsbild) ──────────────────
+        // Live preview: set CSS custom properties without a save/reload.
+        window.applyThemeVars = function (vars) {
+            var root = document.documentElement;
+            for (var key in vars) {
+                if (Object.prototype.hasOwnProperty.call(vars, key)) {
+                    root.style.setProperty('--' + key, vars[key]);
+                }
+            }
+        };
+
+        // Remove all inline preview overrides (falls back to saved theme).
+        window.clearThemeVars = function () {
+            document.documentElement.removeAttribute('style');
+        };
+
+        // Download a text file (theme export)
+        window.downloadTextFile = function (filename, text) {
+            var blob = new Blob([text], { type: 'application/json;charset=utf-8' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
     </script>
 </body>
 
 </html>
+
+@code {
+    private string _themeCss = string.Empty;
+
+    protected override void OnInitialized()
+        => _themeCss = ThemeCatalog.BuildRootCss(SettingsMonitor.CurrentValue.Appearance);
+}

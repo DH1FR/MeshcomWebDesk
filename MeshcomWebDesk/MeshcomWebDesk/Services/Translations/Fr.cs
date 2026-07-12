@@ -869,6 +869,31 @@ internal static class Fr
         ["No stations heard yet."]  = "Aucune station encore entendue.",
         ["No, it's not that good"]  = "Non, ce n'est pas si bon",
         ["Searching…"]              = "Recherche en cours…",
+
+        // Appearance / Themes
+        ["Appearance"] = "Apparence",
+        ["Your selection is applied immediately as a preview – it becomes permanent only after “Save”."] = "La sélection est appliquée immédiatement en aperçu – elle ne devient permanente qu'après « Enregistrer ».",
+        ["Create custom theme"] = "Créer un thème personnalisé",
+        ["Import theme"] = "Importer un thème",
+        ["Import theme file (.mctheme.json)"] = "Importer un fichier de thème (.mctheme.json)",
+        ["Custom themes can be exported as a file and shared with other users."] = "Les thèmes personnalisés peuvent être exportés sous forme de fichier et partagés avec d'autres utilisateurs.",
+        ["Theme name"] = "Nom du thème",
+        ["My Theme"] = "Mon thème",
+        ["Please enter a theme name."] = "Veuillez saisir un nom de thème.",
+        ["A theme with this name already exists."] = "Un thème portant ce nom existe déjà.",
+        ["Import failed: not a valid theme file."] = "Échec de l'importation : fichier de thème non valide.",
+        ["Import failed: no valid colour values found."] = "Échec de l'importation : aucune valeur de couleur valide trouvée.",
+        ["MeshCom Dark (default)"] = "MeshCom Dark (par défaut)",
+        ["Midnight (OLED)"] = "Minuit (OLED)",
+        ["Light"] = "Clair",
+        ["High contrast"] = "Contraste élevé",
+        ["Backgrounds"] = "Arrière-plans",
+        ["Accents & structure"] = "Accents et structure",
+        ["Buttons"] = "Boutons",
+        ["Links & callsigns"] = "Liens et indicatifs",
+        ["Status colours"] = "Couleurs d'état",
+        ["Messages & notices"] = "Messages et avis",
+        ["Monitor & lists"] = "Moniteur et listes",
     };
 }
 

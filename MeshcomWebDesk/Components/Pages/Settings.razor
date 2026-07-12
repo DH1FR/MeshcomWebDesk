@@ -1426,6 +1426,116 @@
             }
         </div>
 
+        <!-- Erscheinungsbild / Appearance -->
+        <div class="settings-section @(IsOpen("appearance") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("appearance")'>🎨 @Loc.T("Erscheinungsbild", "Appearance") <span class="section-chevron">@(IsOpen("appearance") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("appearance")) {
+            <p class="theme-hint">
+                @Loc.T("Die Auswahl wird sofort als Vorschau angewendet – dauerhaft übernommen wird sie erst mit „Speichern“.",
+                       "Your selection is applied immediately as a preview – it becomes permanent only after “Save”.")
+            </p>
+
+            <div class="theme-preset-grid">
+                @foreach (var preset in ThemeCatalog.Presets)
+                {
+                    var presetColors = ThemeCatalog.ResolvePreset(preset.Id);
+                    <div class="theme-card @(IsActiveTheme(preset.Id) ? "theme-card-active" : "")"
+                         @onclick="() => SelectThemeAsync(preset.Id)">
+                        <div class="theme-card-name">
+                            @if (IsActiveTheme(preset.Id)) { <span class="theme-card-check">✔</span> }
+                            @Loc.T(preset.De, preset.En)
+                        </div>
+                        <div class="theme-swatches">
+                            @foreach (var color in ThemeSwatches(presetColors))
+                            {
+                                <span class="theme-swatch" style="background:@color"></span>
+                            }
+                        </div>
+                    </div>
+                }
+                @foreach (var theme in _model.Appearance.CustomThemes)
+                {
+                    var themeColors = ResolveCustomTheme(theme);
+                    <div class="theme-card @(IsActiveTheme(theme.Name) ? "theme-card-active" : "")"
+                         @onclick="() => SelectThemeAsync(theme.Name)">
+                        <div class="theme-card-name">
+                            @if (IsActiveTheme(theme.Name)) { <span class="theme-card-check">✔</span> }
+                            👤 @theme.Name
+                        </div>
+                        <div class="theme-swatches">
+                            @foreach (var color in ThemeSwatches(themeColors))
+                            {
+                                <span class="theme-swatch" style="background:@color"></span>
+                            }
+                        </div>
+                        <div class="theme-card-actions" @onclick:stopPropagation="true">
+                            <button type="button" class="btn-small" title="@Loc.T("Bearbeiten", "Edit")"
+                                    @onclick="() => EditTheme(theme)">✏️</button>
+                            <button type="button" class="btn-small" title="@Loc.T("Exportieren", "Export")"
+                                    @onclick="() => ExportThemeAsync(theme)">📤</button>
+                            <button type="button" class="btn-small btn-danger" title="@Loc.T("Löschen", "Delete")"
+                                    @onclick="() => DeleteThemeAsync(theme)">🗑</button>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="theme-actions-bar">
+                <button type="button" class="btn-secondary" @onclick="NewTheme">
+                    + @Loc.T("Eigenes Theme erstellen", "Create custom theme")
+                </button>
+                <label class="btn-secondary" style="cursor:pointer"
+                       title="@Loc.T("Theme-Datei (.mctheme.json) importieren", "Import theme file (.mctheme.json)")">
+                    📥 @Loc.T("Theme importieren", "Import theme")
+                    <InputFile accept=".json" style="display:none" OnChange="ImportThemeAsync" />
+                </label>
+            </div>
+            <p class="settings-hint" style="margin:0">
+                @Loc.T("Eigene Themes lassen sich als Datei exportieren und mit anderen Benutzern teilen.",
+                       "Custom themes can be exported as a file and shared with other users.")
+            </p>
+
+            @if (_themeError != null)
+            {
+                <div class="settings-error" style="margin-top:0.5rem">❌ @_themeError</div>
+            }
+
+            @if (_themeEditor != null)
+            {
+                <div class="theme-editor">
+                    <div class="settings-grid">
+                        <label>@Loc.T("Theme-Name", "Theme name")</label>
+                        <input type="text" maxlength="40" @bind="_themeEditor.Name" />
+                    </div>
+                    @foreach (var group in ThemeCatalog.Groups)
+                    {
+                        <details class="theme-editor-group" open="@(group.Id == "bg")">
+                            <summary>@Loc.T(group.De, group.En)</summary>
+                            <div class="theme-token-grid">
+                                @foreach (var token in ThemeCatalog.Tokens.Where(t => t.Group == group.Id))
+                                {
+                                    <label>@Loc.T(token.De, token.En)</label>
+                                    <input type="color" value="@GetEditorColor(token.Key)"
+                                           @onchange="e => SetEditorColorAsync(token.Key, e.Value?.ToString())" />
+                                    <input type="text" class="theme-hex" value="@GetEditorColor(token.Key)"
+                                           @onchange="e => SetEditorColorAsync(token.Key, e.Value?.ToString())" />
+                                }
+                            </div>
+                        </details>
+                    }
+                    <div class="theme-actions-bar" style="margin-top:0.75rem">
+                        <button type="button" class="btn-save" @onclick="SaveThemeEditorAsync">
+                            ✔ @Loc.T("Übernehmen", "Apply")
+                        </button>
+                        <button type="button" class="btn-cancel" @onclick="CancelThemeEditorAsync">
+                            @Loc.T("Abbrechen", "Cancel")
+                        </button>
+                    </div>
+                </div>
+            }
+            }
+        </div>
+
         <!-- Datenbank / Database -->
         <div class="settings-section @(IsOpen("db") ? "" : "settings-section-collapsed")">
             <h2 class="settings-section-title" @onclick='() => Toggle("db")'>🗄️ @Loc.T("Datenbank", "Database") <span class="section-chevron">@(IsOpen("db") ? "▲" : "▼")</span></h2>
@@ -2939,6 +3049,18 @@
             TelemetryApiEnabled    = s.TelemetryApiEnabled,
             TelemetryApiKey        = s.TelemetryApiKey,
             Language               = s.Language,
+            Appearance             = new AppearanceSettings
+            {
+                ActiveTheme  = s.Appearance.ActiveTheme,
+                CustomThemes = s.Appearance.CustomThemes
+                    .Select(t => new CustomTheme
+                    {
+                        Name    = t.Name,
+                        BasedOn = t.BasedOn,
+                        Colors  = new Dictionary<string, string>(t.Colors)
+                    })
+                    .ToList()
+            },
             DbProvider              = s.Database.Provider,
             DbMySqlConnectionString = s.Database.MySqlConnectionString,
             DbMySqlTableName        = s.Database.MySqlTableName,
@@ -3232,6 +3354,213 @@
                 $"Import failed: JSON error – {ex.Message}");
         }
         catch (Exception ex) { _importError = $"Import: {ex.Message}"; }
+    }
+
+    // ── Erscheinungsbild / Themes ──────────────────────────────────────────
+
+    private CustomTheme? _themeEditor;          // working copy while the editor is open
+    private string? _themeEditorOriginalName;   // null = creating a new theme
+    private string? _themeError;
+
+    /// <summary>Tokens shown as preview swatches on the theme cards.</summary>
+    private static readonly string[] SwatchTokens =
+        ["bg-base", "bg-panel", "btn-bg", "link-soft", "ok", "warn", "error"];
+
+    private static IEnumerable<string> ThemeSwatches(Dictionary<string, string> colors) =>
+        SwatchTokens.Select(t => colors.TryGetValue(t, out var v) ? v : "#000000");
+
+    private bool IsActiveTheme(string name) =>
+        string.Equals(_model.Appearance.ActiveTheme, name, StringComparison.OrdinalIgnoreCase);
+
+    private static Dictionary<string, string> ResolveCustomTheme(CustomTheme theme)
+    {
+        var colors = ThemeCatalog.Tokens.ToDictionary(t => t.Key, t => t.Default);
+        foreach (var (key, value) in theme.Colors)
+            if (colors.ContainsKey(key) && ThemeCatalog.IsValidColor(value))
+                colors[key] = value.Trim();
+        return colors;
+    }
+
+    private async Task SelectThemeAsync(string name)
+    {
+        _model.Appearance.ActiveTheme = name;
+        await ApplyThemePreviewAsync();
+    }
+
+    /// <summary>Applies the currently selected (unsaved) theme as a live preview.</summary>
+    private async Task ApplyThemePreviewAsync()
+    {
+        var colors = ThemeCatalog.Resolve(_model.Appearance);
+        await JS.InvokeVoidAsync("applyThemeVars", colors);
+    }
+
+    private void NewTheme()
+    {
+        _themeError = null;
+        var baseName = Loc.T("Mein Theme", "My Theme");
+        var name = baseName;
+        var i = 2;
+        while (ThemeNameTaken(name, exceptName: null)) name = $"{baseName} {i++}";
+
+        _themeEditor = new CustomTheme
+        {
+            Name    = name,
+            BasedOn = ThemeCatalog.IsPreset(_model.Appearance.ActiveTheme)
+                          ? _model.Appearance.ActiveTheme : "dark",
+            Colors  = ThemeCatalog.Resolve(_model.Appearance)   // start from current look
+        };
+        _themeEditorOriginalName = null;
+    }
+
+    private void EditTheme(CustomTheme theme)
+    {
+        _themeError = null;
+        _themeEditor = new CustomTheme
+        {
+            Name    = theme.Name,
+            BasedOn = theme.BasedOn,
+            Colors  = ResolveCustomTheme(theme)   // full token set for the editor
+        };
+        _themeEditorOriginalName = theme.Name;
+    }
+
+    private bool ThemeNameTaken(string name, string? exceptName) =>
+        ThemeCatalog.Presets.Any(p => string.Equals(p.Id, name, StringComparison.OrdinalIgnoreCase)
+                                   || string.Equals(p.De, name, StringComparison.OrdinalIgnoreCase)
+                                   || string.Equals(p.En, name, StringComparison.OrdinalIgnoreCase))
+        || _model.Appearance.CustomThemes.Any(t =>
+               !string.Equals(t.Name, exceptName, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase));
+
+    private string GetEditorColor(string key) =>
+        _themeEditor != null && _themeEditor.Colors.TryGetValue(key, out var v) ? v : "#000000";
+
+    private async Task SetEditorColorAsync(string key, string? value)
+    {
+        if (_themeEditor == null || string.IsNullOrWhiteSpace(value)) return;
+        value = value.Trim();
+        if (!ThemeCatalog.IsValidColor(value)) return;
+        _themeEditor.Colors[key] = value;
+        // Live preview of the single changed token
+        await JS.InvokeVoidAsync("applyThemeVars", new Dictionary<string, string> { [key] = value });
+    }
+
+    private async Task SaveThemeEditorAsync()
+    {
+        if (_themeEditor == null) return;
+        _themeError = null;
+
+        var name = _themeEditor.Name.Trim();
+        if (name.Length == 0)
+        {
+            _themeError = Loc.T("Bitte einen Theme-Namen angeben.", "Please enter a theme name.");
+            return;
+        }
+        if (ThemeNameTaken(name, _themeEditorOriginalName))
+        {
+            _themeError = Loc.T("Ein Theme mit diesem Namen existiert bereits.",
+                                "A theme with this name already exists.");
+            return;
+        }
+        _themeEditor.Name = name;
+
+        if (_themeEditorOriginalName != null)
+        {
+            var idx = _model.Appearance.CustomThemes.FindIndex(t =>
+                string.Equals(t.Name, _themeEditorOriginalName, StringComparison.OrdinalIgnoreCase));
+            if (idx >= 0) _model.Appearance.CustomThemes[idx] = _themeEditor;
+            else          _model.Appearance.CustomThemes.Add(_themeEditor);
+        }
+        else
+        {
+            _model.Appearance.CustomThemes.Add(_themeEditor);
+        }
+
+        _model.Appearance.ActiveTheme = name;
+        _themeEditor = null;
+        _themeEditorOriginalName = null;
+        await ApplyThemePreviewAsync();
+    }
+
+    private async Task CancelThemeEditorAsync()
+    {
+        _themeEditor = null;
+        _themeEditorOriginalName = null;
+        _themeError = null;
+        await ApplyThemePreviewAsync();   // discard editor preview, back to selected theme
+    }
+
+    private async Task DeleteThemeAsync(CustomTheme theme)
+    {
+        _model.Appearance.CustomThemes.Remove(theme);
+        if (IsActiveTheme(theme.Name))
+        {
+            _model.Appearance.ActiveTheme = "dark";
+            await ApplyThemePreviewAsync();
+        }
+    }
+
+    private async Task ExportThemeAsync(CustomTheme theme)
+    {
+        _themeError = null;
+        var payload = new CustomTheme { Name = theme.Name, BasedOn = theme.BasedOn, Colors = theme.Colors };
+        var json = System.Text.Json.JsonSerializer.Serialize(payload,
+            new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+        var safe = string.Join("_",
+            theme.Name.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries)).Trim();
+        if (safe.Length == 0) safe = "theme";
+        await JS.InvokeVoidAsync("downloadTextFile", $"{safe}.mctheme.json", json);
+    }
+
+    private async Task ImportThemeAsync(InputFileChangeEventArgs e)
+    {
+        _themeError = null;
+        try
+        {
+            using var stream = e.File.OpenReadStream(maxAllowedSize: 256 * 1024);
+            using var reader = new System.IO.StreamReader(stream);
+            var json = await reader.ReadToEndAsync();
+            if (string.IsNullOrWhiteSpace(json)) return;
+
+            var imported = System.Text.Json.JsonSerializer.Deserialize<CustomTheme>(json,
+                new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (imported is null || string.IsNullOrWhiteSpace(imported.Name) || imported.Colors.Count == 0)
+            {
+                _themeError = Loc.T("Import fehlgeschlagen: Keine gültige Theme-Datei.",
+                                    "Import failed: not a valid theme file.");
+                return;
+            }
+
+            // Only keep known tokens with valid colour values
+            var known = ThemeCatalog.Tokens.Select(t => t.Key).ToHashSet();
+            imported.Colors = imported.Colors
+                .Where(c => known.Contains(c.Key) && ThemeCatalog.IsValidColor(c.Value))
+                .ToDictionary(c => c.Key, c => c.Value.Trim());
+            if (imported.Colors.Count == 0)
+            {
+                _themeError = Loc.T("Import fehlgeschlagen: Keine gültigen Farbwerte gefunden.",
+                                    "Import failed: no valid colour values found.");
+                return;
+            }
+
+            imported.Name = imported.Name.Trim();
+            if (imported.Name.Length > 40) imported.Name = imported.Name[..40];
+            var name = imported.Name;
+            var i = 2;
+            while (ThemeNameTaken(name, exceptName: null)) name = $"{imported.Name} ({i++})";
+            imported.Name = name;
+
+            _model.Appearance.CustomThemes.Add(imported);
+            _model.Appearance.ActiveTheme = name;
+            await ApplyThemePreviewAsync();
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            _themeError = Loc.T($"Import fehlgeschlagen: JSON-Fehler – {ex.Message}",
+                                $"Import failed: JSON error – {ex.Message}");
+        }
+        catch (Exception ex) { _themeError = $"Import: {ex.Message}"; }
     }
 
     // ── Full Settings Backup / Restore (AES-256-CBC + PBKDF2) ─────────────
@@ -3636,6 +3965,9 @@
         public string TelemetryApiKey        { get; set; } = string.Empty;
         public string Language               { get; set; } = "de";
 
+        // Appearance / Themes
+        public AppearanceSettings Appearance { get; set; } = new();
+
         // Database
         public string DbProvider              { get; set; } = DatabaseSettings.ProviderNone;
         public string DbMySqlConnectionString { get; set; } = string.Empty;
@@ -3784,6 +4116,7 @@
             TelemetryApiEnabled    = TelemetryApiEnabled && WeatherApi.Provider == MeshcomWebDesk.Models.WeatherProvider.None,
             TelemetryApiKey        = TelemetryApiKey,
             Language               = Language,
+            Appearance             = Appearance,
             Database               = ToDbSettings(),
             Webhook = new WebhookSettings
             {
