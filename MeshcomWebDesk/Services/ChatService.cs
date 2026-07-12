@@ -79,6 +79,12 @@ public class ChatService
     private NodeState ResolveState(Guid? nodeId) =>
         nodeId is null ? GetPrimaryState() : GetState(nodeId);
 
+    /// <summary>Returns the bucket key that <see cref="ResolveState"/> maps <paramref name="nodeId"/> to:
+    /// <c>null</c> collapses to the primary node's Id (or <see cref="Guid.Empty"/> in legacy mode),
+    /// so packets from unknown IPs and packets from the primary node share one dedup scope.</summary>
+    private Guid ResolveBucketId(Guid? nodeId) =>
+        nodeId ?? _nodeManager?.PrimaryNode?.Id ?? Guid.Empty;
+
     /// <summary>True when <paramref name="nodeId"/> refers to the primary (or only) node.</summary>
     private bool IsPrimaryNode(Guid? nodeId)
     {
@@ -103,8 +109,11 @@ public class ChatService
 
     /// <summary>
     /// Rolling deduplication cache.
-    /// Key = "seq:{From}:{SeqNr}"  (primary, when SequenceNumber is present)
-    ///       "txt:{From}:{To}:{Text}" (fallback, when no sequence number).
+    /// Every message is registered under two kinds of keys:
+    /// a global key ("mid:…" / "seq:{From}:{SeqNr}" / "txt:{From}:{To}:{Text}") that tracks
+    /// whether ANY node already delivered the message (gates one-time side effects), and the
+    /// same key prefixed with the state-bucket Guid that tracks whether THIS node's bucket
+    /// already stored it (gates tab/monitor insertion, so each node keeps its own copy).
     /// Value = time of first receipt. Entries older than <see cref="DedupWindow"/> are pruned on each check.
     /// </summary>
     private readonly Dictionary<string, DateTime> _seenMessageKeys = new(StringComparer.OrdinalIgnoreCase);
@@ -280,11 +289,13 @@ public class ChatService
         var state = ResolveState(nodeId);
 
         // Deduplication: Meshcom 4.0 may deliver the same packet multiple times via different
-        // mesh routes. Use the sender-assigned sequence number as the primary key.
-        if (IsDuplicate(message))
+        // mesh routes. Scoped per state bucket so every node that heard the message keeps its
+        // own copy; isFirstReceipt marks the very first copy across all nodes and gates
+        // one-time side effects (webhook, MQTT, watchlist, CQ) below.
+        if (IsDuplicate(message, ResolveBucketId(nodeId), out bool isFirstReceipt))
         {
-            _logger.LogDebug("Duplicate message suppressed: From={From} Seq={Seq} Text={Text}",
-                message.From, message.SequenceNumber, message.Text);
+            _logger.LogDebug("Duplicate message suppressed: Node={NodeId} From={From} Seq={Seq} Text={Text}",
+                nodeId, message.From, message.SequenceNumber, message.Text);
             return;
         }
 
@@ -344,6 +355,13 @@ public class ChatService
             || !_settings.GroupFilterEnabled
             || _settings.Groups.Contains(tabKey, StringComparer.OrdinalIgnoreCase);
 
+        // A direct message addressed to a sibling node's callsign (e.g. To=DH1FR-2 heard on RF
+        // by DH1FR-99) falls into the group branch above and would open a pseudo-group tab
+        // "#DH1FR-2" here. Suppress the tab – the message still appears in this node's monitor.
+        if (isGroup && looksLikeCallsign && _nodeManager is not null &&
+            _nodeManager.Nodes.Any(n => string.Equals(n.Callsign, message.To, StringComparison.OrdinalIgnoreCase)))
+            tabAllowed = false;
+
         // MH-Liste und Karte werden ausschließlich vom Primary-Node befüllt.
         var primaryState = GetPrimaryState();
         bool mhChanged = IsPrimaryNode(nodeId) && UpdateMhList(message, primaryState);
@@ -376,10 +394,18 @@ public class ChatService
 
         if (mhChanged) OnMhChange?.Invoke();
         NotifyChange();
-        _ = _webhook.SendAsync(message, "message");
-        _ = _mqtt?.PublishAsync(message, "message");
-        CheckWatchlist(message);
-        CheckCq(message, tabKey, myCallsign);
+
+        // One-time side effects: fire only for the first copy across all nodes, otherwise a
+        // message heard by two nodes would trigger duplicate webhooks/notifications.
+        // OnBotCommand/OnDirectMessage below need no gate – their To==myCallsign check already
+        // limits them to the one node the message was addressed to.
+        if (isFirstReceipt)
+        {
+            _ = _webhook.SendAsync(message, "message");
+            _ = _mqtt?.PublishAsync(message, "message");
+            CheckWatchlist(message);
+            CheckCq(message, tabKey, myCallsign);
+        }
 
         if (!message.IsBroadcast &&
             string.Equals(message.To, myCallsign, StringComparison.OrdinalIgnoreCase) &&
@@ -861,18 +887,22 @@ public class ChatService
     }
 
     /// <summary>
-    /// Returns true when an identical message was already processed within <see cref="DedupWindow"/>.
-    /// Registers the message as seen on first encounter.
+    /// Returns true when this node's state bucket already stored an identical message within
+    /// <see cref="DedupWindow"/>. Registers the message as seen on first encounter.
     /// Priority: msg_id (most reliable) → seq:{From}:{SeqNr} → txt:{From}:{To}:{Text}
-    /// The NodeId is included in the key so the same packet received from two different
-    /// nodes is NOT considered a duplicate (each node relays its own traffic independently).
+    /// <para>
+    /// Deduplication is scoped per state bucket (<paramref name="bucketId"/>): the same RF
+    /// packet forwarded by two different nodes is stored once in <em>each</em> node's bucket,
+    /// so every node processes its traffic independently. Repeated deliveries into the same
+    /// bucket (mesh routing, node/lora double copies) are dropped as before.
+    /// <paramref name="isFirstReceipt"/> is true only for the very first copy across all
+    /// buckets – the caller uses it to fire global one-time side effects exactly once.
+    /// </para>
     /// </summary>
-    private bool IsDuplicate(MeshcomMessage message)
+    private bool IsDuplicate(MeshcomMessage message, Guid bucketId, out bool isFirstReceipt)
     {
-        // Keys are global (no node prefix): msg_id, seq number, and text are all
-        // sender-assigned and unique per message regardless of which node received it.
-        // Using a node prefix previously caused the same message received by two
-        // connected nodes to produce different keys and appear twice in the UI.
+        // msg_id, seq number, and text are sender-assigned and identify the message globally;
+        // the bucket prefix scopes storage deduplication to one node's state.
         string key = !string.IsNullOrEmpty(message.MsgId)
             ? $"mid:{message.MsgId}"
             : !string.IsNullOrEmpty(message.SequenceNumber)
@@ -887,6 +917,8 @@ public class ChatService
             ? $"txt:{message.From}:{message.To}:{message.Text}"
             : null;
 
+        var bucketPrefix = bucketId.ToString("N");
+
         lock (_lock)
         {
             var now    = DateTime.Now;
@@ -900,14 +932,21 @@ public class ChatService
             foreach (var k in expired)
                 _seenMessageKeys.Remove(k);
 
-            if (_seenMessageKeys.ContainsKey(key))
+            isFirstReceipt = !_seenMessageKeys.ContainsKey(key) &&
+                             (txtKey == null || !_seenMessageKeys.ContainsKey(txtKey));
+
+            if (_seenMessageKeys.ContainsKey($"{bucketPrefix}:{key}"))
                 return true;
-            if (txtKey != null && _seenMessageKeys.ContainsKey(txtKey))
+            if (txtKey != null && _seenMessageKeys.ContainsKey($"{bucketPrefix}:{txtKey}"))
                 return true;
 
             _seenMessageKeys[key] = now;
+            _seenMessageKeys[$"{bucketPrefix}:{key}"] = now;
             if (txtKey != null && txtKey != key)
+            {
                 _seenMessageKeys[txtKey] = now;
+                _seenMessageKeys[$"{bucketPrefix}:{txtKey}"] = now;
+            }
             return false;
         }
     }
