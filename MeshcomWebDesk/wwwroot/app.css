@@ -61,6 +61,7 @@
     --error-hover: #ff3333;
     /* messages / notices */
     --msg-out-bg: #1b4332;
+    --msg-out-call: #b7e4c7;
     --panel-ok-bg: #0d2b1e;
     --panel-err-bg: #2b0d0d;
     --panel-err-border: #6e2020;
@@ -513,7 +514,7 @@ h1:focus {
 }
 
 .msg-out .msg-call {
-    color: #b7e4c7;
+    color: var(--msg-out-call);
 }
 
 .msg-call-link {

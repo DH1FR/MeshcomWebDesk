@@ -106,6 +106,7 @@ public static class ThemeCatalog
 
         // ── Messages / notices ───────────────────────────────────────────
         new("msg-out-bg",        "msg", "Eigene Nachrichten",     "Own messages",          "#1b4332"),
+        new("msg-out-call",      "msg", "Rufzeichen eigene Nachrichten", "Own message callsign", "#b7e4c7"),
         new("panel-ok-bg",       "msg", "Erfolgs-Hinweis",        "Success notice",        "#0d2b1e"),
         new("panel-err-bg",      "msg", "Fehler-Hinweis",         "Error notice",          "#2b0d0d"),
         new("panel-err-border",  "msg", "Fehler-Hinweis Rahmen",  "Error notice border",   "#6e2020"),
@@ -205,6 +206,7 @@ public static class ThemeCatalog
             ["error-bright"] = "#d1242f",
             ["error-hover"]  = "#86061d",
             ["msg-out-bg"]        = "#d9f2e0",
+            ["msg-out-call"]      = "#116329",
             ["panel-ok-bg"]       = "#d9f2e0",
             ["panel-err-bg"]      = "#ffe5e2",
             ["panel-err-border"]  = "#f1a8a2",
@@ -272,6 +274,7 @@ public static class ThemeCatalog
             ["error-bright"] = "#ff6666",
             ["error-hover"]  = "#ff0000",
             ["msg-out-bg"]   = "#003820",
+            ["msg-out-call"] = "#88ffaa",
             ["mon-text"]      = "#ffffff",
             ["mon-text-soft"] = "#e8e8e8",
         }),
