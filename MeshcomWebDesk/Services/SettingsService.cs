@@ -246,6 +246,17 @@ public class SettingsService
                 ["TelemetryApiEnabled"] = s.TelemetryApiEnabled,
                 ["TelemetryApiKey"]     = Encrypt(s.TelemetryApiKey),
                 ["Language"]            = s.Language,
+                ["Appearance"] = new JsonObject
+                {
+                    ["ActiveTheme"]  = s.Appearance.ActiveTheme,
+                    ["CustomThemes"] = new JsonArray(s.Appearance.CustomThemes.Select(t => (JsonNode?)new JsonObject
+                    {
+                        ["Name"]    = t.Name,
+                        ["BasedOn"] = t.BasedOn,
+                        ["Colors"]  = new JsonObject(t.Colors.Select(c =>
+                                          new KeyValuePair<string, JsonNode?>(c.Key, JsonValue.Create(c.Value))))
+                    }).ToArray())
+                },
                 ["Database"]            = new JsonObject
                 {
                     ["Provider"]              = s.Database.Provider,

@@ -1,5 +1,12 @@
 ﻿# Changelog
 
+## [1.14.0] – in development
+
+### Features
+- **Appearance settings with themes** – New 🎨 *Appearance* section in Settings: choose between four built-in themes (**MeshCom Dark** – the classic look and default, **Midnight (OLED)**, **Light**, **High Contrast**) or create your own. Custom themes are edited in a grouped colour editor (backgrounds, accents, buttons, text, links, status colours, messages, monitor), applied live as a preview and saved under a name. Themes can be **exported/imported as `.mctheme.json` files** so users can share them. Technically the entire UI stylesheet was refactored to semantic CSS custom properties; the default theme renders identical to previous releases.
+
+---
+
 ## [1.12.4] – 2026-06-14
 
 ### Features

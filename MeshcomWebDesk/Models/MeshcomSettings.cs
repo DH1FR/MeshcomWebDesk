@@ -215,6 +215,9 @@ public class MeshcomSettings
     /// </summary>
     public string Language { get; set; } = "de";
 
+    /// <summary>Appearance / theming: active theme and user-defined custom themes.</summary>
+    public AppearanceSettings Appearance { get; set; } = new();
+
     /// <summary>Optional database sink. Set Provider to "mysql" or "influxdb2" to activate.</summary>
     public DatabaseSettings Database { get; set; } = new();
 
