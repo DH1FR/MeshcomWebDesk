@@ -2432,7 +2432,7 @@ h1:focus {
 .leg-line-good    { border-color: #39d353; }
 .leg-line-ok      { border-color: #f0c060; }
 .leg-line-weak    { border-color: #ff6b6b; }
-.leg-line-neutral { border-color: #90a4ae; }
+.leg-line-neutral { border-color: #58a6ff; }
 .leg-line-partial { border-top: 2px dotted #b0bec5; opacity: 0.55; }
 
 .leg-arrow {

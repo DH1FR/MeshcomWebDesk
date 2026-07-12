@@ -266,10 +266,11 @@ window.meshcomMap = (function () {
                     var fade      = ageFade(seg.ageMins);
 
                     // Colour only the true final RF hop (quality measured at own node);
-                    // upstream hops have unknown link quality → neutral grey
+                    // upstream hops have unknown link quality → neutral blue
+                    // (same blue as markers without signal data)
                     var color = seg.lastHop && (seg.rssi != null || seg.snr != null)
                               ? tierColor(sigTier(seg.rssi, seg.snr))
-                              : '#90a4ae';
+                              : '#58a6ff';
 
                     var lineOpacity = (seg.partial ? 0.50 : 0.90) * fade;
                     var haloOpacity = (seg.partial ? 0.25 : 0.55) * fade;
