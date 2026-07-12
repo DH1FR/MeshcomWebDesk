@@ -443,6 +443,8 @@ public sealed class ConsoleCommandHelperService : IDisposable
         for (int i = upToIdx; i >= 0; i--)
         {
             var l = lines[i];
+            if (i < upToIdx && l.Trim() == "SCAN END")
+                break; // Ende des VORHERIGEN Scans – ältere Blöcke nicht anhängen
             if (l.StartsWith("FREQ ") || l.StartsWith("SCAN ") ||
                 l.Trim() == "SCAN END" || l.Contains("spectral scan"))
                 firstFreq = i;
