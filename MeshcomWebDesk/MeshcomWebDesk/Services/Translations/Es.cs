@@ -360,6 +360,19 @@ internal static class Es
         ["Telemetry interval (minutes)"]
                                     = "Intervalo telemetría (minutos)",
         ["Temperature"]             = "Temperatura",
+        ["Send native telemetry (extudp)"] = "Enviar telemetría nativa (extudp)",
+        ["Sends up to 4 of the values marked with an extudp slot below as a native telemetry telegram directly to the node (which appends its battery level and forwards it as a real LoRa telemetry packet). The node rejects the telegram while it has its own --values sensors configured."]
+                                    = "Envía hasta 4 de los valores marcados abajo con una ranura extudp como telegrama de telemetría nativo directamente al nodo (que añade su nivel de batería y lo reenvía como un paquete de telemetría LoRa real). El nodo rechaza el telegrama mientras tenga configurados sus propios sensores --values.",
+        ["Position in the extudp telegram (max. 4 values)"]
+                                    = "Posición en el telegrama extudp (máx. 4 valores)",
+        ["Position in the extudp telegram"]
+                                    = "Posición en el telegrama extudp",
+        ["Extudp is active, but no value has an assigned slot (1-4)."]
+                                    = "Extudp está activo, pero ningún valor tiene una ranura asignada (1-4).",
+        ["Preview native telemetry telegram (extudp)"]
+                                    = "Vista previa del telegrama de telemetría nativo (extudp)",
+        ["None of the assigned extudp values could be found in the file."]
+                                    = "No se encontró en el archivo ninguno de los valores extudp asignados.",
 
         // Settings – Database
         ["Database"]                = "Base de datos",
