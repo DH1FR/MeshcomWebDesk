@@ -705,10 +705,13 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             catch (OperationCanceledException) { break; }
 
             var s = _settings;
+            bool textConfigured   = !string.IsNullOrWhiteSpace(s.TelemetryGroup);
+            bool extUdpConfigured = s.TelemetryExtUdpEnabled
+                && s.TelemetryMapping.Any(e => e.ExtUdpSlot is >= 1 and <= 4);
             bool configured = s.TelemetryEnabled
                 && !string.IsNullOrWhiteSpace(s.TelemetryFilePath)
-                && !string.IsNullOrWhiteSpace(s.TelemetryGroup)
-                && s.TelemetryMapping.Count > 0;
+                && s.TelemetryMapping.Count > 0
+                && (textConfigured || extUdpConfigured);
 
             if (!configured)
             {
@@ -808,6 +811,29 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     }
 
     /// <summary>
+    /// Parses a telemetry JSON value that may be either a JSON number or a numeric string.
+    /// Shared by the text-message and extudp telemetry builders.
+    /// </summary>
+    private static bool TryParseTelemetryValue(JsonElement valueProp, out double value)
+    {
+        if (valueProp.ValueKind == JsonValueKind.Number)
+        {
+            value = valueProp.GetDouble();
+            return true;
+        }
+        if (valueProp.ValueKind == JsonValueKind.String &&
+            double.TryParse(valueProp.GetString(),
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var parsed))
+        {
+            value = parsed;
+            return true;
+        }
+        value = 0;
+        return false;
+    }
+
+    /// <summary>
     /// Reads the telemetry JSON file and builds the flat "key=value unit" string
     /// from the configured <see cref="MeshcomSettings.TelemetryMapping"/>.
     /// Returns <c>null</c> when the file does not exist, cannot be parsed, or yields no values.
@@ -856,17 +882,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             {
                 if (string.IsNullOrWhiteSpace(entry.JsonKey)) continue;
                 if (!root.TryGetProperty(entry.JsonKey, out var valueProp)) continue;
-
-                double value;
-                if (valueProp.ValueKind == JsonValueKind.Number)
-                    value = valueProp.GetDouble();
-                else if (valueProp.ValueKind == JsonValueKind.String &&
-                         double.TryParse(valueProp.GetString(),
-                             System.Globalization.NumberStyles.Float,
-                             System.Globalization.CultureInfo.InvariantCulture, out var parsed))
-                    value = parsed;
-                else
-                    continue;
+                if (!TryParseTelemetryValue(valueProp, out var value)) continue;
 
                 // Capture well-known weather values for map popup.
                 // Explicit WeatherRole takes precedence; unit-based detection is the fallback
@@ -897,7 +913,23 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         }
     }
 
+    /// <summary>
+    /// Dispatches to the two independent telemetry send paths: the classic text-message
+    /// path (when <see cref="MeshcomSettings.TelemetryGroup"/> is set) and the native
+    /// extudp "tele" telegram (when <see cref="MeshcomSettings.TelemetryExtUdpEnabled"/> is
+    /// set and at least one mapping entry has an <see cref="TelemetryMappingEntry.ExtUdpSlot"/>).
+    /// Either, both, or neither may fire depending on configuration.
+    /// </summary>
     private async Task SendTelemetryAsync(MeshcomSettings s)
+    {
+        if (!string.IsNullOrWhiteSpace(s.TelemetryGroup))
+            await SendTextTelemetryAsync(s);
+
+        if (s.TelemetryExtUdpEnabled && s.TelemetryMapping.Any(e => e.ExtUdpSlot is >= 1 and <= 4))
+            await SendExtUdpTeleAsync(s);
+    }
+
+    private async Task SendTextTelemetryAsync(MeshcomSettings s)
     {
         try
         {
@@ -978,6 +1010,107 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error reading or sending telemetry from {Path}", s.TelemetryFilePath);
+        }
+    }
+
+    /// <summary>
+    /// Reads the telemetry JSON file and resolves the mapping entries that have an
+    /// <see cref="TelemetryMappingEntry.ExtUdpSlot"/> (1-4), ordered by slot, capped at 4
+    /// entries (the extudp protocol limit). Returns <c>null</c> when the file is missing,
+    /// unparsable, or no slot-assigned value could be resolved.
+    /// </summary>
+    private List<(TelemetryMappingEntry Entry, string Formatted)>? BuildExtUdpValues(MeshcomSettings s)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(s.TelemetryFilePath) || !File.Exists(s.TelemetryFilePath))
+                return null;
+
+            var fileContent = File.ReadAllText(s.TelemetryFilePath);
+            using var doc = JsonDocument.Parse(fileContent);
+            var root = doc.RootElement;
+
+            var resolved = new List<(TelemetryMappingEntry Entry, string Formatted)>();
+
+            foreach (var entry in s.TelemetryMapping
+                         .Where(e => e.ExtUdpSlot is >= 1 and <= 4)
+                         .OrderBy(e => e.ExtUdpSlot)
+                         .Take(4))
+            {
+                if (string.IsNullOrWhiteSpace(entry.JsonKey)) continue;
+                if (!root.TryGetProperty(entry.JsonKey, out var valueProp)) continue;
+                if (!TryParseTelemetryValue(valueProp, out var value)) continue;
+
+                var decimals  = Math.Max(0, entry.Decimals);
+                var formatted = value.ToString($"F{decimals}", System.Globalization.CultureInfo.InvariantCulture);
+                resolved.Add((entry, formatted));
+            }
+
+            return resolved.Count > 0 ? resolved : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Sends the values assigned to an <see cref="TelemetryMappingEntry.ExtUdpSlot"/> as a
+    /// native <c>{"type":"tele",...}</c> UDP telegram directly to the node (same endpoint as
+    /// <see cref="SendMessageAsync"/>). The node prepends its own battery level and forwards
+    /// the combined report as a real T# LoRa telemetry packet.
+    /// </summary>
+    private async Task SendExtUdpTeleAsync(MeshcomSettings s)
+    {
+        if (_udpClient == null)
+        {
+            _logger.LogWarning("Cannot send extudp telemetry – UDP client not initialized");
+            return;
+        }
+
+        try
+        {
+            var values = BuildExtUdpValues(s);
+            if (values is null)
+            {
+                if (!File.Exists(s.TelemetryFilePath))
+                    _logger.LogWarning("Extudp telemetry: telemetry file not found: {Path}", s.TelemetryFilePath);
+                else
+                    _logger.LogWarning("Extudp telemetry: no slot-assigned values could be read from {Path}", s.TelemetryFilePath);
+                return;
+            }
+
+            var valuesStr = string.Join(",", values.Select(v => v.Formatted));
+            var parmStr   = string.Join(",", values.Select(v => string.IsNullOrWhiteSpace(v.Entry.Label) ? v.Entry.JsonKey : v.Entry.Label));
+            var unitStr   = string.Join(",", values.Select(v => v.Entry.Unit));
+
+            var json  = JsonSerializer.Serialize(new { type = "tele", values = valuesStr, parm = parmStr, unit = unitStr });
+            var bytes = Encoding.UTF8.GetBytes(json);
+
+            if (bytes.Length > 254)
+            {
+                _logger.LogWarning(
+                    "Extudp telemetry payload too large ({Bytes} bytes, max 254) – Senden abgebrochen", bytes.Length);
+                return;
+            }
+
+            var sendingNode = _nodeManager.SelectedNode;
+            var deviceIp    = sendingNode?.DeviceIp   ?? s.DeviceIp;
+            var devicePort  = sendingNode?.DevicePort ?? s.DevicePort;
+            var remoteEp    = new IPEndPoint(IPAddress.Parse(deviceIp), devicePort);
+
+            await _udpClient.SendAsync(bytes, bytes.Length, remoteEp);
+            _logger.LogInformation("Sending native extudp telemetry to {Remote}: {Data}", remoteEp, json);
+            if (s.LogUdpTraffic)
+                _logger.LogInformation("[UDP-TX] {Remote} {Data}", remoteEp, json);
+
+            Status.TxCount++;
+            Status.LastTxTime = DateTime.Now;
+            NotifyStatusChange();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sending extudp telemetry telegram");
         }
     }
 

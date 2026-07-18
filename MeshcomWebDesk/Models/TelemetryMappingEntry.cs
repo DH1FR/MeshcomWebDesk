@@ -20,4 +20,11 @@ public class TelemetryMappingEntry
     /// Takes precedence over unit-based auto-detection.
     /// </summary>
     public string WeatherRole { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Optional position (1-4) of this value in the native extudp "tele" telegram's
+    /// values/parm/unit lists. 0 means the entry is not sent via extudp.
+    /// Must be unique across all mapping entries; the UI enforces this.
+    /// </summary>
+    public int ExtUdpSlot { get; set; } = 0;
 }

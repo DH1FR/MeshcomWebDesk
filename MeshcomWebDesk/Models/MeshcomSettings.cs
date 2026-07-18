@@ -211,6 +211,15 @@ public class MeshcomSettings
     public string TelemetryApiKey { get; set; } = string.Empty;
 
     /// <summary>
+    /// When true, on each scheduled telemetry run (or manual "send now"), the values whose
+    /// <see cref="TelemetryMappingEntry.ExtUdpSlot"/> is set (1-4) are additionally sent as a
+    /// native <c>{"type":"tele",...}</c> UDP telegram directly to the node, which forwards them
+    /// as a real T# LoRa telemetry packet (with its own battery level prepended). Works
+    /// independently of <see cref="TelemetryGroup"/> / the text-message telemetry path.
+    /// </summary>
+    public bool TelemetryExtUdpEnabled { get; set; } = false;
+
+    /// <summary>
     /// UI language. Supported values: "de" (German, default) and "en" (English).
     /// </summary>
     public string Language { get; set; } = "de";
