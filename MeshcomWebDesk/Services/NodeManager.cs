@@ -82,17 +82,22 @@ public sealed class NodeManager
     // ── Node list helpers ────────────────────────────────────────────────
 
     /// <summary>
-    /// Returns the current node list.
-    /// When the list is empty the application is running in legacy single-node mode.
+    /// Returns all configured, currently enabled nodes (disabled nodes are excluded from
+    /// active use – registration, sending, chat switcher, telnet console selector – while
+    /// their configuration is retained in <see cref="MeshcomSettings.Nodes"/>).
+    /// When the list is empty the application is running in legacy single-node mode
+    /// (or all configured nodes happen to be disabled).
     /// </summary>
-    public IReadOnlyList<NodeProfile> Nodes => _settingsMonitor.CurrentValue.Nodes;
+    public IReadOnlyList<NodeProfile> Nodes =>
+        _settingsMonitor.CurrentValue.Nodes.Where(n => n.Enabled).ToList();
 
-    /// <summary>True when at least one node profile is configured.</summary>
-    public bool MultiNodeEnabled => _settingsMonitor.CurrentValue.Nodes.Count > 0;
+    /// <summary>True when at least one enabled node profile is configured.</summary>
+    public bool MultiNodeEnabled => Nodes.Count > 0;
 
     /// <summary>
     /// Returns the primary node, or <c>null</c> when running in legacy mode.
     /// In legacy mode callers should fall back to the top-level connection settings.
+    /// The primary node cannot be disabled, so this always considers all configured nodes.
     /// </summary>
     public NodeProfile? PrimaryNode =>
         _settingsMonitor.CurrentValue.Nodes.FirstOrDefault(n => n.IsPrimary);
@@ -108,7 +113,7 @@ public sealed class NodeManager
     {
         get
         {
-            var nodes = _settingsMonitor.CurrentValue.Nodes;
+            var nodes = Nodes;
             if (nodes.Count == 0) return null;
 
             if (_selectedNodeId is { } id)
@@ -117,7 +122,8 @@ public sealed class NodeManager
                 if (found is not null) return found;
             }
 
-            // Default to primary.
+            // Default to primary (falls back to the first enabled node if the primary
+            // itself is somehow not in the enabled list, which should not normally happen).
             return nodes.FirstOrDefault(n => n.IsPrimary) ?? nodes[0];
         }
     }
@@ -239,7 +245,7 @@ public sealed class NodeManager
     {
         if (_selectedNodeId is null) return;
 
-        var stillExists = _settingsMonitor.CurrentValue.Nodes.Any(n => n.Id == _selectedNodeId);
+        var stillExists = Nodes.Any(n => n.Id == _selectedNodeId);
         if (!stillExists)
         {
             _selectedNodeId = null;

@@ -105,11 +105,17 @@
                 </p>
             }
             @foreach (var node in _model.Nodes) {
-                <div class="settings-node-card">
+                <div class="settings-node-card@(node.Enabled ? "" : " settings-node-card-disabled")">
                     <div class="settings-node-header">
+                        <label class="settings-toggle" title="@(node.IsPrimary ? Loc.T("Der Primär-Node kann nicht deaktiviert werden – zuerst einen anderen Node als Primär festlegen.", "The primary node cannot be disabled – set another node as primary first.") : Loc.T("Node vorübergehend deaktivieren, ohne die Konfiguration zu löschen.", "Temporarily disable this node without deleting its configuration."))">
+                            <input type="checkbox" @bind="node.Enabled" disabled="@node.IsPrimary" />
+                        </label>
                         <strong>@node.Name</strong>
                         @if (node.IsPrimary) {
                             <span class="settings-node-primary-badge">★ @Loc.T("Primär", "Primary")</span>
+                        }
+                        @if (!node.Enabled) {
+                            <span class="settings-node-primary-badge" style="background:#30363d;color:#8b949e">@Loc.T("Deaktiviert", "Disabled")</span>
                         }
                         <div class="settings-node-actions">
                             @if (!node.IsPrimary) {
@@ -121,6 +127,31 @@
                     <div class="settings-grid" style="margin-top:.5rem">
                         <label>@Loc.T("Name", "Name")</label>
                         <input type="text" @bind="node.Name" />
+                        @if (node.IsPrimary) {
+                        <label>@Loc.T("Rufzeichen", "Callsign")</label>
+                        <input type="text" value="@_model.MyCallsign" readonly style="opacity:0.6;cursor:not-allowed;text-transform:uppercase"
+                               title="@Loc.T("Wird im Abschnitt Verbindung oben verwaltet.", "Managed in the Connection section above.")" />
+                        <label>Device IP</label>
+                        <input type="text" value="@_model.DeviceIp" readonly style="opacity:0.6;cursor:not-allowed;"
+                               title="@Loc.T("Wird im Abschnitt Verbindung oben verwaltet.", "Managed in the Connection section above.")" />
+                        <label>
+                            Device Port<br />
+                            <small>@Loc.T("Fest: 1799 (gerätefixiert)", "Fixed: 1799 (device-fixed)")</small>
+                        </label>
+                        <input type="number" value="@_model.DevicePort" readonly style="opacity:0.6;cursor:not-allowed;" />
+                        <label>Listen IP</label>
+                        <input type="text" value="@_model.ListenIp" readonly style="opacity:0.6;cursor:not-allowed;"
+                               title="@Loc.T("Wird im Abschnitt Verbindung oben verwaltet.", "Managed in the Connection section above.")" />
+                        <label>
+                            Listen Port<br />
+                            <small>@Loc.T("Fest: 1799 (gerätefixiert)", "Fixed: 1799 (device-fixed)")</small>
+                        </label>
+                        <input type="number" value="@_model.ListenPort" readonly style="opacity:0.6;cursor:not-allowed;" />
+                        <span></span>
+                        <small style="color:#8b949e">ℹ️ @Loc.T(
+                            "Rufzeichen und Verbindungsdaten des Primär-Node werden im Abschnitt Verbindung oben gepflegt.",
+                            "The primary node's callsign and connection data are maintained in the Connection section above.")</small>
+                        } else {
                         <label>@Loc.T("Rufzeichen", "Callsign")</label>
                         <div>
                             <input type="text" @bind="node.Callsign" placeholder="OE1ABC-2" style="text-transform:uppercase;width:100%" />
@@ -147,6 +178,7 @@
                             <small>@Loc.T("Fest: 1799 (gerätefixiert)", "Fixed: 1799 (device-fixed)")</small>
                         </label>
                         <input type="number" value="@node.ListenPort" readonly style="opacity:0.6;cursor:not-allowed;" />
+                        }
                         @* ── TLS Console ── *@
                         <label>
                             @Loc.T("TLS Passwort", "TLS Password")<br />
@@ -2455,12 +2487,15 @@
         var isFirst = _model.Nodes.Count == 0;
         _model.Nodes.Add(new NodeProfile
         {
-            Name       = $"Node {_model.Nodes.Count + 1}",
+            // The first node is the primary – its connection data mirrors the
+            // "Verbindung" section above (see PromoteToPrimary / ToSettings) and its
+            // fields are shown read-only in the UI, so no re-entry is needed.
+            Name       = isFirst ? Loc.T("Primär", "Primary") : $"Node {_model.Nodes.Count + 1}",
             Callsign   = _model.MyCallsign,
             DeviceIp   = _model.DeviceIp,
             DevicePort = _model.DevicePort,
             ListenIp   = _model.ListenIp,
-            ListenPort = _model.ListenPort + _model.Nodes.Count,
+            ListenPort = isFirst ? _model.ListenPort : _model.ListenPort + _model.Nodes.Count,
             IsPrimary  = isFirst
         });
     }
@@ -2468,15 +2503,29 @@
     private void RemoveNode(NodeProfile node)
     {
         _model.Nodes.Remove(node);
-        // If the removed node was primary, make the first remaining node primary.
+        // If the removed node was primary, promote the first remaining node.
         if (node.IsPrimary && _model.Nodes.Count > 0)
-            _model.Nodes[0].IsPrimary = true;
+            PromoteToPrimary(_model.Nodes[0]);
     }
 
-    private void SetPrimaryNode(NodeProfile node)
+    private void SetPrimaryNode(NodeProfile node) => PromoteToPrimary(node);
+
+    /// <summary>
+    /// Makes <paramref name="node"/> the primary node and moves its connection identity
+    /// (callsign, device/listen IP + port) up into the top-level "Verbindung" fields, which
+    /// are the single source of truth for the primary node's connection data. The previously
+    /// primary node keeps its own stored values and becomes a regular, editable secondary node.
+    /// </summary>
+    private void PromoteToPrimary(NodeProfile node)
     {
         foreach (var n in _model.Nodes) n.IsPrimary = false;
         node.IsPrimary = true;
+        node.Enabled = true;
+        _model.MyCallsign = node.Callsign;
+        _model.DeviceIp   = node.DeviceIp;
+        _model.DevicePort = node.DevicePort;
+        _model.ListenIp   = node.ListenIp;
+        _model.ListenPort = node.ListenPort;
     }
     // ──────────────────────────────────────────────────────────────────────
 
@@ -3088,6 +3137,7 @@
                 ListenIp              = n.ListenIp,
                 ListenPort            = n.ListenPort,
                 IsPrimary             = n.IsPrimary,
+                Enabled               = n.Enabled,
                 TelnetCertThumbprint  = n.TelnetCertThumbprint,
                 TelnetPassword        = n.TelnetPassword,
                 ConsoleLogEnabled     = n.ConsoleLogEnabled
@@ -3894,6 +3944,7 @@
                     ListenIp              = n.ListenIp,
                     ListenPort            = n.ListenPort,
                     IsPrimary             = n.IsPrimary,
+                    Enabled               = n.Enabled,
                     TelnetCertThumbprint  = n.TelnetCertThumbprint,
                     TelnetPassword        = n.TelnetPassword,
                     ConsoleLogEnabled     = n.ConsoleLogEnabled
@@ -4183,8 +4234,21 @@
             };
         }
 
-        public MeshcomSettings ToSettings() => new()
+        public MeshcomSettings ToSettings()
         {
+            // The primary node's connection identity is always sourced from the top-level
+            // "Verbindung" fields (single source of truth) rather than re-entered per node.
+            var primary = Nodes.FirstOrDefault(n => n.IsPrimary);
+            if (primary is not null)
+            {
+                primary.Callsign   = MyCallsign;
+                primary.DeviceIp   = DeviceIp;
+                primary.DevicePort = DevicePort;
+                primary.ListenIp   = ListenIp;
+                primary.ListenPort = ListenPort;
+            }
+            return new()
+            {
             Nodes               = Nodes,
             ListenIp            = ListenIp,
             ListenPort          = ListenPort,
@@ -4303,6 +4367,7 @@
             GroupLabels = GroupLabels,
             WeatherApi = WeatherApi,
             LicenseToken = LicenseToken
-        };
+            };
+        }
     }
 }

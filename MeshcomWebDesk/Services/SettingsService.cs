@@ -171,6 +171,7 @@ public class SettingsService
                     ["ListenIp"]             = n.ListenIp,
                     ["ListenPort"]           = n.ListenPort,
                     ["IsPrimary"]            = n.IsPrimary,
+                    ["Enabled"]              = n.Enabled,
                     ["TelnetCertThumbprint"] = n.TelnetCertThumbprint,
                     ["TelnetPassword"]       = Encrypt(n.TelnetPassword),
                     ["ConsoleLogEnabled"]    = n.ConsoleLogEnabled

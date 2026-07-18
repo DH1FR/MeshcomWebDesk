@@ -44,6 +44,13 @@ public class NodeProfile
     /// </summary>
     public bool IsPrimary { get; set; } = false;
 
+    /// <summary>
+    /// When false, this node is temporarily excluded from all active use (registration,
+    /// beacon/telemetry sending, chat node switcher, telnet console selector) while its
+    /// configuration is kept intact. The primary node cannot be disabled.
+    /// </summary>
+    public bool Enabled { get; set; } = true;
+
     // ── TLS Console ──────────────────────────────────────────────────────
 
     /// <summary>

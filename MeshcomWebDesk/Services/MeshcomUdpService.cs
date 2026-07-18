@@ -97,7 +97,8 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                 || prev.Nodes.Zip(s.Nodes).Any(p =>
                     p.First.Id         != p.Second.Id         ||
                     p.First.DeviceIp   != p.Second.DeviceIp   ||
-                    p.First.DevicePort != p.Second.DevicePort);
+                    p.First.DevicePort != p.Second.DevicePort ||
+                    p.First.Enabled    != p.Second.Enabled);
             if (nodesChanged)
                 _ = RegisterWithDeviceAsync();
         });

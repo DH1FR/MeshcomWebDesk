@@ -3184,6 +3184,8 @@ h1:focus {
 
 /* ── Multi-node settings cards ────────────────────────────────────────── */
 .settings-node-card{background:var(--bg-elevated);border:1px solid var(--border-strong);border-radius:6px;padding:.75rem 1rem;margin-bottom:.6rem}
+.settings-node-card-disabled{opacity:.55}
+.settings-node-card-disabled .settings-node-header strong{text-decoration:line-through}
 .settings-node-header{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
 .settings-node-primary-badge{font-size:.75em;background:var(--ok-strong);color:var(--text-on-accent);border-radius:4px;padding:1px 7px;font-weight:600}
 .settings-node-actions{margin-left:auto;display:flex;gap:.4rem}
