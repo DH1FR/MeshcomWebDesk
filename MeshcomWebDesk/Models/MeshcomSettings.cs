@@ -220,6 +220,16 @@ public class MeshcomSettings
     public bool TelemetryExtUdpEnabled { get; set; } = false;
 
     /// <summary>
+    /// Minimum time (in minutes) between two extudp "tele" sends. The node applies no rate
+    /// limiting of its own for externally pushed telemetry (it forwards every accepted packet
+    /// immediately via LoRa and queues it in a shared TX ring buffer also used by chat/position),
+    /// so this throttle is the only guard against flooding the mesh / overflowing that buffer
+    /// when a source value jitters. Only sends that also carry a changed value are throttled;
+    /// unchanged values never trigger a send regardless of this interval.
+    /// </summary>
+    public int TelemetryExtUdpMinIntervalMinutes { get; set; } = 10;
+
+    /// <summary>
     /// UI language. Supported values: "de" (German, default) and "en" (English).
     /// </summary>
     public string Language { get; set; } = "de";

@@ -1154,9 +1154,15 @@
                 @if (_model.TelemetryExtUdpEnabled)
                 {
                     <div style="grid-column:1/-1;font-size:.8rem;color:#8b949e;margin-top:.2rem">
-                        @Loc.T("Sendet bis zu 4 der unten mit einem Extudp-Slot markierten Werte zusätzlich als natives Telemetrie-Telegramm direkt an den Node (dieser hängt seinen Akkustand an und verschickt sie als echtes LoRa-Telemetriepaket). Der Node lehnt das Telegramm ab, solange er eigene --values-Sensoren konfiguriert hat.",
-                                  "Sends up to 4 of the values marked with an extudp slot below as a native telemetry telegram directly to the node (which appends its battery level and forwards it as a real LoRa telemetry packet). The node rejects the telegram while it has its own --values sensors configured.")
+                        @Loc.T("Sendet bis zu 4 der unten mit einem Extudp-Slot markierten Werte als natives Telemetrie-Telegramm direkt an den Node, sobald sich mindestens ein Wert ändert (nicht zeitgesteuert). Der Node hängt seinen Akkustand an und verschickt sie umgehend und ungebremst als echtes LoRa-Telemetriepaket – er lehnt das Telegramm ab, solange er eigene --values-Sensoren konfiguriert hat.",
+                                  "Sends up to 4 of the values marked with an extudp slot below as a native telemetry telegram directly to the node as soon as at least one value changes (not time-scheduled). The node appends its battery level and forwards it immediately and unthrottled as a real LoRa telemetry packet – it rejects the telegram while it has its own --values sensors configured.")
                     </div>
+
+                    <label>
+                        @Loc.T("Mindestabstand (Minuten)", "Minimum interval (minutes)")<br />
+                        <small>@Loc.T("Der Node bremst selbst nicht – dieser Mindestabstand zwischen zwei extudp-Sendungen schützt bei jitternden Werten vor einer gefluteten Mesh.", "The node applies no throttling of its own – this minimum interval between two extudp sends protects against flooding the mesh when a value jitters.")</small>
+                    </label>
+                    <input type="number" min="1" max="120" style="width:6rem" @bind="_model.TelemetryExtUdpMinIntervalMinutes" />
                 }
             </div>
 
@@ -3209,7 +3215,8 @@
                 .ToList(),
             TelemetryApiEnabled    = s.TelemetryApiEnabled,
             TelemetryApiKey        = s.TelemetryApiKey,
-            TelemetryExtUdpEnabled = s.TelemetryExtUdpEnabled,
+            TelemetryExtUdpEnabled            = s.TelemetryExtUdpEnabled,
+            TelemetryExtUdpMinIntervalMinutes = s.TelemetryExtUdpMinIntervalMinutes,
             Language               = s.Language,
             Appearance             = new AppearanceSettings
             {
@@ -4008,7 +4015,8 @@
                     .ToList(),
                 TelemetryApiEnabled    = s.TelemetryApiEnabled,
                 TelemetryApiKey        = s.TelemetryApiKey,
-                TelemetryExtUdpEnabled = s.TelemetryExtUdpEnabled,
+                TelemetryExtUdpEnabled            = s.TelemetryExtUdpEnabled,
+                TelemetryExtUdpMinIntervalMinutes = s.TelemetryExtUdpMinIntervalMinutes,
                 Language            = s.Language,
                 DbProvider              = s.Database.Provider,
                 DbMySqlConnectionString = s.Database.MySqlConnectionString,
@@ -4127,7 +4135,8 @@
         public List<TelemetryMappingEntry> TelemetryMapping { get; set; } = [];
         public bool   TelemetryApiEnabled    { get; set; }
         public string TelemetryApiKey        { get; set; } = string.Empty;
-        public bool   TelemetryExtUdpEnabled { get; set; }
+        public bool   TelemetryExtUdpEnabled            { get; set; }
+        public int    TelemetryExtUdpMinIntervalMinutes { get; set; } = 10;
         public string Language               { get; set; } = "de";
 
         // Appearance / Themes
@@ -4293,7 +4302,8 @@
             TelemetryMapping       = TelemetryMapping.ToList(),
             TelemetryApiEnabled    = TelemetryApiEnabled && WeatherApi.Provider == MeshcomWebDesk.Models.WeatherProvider.None,
             TelemetryApiKey        = TelemetryApiKey,
-            TelemetryExtUdpEnabled = TelemetryExtUdpEnabled,
+            TelemetryExtUdpEnabled            = TelemetryExtUdpEnabled,
+            TelemetryExtUdpMinIntervalMinutes = TelemetryExtUdpMinIntervalMinutes,
             Language               = Language,
             Appearance             = Appearance,
             Database               = ToDbSettings(),

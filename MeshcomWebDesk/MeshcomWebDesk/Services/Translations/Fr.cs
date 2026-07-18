@@ -361,8 +361,12 @@ internal static class Fr
                                     = "Intervalle télémétrie (minutes)",
         ["Temperature"]             = "Température",
         ["Send native telemetry (extudp)"] = "Envoyer la télémétrie native (extudp)",
-        ["Sends up to 4 of the values marked with an extudp slot below as a native telemetry telegram directly to the node (which appends its battery level and forwards it as a real LoRa telemetry packet). The node rejects the telegram while it has its own --values sensors configured."]
-                                    = "Envoie jusqu'à 4 des valeurs marquées ci-dessous avec un emplacement extudp sous forme de télégramme de télémétrie natif directement au nœud (qui ajoute son niveau de batterie et le transmet comme un véritable paquet de télémétrie LoRa). Le nœud rejette le télégramme tant qu'il a ses propres capteurs --values configurés.",
+        ["Sends up to 4 of the values marked with an extudp slot below as a native telemetry telegram directly to the node as soon as at least one value changes (not time-scheduled). The node appends its battery level and forwards it immediately and unthrottled as a real LoRa telemetry packet – it rejects the telegram while it has its own --values sensors configured."]
+                                    = "Envoie jusqu'à 4 des valeurs marquées ci-dessous avec un emplacement extudp sous forme de télégramme de télémétrie natif directement au nœud dès qu'au moins une valeur change (non planifié dans le temps). Le nœud ajoute son niveau de batterie et le transmet immédiatement et sans limitation comme un véritable paquet de télémétrie LoRa – il rejette le télégramme tant qu'il a ses propres capteurs --values configurés.",
+        ["Minimum interval (minutes)"]
+                                    = "Intervalle minimum (minutes)",
+        ["The node applies no throttling of its own – this minimum interval between two extudp sends protects against flooding the mesh when a value jitters."]
+                                    = "Le nœud n'applique aucune limitation propre : cet intervalle minimum entre deux envois extudp protège contre la saturation de la mesh lorsqu'une valeur fluctue.",
         ["Position in the extudp telegram (max. 4 values)"]
                                     = "Position dans le télégramme extudp (max. 4 valeurs)",
         ["Position in the extudp telegram"]

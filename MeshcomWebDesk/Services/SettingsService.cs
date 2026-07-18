@@ -245,9 +245,10 @@ public class SettingsService
                     ["WeatherRole"] = m.WeatherRole,
                     ["ExtUdpSlot"]  = m.ExtUdpSlot
                 }).ToArray()),
-                ["TelemetryApiEnabled"]    = s.TelemetryApiEnabled,
-                ["TelemetryApiKey"]        = Encrypt(s.TelemetryApiKey),
-                ["TelemetryExtUdpEnabled"] = s.TelemetryExtUdpEnabled,
+                ["TelemetryApiEnabled"]              = s.TelemetryApiEnabled,
+                ["TelemetryApiKey"]                  = Encrypt(s.TelemetryApiKey),
+                ["TelemetryExtUdpEnabled"]            = s.TelemetryExtUdpEnabled,
+                ["TelemetryExtUdpMinIntervalMinutes"] = s.TelemetryExtUdpMinIntervalMinutes,
                 ["Language"]            = s.Language,
                 ["Appearance"] = new JsonObject
                 {

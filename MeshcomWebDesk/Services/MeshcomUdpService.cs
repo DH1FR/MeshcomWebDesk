@@ -31,6 +31,16 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     private MeshcomSettings _settings;
     private UdpClient? _udpClient;
 
+    /// <summary>
+    /// Formatted (JsonKey, Value) pairs from the last successfully sent extudp "tele" telegram.
+    /// Used by <see cref="CheckAndSendExtUdpIfChangedAsync"/> to detect changes; <c>null</c> means
+    /// nothing has been sent yet in this process (not persisted across restarts).
+    /// </summary>
+    private List<(string JsonKey, string Formatted)>? _lastExtUdpSentValues;
+
+    /// <summary>UTC timestamp of the last successful extudp send, for the min-interval throttle.</summary>
+    private DateTime? _lastExtUdpSentTime;
+
     /// <summary>Assembly version, resolved once at startup (e.g. "1.4.1").</summary>
     private static readonly string AppVersion =
         System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? string.Empty;
@@ -706,13 +716,17 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             catch (OperationCanceledException) { break; }
 
             var s = _settings;
-            bool textConfigured   = !string.IsNullOrWhiteSpace(s.TelemetryGroup);
-            bool extUdpConfigured = s.TelemetryExtUdpEnabled
-                && s.TelemetryMapping.Any(e => e.ExtUdpSlot is >= 1 and <= 4);
+
+            // Extudp runs on its own send-on-change schedule, independent of the hour-slot
+            // schedule below (which only applies to the text-message path). The node applies
+            // no rate limiting of its own for externally pushed telemetry, so this is the only
+            // guard against flooding the mesh / the node's shared TX ring buffer.
+            await CheckAndSendExtUdpIfChangedAsync(s);
+
             bool configured = s.TelemetryEnabled
                 && !string.IsNullOrWhiteSpace(s.TelemetryFilePath)
-                && s.TelemetryMapping.Count > 0
-                && (textConfigured || extUdpConfigured);
+                && !string.IsNullOrWhiteSpace(s.TelemetryGroup)
+                && s.TelemetryMapping.Count > 0;
 
             if (!configured)
             {
@@ -734,7 +748,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
 
             if (scheduleHours.Contains(now.Hour) && lastSentSlot != currentSlot)
             {
-                await SendTelemetryAsync(s);
+                await SendTextTelemetryAsync(s);
                 lastSentSlot = currentSlot;
                 SetTelemetryStatus(true, ComputeNextScheduledTime(scheduleHours, DateTime.Now));
             }
@@ -915,11 +929,13 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     }
 
     /// <summary>
-    /// Dispatches to the two independent telemetry send paths: the classic text-message
-    /// path (when <see cref="MeshcomSettings.TelemetryGroup"/> is set) and the native
-    /// extudp "tele" telegram (when <see cref="MeshcomSettings.TelemetryExtUdpEnabled"/> is
-    /// set and at least one mapping entry has an <see cref="TelemetryMappingEntry.ExtUdpSlot"/>).
-    /// Either, both, or neither may fire depending on configuration.
+    /// Forces an immediate send on both telemetry paths: the classic text-message path (when
+    /// <see cref="MeshcomSettings.TelemetryGroup"/> is set) and the native extudp "tele"
+    /// telegram (when configured), bypassing the extudp send-on-change throttle. Used only by
+    /// <see cref="SendTelemetryNowAsync"/> (the Settings UI's manual test-send button) — the
+    /// scheduled hour-slot loop in <see cref="RunTelemetryAsync"/> calls
+    /// <see cref="SendTextTelemetryAsync"/> and <see cref="CheckAndSendExtUdpIfChangedAsync"/>
+    /// directly and independently instead.
     /// </summary>
     private async Task SendTelemetryAsync(MeshcomSettings s)
     {
@@ -1108,11 +1124,46 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             Status.TxCount++;
             Status.LastTxTime = DateTime.Now;
             NotifyStatusChange();
+
+            // Record what was actually sent, for the send-on-change throttle in
+            // CheckAndSendExtUdpIfChangedAsync. Updated here (the single choke point for all
+            // extudp sends, automatic or manual "send now") so the throttle timer always
+            // reflects real airtime usage.
+            _lastExtUdpSentValues = values.Select(v => (v.Entry.JsonKey, v.Formatted)).ToList();
+            _lastExtUdpSentTime   = DateTime.UtcNow;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error sending extudp telemetry telegram");
         }
+    }
+
+    /// <summary>
+    /// Send-on-change check for the extudp telemetry path, called once per minute from
+    /// <see cref="RunTelemetryAsync"/>. The node applies no rate limiting of its own for
+    /// externally pushed telemetry (every accepted packet is forwarded via LoRa immediately),
+    /// so this throttle is the only guard against flooding the mesh / the node's shared TX ring
+    /// buffer when a source value jitters. A send only happens when at least one value differs
+    /// from the last successfully sent set AND the configured minimum interval has elapsed;
+    /// unchanged values never trigger a send regardless of the interval.
+    /// </summary>
+    private async Task CheckAndSendExtUdpIfChangedAsync(MeshcomSettings s)
+    {
+        if (!s.TelemetryEnabled || !s.TelemetryExtUdpEnabled) return;
+        if (!s.TelemetryMapping.Any(e => e.ExtUdpSlot is >= 1 and <= 4)) return;
+
+        var current = BuildExtUdpValues(s);
+        if (current is null) return;
+
+        var currentKeyed = current.Select(v => (v.Entry.JsonKey, v.Formatted)).ToList();
+        if (_lastExtUdpSentValues is not null && currentKeyed.SequenceEqual(_lastExtUdpSentValues))
+            return;
+
+        var minInterval = TimeSpan.FromMinutes(Math.Max(1, s.TelemetryExtUdpMinIntervalMinutes));
+        if (_lastExtUdpSentTime is not null && DateTime.UtcNow - _lastExtUdpSentTime.Value < minInterval)
+            return; // changed, but throttled – retried on the next tick as long as the change persists
+
+        await SendExtUdpTeleAsync(s);
     }
 
     private void SetTelemetryStatus(bool active, DateTime? nextSend)
