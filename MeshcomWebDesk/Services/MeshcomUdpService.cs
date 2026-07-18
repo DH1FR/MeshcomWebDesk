@@ -41,6 +41,13 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     /// <summary>UTC timestamp of the last successful extudp send, for the min-interval throttle.</summary>
     private DateTime? _lastExtUdpSentTime;
 
+    /// <summary>
+    /// Tracks whether the last per-minute extudp check already logged a "no values available"
+    /// warning, so <see cref="CheckAndSendExtUdpIfChangedAsync"/> logs the condition once when it
+    /// starts (and once when it clears) instead of spamming the log every minute it persists.
+    /// </summary>
+    private bool _lastExtUdpBuildFailed;
+
     /// <summary>Assembly version, resolved once at startup (e.g. "1.4.1").</summary>
     private static readonly string AppVersion =
         System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? string.Empty;
@@ -941,9 +948,15 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     {
         if (!string.IsNullOrWhiteSpace(s.TelemetryGroup))
             await SendTextTelemetryAsync(s);
+        else
+            _logger.LogInformation("Telemetry test send: TelemetryGroup is empty – skipping text-message path.");
 
         if (s.TelemetryExtUdpEnabled && s.TelemetryMapping.Any(e => e.ExtUdpSlot is >= 1 and <= 4))
             await SendExtUdpTeleAsync(s);
+        else if (s.TelemetryExtUdpEnabled)
+            _logger.LogInformation("Telemetry test send: extudp enabled but no mapping entry has an assigned slot (1-4) – skipping extudp path.");
+        else
+            _logger.LogInformation("Telemetry test send: extudp is disabled – skipping extudp path.");
     }
 
     private async Task SendTextTelemetryAsync(MeshcomSettings s)
@@ -1153,7 +1166,24 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         if (!s.TelemetryMapping.Any(e => e.ExtUdpSlot is >= 1 and <= 4)) return;
 
         var current = BuildExtUdpValues(s);
-        if (current is null) return;
+        if (current is null)
+        {
+            // Log once when this condition starts, not on every per-minute tick it persists.
+            if (!_lastExtUdpBuildFailed)
+            {
+                if (!File.Exists(s.TelemetryFilePath))
+                    _logger.LogWarning("Extudp telemetry: telemetry file not found: {Path}", s.TelemetryFilePath);
+                else
+                    _logger.LogWarning("Extudp telemetry: no slot-assigned values could be read from {Path}", s.TelemetryFilePath);
+                _lastExtUdpBuildFailed = true;
+            }
+            return;
+        }
+        if (_lastExtUdpBuildFailed)
+        {
+            _logger.LogInformation("Extudp telemetry: values available again from {Path}", s.TelemetryFilePath);
+            _lastExtUdpBuildFailed = false;
+        }
 
         var currentKeyed = current.Select(v => (v.Entry.JsonKey, v.Formatted)).ToList();
         if (_lastExtUdpSentValues is not null && currentKeyed.SequenceEqual(_lastExtUdpSentValues))
