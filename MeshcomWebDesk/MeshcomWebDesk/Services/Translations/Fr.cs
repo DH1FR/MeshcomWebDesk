@@ -135,6 +135,8 @@ internal static class Fr
                                     = "Mise en évidence LoRa debug on/off",
         ["Start OTA update – sends --ota-update to node and opens OTA web server"]
                                     = "Démarrer mise à jour OTA – envoie --ota-update au nœud",
+        ["Open the node's default web interface"]
+                                    = "Ouvrir l'interface web par défaut du nœud",
         ["Reboot node – sends --reboot to node"]
                                     = "Redémarrer le nœud – envoie --reboot au nœud",
         ["Last seen"]               = "Vu en dernier",

@@ -70,6 +70,10 @@
                     }
                 </select>
             }
+            <a class="btn-action btn-sm" href="http://@ActiveNodeIp/" target="_blank" rel="noopener"
+               title="@Loc.T("Standard-Weboberfläche des Nodes öffnen", "Open the node's default web interface")">
+                🌐 <span class="btn-label">Web</span>
+            </a>
             @if (Console.IsConnected)
             {
                 <button class="btn-action btn-sm" title="@Loc.T("OTA-Update starten – sendet --ota-update an den Node und öffnet den OTA-Webserver", "Start OTA update – sends --ota-update to node and opens OTA web server")"

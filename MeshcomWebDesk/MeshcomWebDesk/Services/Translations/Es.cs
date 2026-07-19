@@ -135,6 +135,8 @@ internal static class Es
                                     = "Resaltado debug LoRa on/off",
         ["Start OTA update – sends --ota-update to node and opens OTA web server"]
                                     = "Iniciar actualización OTA – envía --ota-update al nodo",
+        ["Open the node's default web interface"]
+                                    = "Abrir la interfaz web predeterminada del nodo",
         ["Reboot node – sends --reboot to node"]
                                     = "Reiniciar nodo – envía --reboot al nodo",
         ["Last seen"]               = "Visto por última vez",
