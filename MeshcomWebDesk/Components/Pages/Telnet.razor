@@ -88,6 +88,12 @@
                     🔌 <span class="btn-label">@Loc.T("Trennen", "Disconnect")</span>
                 </button>
             }
+            else
+            {
+                <button class="btn-action btn-sm" @onclick="ConnectAsync">
+                    🔌 <span class="btn-label">@Loc.T("Verbinden", "Connect")</span>
+                </button>
+            }
             <button class="btn-sm @(_paused ? "btn-primary" : "btn-action")" @onclick="TogglePause"
                     title="@(_paused ? Loc.T("Ausgabe fortsetzen (Scroll wieder aktiv)", "Resume output (scroll re-enabled)") : Loc.T("Ausgabe pausieren (neue Zeilen kommen weiter rein)", "Pause output (new lines still buffered)"))"
                     style="@(Console.IsConnected ? "" : "display:none")">
