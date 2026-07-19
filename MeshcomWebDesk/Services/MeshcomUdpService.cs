@@ -263,8 +263,32 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                             _logger.LogDebug("Node echo meta: firmware={Fw} hw_id={HwId} NodeFirmware={NodeFw} NodeHwId={NodeHwId}",
                                 message.Firmware, message.HwId, Status.NodeFirmware, Status.NodeHwId);
                             if (metaChanged) NotifyStatusChange();
-                            _logger.LogDebug("Skipping node echo from {From}", message.From);
-                            // Do not add node echoes to the monitor – the TX entry is already shown there.
+
+                            // Own pos/tele broadcasts are generated autonomously by the node
+                            // firmware (not via SendMessageAsync), so unlike own "msg" echoes
+                            // there is no pre-existing TX row for them in the monitor – add
+                            // them like any other station's beacon instead of skipping.
+                            if (message.IsPositionBeacon)
+                            {
+                                Status.RxCount++;
+                                Status.LastRxTime = message.Timestamp;
+                                Status.LastRxFrom = message.From;
+                                NotifyStatusChange();
+                                _chatService.AddPositionBeacon(message);
+                            }
+                            else if (message.IsTelemetry)
+                            {
+                                Status.RxCount++;
+                                Status.LastRxTime = message.Timestamp;
+                                Status.LastRxFrom = message.From;
+                                NotifyStatusChange();
+                                _chatService.AddTelemetry(message);
+                            }
+                            else
+                            {
+                                _logger.LogDebug("Skipping node echo from {From}", message.From);
+                                // Do not add msg/other echoes to the monitor – the TX entry is already shown there.
+                            }
                         }
                         else if (message.IsTimeSync)
                         {
