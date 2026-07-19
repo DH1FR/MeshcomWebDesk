@@ -212,10 +212,12 @@ public class MeshcomSettings
 
     /// <summary>
     /// When true, on each scheduled telemetry run (or manual "send now"), the values whose
-    /// <see cref="TelemetryMappingEntry.ExtUdpSlot"/> is set (1-4) are additionally sent as a
-    /// native <c>{"type":"tele",...}</c> UDP telegram directly to the node, which forwards them
-    /// as a real T# LoRa telemetry packet (with its own battery level prepended). Works
-    /// independently of <see cref="TelemetryGroup"/> / the text-message telemetry path.
+    /// <see cref="TelemetryMappingEntry.WeatherRole"/> matches one of the 7 fixed extudp fields
+    /// (temp/humidity/pressure/temp2/qnh/gasres/co2) are additionally sent as a native
+    /// <c>{"type":"tele","temp":...,...}</c> UDP telegram directly to the node. The node writes
+    /// each field into its own sensor variables and immediately re-beacons its position, so the
+    /// values appear embedded in the position comment exactly like a real onboard sensor would.
+    /// Works independently of <see cref="TelemetryGroup"/> / the text-message telemetry path.
     /// </summary>
     public bool TelemetryExtUdpEnabled { get; set; } = false;
 

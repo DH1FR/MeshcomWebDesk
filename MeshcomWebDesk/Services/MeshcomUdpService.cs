@@ -32,11 +32,27 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     private UdpClient? _udpClient;
 
     /// <summary>
-    /// Formatted (JsonKey, Value) pairs from the last successfully sent extudp "tele" telegram.
+    /// (extudp field name, value) pairs from the last successfully sent extudp "tele" telegram.
     /// Used by <see cref="CheckAndSendExtUdpIfChangedAsync"/> to detect changes; <c>null</c> means
     /// nothing has been sent yet in this process (not persisted across restarts).
     /// </summary>
-    private List<(string JsonKey, string Formatted)>? _lastExtUdpSentValues;
+    private List<(string Field, double Value)>? _lastExtUdpSentValues;
+
+    /// <summary>
+    /// Maps <see cref="TelemetryMappingEntry.WeatherRole"/> to the fixed field name the node's
+    /// <c>handleExternTelemetry()</c> recognizes in the native extudp "tele" JSON. Roles not
+    /// listed here (i.e. an empty role) are not sent via extudp.
+    /// </summary>
+    private static readonly Dictionary<string, string> RoleToExtUdpField = new()
+    {
+        ["temp"]     = "temp",
+        ["humidity"] = "hum",
+        ["pressure"] = "press",
+        ["temp2"]    = "temp2",
+        ["qnh"]      = "qnh",
+        ["gasres"]   = "gasres",
+        ["co2"]      = "co2",
+    };
 
     /// <summary>UTC timestamp of the last successful extudp send, for the min-interval throttle.</summary>
     private DateTime? _lastExtUdpSentTime;
@@ -951,10 +967,10 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         else
             _logger.LogInformation("Telemetry test send: TelemetryGroup is empty – skipping text-message path.");
 
-        if (s.TelemetryExtUdpEnabled && s.TelemetryMapping.Any(e => e.ExtUdpSlot is >= 1 and <= 4))
+        if (s.TelemetryExtUdpEnabled && s.TelemetryMapping.Any(e => RoleToExtUdpField.ContainsKey(e.WeatherRole.Trim().ToLowerInvariant())))
             await SendExtUdpTeleAsync(s);
         else if (s.TelemetryExtUdpEnabled)
-            _logger.LogInformation("Telemetry test send: extudp enabled but no mapping entry has an assigned slot (1-4) – skipping extudp path.");
+            _logger.LogInformation("Telemetry test send: extudp enabled but no mapping entry has an assigned role (temp/humidity/pressure/temp2/qnh/gasres/co2) – skipping extudp path.");
         else
             _logger.LogInformation("Telemetry test send: extudp is disabled – skipping extudp path.");
     }
@@ -1044,12 +1060,13 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     }
 
     /// <summary>
-    /// Reads the telemetry JSON file and resolves the mapping entries that have an
-    /// <see cref="TelemetryMappingEntry.ExtUdpSlot"/> (1-4), ordered by slot, capped at 4
-    /// entries (the extudp protocol limit). Returns <c>null</c> when the file is missing,
-    /// unparsable, or no slot-assigned value could be resolved.
+    /// Reads the telemetry JSON file and resolves the mapping entries whose
+    /// <see cref="TelemetryMappingEntry.WeatherRole"/> is one of the 7 fixed extudp fields
+    /// (<see cref="RoleToExtUdpField"/>). When two entries share the same role, the first one
+    /// (in <see cref="MeshcomSettings.TelemetryMapping"/> order) wins. Returns <c>null</c> when
+    /// the file is missing, unparsable, or no role-assigned value could be resolved.
     /// </summary>
-    private List<(TelemetryMappingEntry Entry, string Formatted)>? BuildExtUdpValues(MeshcomSettings s)
+    private Dictionary<string, double>? BuildExtUdpValues(MeshcomSettings s)
     {
         try
         {
@@ -1060,20 +1077,17 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             using var doc = JsonDocument.Parse(fileContent);
             var root = doc.RootElement;
 
-            var resolved = new List<(TelemetryMappingEntry Entry, string Formatted)>();
+            var resolved = new Dictionary<string, double>();
 
-            foreach (var entry in s.TelemetryMapping
-                         .Where(e => e.ExtUdpSlot is >= 1 and <= 4)
-                         .OrderBy(e => e.ExtUdpSlot)
-                         .Take(4))
+            foreach (var entry in s.TelemetryMapping)
             {
                 if (string.IsNullOrWhiteSpace(entry.JsonKey)) continue;
+                if (!RoleToExtUdpField.TryGetValue(entry.WeatherRole.Trim().ToLowerInvariant(), out var field)) continue;
+                if (resolved.ContainsKey(field)) continue; // first mapping entry for this role wins
                 if (!root.TryGetProperty(entry.JsonKey, out var valueProp)) continue;
                 if (!TryParseTelemetryValue(valueProp, out var value)) continue;
 
-                var decimals  = Math.Max(0, entry.Decimals);
-                var formatted = value.ToString($"F{decimals}", System.Globalization.CultureInfo.InvariantCulture);
-                resolved.Add((entry, formatted));
+                resolved[field] = value;
             }
 
             return resolved.Count > 0 ? resolved : null;
@@ -1085,10 +1099,11 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     }
 
     /// <summary>
-    /// Sends the values assigned to an <see cref="TelemetryMappingEntry.ExtUdpSlot"/> as a
-    /// native <c>{"type":"tele",...}</c> UDP telegram directly to the node (same endpoint as
-    /// <see cref="SendMessageAsync"/>). The node prepends its own battery level and forwards
-    /// the combined report as a real T# LoRa telemetry packet.
+    /// Sends the values assigned to a <see cref="TelemetryMappingEntry.WeatherRole"/> as a
+    /// native <c>{"type":"tele","temp":...,"hum":...,...}</c> UDP telegram directly to the node
+    /// (same endpoint as <see cref="SendMessageAsync"/>). The node writes each field straight
+    /// into its own sensor variables and immediately re-beacons its position, so the values
+    /// appear embedded in the position comment exactly like a real onboard sensor would.
     /// </summary>
     private async Task SendExtUdpTeleAsync(MeshcomSettings s)
     {
@@ -1106,15 +1121,15 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                 if (!File.Exists(s.TelemetryFilePath))
                     _logger.LogWarning("Extudp telemetry: telemetry file not found: {Path}", s.TelemetryFilePath);
                 else
-                    _logger.LogWarning("Extudp telemetry: no slot-assigned values could be read from {Path}", s.TelemetryFilePath);
+                    _logger.LogWarning("Extudp telemetry: no role-assigned values could be read from {Path}", s.TelemetryFilePath);
                 return;
             }
 
-            var valuesStr = string.Join(",", values.Select(v => v.Formatted));
-            var parmStr   = string.Join(",", values.Select(v => string.IsNullOrWhiteSpace(v.Entry.Label) ? v.Entry.JsonKey : v.Entry.Label));
-            var unitStr   = string.Join(",", values.Select(v => v.Entry.Unit));
+            var payload = new Dictionary<string, object> { ["type"] = "tele" };
+            foreach (var (field, value) in values)
+                payload[field] = value;
 
-            var json  = JsonSerializer.Serialize(new { type = "tele", values = valuesStr, parm = parmStr, unit = unitStr });
+            var json  = JsonSerializer.Serialize(payload);
             var bytes = Encoding.UTF8.GetBytes(json);
 
             if (bytes.Length > 254)
@@ -1142,7 +1157,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             // CheckAndSendExtUdpIfChangedAsync. Updated here (the single choke point for all
             // extudp sends, automatic or manual "send now") so the throttle timer always
             // reflects real airtime usage.
-            _lastExtUdpSentValues = values.Select(v => (v.Entry.JsonKey, v.Formatted)).ToList();
+            _lastExtUdpSentValues = values.Select(kv => (kv.Key, kv.Value)).ToList();
             _lastExtUdpSentTime   = DateTime.UtcNow;
         }
         catch (Exception ex)
@@ -1163,7 +1178,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     private async Task CheckAndSendExtUdpIfChangedAsync(MeshcomSettings s)
     {
         if (!s.TelemetryEnabled || !s.TelemetryExtUdpEnabled) return;
-        if (!s.TelemetryMapping.Any(e => e.ExtUdpSlot is >= 1 and <= 4)) return;
+        if (!s.TelemetryMapping.Any(e => RoleToExtUdpField.ContainsKey(e.WeatherRole.Trim().ToLowerInvariant()))) return;
 
         var current = BuildExtUdpValues(s);
         if (current is null)
@@ -1174,7 +1189,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                 if (!File.Exists(s.TelemetryFilePath))
                     _logger.LogWarning("Extudp telemetry: telemetry file not found: {Path}", s.TelemetryFilePath);
                 else
-                    _logger.LogWarning("Extudp telemetry: no slot-assigned values could be read from {Path}", s.TelemetryFilePath);
+                    _logger.LogWarning("Extudp telemetry: no role-assigned values could be read from {Path}", s.TelemetryFilePath);
                 _lastExtUdpBuildFailed = true;
             }
             return;
@@ -1185,8 +1200,8 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             _lastExtUdpBuildFailed = false;
         }
 
-        var currentKeyed = current.Select(v => (v.Entry.JsonKey, v.Formatted)).ToList();
-        if (_lastExtUdpSentValues is not null && currentKeyed.SequenceEqual(_lastExtUdpSentValues))
+        var currentKeyed = current.Select(kv => (kv.Key, kv.Value)).OrderBy(kv => kv.Key).ToList();
+        if (_lastExtUdpSentValues is not null && currentKeyed.SequenceEqual(_lastExtUdpSentValues.OrderBy(kv => kv.Field)))
             return;
 
         var minInterval = TimeSpan.FromMinutes(Math.Max(1, s.TelemetryExtUdpMinIntervalMinutes));

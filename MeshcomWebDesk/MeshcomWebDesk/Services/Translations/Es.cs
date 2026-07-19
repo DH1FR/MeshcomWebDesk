@@ -361,18 +361,21 @@ internal static class Es
                                     = "Intervalo telemetría (minutos)",
         ["Temperature"]             = "Temperatura",
         ["Send native telemetry (extudp)"] = "Enviar telemetría nativa (extudp)",
-        ["Sends up to 4 of the values marked with an extudp slot below as a native telemetry telegram directly to the node as soon as at least one value changes (not time-scheduled). The node appends its battery level and forwards it immediately and unthrottled as a real LoRa telemetry packet – it rejects the telegram while it has its own --values sensors configured."]
-                                    = "Envía hasta 4 de los valores marcados abajo con una ranura extudp como telegrama de telemetría nativo directamente al nodo en cuanto cambia al menos un valor (no programado por tiempo). El nodo añade su nivel de batería y lo reenvía de inmediato y sin limitación como un paquete de telemetría LoRa real; rechaza el telegrama mientras tenga configurados sus propios sensores --values.",
+        ["Sends the values marked with a role below (up to 7: temp, humidity, pressure, temp 2, QNH, gas resistance, CO2) as a native telemetry telegram directly to the node as soon as at least one value changes (not time-scheduled). The node writes them into its sensor variables and immediately triggers a new position beacon whose comment includes the values just like real onboard sensors would. It ignores the telegram while it has real sensor hardware (BME280/BMP3xx/AHT20/SHT21) installed."]
+                                    = "Envía los valores marcados abajo con un rol (hasta 7: temp., humedad, presión, temp. 2, QNH, resistencia de gas, CO2) como telegrama de telemetría nativo directamente al nodo en cuanto cambia al menos un valor (no programado por tiempo). El nodo los escribe en sus propias variables de sensor y activa de inmediato un nuevo baliza de posición cuyo comentario incluye los valores igual que sensores reales a bordo. Ignora el telegrama mientras tenga instalado hardware de sensor real (BME280/BMP3xx/AHT20/SHT21).",
         ["Minimum interval (minutes)"]
                                     = "Intervalo mínimo (minutos)",
         ["The node applies no throttling of its own – this minimum interval between two extudp sends protects against flooding the mesh when a value jitters."]
                                     = "El nodo no aplica ninguna limitación propia: este intervalo mínimo entre dos envíos extudp protege contra la saturación de la mesh cuando un valor fluctúa.",
-        ["Position in the extudp telegram (max. 4 values)"]
-                                    = "Posición en el telegrama extudp (máx. 4 valores)",
-        ["Position in the extudp telegram"]
-                                    = "Posición en el telegrama extudp",
-        ["Extudp is active, but no value has an assigned slot (1-4)."]
-                                    = "Extudp está activo, pero ningún valor tiene una ranura asignada (1-4).",
+        ["Role"]                    = "Rol",
+        ["Role for the map popup and the native extudp telegram"]
+                                    = "Rol para el popup del mapa y el telegrama extudp nativo",
+        ["Role: drives the map popup (temp/humidity/pressure) and/or the target field in the native extudp telegram"]
+                                    = "Rol: determina el popup del mapa (temp./humedad/presión) y/o el campo de destino en el telegrama extudp nativo",
+        ["Temp. 2"]                 = "Temp. 2",
+        ["Gas resistance"]          = "Resistencia de gas",
+        ["Extudp is active, but no value has an assigned role."]
+                                    = "Extudp está activo, pero ningún valor tiene un rol asignado.",
         ["Preview native telemetry telegram (extudp)"]
                                     = "Vista previa del telegrama de telemetría nativo (extudp)",
         ["None of the assigned extudp values could be found in the file."]

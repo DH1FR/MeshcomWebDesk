@@ -242,8 +242,7 @@ public class SettingsService
                     ["Label"]       = m.Label,
                     ["Unit"]        = m.Unit,
                     ["Decimals"]    = m.Decimals,
-                    ["WeatherRole"] = m.WeatherRole,
-                    ["ExtUdpSlot"]  = m.ExtUdpSlot
+                    ["WeatherRole"] = m.WeatherRole
                 }).ToArray()),
                 ["TelemetryApiEnabled"]              = s.TelemetryApiEnabled,
                 ["TelemetryApiKey"]                  = Encrypt(s.TelemetryApiKey),

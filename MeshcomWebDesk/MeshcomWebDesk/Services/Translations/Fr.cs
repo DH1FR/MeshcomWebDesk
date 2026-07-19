@@ -361,18 +361,21 @@ internal static class Fr
                                     = "Intervalle télémétrie (minutes)",
         ["Temperature"]             = "Température",
         ["Send native telemetry (extudp)"] = "Envoyer la télémétrie native (extudp)",
-        ["Sends up to 4 of the values marked with an extudp slot below as a native telemetry telegram directly to the node as soon as at least one value changes (not time-scheduled). The node appends its battery level and forwards it immediately and unthrottled as a real LoRa telemetry packet – it rejects the telegram while it has its own --values sensors configured."]
-                                    = "Envoie jusqu'à 4 des valeurs marquées ci-dessous avec un emplacement extudp sous forme de télégramme de télémétrie natif directement au nœud dès qu'au moins une valeur change (non planifié dans le temps). Le nœud ajoute son niveau de batterie et le transmet immédiatement et sans limitation comme un véritable paquet de télémétrie LoRa – il rejette le télégramme tant qu'il a ses propres capteurs --values configurés.",
+        ["Sends the values marked with a role below (up to 7: temp, humidity, pressure, temp 2, QNH, gas resistance, CO2) as a native telemetry telegram directly to the node as soon as at least one value changes (not time-scheduled). The node writes them into its sensor variables and immediately triggers a new position beacon whose comment includes the values just like real onboard sensors would. It ignores the telegram while it has real sensor hardware (BME280/BMP3xx/AHT20/SHT21) installed."]
+                                    = "Envoie les valeurs marquées ci-dessous avec un rôle (jusqu'à 7 : temp., humidité, pression, temp. 2, QNH, résistance gaz, CO2) sous forme de télégramme de télémétrie natif directement au nœud dès qu'au moins une valeur change (non planifié dans le temps). Le nœud les écrit dans ses propres variables de capteur et déclenche aussitôt une nouvelle balise de position dont le commentaire inclut les valeurs comme le ferait un capteur embarqué réel. Il ignore le télégramme tant qu'il dispose d'un capteur matériel réel (BME280/BMP3xx/AHT20/SHT21) installé.",
         ["Minimum interval (minutes)"]
                                     = "Intervalle minimum (minutes)",
         ["The node applies no throttling of its own – this minimum interval between two extudp sends protects against flooding the mesh when a value jitters."]
                                     = "Le nœud n'applique aucune limitation propre : cet intervalle minimum entre deux envois extudp protège contre la saturation de la mesh lorsqu'une valeur fluctue.",
-        ["Position in the extudp telegram (max. 4 values)"]
-                                    = "Position dans le télégramme extudp (max. 4 valeurs)",
-        ["Position in the extudp telegram"]
-                                    = "Position dans le télégramme extudp",
-        ["Extudp is active, but no value has an assigned slot (1-4)."]
-                                    = "Extudp est actif, mais aucune valeur n'a d'emplacement attribué (1-4).",
+        ["Role"]                    = "Rôle",
+        ["Role for the map popup and the native extudp telegram"]
+                                    = "Rôle pour la popup de la carte et le télégramme extudp natif",
+        ["Role: drives the map popup (temp/humidity/pressure) and/or the target field in the native extudp telegram"]
+                                    = "Rôle : détermine la popup de la carte (temp./humidité/pression) et/ou le champ cible dans le télégramme extudp natif",
+        ["Temp. 2"]                 = "Temp. 2",
+        ["Gas resistance"]          = "Résistance gaz",
+        ["Extudp is active, but no value has an assigned role."]
+                                    = "Extudp est actif, mais aucune valeur n'a de rôle attribué.",
         ["Preview native telemetry telegram (extudp)"]
                                     = "Aperçu du télégramme de télémétrie natif (extudp)",
         ["None of the assigned extudp values could be found in the file."]

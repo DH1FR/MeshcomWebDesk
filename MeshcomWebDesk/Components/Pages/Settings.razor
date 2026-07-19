@@ -1154,8 +1154,8 @@
                 @if (_model.TelemetryExtUdpEnabled)
                 {
                     <div style="grid-column:1/-1;font-size:.8rem;color:#8b949e;margin-top:.2rem">
-                        @Loc.T("Sendet bis zu 4 der unten mit einem Extudp-Slot markierten Werte als natives Telemetrie-Telegramm direkt an den Node, sobald sich mindestens ein Wert ändert (nicht zeitgesteuert). Der Node hängt seinen Akkustand an und verschickt sie umgehend und ungebremst als echtes LoRa-Telemetriepaket – er lehnt das Telegramm ab, solange er eigene --values-Sensoren konfiguriert hat.",
-                                  "Sends up to 4 of the values marked with an extudp slot below as a native telemetry telegram directly to the node as soon as at least one value changes (not time-scheduled). The node appends its battery level and forwards it immediately and unthrottled as a real LoRa telemetry packet – it rejects the telegram while it has its own --values sensors configured.")
+                        @Loc.T("Sendet die unten mit einer Rolle markierten Werte (max. 7: Temp., Feuchte, Druck, Temp. 2, QNH, Gaswiderstand, CO2) als natives Telemetrie-Telegramm direkt an den Node, sobald sich mindestens ein Wert ändert (nicht zeitgesteuert). Der Node schreibt sie in seine Sensor-Variablen und löst sofort einen neuen Positions-Beacon aus, in dessen Kommentar die Werte wie bei echter Sensorik erscheinen. Er ignoriert das Telegramm, solange er eigene Sensor-Hardware (BME280/BMP3xx/AHT20/SHT21) verbaut hat.",
+                                  "Sends the values marked with a role below (up to 7: temp, humidity, pressure, temp 2, QNH, gas resistance, CO2) as a native telemetry telegram directly to the node as soon as at least one value changes (not time-scheduled). The node writes them into its sensor variables and immediately triggers a new position beacon whose comment includes the values just like real onboard sensors would. It ignores the telegram while it has real sensor hardware (BME280/BMP3xx/AHT20/SHT21) installed.")
                     </div>
 
                     <label>
@@ -1176,11 +1176,7 @@
                             <th>@Loc.T("Bezeichnung", "Label")</th>
                             <th>@Loc.T("Einheit", "Unit")</th>
                             <th>@Loc.T("Dez.", "Dec.")</th>
-                            <th>@Loc.T("Karte", "Map")</th>
-                            @if (_model.TelemetryExtUdpEnabled)
-                            {
-                                <th title="@Loc.T("Position im extudp-Telegramm (max. 4 Werte)", "Position in the extudp telegram (max. 4 values)")">Extudp</th>
-                            }
+                            <th title="@Loc.T("Rolle für Karten-Popup und natives extudp-Telegramm", "Role for the map popup and the native extudp telegram")">@Loc.T("Rolle", "Role")</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -1196,26 +1192,17 @@
                                 <td><input type="text" @bind="e.Unit" /></td>
                                 <td><input type="number" min="0" max="4" style="width:4rem" @bind="e.Decimals" /></td>
                                 <td>
-                                    <select @bind="e.WeatherRole" title="@Loc.T("Karten-Rolle für Wetter-Popup", "Map role for weather popup")">
+                                    <select @bind="e.WeatherRole" title="@Loc.T("Rolle: bestimmt Karten-Popup (Temp./Feuchte/Druck) und/oder Zielfeld im nativen extudp-Telegramm", "Role: drives the map popup (temp/humidity/pressure) and/or the target field in the native extudp telegram")">
                                         <option value="">–</option>
                                         <option value="temp">🌡️ @Loc.T("Temp.", "Temp.")</option>
                                         <option value="humidity">💧 @Loc.T("Feuchte", "Humidity")</option>
                                         <option value="pressure">🧭 @Loc.T("Druck", "Pressure")</option>
+                                        <option value="temp2">🌡️2 @Loc.T("Temp. 2", "Temp. 2")</option>
+                                        <option value="qnh">📏 QNH</option>
+                                        <option value="gasres">💨 @Loc.T("Gaswiderstand", "Gas resistance")</option>
+                                        <option value="co2">☁️ CO2</option>
                                     </select>
                                 </td>
-                                @if (_model.TelemetryExtUdpEnabled)
-                                {
-                                    <td>
-                                        <select value="@e.ExtUdpSlot" @onchange="ev => SetExtUdpSlot(e, int.Parse(ev.Value!.ToString()!))"
-                                                title="@Loc.T("Position im extudp-Telegramm", "Position in the extudp telegram")">
-                                            <option value="0">–</option>
-                                            <option value="1">1</option>
-                                            <option value="2">2</option>
-                                            <option value="3">3</option>
-                                            <option value="4">4</option>
-                                        </select>
-                                    </td>
-                                }
                                 <td><button type="button" class="btn-remove" @onclick="() => _model.TelemetryMapping.Remove(e)">🗑️</button></td>
                             </tr>
                         }
@@ -1224,10 +1211,10 @@
                 <button type="button" class="btn-add" @onclick="() => _model.TelemetryMapping.Add(new TelemetryMappingEntry())">
                     ➕ @Loc.T("Zeile hinzufügen", "Add Row")
                 </button>
-                @if (_model.TelemetryExtUdpEnabled && !_model.TelemetryMapping.Any(m => m.ExtUdpSlot is >= 1 and <= 4))
+                @if (_model.TelemetryExtUdpEnabled && !_model.TelemetryMapping.Any(m => ExtUdpRoleToField.ContainsKey(m.WeatherRole.Trim().ToLowerInvariant())))
                 {
                     <div style="font-size:.8rem;color:#f0a030;margin-top:.4rem">
-                        ⚠️ @Loc.T("Extudp ist aktiv, aber keinem Wert ist ein Slot (1–4) zugewiesen.", "Extudp is active, but no value has an assigned slot (1-4).")
+                        ⚠️ @Loc.T("Extudp ist aktiv, aber keinem Wert ist eine Rolle zugewiesen.", "Extudp is active, but no value has an assigned role.")
                     </div>
                 }
             </div>
@@ -2705,19 +2692,15 @@
     private sealed record TelemetryPreviewRow(string Key, string RawValue, string Formatted, bool IsWarning);
 
     /// <summary>
-    /// Assigns <paramref name="slot"/> (0-4) to <paramref name="entry"/>'s ExtUdpSlot.
-    /// Any other mapping entry that already held that slot is cleared first, so a slot
-    /// is always assigned to at most one entry (enforced client-side, mirrors a radio group).
+    /// Maps WeatherRole to the target field in the native extudp "tele" telegram.
+    /// Mirrors <see cref="Services.MeshcomUdpService.RoleToExtUdpField"/> (kept in sync manually –
+    /// this copy only drives the settings-page preview, the real send path uses the service's).
     /// </summary>
-    private void SetExtUdpSlot(TelemetryMappingEntry entry, int slot)
+    private static readonly Dictionary<string, string> ExtUdpRoleToField = new()
     {
-        if (slot != 0)
-        {
-            foreach (var other in _model.TelemetryMapping.Where(m => m != entry && m.ExtUdpSlot == slot))
-                other.ExtUdpSlot = 0;
-        }
-        entry.ExtUdpSlot = slot;
-    }
+        ["temp"] = "temp", ["humidity"] = "hum", ["pressure"] = "press",
+        ["temp2"] = "temp2", ["qnh"] = "qnh", ["gasres"] = "gasres", ["co2"] = "co2",
+    };
 
     private async Task LoadTelemetryPreviewAsync()
     {
@@ -2824,41 +2807,34 @@
                     : $"{locator ?? "TM"}/{i + 1}: {b}")
                 .ToList();
 
-            // Extudp preview: same slot-based selection/formatting as MeshcomUdpService.BuildExtUdpValues
+            // Extudp preview: same role-based selection as MeshcomUdpService.BuildExtUdpValues
+            // (first mapping entry for a given role wins, matches the real send path).
             if (_model.TelemetryExtUdpEnabled)
             {
-                var slotted = _model.TelemetryMapping
-                    .Where(m => m.ExtUdpSlot is >= 1 and <= 4 && !string.IsNullOrWhiteSpace(m.JsonKey))
-                    .OrderBy(m => m.ExtUdpSlot)
-                    .Take(4)
-                    .Select((m) =>
-                    {
-                        (string Value, string Label, string Unit)? none = null;
-                        if (!root.TryGetProperty(m.JsonKey, out var vp)) return none;
-                        double v;
-                        if (vp.ValueKind == System.Text.Json.JsonValueKind.Number) v = vp.GetDouble();
-                        else if (vp.ValueKind == System.Text.Json.JsonValueKind.String &&
-                                 double.TryParse(vp.GetString(), System.Globalization.NumberStyles.Float,
-                                     System.Globalization.CultureInfo.InvariantCulture, out var pv)) v = pv;
-                        else return none;
-                        var formatted = v.ToString($"F{Math.Max(0, m.Decimals)}", System.Globalization.CultureInfo.InvariantCulture);
-                        var label     = string.IsNullOrWhiteSpace(m.Label) ? m.JsonKey : m.Label;
-                        return (Value: formatted, Label: label, Unit: m.Unit);
-                    })
-                    .Where(x => x is not null)
-                    .Select(x => x!.Value)
-                    .ToList();
+                var roled = new Dictionary<string, double>();
 
-                if (slotted.Count > 0)
+                foreach (var m in _model.TelemetryMapping)
                 {
-                    var extUdpJson = System.Text.Json.JsonSerializer.Serialize(new
-                    {
-                        type   = "tele",
-                        values = string.Join(",", slotted.Select(x => x.Value)),
-                        parm   = string.Join(",", slotted.Select(x => x.Label)),
-                        unit   = string.Join(",", slotted.Select(x => x.Unit))
-                    });
-                    _telemetryExtUdpPreview = extUdpJson;
+                    if (string.IsNullOrWhiteSpace(m.JsonKey)) continue;
+                    if (!ExtUdpRoleToField.TryGetValue(m.WeatherRole.Trim().ToLowerInvariant(), out var role)) continue;
+                    if (roled.ContainsKey(role)) continue;
+
+                    if (!root.TryGetProperty(m.JsonKey, out var vp)) continue;
+                    double v;
+                    if (vp.ValueKind == System.Text.Json.JsonValueKind.Number) v = vp.GetDouble();
+                    else if (vp.ValueKind == System.Text.Json.JsonValueKind.String &&
+                             double.TryParse(vp.GetString(), System.Globalization.NumberStyles.Float,
+                                 System.Globalization.CultureInfo.InvariantCulture, out var pv)) v = pv;
+                    else continue;
+
+                    roled[role] = v;
+                }
+
+                if (roled.Count > 0)
+                {
+                    var payload = new Dictionary<string, object> { ["type"] = "tele" };
+                    foreach (var kv in roled) payload[kv.Key] = kv.Value;
+                    _telemetryExtUdpPreview = System.Text.Json.JsonSerializer.Serialize(payload);
                 }
             }
         }
@@ -3209,8 +3185,7 @@
                     Label       = m.Label,
                     Unit        = m.Unit,
                     Decimals    = m.Decimals,
-                    WeatherRole = m.WeatherRole,
-                    ExtUdpSlot  = m.ExtUdpSlot
+                    WeatherRole = m.WeatherRole
                 })
                 .ToList(),
             TelemetryApiEnabled    = s.TelemetryApiEnabled,
@@ -4011,7 +3986,7 @@
                 TelemetryGroup         = s.TelemetryGroup,
                 TelemetryScheduleHours = s.TelemetryScheduleHours,
                 TelemetryMapping       = s.TelemetryMapping
-                    .Select(m => new TelemetryMappingEntry { JsonKey = m.JsonKey, Label = m.Label, Unit = m.Unit, Decimals = m.Decimals, WeatherRole = m.WeatherRole, ExtUdpSlot = m.ExtUdpSlot })
+                    .Select(m => new TelemetryMappingEntry { JsonKey = m.JsonKey, Label = m.Label, Unit = m.Unit, Decimals = m.Decimals, WeatherRole = m.WeatherRole })
                     .ToList(),
                 TelemetryApiEnabled    = s.TelemetryApiEnabled,
                 TelemetryApiKey        = s.TelemetryApiKey,

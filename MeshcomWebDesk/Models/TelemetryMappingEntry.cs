@@ -15,16 +15,17 @@ public class TelemetryMappingEntry
     public int Decimals { get; set; } = 1;
 
     /// <summary>
-    /// Optional weather role for the map popup.
-    /// Allowed values: "temp", "humidity", "pressure", or empty (no role).
-    /// Takes precedence over unit-based auto-detection.
+    /// Optional weather/sensor role. Drives two independent things:
+    /// - "temp"/"humidity"/"pressure" feed the map popup (<see cref="Services.MeshcomUdpService"/>
+    ///   sets Status.OwnTemp/OwnHumidity/OwnPressure for these three roles).
+    /// - Any of the 7 roles below additionally selects which fixed field this value is sent
+    ///   as in the native extudp "tele" telegram (see <see cref="MeshcomSettings.TelemetryExtUdpEnabled"/>),
+    ///   when <see cref="MeshcomSettings.TelemetryExtUdpEnabled"/> is on. Empty = not sent via extudp.
+    /// Allowed values: "temp", "humidity", "pressure", "temp2", "qnh", "gasres", "co2", or empty.
+    /// For "temp"/"humidity"/"pressure" this takes precedence over unit-based auto-detection
+    /// (used for the map popup only, for entries configured before this field existed).
+    /// At most one mapping entry should use a given role; the UI enforces this for the extudp
+    /// path (mirrors a radio group, like the former ExtUdpSlot mechanism it replaces).
     /// </summary>
     public string WeatherRole { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Optional position (1-4) of this value in the native extudp "tele" telegram's
-    /// values/parm/unit lists. 0 means the entry is not sent via extudp.
-    /// Must be unique across all mapping entries; the UI enforces this.
-    /// </summary>
-    public int ExtUdpSlot { get; set; } = 0;
 }
