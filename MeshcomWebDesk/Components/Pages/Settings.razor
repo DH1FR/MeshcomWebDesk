@@ -1192,7 +1192,8 @@
                                 <td><input type="text" @bind="e.Unit" /></td>
                                 <td><input type="number" min="0" max="4" style="width:4rem" @bind="e.Decimals" /></td>
                                 <td>
-                                    <select @bind="e.WeatherRole" title="@Loc.T("Rolle: bestimmt Karten-Popup (Temp./Feuchte/Druck) und/oder Zielfeld im nativen extudp-Telegramm", "Role: drives the map popup (temp/humidity/pressure) and/or the target field in the native extudp telegram")">
+                                    <select value="@e.WeatherRole" @onchange="ev => SetWeatherRole(e, ev.Value!.ToString()!)"
+                                            title="@Loc.T("Rolle: bestimmt Karten-Popup (Temp./Feuchte/Druck) und/oder Zielfeld im nativen extudp-Telegramm", "Role: drives the map popup (temp/humidity/pressure) and/or the target field in the native extudp telegram")">
                                         <option value="">–</option>
                                         <option value="temp">🌡️ @Loc.T("Temp.", "Temp.")</option>
                                         <option value="humidity">💧 @Loc.T("Feuchte", "Humidity")</option>
@@ -2701,6 +2702,23 @@
         ["temp"] = "temp", ["humidity"] = "hum", ["pressure"] = "press",
         ["temp2"] = "temp2", ["qnh"] = "qnh", ["gasres"] = "gasres", ["co2"] = "co2",
     };
+
+    /// <summary>
+    /// Assigns <paramref name="role"/> to <paramref name="entry"/>'s WeatherRole. Any other
+    /// mapping entry that already held that role is cleared first, so a non-empty role is
+    /// always assigned to at most one entry (enforced client-side, mirrors a radio group) —
+    /// the backend's "first entry wins" fallback then only matters for entries loaded from an
+    /// import/backup that predates this check.
+    /// </summary>
+    private void SetWeatherRole(TelemetryMappingEntry entry, string role)
+    {
+        if (!string.IsNullOrEmpty(role))
+        {
+            foreach (var other in _model.TelemetryMapping.Where(m => m != entry && m.WeatherRole == role))
+                other.WeatherRole = string.Empty;
+        }
+        entry.WeatherRole = role;
+    }
 
     private async Task LoadTelemetryPreviewAsync()
     {
