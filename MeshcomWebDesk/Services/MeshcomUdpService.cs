@@ -28,8 +28,61 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     private readonly BotCommandService _botCommandService;
     private readonly QsoSummaryService _qsoSummaryService;
     private readonly NodeManager _nodeManager;
+    private readonly SettingsService _settingsService;
     private MeshcomSettings _settings;
     private UdpClient? _udpClient;
+
+    /// <summary>
+    /// (extudp field name, value) pairs from the last successfully sent extudp "tele" telegram.
+    /// Used by <see cref="CheckAndSendExtUdpIfChangedAsync"/> to detect changes; <c>null</c> means
+    /// nothing has been sent yet in this process (not persisted across restarts).
+    /// </summary>
+    private List<(string Field, double Value)>? _lastExtUdpSentValues;
+
+    /// <summary>
+    /// Values (restricted to the subset of <see cref="RoleToExtUdpField"/> that WebDesk can also
+    /// parse back out of a telemetry echo: temp/hum/temp2 – pressure is excluded because the
+    /// node's own qnh/qfe preference logic makes a clean round-trip comparison ambiguous) from the
+    /// most recent extudp "tele" send, awaiting confirmation via the node's own next telemetry
+    /// echo. Set to <c>null</c> once confirmed or once <see cref="ExtUdpProbeTimeout"/> elapses.
+    /// </summary>
+    private List<(string Field, double Value)>? _pendingExtUdpProbe;
+
+    /// <summary>UTC send time of <see cref="_pendingExtUdpProbe"/>, for the timeout check.</summary>
+    private DateTime _pendingExtUdpProbeSentAt;
+
+    /// <summary>
+    /// How long to wait for the node's own telemetry echo before concluding the firmware does not
+    /// support the extudp "tele" interface. The node re-beacons its position immediately after
+    /// accepting the values, so this only needs to cover UDP/LoRa round-trip latency.
+    /// </summary>
+    private static readonly TimeSpan ExtUdpProbeTimeout = TimeSpan.FromSeconds(20);
+
+    /// <summary>
+    /// Maps <see cref="TelemetryMappingEntry.WeatherRole"/> to the fixed field name the node's
+    /// <c>handleExternTelemetry()</c> recognizes in the native extudp "tele" JSON. Roles not
+    /// listed here (i.e. an empty role) are not sent via extudp.
+    /// </summary>
+    private static readonly Dictionary<string, string> RoleToExtUdpField = new()
+    {
+        ["temp"]     = "temp",
+        ["humidity"] = "hum",
+        ["pressure"] = "press",
+        ["temp2"]    = "temp2",
+        ["qnh"]      = "qnh",
+        ["gasres"]   = "gasres",
+        ["co2"]      = "co2",
+    };
+
+    /// <summary>UTC timestamp of the last successful extudp send, for the min-interval throttle.</summary>
+    private DateTime? _lastExtUdpSentTime;
+
+    /// <summary>
+    /// Tracks whether the last per-minute extudp check already logged a "no values available"
+    /// warning, so <see cref="CheckAndSendExtUdpIfChangedAsync"/> logs the condition once when it
+    /// starts (and once when it clears) instead of spamming the log every minute it persists.
+    /// </summary>
+    private bool _lastExtUdpBuildFailed;
 
     /// <summary>Assembly version, resolved once at startup (e.g. "1.4.1").</summary>
     private static readonly string AppVersion =
@@ -76,7 +129,8 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         QrzService qrzService,
         BotCommandService botCommandService,
         QsoSummaryService qsoSummaryService,
-        NodeManager nodeManager)
+        NodeManager nodeManager,
+        SettingsService settingsService)
     {
         _logger              = logger;
         _chatService         = chatService;
@@ -84,6 +138,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         _botCommandService   = botCommandService;
         _qsoSummaryService   = qsoSummaryService;
         _nodeManager         = nodeManager;
+        _settingsService     = settingsService;
         _settings            = settings.CurrentValue;
         settings.OnChange(s =>
         {
@@ -97,9 +152,19 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                 || prev.Nodes.Zip(s.Nodes).Any(p =>
                     p.First.Id         != p.Second.Id         ||
                     p.First.DeviceIp   != p.Second.DeviceIp   ||
-                    p.First.DevicePort != p.Second.DevicePort);
+                    p.First.DevicePort != p.Second.DevicePort ||
+                    p.First.Enabled    != p.Second.Enabled);
             if (nodesChanged)
                 _ = RegisterWithDeviceAsync();
+
+            // Re-arm the firmware-capability check when the user turns extudp telemetry back on
+            // (e.g. after flashing supporting firmware), instead of leaving a stale "not
+            // confirmed" status showing until the next send resolves it.
+            if (!prev.TelemetryExtUdpEnabled && s.TelemetryExtUdpEnabled)
+            {
+                Status.ExtUdpTelemetryConfirmed = null;
+                NotifyStatusChange();
+            }
         });
 
         _chatService.OnNewDirectTab += (callsign, msg) => _ = SendAutoReplyAsync(callsign, msg.Timestamp, msg.NodeId);
@@ -229,8 +294,33 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                             _logger.LogDebug("Node echo meta: firmware={Fw} hw_id={HwId} NodeFirmware={NodeFw} NodeHwId={NodeHwId}",
                                 message.Firmware, message.HwId, Status.NodeFirmware, Status.NodeHwId);
                             if (metaChanged) NotifyStatusChange();
-                            _logger.LogDebug("Skipping node echo from {From}", message.From);
-                            // Do not add node echoes to the monitor – the TX entry is already shown there.
+
+                            // Own pos/tele broadcasts are generated autonomously by the node
+                            // firmware (not via SendMessageAsync), so unlike own "msg" echoes
+                            // there is no pre-existing TX row for them in the monitor – add
+                            // them like any other station's beacon instead of skipping.
+                            if (message.IsPositionBeacon)
+                            {
+                                Status.RxCount++;
+                                Status.LastRxTime = message.Timestamp;
+                                Status.LastRxFrom = message.From;
+                                NotifyStatusChange();
+                                _chatService.AddPositionBeacon(message);
+                            }
+                            else if (message.IsTelemetry)
+                            {
+                                Status.RxCount++;
+                                Status.LastRxTime = message.Timestamp;
+                                Status.LastRxFrom = message.From;
+                                NotifyStatusChange();
+                                _chatService.AddTelemetry(message);
+                                EvaluateExtUdpProbe(message);
+                            }
+                            else
+                            {
+                                _logger.LogDebug("Skipping node echo from {From}", message.From);
+                                // Do not add msg/other echoes to the monitor – the TX entry is already shown there.
+                            }
                         }
                         else if (message.IsTimeSync)
                         {
@@ -705,6 +795,13 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             catch (OperationCanceledException) { break; }
 
             var s = _settings;
+
+            // Extudp runs on its own send-on-change schedule, independent of the hour-slot
+            // schedule below (which only applies to the text-message path). The node applies
+            // no rate limiting of its own for externally pushed telemetry, so this is the only
+            // guard against flooding the mesh / the node's shared TX ring buffer.
+            await CheckAndSendExtUdpIfChangedAsync(s);
+
             bool configured = s.TelemetryEnabled
                 && !string.IsNullOrWhiteSpace(s.TelemetryFilePath)
                 && !string.IsNullOrWhiteSpace(s.TelemetryGroup)
@@ -730,7 +827,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
 
             if (scheduleHours.Contains(now.Hour) && lastSentSlot != currentSlot)
             {
-                await SendTelemetryAsync(s);
+                await SendTextTelemetryAsync(s);
                 lastSentSlot = currentSlot;
                 SetTelemetryStatus(true, ComputeNextScheduledTime(scheduleHours, DateTime.Now));
             }
@@ -808,6 +905,29 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     }
 
     /// <summary>
+    /// Parses a telemetry JSON value that may be either a JSON number or a numeric string.
+    /// Shared by the text-message and extudp telemetry builders.
+    /// </summary>
+    private static bool TryParseTelemetryValue(JsonElement valueProp, out double value)
+    {
+        if (valueProp.ValueKind == JsonValueKind.Number)
+        {
+            value = valueProp.GetDouble();
+            return true;
+        }
+        if (valueProp.ValueKind == JsonValueKind.String &&
+            double.TryParse(valueProp.GetString(),
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var parsed))
+        {
+            value = parsed;
+            return true;
+        }
+        value = 0;
+        return false;
+    }
+
+    /// <summary>
     /// Reads the telemetry JSON file and builds the flat "key=value unit" string
     /// from the configured <see cref="MeshcomSettings.TelemetryMapping"/>.
     /// Returns <c>null</c> when the file does not exist, cannot be parsed, or yields no values.
@@ -856,17 +976,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             {
                 if (string.IsNullOrWhiteSpace(entry.JsonKey)) continue;
                 if (!root.TryGetProperty(entry.JsonKey, out var valueProp)) continue;
-
-                double value;
-                if (valueProp.ValueKind == JsonValueKind.Number)
-                    value = valueProp.GetDouble();
-                else if (valueProp.ValueKind == JsonValueKind.String &&
-                         double.TryParse(valueProp.GetString(),
-                             System.Globalization.NumberStyles.Float,
-                             System.Globalization.CultureInfo.InvariantCulture, out var parsed))
-                    value = parsed;
-                else
-                    continue;
+                if (!TryParseTelemetryValue(valueProp, out var value)) continue;
 
                 // Capture well-known weather values for map popup.
                 // Explicit WeatherRole takes precedence; unit-based detection is the fallback
@@ -897,7 +1007,31 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         }
     }
 
+    /// <summary>
+    /// Forces an immediate send on both telemetry paths: the classic text-message path (when
+    /// <see cref="MeshcomSettings.TelemetryGroup"/> is set) and the native extudp "tele"
+    /// telegram (when configured), bypassing the extudp send-on-change throttle. Used only by
+    /// <see cref="SendTelemetryNowAsync"/> (the Settings UI's manual test-send button) — the
+    /// scheduled hour-slot loop in <see cref="RunTelemetryAsync"/> calls
+    /// <see cref="SendTextTelemetryAsync"/> and <see cref="CheckAndSendExtUdpIfChangedAsync"/>
+    /// directly and independently instead.
+    /// </summary>
     private async Task SendTelemetryAsync(MeshcomSettings s)
+    {
+        if (!string.IsNullOrWhiteSpace(s.TelemetryGroup))
+            await SendTextTelemetryAsync(s);
+        else
+            _logger.LogInformation("Telemetry test send: TelemetryGroup is empty – skipping text-message path.");
+
+        if (s.TelemetryExtUdpEnabled && s.TelemetryMapping.Any(e => RoleToExtUdpField.ContainsKey(e.WeatherRole.Trim().ToLowerInvariant())))
+            await SendExtUdpTeleAsync(s);
+        else if (s.TelemetryExtUdpEnabled)
+            _logger.LogInformation("Telemetry test send: extudp enabled but no mapping entry has an assigned role (temp/humidity/pressure/temp2/qnh/gasres/co2) – skipping extudp path.");
+        else
+            _logger.LogInformation("Telemetry test send: extudp is disabled – skipping extudp path.");
+    }
+
+    private async Task SendTextTelemetryAsync(MeshcomSettings s)
     {
         try
         {
@@ -978,6 +1112,243 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error reading or sending telemetry from {Path}", s.TelemetryFilePath);
+        }
+    }
+
+    /// <summary>
+    /// Reads the telemetry JSON file and resolves the mapping entries whose
+    /// <see cref="TelemetryMappingEntry.WeatherRole"/> is one of the 7 fixed extudp fields
+    /// (<see cref="RoleToExtUdpField"/>). When two entries share the same role, the first one
+    /// (in <see cref="MeshcomSettings.TelemetryMapping"/> order) wins. Returns <c>null</c> when
+    /// the file is missing, unparsable, or no role-assigned value could be resolved.
+    /// </summary>
+    private Dictionary<string, double>? BuildExtUdpValues(MeshcomSettings s)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(s.TelemetryFilePath) || !File.Exists(s.TelemetryFilePath))
+                return null;
+
+            var fileContent = File.ReadAllText(s.TelemetryFilePath);
+            using var doc = JsonDocument.Parse(fileContent);
+            var root = doc.RootElement;
+
+            var resolved = new Dictionary<string, double>();
+
+            foreach (var entry in s.TelemetryMapping)
+            {
+                if (string.IsNullOrWhiteSpace(entry.JsonKey)) continue;
+                if (!RoleToExtUdpField.TryGetValue(entry.WeatherRole.Trim().ToLowerInvariant(), out var field)) continue;
+                if (resolved.ContainsKey(field)) continue; // first mapping entry for this role wins
+                if (!root.TryGetProperty(entry.JsonKey, out var valueProp)) continue;
+                if (!TryParseTelemetryValue(valueProp, out var value)) continue;
+
+                resolved[field] = value;
+            }
+
+            return resolved.Count > 0 ? resolved : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Sends the values assigned to a <see cref="TelemetryMappingEntry.WeatherRole"/> as a
+    /// native <c>{"type":"tele","temp":...,"hum":...,...}</c> UDP telegram directly to the node
+    /// (same endpoint as <see cref="SendMessageAsync"/>). The node writes each field straight
+    /// into its own sensor variables and immediately re-beacons its position, so the values
+    /// appear embedded in the position comment exactly like a real onboard sensor would.
+    /// </summary>
+    private async Task SendExtUdpTeleAsync(MeshcomSettings s)
+    {
+        if (_udpClient == null)
+        {
+            _logger.LogWarning("Cannot send extudp telemetry – UDP client not initialized");
+            return;
+        }
+
+        try
+        {
+            var values = BuildExtUdpValues(s);
+            if (values is null)
+            {
+                if (!File.Exists(s.TelemetryFilePath))
+                    _logger.LogWarning("Extudp telemetry: telemetry file not found: {Path}", s.TelemetryFilePath);
+                else
+                    _logger.LogWarning("Extudp telemetry: no role-assigned values could be read from {Path}", s.TelemetryFilePath);
+                return;
+            }
+
+            var payload = new Dictionary<string, object> { ["type"] = "tele" };
+            foreach (var (field, value) in values)
+                payload[field] = value;
+
+            var json  = JsonSerializer.Serialize(payload);
+            var bytes = Encoding.UTF8.GetBytes(json);
+
+            if (bytes.Length > 254)
+            {
+                _logger.LogWarning(
+                    "Extudp telemetry payload too large ({Bytes} bytes, max 254) – Senden abgebrochen", bytes.Length);
+                return;
+            }
+
+            var sendingNode = _nodeManager.SelectedNode;
+            var deviceIp    = sendingNode?.DeviceIp   ?? s.DeviceIp;
+            var devicePort  = sendingNode?.DevicePort ?? s.DevicePort;
+            var remoteEp    = new IPEndPoint(IPAddress.Parse(deviceIp), devicePort);
+
+            await _udpClient.SendAsync(bytes, bytes.Length, remoteEp);
+            _logger.LogInformation("Sending native extudp telemetry to {Remote}: {Data}", remoteEp, json);
+            if (s.LogUdpTraffic)
+                _logger.LogInformation("[UDP-TX] {Remote} {Data}", remoteEp, json);
+
+            Status.TxCount++;
+            Status.LastTxTime = DateTime.Now;
+            NotifyStatusChange();
+
+            // Record what was actually sent, for the send-on-change throttle in
+            // CheckAndSendExtUdpIfChangedAsync. Updated here (the single choke point for all
+            // extudp sends, automatic or manual "send now") so the throttle timer always
+            // reflects real airtime usage.
+            _lastExtUdpSentValues = values.Select(kv => (kv.Key, kv.Value)).ToList();
+            _lastExtUdpSentTime   = DateTime.UtcNow;
+
+            // Arm the firmware-capability probe (see EvaluateExtUdpProbe / the timeout sweep in
+            // CheckAndSendExtUdpIfChangedAsync) with only the fields WebDesk can read back out of
+            // a telemetry echo unambiguously.
+            var probeFields = values.Where(kv => kv.Key is "temp" or "hum" or "temp2")
+                                     .Select(kv => (kv.Key, kv.Value)).ToList();
+            if (probeFields.Count > 0)
+            {
+                _pendingExtUdpProbe       = probeFields;
+                _pendingExtUdpProbeSentAt = DateTime.UtcNow;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sending extudp telemetry telegram");
+        }
+    }
+
+    /// <summary>
+    /// Send-on-change check for the extudp telemetry path, called once per minute from
+    /// <see cref="RunTelemetryAsync"/>. The node applies no rate limiting of its own for
+    /// externally pushed telemetry (every accepted packet is forwarded via LoRa immediately),
+    /// so this throttle is the only guard against flooding the mesh / the node's shared TX ring
+    /// buffer when a source value jitters. A send only happens when at least one value differs
+    /// from the last successfully sent set AND the configured minimum interval has elapsed;
+    /// unchanged values never trigger a send regardless of the interval.
+    /// </summary>
+    private async Task CheckAndSendExtUdpIfChangedAsync(MeshcomSettings s)
+    {
+        // Firmware-capability check: if the node never echoed back the values from the last
+        // probe within the timeout, it does not implement the extudp "tele" interface (or has
+        // real sensor hardware installed, which behaves identically from here) – stop sending.
+        if (_pendingExtUdpProbe is not null && DateTime.UtcNow - _pendingExtUdpProbeSentAt > ExtUdpProbeTimeout)
+        {
+            _pendingExtUdpProbe = null;
+            await DisableExtUdpTelemetryAsync(
+                "the node did not echo back matching values within the expected time – its firmware likely does not implement the extudp \"tele\" interface (or has real sensor hardware installed)");
+            return;
+        }
+
+        if (!s.TelemetryEnabled || !s.TelemetryExtUdpEnabled) return;
+        if (!s.TelemetryMapping.Any(e => RoleToExtUdpField.ContainsKey(e.WeatherRole.Trim().ToLowerInvariant()))) return;
+
+        var current = BuildExtUdpValues(s);
+        if (current is null)
+        {
+            // Log once when this condition starts, not on every per-minute tick it persists.
+            if (!_lastExtUdpBuildFailed)
+            {
+                if (!File.Exists(s.TelemetryFilePath))
+                    _logger.LogWarning("Extudp telemetry: telemetry file not found: {Path}", s.TelemetryFilePath);
+                else
+                    _logger.LogWarning("Extudp telemetry: no role-assigned values could be read from {Path}", s.TelemetryFilePath);
+                _lastExtUdpBuildFailed = true;
+            }
+            return;
+        }
+        if (_lastExtUdpBuildFailed)
+        {
+            _logger.LogInformation("Extudp telemetry: values available again from {Path}", s.TelemetryFilePath);
+            _lastExtUdpBuildFailed = false;
+        }
+
+        var currentKeyed = current.Select(kv => (kv.Key, kv.Value)).OrderBy(kv => kv.Key).ToList();
+        if (_lastExtUdpSentValues is not null && currentKeyed.SequenceEqual(_lastExtUdpSentValues.OrderBy(kv => kv.Field)))
+            return;
+
+        var minInterval = TimeSpan.FromMinutes(Math.Max(1, s.TelemetryExtUdpMinIntervalMinutes));
+        if (_lastExtUdpSentTime is not null && DateTime.UtcNow - _lastExtUdpSentTime.Value < minInterval)
+            return; // changed, but throttled – retried on the next tick as long as the change persists
+
+        await SendExtUdpTeleAsync(s);
+    }
+
+    /// <summary>
+    /// Compares an incoming own-node telemetry echo against <see cref="_pendingExtUdpProbe"/>
+    /// (armed by <see cref="SendExtUdpTeleAsync"/>). Confirms extudp telemetry support the first
+    /// time a matching echo arrives; stale/unrelated echoes (e.g. from a periodic beacon that
+    /// happens to arrive while a probe is pending) are ignored rather than treated as a mismatch,
+    /// so only a full timeout (handled in <see cref="CheckAndSendExtUdpIfChangedAsync"/>) counts
+    /// as "not supported".
+    /// </summary>
+    private void EvaluateExtUdpProbe(MeshcomMessage message)
+    {
+        if (_pendingExtUdpProbe is null) return;
+        if (DateTime.UtcNow - _pendingExtUdpProbeSentAt > ExtUdpProbeTimeout)
+        {
+            _pendingExtUdpProbe = null; // timeout sweep in CheckAndSendExtUdpIfChangedAsync handles disabling
+            return;
+        }
+
+        const double tolerance = 0.1;
+        bool allMatch = _pendingExtUdpProbe.All(p => p.Field switch
+        {
+            "temp"  => message.Temp1.HasValue    && Math.Abs(message.Temp1.Value    - p.Value) < tolerance,
+            "hum"   => message.Humidity.HasValue && Math.Abs(message.Humidity.Value - p.Value) < tolerance,
+            "temp2" => message.Temp2.HasValue    && Math.Abs(message.Temp2.Value    - p.Value) < tolerance,
+            _       => true
+        });
+        if (!allMatch) return; // not our echo (yet) – keep waiting until it matches or times out
+
+        _pendingExtUdpProbe = null;
+        if (Status.ExtUdpTelemetryConfirmed != true)
+        {
+            Status.ExtUdpTelemetryConfirmed = true;
+            _logger.LogInformation("Extudp telemetry confirmed: the node echoed back the values we sent.");
+            NotifyStatusChange();
+        }
+    }
+
+    /// <summary>
+    /// Turns off <see cref="MeshcomSettings.TelemetryExtUdpEnabled"/> and persists it, so the app
+    /// stops wasting mesh airtime on a node whose firmware does not apply the values (see
+    /// <see cref="CheckAndSendExtUdpIfChangedAsync"/>'s timeout sweep). The user can re-enable it
+    /// manually in Settings at any time (e.g. after flashing supporting firmware), which re-arms
+    /// the probe on the next send.
+    /// </summary>
+    private async Task DisableExtUdpTelemetryAsync(string reason)
+    {
+        if (!_settings.TelemetryExtUdpEnabled) return; // already off
+
+        _logger.LogWarning(
+            "Disabling extudp telemetry automatically: {Reason}.", reason);
+        Status.ExtUdpTelemetryConfirmed = false;
+        NotifyStatusChange();
+
+        _settings.TelemetryExtUdpEnabled = false;
+        try
+        {
+            await _settingsService.SaveMeshcomSettingsAsync(_settings);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to persist automatic extudp telemetry disable");
         }
     }
 

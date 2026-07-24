@@ -96,8 +96,8 @@
                         <th class="col-center mh-th-sort" @onclick='() => SortBy("Altitude")'>@Loc.T("Höhe", "Alt.")@SortIcon("Altitude")</th>
                         <th class="col-center mh-th-sort" @onclick='() => SortBy("Distance")'>@Loc.T("Entfernung", "Distance")@SortIcon("Distance")</th>
                         <th class="col-center mh-th-sort" @onclick='() => SortBy("Battery")'>🔋@SortIcon("Battery")</th>
-                        <th class="col-center mh-th-sort" @onclick='() => SortBy("Rssi")'>RSSI@SortIcon("Rssi")</th>
-                        <th class="col-center mh-th-sort" @onclick='() => SortBy("Snr")'>SNR@SortIcon("Snr")</th>
+                        <th class="col-center mh-th-sort" @onclick='() => SortBy("Rssi")'>RSSI@(SortIcon("Rssi"))</th>
+                        <th class="col-center mh-th-sort" @onclick='() => SortBy("Snr")'>SNR@(SortIcon("Snr"))</th>
                         <th class="col-center mh-th-sort" title="Hops (0=direkt)" @onclick='() => SortBy("HopCount")'>🔁@SortIcon("HopCount")</th>
                         <th></th>
                     </tr>
@@ -547,8 +547,8 @@
 
     private static string RssiClass(int? rssi) => rssi switch
     {
-        > -70 => "rssi-good",
-        > -90 => "rssi-fair",
+        > SignalHelper.RssiGoodDbm => "rssi-good",
+        > SignalHelper.RssiWeakDbm => "rssi-fair",
         null  => "",
         _     => "rssi-weak"
     };

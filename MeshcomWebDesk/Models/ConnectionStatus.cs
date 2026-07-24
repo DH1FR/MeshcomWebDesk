@@ -80,4 +80,15 @@ public class ConnectionStatus
 
     /// <summary>Hardware ID of the connected node (from hw_id field).</summary>
     public int? NodeHwId { get; set; }
+
+    // ── Extudp "tele" capability check ────────────────────────────────────
+
+    /// <summary>
+    /// Whether the node's firmware has been observed to actually apply extudp
+    /// <c>"type":"tele"</c> values (confirmed by echoing them back in its own next
+    /// telemetry beacon). <c>null</c> = not yet checked this session; <c>true</c> =
+    /// confirmed working; <c>false</c> = the node did not echo back matching values
+    /// within the expected time, so extudp telemetry was disabled automatically.
+    /// </summary>
+    public bool? ExtUdpTelemetryConfirmed { get; set; }
 }

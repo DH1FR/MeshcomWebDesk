@@ -29,20 +29,20 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
-## 🆕 What's New in v1.13.3
+## 🆕 What's New in v1.14.0
 
 ### ✨ Features
-- **Calendar Beacon: multiple announcement lead times** – The separate "days before" / "hours before" fields are replaced by a comma-separated lead-time list per entry, e.g. `3d, 24h, 2h` (units: `d` = days, `h` = hours, `m` = minutes). Existing settings migrate automatically. (#13, #14)
-- **Calendar Beacon: next-transmission preview** – The settings page now shows date and time of the next scheduled transmission for each entry, in addition to the next event date.
-- **Weather API: optional request/response logging** – New *Log requests* toggle logs the masked request URL and raw provider response, matching the existing QRZ / MQTT / AI logging pattern.
-- **Console Command Helper: via node remembered** – The last-sent via node callsign is remembered in the Console Command Helper.
+- **Appearance settings with themes** – New 🎨 *Appearance* section in Settings: choose between four built-in themes (MeshCom Dark, Midnight/OLED, Light, High Contrast) or create your own in a grouped colour editor, applied live as a preview and saved under a name. Themes can be exported/imported as `.mctheme.json` files to share.
+- **Native extudp telemetry** – Selected telemetry values (temp, humidity, pressure, temp 2, QNH, gas resistance, CO2) can now be sent directly to the node as a native `"type":"tele"` UDP telegram instead of only as chat text, on value change rather than a fixed schedule. WebDesk checks whether the node's firmware actually applies the values (via its own telemetry echo) and disables the feature automatically if not, with the confirmation status shown in Settings.
+- **Additional nodes can be disabled** – Each node under *Additional Nodes* now has an enable/disable checkbox to take it out of active use temporarily without deleting its configuration. The primary node's connection fields now mirror the *Connection* section above read-only instead of needing to be entered twice; promoting a different node to primary moves its data up into that section.
+- **NET Console**: button to open a node's default web interface directly.
+- **Toolbar**: *Connect* button shown when disconnected, not just *Disconnect*.
 
 ### 🔧 Bug Fixes
-- **Calendar Beacon: missing group now warns** – Active entries without a target group were silently skipped; the settings page and the log now show a clear warning.
-- **Stale weather data no longer rebroadcast** – Telemetry sending checks the observation timestamp and skips outdated values; Weather Underground empty responses (HTTP 204) produce a clear error instead of a JSON parse failure; hanging requests fail fast (30 s timeout).
-- **iPad detection via touch heuristic** – Clipboard copy and TTS skip now also work on iPads that report themselves as macOS.
-- **Bot help prefix shortened** – `Befehle/Commands:` reduced to `Cmds:` to save LoRa payload space.
-- **Linux/macOS tarballs extract into a `MeshcomWebDesk/` folder** – Archives no longer unpack flat into the current directory.
+- **Own beacons shown in the monitor** – Own position/telemetry beacons now appear in the monitor, not just other stations'.
+- **Telemetry mapping**: duplicate `WeatherRole` assignments are cleared automatically; skipped extudp sends are now logged with a reason instead of failing silently; `TelemetryExtUdpEnabled` and the extudp slot are persisted correctly on save.
+- **Spectrum chart** no longer accumulates points from previous scans.
+- **Light theme contrast** fixed for own-message callsigns and chips (Console Command Helper etc.).
 
 ---
 
@@ -128,17 +128,20 @@ Each node profile contains:
 
 | Field | Description |
 |---|---|
+| **Enabled** | Checkbox to take a node out of active use (registration, sending, chat switcher, telnet console) temporarily without deleting its configuration. The primary node cannot be disabled. |
 | **Name** | Display name shown in the node switcher (e.g. `Balkon`, `Auto`) |
-| **Callsign** | Own callsign used for outgoing messages on this node (e.g. `OE1ABC-2`) |
-| **Device IP** | IP address of the MeshCom node |
+| **Callsign** | Own callsign used for outgoing messages on this node (e.g. `OE1ABC-2`). For the primary node this is read-only and mirrors **Settings → Connection** (see below). |
+| **Device IP** | IP address of the MeshCom node. For the primary node this is read-only and mirrors **Settings → Connection**. |
 | **Device Port** | UDP port on the node (default `1799`) |
-| **Listen IP** | Local bind address (`0.0.0.0` = all interfaces) |
+| **Listen IP** | Local bind address (`0.0.0.0` = all interfaces). For the primary node this is read-only and mirrors **Settings → Connection**. |
 | **Listen Port** | Local UDP port to receive packets from this node (default `1799`) |
 | **Primary** | Exactly one node must be marked primary – only the primary node drives MH list, Live Map, beacons, telemetry, bot and OTA/reboot |
 | **TLS Certificate Fingerprint** | SHA-256 fingerprint of this node's self-signed TLS certificate; filled automatically via *Trust & Save* on first connect |
 | **TLS Password** | Console password for this node (encrypted at rest with DPAPI) |
 
 > 💡 When multiple nodes share the same UDP port (`1799`), incoming packets are routed to the correct node by the **sender's IP address** – no port forwarding required.
+
+> 💡 The primary node's connection data (callsign, device/listen IP + port) lives in **Settings → Connection**, not in its Additional Nodes card, so it's never entered twice. Promoting a different node to primary (**Set Primary**) moves that node's connection data up into the Connection section instead, and the previous primary becomes a regular, editable secondary node.
 
 #### Node behaviour
 
@@ -148,6 +151,7 @@ Each node profile contains:
 - **Auto-replies and bot replies** are sent back through the same node that received the triggering message
 - **MH list, Live Map, beacon, bot, telemetry, OTA and reboot** only operate on the **primary node**
 - A **node switcher** dropdown appears in the Chat header whenever more than one node is configured; switching changes the visible chat tabs and monitor without reconnecting UDP
+- **Disabled nodes** are excluded from UDP registration/sending, the chat node switcher and the telnet console selector, but keep their saved configuration for later re-enabling
 
 #### State persistence
 
@@ -949,6 +953,13 @@ This client communicates with the MeshCom node using the **EXTUDP JSON protocol*
 | `msg`  | Chat message (direct, broadcast, group, ACK) | Chat tab + monitor |
 | `pos`  | Position beacon with GPS coordinates | MH list + monitor |
 | `tele` | Telemetry (temperature, humidity, pressure, battery) | MH list + monitor |
+
+> 💡 WebDesk can also **send** a `"type":"tele"` telegram to the node to inject external
+> sensor values (temp, humidity, pressure, temp 2, QNH, gas resistance, CO2) into its own
+> position beacon, on firmware that supports it – see
+> [`docs/ext_udp_telemetry_guide.md`](docs/ext_udp_telemetry_guide.md). WebDesk verifies via
+> the node's own telemetry echo that the values were actually applied and disables the
+> feature automatically if not (shown live in **Settings → Telemetry**).
 
 ### Example packets
 

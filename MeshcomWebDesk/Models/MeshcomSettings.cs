@@ -211,9 +211,33 @@ public class MeshcomSettings
     public string TelemetryApiKey { get; set; } = string.Empty;
 
     /// <summary>
+    /// When true, on each scheduled telemetry run (or manual "send now"), the values whose
+    /// <see cref="TelemetryMappingEntry.WeatherRole"/> matches one of the 7 fixed extudp fields
+    /// (temp/humidity/pressure/temp2/qnh/gasres/co2) are additionally sent as a native
+    /// <c>{"type":"tele","temp":...,...}</c> UDP telegram directly to the node. The node writes
+    /// each field into its own sensor variables and immediately re-beacons its position, so the
+    /// values appear embedded in the position comment exactly like a real onboard sensor would.
+    /// Works independently of <see cref="TelemetryGroup"/> / the text-message telemetry path.
+    /// </summary>
+    public bool TelemetryExtUdpEnabled { get; set; } = false;
+
+    /// <summary>
+    /// Minimum time (in minutes) between two extudp "tele" sends. The node applies no rate
+    /// limiting of its own for externally pushed telemetry (it forwards every accepted packet
+    /// immediately via LoRa and queues it in a shared TX ring buffer also used by chat/position),
+    /// so this throttle is the only guard against flooding the mesh / overflowing that buffer
+    /// when a source value jitters. Only sends that also carry a changed value are throttled;
+    /// unchanged values never trigger a send regardless of this interval.
+    /// </summary>
+    public int TelemetryExtUdpMinIntervalMinutes { get; set; } = 10;
+
+    /// <summary>
     /// UI language. Supported values: "de" (German, default) and "en" (English).
     /// </summary>
     public string Language { get; set; } = "de";
+
+    /// <summary>Appearance / theming: active theme and user-defined custom themes.</summary>
+    public AppearanceSettings Appearance { get; set; } = new();
 
     /// <summary>Optional database sink. Set Provider to "mysql" or "influxdb2" to activate.</summary>
     public DatabaseSettings Database { get; set; } = new();

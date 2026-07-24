@@ -135,6 +135,8 @@ internal static class Es
                                     = "Resaltado debug LoRa on/off",
         ["Start OTA update – sends --ota-update to node and opens OTA web server"]
                                     = "Iniciar actualización OTA – envía --ota-update al nodo",
+        ["Open the node's default web interface"]
+                                    = "Abrir la interfaz web predeterminada del nodo",
         ["Reboot node – sends --reboot to node"]
                                     = "Reiniciar nodo – envía --reboot al nodo",
         ["Last seen"]               = "Visto por última vez",
@@ -360,6 +362,26 @@ internal static class Es
         ["Telemetry interval (minutes)"]
                                     = "Intervalo telemetría (minutos)",
         ["Temperature"]             = "Temperatura",
+        ["Send native telemetry (extudp)"] = "Enviar telemetría nativa (extudp)",
+        ["Sends the values marked with a role below (up to 7: temp, humidity, pressure, temp 2, QNH, gas resistance, CO2) as a native telemetry telegram directly to the node as soon as at least one value changes (not time-scheduled). The node writes them into its sensor variables and immediately triggers a new position beacon whose comment includes the values just like real onboard sensors would. It ignores the telegram while it has real sensor hardware (BME280/BMP3xx/AHT20/SHT21) installed."]
+                                    = "Envía los valores marcados abajo con un rol (hasta 7: temp., humedad, presión, temp. 2, QNH, resistencia de gas, CO2) como telegrama de telemetría nativo directamente al nodo en cuanto cambia al menos un valor (no programado por tiempo). El nodo los escribe en sus propias variables de sensor y activa de inmediato un nuevo baliza de posición cuyo comentario incluye los valores igual que sensores reales a bordo. Ignora el telegrama mientras tenga instalado hardware de sensor real (BME280/BMP3xx/AHT20/SHT21).",
+        ["Minimum interval (minutes)"]
+                                    = "Intervalo mínimo (minutos)",
+        ["The node applies no throttling of its own – this minimum interval between two extudp sends protects against flooding the mesh when a value jitters."]
+                                    = "El nodo no aplica ninguna limitación propia: este intervalo mínimo entre dos envíos extudp protege contra la saturación de la mesh cuando un valor fluctúa.",
+        ["Role"]                    = "Rol",
+        ["Role for the map popup and the native extudp telegram"]
+                                    = "Rol para el popup del mapa y el telegrama extudp nativo",
+        ["Role: drives the map popup (temp/humidity/pressure) and/or the target field in the native extudp telegram"]
+                                    = "Rol: determina el popup del mapa (temp./humedad/presión) y/o el campo de destino en el telegrama extudp nativo",
+        ["Temp. 2"]                 = "Temp. 2",
+        ["Gas resistance"]          = "Resistencia de gas",
+        ["Extudp is active, but no value has an assigned role."]
+                                    = "Extudp está activo, pero ningún valor tiene un rol asignado.",
+        ["Preview native telemetry telegram (extudp)"]
+                                    = "Vista previa del telegrama de telemetría nativo (extudp)",
+        ["None of the assigned extudp values could be found in the file."]
+                                    = "No se encontró en el archivo ninguno de los valores extudp asignados.",
 
         // Settings – Database
         ["Database"]                = "Base de datos",
@@ -429,5 +451,30 @@ internal static class Es
         ["OTA update started"]      = "Actualización OTA iniciada",
         ["Connection refused"]      = "Conexión rechazada",
         ["More info"]               = "Más información",
+
+        // Appearance / Themes
+        ["Appearance"] = "Apariencia",
+        ["Your selection is applied immediately as a preview – it becomes permanent only after “Save”."] = "La selección se aplica inmediatamente como vista previa – solo se vuelve permanente tras “Guardar”.",
+        ["Create custom theme"] = "Crear tema personalizado",
+        ["Import theme"] = "Importar tema",
+        ["Import theme file (.mctheme.json)"] = "Importar archivo de tema (.mctheme.json)",
+        ["Custom themes can be exported as a file and shared with other users."] = "Los temas personalizados se pueden exportar como archivo y compartir con otros usuarios.",
+        ["Theme name"] = "Nombre del tema",
+        ["My Theme"] = "Mi tema",
+        ["Please enter a theme name."] = "Introduce un nombre para el tema.",
+        ["A theme with this name already exists."] = "Ya existe un tema con este nombre.",
+        ["Import failed: not a valid theme file."] = "Importación fallida: archivo de tema no válido.",
+        ["Import failed: no valid colour values found."] = "Importación fallida: no se encontraron valores de color válidos.",
+        ["MeshCom Dark (default)"] = "MeshCom Dark (predeterminado)",
+        ["Midnight (OLED)"] = "Medianoche (OLED)",
+        ["Light"] = "Claro",
+        ["High contrast"] = "Contraste alto",
+        ["Backgrounds"] = "Fondos",
+        ["Accents & structure"] = "Acentos y estructura",
+        ["Buttons"] = "Botones",
+        ["Links & callsigns"] = "Enlaces e indicativos",
+        ["Status colours"] = "Colores de estado",
+        ["Messages & notices"] = "Mensajes y avisos",
+        ["Monitor & lists"] = "Monitor y listas",
     };
 }

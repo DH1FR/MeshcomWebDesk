@@ -171,6 +171,7 @@ public class SettingsService
                     ["ListenIp"]             = n.ListenIp,
                     ["ListenPort"]           = n.ListenPort,
                     ["IsPrimary"]            = n.IsPrimary,
+                    ["Enabled"]              = n.Enabled,
                     ["TelnetCertThumbprint"] = n.TelnetCertThumbprint,
                     ["TelnetPassword"]       = Encrypt(n.TelnetPassword),
                     ["ConsoleLogEnabled"]    = n.ConsoleLogEnabled
@@ -243,9 +244,22 @@ public class SettingsService
                     ["Decimals"]    = m.Decimals,
                     ["WeatherRole"] = m.WeatherRole
                 }).ToArray()),
-                ["TelemetryApiEnabled"] = s.TelemetryApiEnabled,
-                ["TelemetryApiKey"]     = Encrypt(s.TelemetryApiKey),
+                ["TelemetryApiEnabled"]              = s.TelemetryApiEnabled,
+                ["TelemetryApiKey"]                  = Encrypt(s.TelemetryApiKey),
+                ["TelemetryExtUdpEnabled"]            = s.TelemetryExtUdpEnabled,
+                ["TelemetryExtUdpMinIntervalMinutes"] = s.TelemetryExtUdpMinIntervalMinutes,
                 ["Language"]            = s.Language,
+                ["Appearance"] = new JsonObject
+                {
+                    ["ActiveTheme"]  = s.Appearance.ActiveTheme,
+                    ["CustomThemes"] = new JsonArray(s.Appearance.CustomThemes.Select(t => (JsonNode?)new JsonObject
+                    {
+                        ["Name"]    = t.Name,
+                        ["BasedOn"] = t.BasedOn,
+                        ["Colors"]  = new JsonObject(t.Colors.Select(c =>
+                                          new KeyValuePair<string, JsonNode?>(c.Key, JsonValue.Create(c.Value))))
+                    }).ToArray())
+                },
                 ["Database"]            = new JsonObject
                 {
                     ["Provider"]              = s.Database.Provider,

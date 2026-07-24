@@ -105,11 +105,17 @@
                 </p>
             }
             @foreach (var node in _model.Nodes) {
-                <div class="settings-node-card">
+                <div class="settings-node-card@(node.Enabled ? "" : " settings-node-card-disabled")">
                     <div class="settings-node-header">
+                        <label class="settings-toggle" title="@(node.IsPrimary ? Loc.T("Der Primär-Node kann nicht deaktiviert werden – zuerst einen anderen Node als Primär festlegen.", "The primary node cannot be disabled – set another node as primary first.") : Loc.T("Node vorübergehend deaktivieren, ohne die Konfiguration zu löschen.", "Temporarily disable this node without deleting its configuration."))">
+                            <input type="checkbox" @bind="node.Enabled" disabled="@node.IsPrimary" />
+                        </label>
                         <strong>@node.Name</strong>
                         @if (node.IsPrimary) {
                             <span class="settings-node-primary-badge">★ @Loc.T("Primär", "Primary")</span>
+                        }
+                        @if (!node.Enabled) {
+                            <span class="settings-node-primary-badge" style="background:#30363d;color:#8b949e">@Loc.T("Deaktiviert", "Disabled")</span>
                         }
                         <div class="settings-node-actions">
                             @if (!node.IsPrimary) {
@@ -121,6 +127,31 @@
                     <div class="settings-grid" style="margin-top:.5rem">
                         <label>@Loc.T("Name", "Name")</label>
                         <input type="text" @bind="node.Name" />
+                        @if (node.IsPrimary) {
+                        <label>@Loc.T("Rufzeichen", "Callsign")</label>
+                        <input type="text" value="@_model.MyCallsign" readonly style="opacity:0.6;cursor:not-allowed;text-transform:uppercase"
+                               title="@Loc.T("Wird im Abschnitt Verbindung oben verwaltet.", "Managed in the Connection section above.")" />
+                        <label>Device IP</label>
+                        <input type="text" value="@_model.DeviceIp" readonly style="opacity:0.6;cursor:not-allowed;"
+                               title="@Loc.T("Wird im Abschnitt Verbindung oben verwaltet.", "Managed in the Connection section above.")" />
+                        <label>
+                            Device Port<br />
+                            <small>@Loc.T("Fest: 1799 (gerätefixiert)", "Fixed: 1799 (device-fixed)")</small>
+                        </label>
+                        <input type="number" value="@_model.DevicePort" readonly style="opacity:0.6;cursor:not-allowed;" />
+                        <label>Listen IP</label>
+                        <input type="text" value="@_model.ListenIp" readonly style="opacity:0.6;cursor:not-allowed;"
+                               title="@Loc.T("Wird im Abschnitt Verbindung oben verwaltet.", "Managed in the Connection section above.")" />
+                        <label>
+                            Listen Port<br />
+                            <small>@Loc.T("Fest: 1799 (gerätefixiert)", "Fixed: 1799 (device-fixed)")</small>
+                        </label>
+                        <input type="number" value="@_model.ListenPort" readonly style="opacity:0.6;cursor:not-allowed;" />
+                        <span></span>
+                        <small style="color:#8b949e">ℹ️ @Loc.T(
+                            "Rufzeichen und Verbindungsdaten des Primär-Node werden im Abschnitt Verbindung oben gepflegt.",
+                            "The primary node's callsign and connection data are maintained in the Connection section above.")</small>
+                        } else {
                         <label>@Loc.T("Rufzeichen", "Callsign")</label>
                         <div>
                             <input type="text" @bind="node.Callsign" placeholder="OE1ABC-2" style="text-transform:uppercase;width:100%" />
@@ -147,6 +178,7 @@
                             <small>@Loc.T("Fest: 1799 (gerätefixiert)", "Fixed: 1799 (device-fixed)")</small>
                         </label>
                         <input type="number" value="@node.ListenPort" readonly style="opacity:0.6;cursor:not-allowed;" />
+                        }
                         @* ── TLS Console ── *@
                         <label>
                             @Loc.T("TLS Passwort", "TLS Password")<br />
@@ -1113,6 +1145,40 @@
                 </label>
                 <input type="password" @bind="_model.TelemetryApiKey" autocomplete="new-password"
                        placeholder="@Loc.T("Geheimer Schlüssel für POST /api/telemetry", "Secret key for POST /api/telemetry")" />
+
+                <label>@Loc.T("Native Telemetrie (extudp) senden", "Send native telemetry (extudp)")</label>
+                <label class="settings-toggle">
+                    <input type="checkbox" @bind="_model.TelemetryExtUdpEnabled" />
+                    <span>@(_model.TelemetryExtUdpEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
+                </label>
+                @if (_model.TelemetryExtUdpEnabled)
+                {
+                    <div style="grid-column:1/-1;font-size:.8rem;color:#8b949e;margin-top:.2rem">
+                        @Loc.T("Sendet die unten mit einer Rolle markierten Werte (max. 7: Temp., Feuchte, Druck, Temp. 2, QNH, Gaswiderstand, CO2) als natives Telemetrie-Telegramm direkt an den Node, sobald sich mindestens ein Wert ändert (nicht zeitgesteuert). Der Node schreibt sie in seine Sensor-Variablen und löst sofort einen neuen Positions-Beacon aus, in dessen Kommentar die Werte wie bei echter Sensorik erscheinen. Er ignoriert das Telegramm, solange er eigene Sensor-Hardware (BME280/BMP3xx/AHT20/SHT21) verbaut hat.",
+                                  "Sends the values marked with a role below (up to 7: temp, humidity, pressure, temp 2, QNH, gas resistance, CO2) as a native telemetry telegram directly to the node as soon as at least one value changes (not time-scheduled). The node writes them into its sensor variables and immediately triggers a new position beacon whose comment includes the values just like real onboard sensors would. It ignores the telegram while it has real sensor hardware (BME280/BMP3xx/AHT20/SHT21) installed.")
+                    </div>
+
+                    var extUdpConfirmed = UdpService.Status.ExtUdpTelemetryConfirmed;
+                    <span></span>
+                    @if (extUdpConfirmed == true)
+                    {
+                        <small style="color:#3fb950">✅ @Loc.T("Vom Node bestätigt – die gesendeten Werte wurden im eigenen Beacon zurückgemeldet.", "Confirmed by the node – it echoed back the values we sent in its own beacon.")</small>
+                    }
+                    else if (extUdpConfirmed == false)
+                    {
+                        <small style="color:#f85149">⚠️ @Loc.T("Der Node hat die gesendeten Werte nicht bestätigt und wurde deshalb automatisch deaktiviert. Vermutlich unterstützt die Firmware das native \"tele\"-Telegramm noch nicht (oder es ist echte Sensor-Hardware verbaut).", "The node did not confirm the sent values, so this was disabled automatically. Its firmware likely does not yet support the native \"tele\" telegram (or it has real sensor hardware installed).")</small>
+                    }
+                    else
+                    {
+                        <small style="color:#8b949e">ℹ️ @Loc.T("Wird beim nächsten Senden geprüft, ob der Node die Werte tatsächlich übernimmt.", "Will be checked on the next send whether the node actually applies the values.")</small>
+                    }
+
+                    <label>
+                        @Loc.T("Mindestabstand (Minuten)", "Minimum interval (minutes)")<br />
+                        <small>@Loc.T("Der Node bremst selbst nicht – dieser Mindestabstand zwischen zwei extudp-Sendungen schützt bei jitternden Werten vor einer gefluteten Mesh.", "The node applies no throttling of its own – this minimum interval between two extudp sends protects against flooding the mesh when a value jitters.")</small>
+                    </label>
+                    <input type="number" min="1" max="120" style="width:6rem" @bind="_model.TelemetryExtUdpMinIntervalMinutes" />
+                }
             </div>
 
             <div style="margin-top:1rem">
@@ -1125,7 +1191,7 @@
                             <th>@Loc.T("Bezeichnung", "Label")</th>
                             <th>@Loc.T("Einheit", "Unit")</th>
                             <th>@Loc.T("Dez.", "Dec.")</th>
-                            <th>@Loc.T("Karte", "Map")</th>
+                            <th title="@Loc.T("Rolle für Karten-Popup und natives extudp-Telegramm", "Role for the map popup and the native extudp telegram")">@Loc.T("Rolle", "Role")</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -1141,11 +1207,16 @@
                                 <td><input type="text" @bind="e.Unit" /></td>
                                 <td><input type="number" min="0" max="4" style="width:4rem" @bind="e.Decimals" /></td>
                                 <td>
-                                    <select @bind="e.WeatherRole" title="@Loc.T("Karten-Rolle für Wetter-Popup", "Map role for weather popup")">
+                                    <select value="@e.WeatherRole" @onchange="ev => SetWeatherRole(e, ev.Value!.ToString()!)"
+                                            title="@Loc.T("Rolle: bestimmt Karten-Popup (Temp./Feuchte/Druck) und/oder Zielfeld im nativen extudp-Telegramm", "Role: drives the map popup (temp/humidity/pressure) and/or the target field in the native extudp telegram")">
                                         <option value="">–</option>
                                         <option value="temp">🌡️ @Loc.T("Temp.", "Temp.")</option>
                                         <option value="humidity">💧 @Loc.T("Feuchte", "Humidity")</option>
                                         <option value="pressure">🧭 @Loc.T("Druck", "Pressure")</option>
+                                        <option value="temp2">🌡️2 @Loc.T("Temp. 2", "Temp. 2")</option>
+                                        <option value="qnh">📏 QNH</option>
+                                        <option value="gasres">💨 @Loc.T("Gaswiderstand", "Gas resistance")</option>
+                                        <option value="co2">☁️ CO2</option>
                                     </select>
                                 </td>
                                 <td><button type="button" class="btn-remove" @onclick="() => _model.TelemetryMapping.Remove(e)">🗑️</button></td>
@@ -1156,6 +1227,12 @@
                 <button type="button" class="btn-add" @onclick="() => _model.TelemetryMapping.Add(new TelemetryMappingEntry())">
                     ➕ @Loc.T("Zeile hinzufügen", "Add Row")
                 </button>
+                @if (_model.TelemetryExtUdpEnabled && !_model.TelemetryMapping.Any(m => ExtUdpRoleToField.ContainsKey(m.WeatherRole.Trim().ToLowerInvariant())))
+                {
+                    <div style="font-size:.8rem;color:#f0a030;margin-top:.4rem">
+                        ⚠️ @Loc.T("Extudp ist aktiv, aber keinem Wert ist eine Rolle zugewiesen.", "Extudp is active, but no value has an assigned role.")
+                    </div>
+                }
             </div>
 
             <!-- Vorschau -->
@@ -1195,6 +1272,25 @@
                             {
                                 <div style="font-family:monospace;background:#16213e;color:#c9d1d9;padding:5px 10px;border-radius:4px;margin-top:4px;font-size:12px;word-break:break-all">
                                     @msg
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    @if (_model.TelemetryExtUdpEnabled)
+                    {
+                        <div style="margin-top:0.75rem">
+                            <strong style="font-size:13px">@Loc.T("Vorschau natives Telemetrie-Telegramm (extudp)", "Preview native telemetry telegram (extudp)"):</strong>
+                            @if (_telemetryExtUdpPreview != null)
+                            {
+                                <div style="font-family:monospace;background:#16213e;color:#c9d1d9;padding:5px 10px;border-radius:4px;margin-top:4px;font-size:12px;word-break:break-all">
+                                    @_telemetryExtUdpPreview
+                                </div>
+                            }
+                            else
+                            {
+                                <div style="font-size:12px;color:#f0a030;margin-top:4px">
+                                    ⚠️ @Loc.T("Keiner der zugewiesenen Extudp-Werte konnte in der Datei gefunden werden.", "None of the assigned extudp values could be found in the file.")
                                 </div>
                             }
                         </div>
@@ -1423,6 +1519,116 @@
                     <option value="fr">🇫🇷 Français</option>
                 </select>
             </div>
+            }
+        </div>
+
+        <!-- Erscheinungsbild / Appearance -->
+        <div class="settings-section @(IsOpen("appearance") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("appearance")'>🎨 @Loc.T("Erscheinungsbild", "Appearance") <span class="section-chevron">@(IsOpen("appearance") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("appearance")) {
+            <p class="theme-hint">
+                @Loc.T("Die Auswahl wird sofort als Vorschau angewendet – dauerhaft übernommen wird sie erst mit „Speichern“.",
+                       "Your selection is applied immediately as a preview – it becomes permanent only after “Save”.")
+            </p>
+
+            <div class="theme-preset-grid">
+                @foreach (var preset in ThemeCatalog.Presets)
+                {
+                    var presetColors = ThemeCatalog.ResolvePreset(preset.Id);
+                    <div class="theme-card @(IsActiveTheme(preset.Id) ? "theme-card-active" : "")"
+                         @onclick="() => SelectThemeAsync(preset.Id)">
+                        <div class="theme-card-name">
+                            @if (IsActiveTheme(preset.Id)) { <span class="theme-card-check">✔</span> }
+                            @Loc.T(preset.De, preset.En)
+                        </div>
+                        <div class="theme-swatches">
+                            @foreach (var color in ThemeSwatches(presetColors))
+                            {
+                                <span class="theme-swatch" style="background:@color"></span>
+                            }
+                        </div>
+                    </div>
+                }
+                @foreach (var theme in _model.Appearance.CustomThemes)
+                {
+                    var themeColors = ResolveCustomTheme(theme);
+                    <div class="theme-card @(IsActiveTheme(theme.Name) ? "theme-card-active" : "")"
+                         @onclick="() => SelectThemeAsync(theme.Name)">
+                        <div class="theme-card-name">
+                            @if (IsActiveTheme(theme.Name)) { <span class="theme-card-check">✔</span> }
+                            👤 @theme.Name
+                        </div>
+                        <div class="theme-swatches">
+                            @foreach (var color in ThemeSwatches(themeColors))
+                            {
+                                <span class="theme-swatch" style="background:@color"></span>
+                            }
+                        </div>
+                        <div class="theme-card-actions" @onclick:stopPropagation="true">
+                            <button type="button" class="btn-small" title="@Loc.T("Bearbeiten", "Edit")"
+                                    @onclick="() => EditTheme(theme)">✏️</button>
+                            <button type="button" class="btn-small" title="@Loc.T("Exportieren", "Export")"
+                                    @onclick="() => ExportThemeAsync(theme)">📤</button>
+                            <button type="button" class="btn-small btn-danger" title="@Loc.T("Löschen", "Delete")"
+                                    @onclick="() => DeleteThemeAsync(theme)">🗑</button>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="theme-actions-bar">
+                <button type="button" class="btn-secondary" @onclick="NewTheme">
+                    + @Loc.T("Eigenes Theme erstellen", "Create custom theme")
+                </button>
+                <label class="btn-secondary" style="cursor:pointer"
+                       title="@Loc.T("Theme-Datei (.mctheme.json) importieren", "Import theme file (.mctheme.json)")">
+                    📥 @Loc.T("Theme importieren", "Import theme")
+                    <InputFile accept=".json" style="display:none" OnChange="ImportThemeAsync" />
+                </label>
+            </div>
+            <p class="settings-hint" style="margin:0">
+                @Loc.T("Eigene Themes lassen sich als Datei exportieren und mit anderen Benutzern teilen.",
+                       "Custom themes can be exported as a file and shared with other users.")
+            </p>
+
+            @if (_themeError != null)
+            {
+                <div class="settings-error" style="margin-top:0.5rem">❌ @_themeError</div>
+            }
+
+            @if (_themeEditor != null)
+            {
+                <div class="theme-editor">
+                    <div class="settings-grid">
+                        <label>@Loc.T("Theme-Name", "Theme name")</label>
+                        <input type="text" maxlength="40" @bind="_themeEditor.Name" />
+                    </div>
+                    @foreach (var group in ThemeCatalog.Groups)
+                    {
+                        <details class="theme-editor-group" open="@(group.Id == "bg")">
+                            <summary>@Loc.T(group.De, group.En)</summary>
+                            <div class="theme-token-grid">
+                                @foreach (var token in ThemeCatalog.Tokens.Where(t => t.Group == group.Id))
+                                {
+                                    <label>@Loc.T(token.De, token.En)</label>
+                                    <input type="color" value="@GetEditorColor(token.Key)"
+                                           @onchange="e => SetEditorColorAsync(token.Key, e.Value?.ToString())" />
+                                    <input type="text" class="theme-hex" value="@GetEditorColor(token.Key)"
+                                           @onchange="e => SetEditorColorAsync(token.Key, e.Value?.ToString())" />
+                                }
+                            </div>
+                        </details>
+                    }
+                    <div class="theme-actions-bar" style="margin-top:0.75rem">
+                        <button type="button" class="btn-save" @onclick="SaveThemeEditorAsync">
+                            ✔ @Loc.T("Übernehmen", "Apply")
+                        </button>
+                        <button type="button" class="btn-cancel" @onclick="CancelThemeEditorAsync">
+                            @Loc.T("Abbrechen", "Cancel")
+                        </button>
+                    </div>
+                </div>
+            }
             }
         </div>
 
@@ -2290,12 +2496,15 @@
         var isFirst = _model.Nodes.Count == 0;
         _model.Nodes.Add(new NodeProfile
         {
-            Name       = $"Node {_model.Nodes.Count + 1}",
+            // The first node is the primary – its connection data mirrors the
+            // "Verbindung" section above (see PromoteToPrimary / ToSettings) and its
+            // fields are shown read-only in the UI, so no re-entry is needed.
+            Name       = isFirst ? Loc.T("Primär", "Primary") : $"Node {_model.Nodes.Count + 1}",
             Callsign   = _model.MyCallsign,
             DeviceIp   = _model.DeviceIp,
             DevicePort = _model.DevicePort,
             ListenIp   = _model.ListenIp,
-            ListenPort = _model.ListenPort + _model.Nodes.Count,
+            ListenPort = isFirst ? _model.ListenPort : _model.ListenPort + _model.Nodes.Count,
             IsPrimary  = isFirst
         });
     }
@@ -2303,15 +2512,29 @@
     private void RemoveNode(NodeProfile node)
     {
         _model.Nodes.Remove(node);
-        // If the removed node was primary, make the first remaining node primary.
+        // If the removed node was primary, promote the first remaining node.
         if (node.IsPrimary && _model.Nodes.Count > 0)
-            _model.Nodes[0].IsPrimary = true;
+            PromoteToPrimary(_model.Nodes[0]);
     }
 
-    private void SetPrimaryNode(NodeProfile node)
+    private void SetPrimaryNode(NodeProfile node) => PromoteToPrimary(node);
+
+    /// <summary>
+    /// Makes <paramref name="node"/> the primary node and moves its connection identity
+    /// (callsign, device/listen IP + port) up into the top-level "Verbindung" fields, which
+    /// are the single source of truth for the primary node's connection data. The previously
+    /// primary node keeps its own stored values and becomes a regular, editable secondary node.
+    /// </summary>
+    private void PromoteToPrimary(NodeProfile node)
     {
         foreach (var n in _model.Nodes) n.IsPrimary = false;
         node.IsPrimary = true;
+        node.Enabled = true;
+        _model.MyCallsign = node.Callsign;
+        _model.DeviceIp   = node.DeviceIp;
+        _model.DevicePort = node.DevicePort;
+        _model.ListenIp   = node.ListenIp;
+        _model.ListenPort = node.ListenPort;
     }
     // ──────────────────────────────────────────────────────────────────────
 
@@ -2479,15 +2702,45 @@
 
     private List<TelemetryPreviewRow>? _telemetryPreview;
     private List<string>? _telemetryMessages;
+    private string? _telemetryExtUdpPreview;
     private string? _telemetryPreviewError;
 
     private sealed record TelemetryPreviewRow(string Key, string RawValue, string Formatted, bool IsWarning);
 
+    /// <summary>
+    /// Maps WeatherRole to the target field in the native extudp "tele" telegram.
+    /// Mirrors <see cref="Services.MeshcomUdpService.RoleToExtUdpField"/> (kept in sync manually –
+    /// this copy only drives the settings-page preview, the real send path uses the service's).
+    /// </summary>
+    private static readonly Dictionary<string, string> ExtUdpRoleToField = new()
+    {
+        ["temp"] = "temp", ["humidity"] = "hum", ["pressure"] = "press",
+        ["temp2"] = "temp2", ["qnh"] = "qnh", ["gasres"] = "gasres", ["co2"] = "co2",
+    };
+
+    /// <summary>
+    /// Assigns <paramref name="role"/> to <paramref name="entry"/>'s WeatherRole. Any other
+    /// mapping entry that already held that role is cleared first, so a non-empty role is
+    /// always assigned to at most one entry (enforced client-side, mirrors a radio group) —
+    /// the backend's "first entry wins" fallback then only matters for entries loaded from an
+    /// import/backup that predates this check.
+    /// </summary>
+    private void SetWeatherRole(TelemetryMappingEntry entry, string role)
+    {
+        if (!string.IsNullOrEmpty(role))
+        {
+            foreach (var other in _model.TelemetryMapping.Where(m => m != entry && m.WeatherRole == role))
+                other.WeatherRole = string.Empty;
+        }
+        entry.WeatherRole = role;
+    }
+
     private async Task LoadTelemetryPreviewAsync()
     {
-        _telemetryPreview      = null;
-        _telemetryMessages     = null;
-        _telemetryPreviewError = null;
+        _telemetryPreview       = null;
+        _telemetryMessages      = null;
+        _telemetryExtUdpPreview = null;
+        _telemetryPreviewError  = null;
 
         var filePath = _model.TelemetryFilePath;
         if (string.IsNullOrWhiteSpace(filePath))
@@ -2586,6 +2839,37 @@
                     ? $"{locator ?? "TM"}: {b}"
                     : $"{locator ?? "TM"}/{i + 1}: {b}")
                 .ToList();
+
+            // Extudp preview: same role-based selection as MeshcomUdpService.BuildExtUdpValues
+            // (first mapping entry for a given role wins, matches the real send path).
+            if (_model.TelemetryExtUdpEnabled)
+            {
+                var roled = new Dictionary<string, double>();
+
+                foreach (var m in _model.TelemetryMapping)
+                {
+                    if (string.IsNullOrWhiteSpace(m.JsonKey)) continue;
+                    if (!ExtUdpRoleToField.TryGetValue(m.WeatherRole.Trim().ToLowerInvariant(), out var role)) continue;
+                    if (roled.ContainsKey(role)) continue;
+
+                    if (!root.TryGetProperty(m.JsonKey, out var vp)) continue;
+                    double v;
+                    if (vp.ValueKind == System.Text.Json.JsonValueKind.Number) v = vp.GetDouble();
+                    else if (vp.ValueKind == System.Text.Json.JsonValueKind.String &&
+                             double.TryParse(vp.GetString(), System.Globalization.NumberStyles.Float,
+                                 System.Globalization.CultureInfo.InvariantCulture, out var pv)) v = pv;
+                    else continue;
+
+                    roled[role] = v;
+                }
+
+                if (roled.Count > 0)
+                {
+                    var payload = new Dictionary<string, object> { ["type"] = "tele" };
+                    foreach (var kv in roled) payload[kv.Key] = kv.Value;
+                    _telemetryExtUdpPreview = System.Text.Json.JsonSerializer.Serialize(payload);
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -2837,6 +3121,7 @@
     {
         Loc.OnChange += StateHasChanged;
         TelnetService.OnChange += OnTelnetChange;
+        UdpService.OnStatusChange += OnUdpStatusChange;
 
         // Pick up fingerprint that arrived before this page was opened
         if (!string.IsNullOrEmpty(TelnetService.UnknownCertThumbprint))
@@ -2868,6 +3153,7 @@
                 ListenIp              = n.ListenIp,
                 ListenPort            = n.ListenPort,
                 IsPrimary             = n.IsPrimary,
+                Enabled               = n.Enabled,
                 TelnetCertThumbprint  = n.TelnetCertThumbprint,
                 TelnetPassword        = n.TelnetPassword,
                 ConsoleLogEnabled     = n.ConsoleLogEnabled
@@ -2938,7 +3224,21 @@
                 .ToList(),
             TelemetryApiEnabled    = s.TelemetryApiEnabled,
             TelemetryApiKey        = s.TelemetryApiKey,
+            TelemetryExtUdpEnabled            = s.TelemetryExtUdpEnabled,
+            TelemetryExtUdpMinIntervalMinutes = s.TelemetryExtUdpMinIntervalMinutes,
             Language               = s.Language,
+            Appearance             = new AppearanceSettings
+            {
+                ActiveTheme  = s.Appearance.ActiveTheme,
+                CustomThemes = s.Appearance.CustomThemes
+                    .Select(t => new CustomTheme
+                    {
+                        Name    = t.Name,
+                        BasedOn = t.BasedOn,
+                        Colors  = new Dictionary<string, string>(t.Colors)
+                    })
+                    .ToList()
+            },
             DbProvider              = s.Database.Provider,
             DbMySqlConnectionString = s.Database.MySqlConnectionString,
             DbMySqlTableName        = s.Database.MySqlTableName,
@@ -3030,7 +3330,10 @@
     {
         Loc.OnChange -= StateHasChanged;
         TelnetService.OnChange -= OnTelnetChange;
+        UdpService.OnStatusChange -= OnUdpStatusChange;
     }
+
+    private void OnUdpStatusChange() => InvokeAsync(StateHasChanged);
 
     private async Task SaveAsync()
     {
@@ -3232,6 +3535,213 @@
                 $"Import failed: JSON error – {ex.Message}");
         }
         catch (Exception ex) { _importError = $"Import: {ex.Message}"; }
+    }
+
+    // ── Erscheinungsbild / Themes ──────────────────────────────────────────
+
+    private CustomTheme? _themeEditor;          // working copy while the editor is open
+    private string? _themeEditorOriginalName;   // null = creating a new theme
+    private string? _themeError;
+
+    /// <summary>Tokens shown as preview swatches on the theme cards.</summary>
+    private static readonly string[] SwatchTokens =
+        ["bg-base", "bg-panel", "btn-bg", "link-soft", "ok", "warn", "error"];
+
+    private static IEnumerable<string> ThemeSwatches(Dictionary<string, string> colors) =>
+        SwatchTokens.Select(t => colors.TryGetValue(t, out var v) ? v : "#000000");
+
+    private bool IsActiveTheme(string name) =>
+        string.Equals(_model.Appearance.ActiveTheme, name, StringComparison.OrdinalIgnoreCase);
+
+    private static Dictionary<string, string> ResolveCustomTheme(CustomTheme theme)
+    {
+        var colors = ThemeCatalog.Tokens.ToDictionary(t => t.Key, t => t.Default);
+        foreach (var (key, value) in theme.Colors)
+            if (colors.ContainsKey(key) && ThemeCatalog.IsValidColor(value))
+                colors[key] = value.Trim();
+        return colors;
+    }
+
+    private async Task SelectThemeAsync(string name)
+    {
+        _model.Appearance.ActiveTheme = name;
+        await ApplyThemePreviewAsync();
+    }
+
+    /// <summary>Applies the currently selected (unsaved) theme as a live preview.</summary>
+    private async Task ApplyThemePreviewAsync()
+    {
+        var colors = ThemeCatalog.Resolve(_model.Appearance);
+        await JS.InvokeVoidAsync("applyThemeVars", colors);
+    }
+
+    private void NewTheme()
+    {
+        _themeError = null;
+        var baseName = Loc.T("Mein Theme", "My Theme");
+        var name = baseName;
+        var i = 2;
+        while (ThemeNameTaken(name, exceptName: null)) name = $"{baseName} {i++}";
+
+        _themeEditor = new CustomTheme
+        {
+            Name    = name,
+            BasedOn = ThemeCatalog.IsPreset(_model.Appearance.ActiveTheme)
+                          ? _model.Appearance.ActiveTheme : "dark",
+            Colors  = ThemeCatalog.Resolve(_model.Appearance)   // start from current look
+        };
+        _themeEditorOriginalName = null;
+    }
+
+    private void EditTheme(CustomTheme theme)
+    {
+        _themeError = null;
+        _themeEditor = new CustomTheme
+        {
+            Name    = theme.Name,
+            BasedOn = theme.BasedOn,
+            Colors  = ResolveCustomTheme(theme)   // full token set for the editor
+        };
+        _themeEditorOriginalName = theme.Name;
+    }
+
+    private bool ThemeNameTaken(string name, string? exceptName) =>
+        ThemeCatalog.Presets.Any(p => string.Equals(p.Id, name, StringComparison.OrdinalIgnoreCase)
+                                   || string.Equals(p.De, name, StringComparison.OrdinalIgnoreCase)
+                                   || string.Equals(p.En, name, StringComparison.OrdinalIgnoreCase))
+        || _model.Appearance.CustomThemes.Any(t =>
+               !string.Equals(t.Name, exceptName, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(t.Name, name, StringComparison.OrdinalIgnoreCase));
+
+    private string GetEditorColor(string key) =>
+        _themeEditor != null && _themeEditor.Colors.TryGetValue(key, out var v) ? v : "#000000";
+
+    private async Task SetEditorColorAsync(string key, string? value)
+    {
+        if (_themeEditor == null || string.IsNullOrWhiteSpace(value)) return;
+        value = value.Trim();
+        if (!ThemeCatalog.IsValidColor(value)) return;
+        _themeEditor.Colors[key] = value;
+        // Live preview of the single changed token
+        await JS.InvokeVoidAsync("applyThemeVars", new Dictionary<string, string> { [key] = value });
+    }
+
+    private async Task SaveThemeEditorAsync()
+    {
+        if (_themeEditor == null) return;
+        _themeError = null;
+
+        var name = _themeEditor.Name.Trim();
+        if (name.Length == 0)
+        {
+            _themeError = Loc.T("Bitte einen Theme-Namen angeben.", "Please enter a theme name.");
+            return;
+        }
+        if (ThemeNameTaken(name, _themeEditorOriginalName))
+        {
+            _themeError = Loc.T("Ein Theme mit diesem Namen existiert bereits.",
+                                "A theme with this name already exists.");
+            return;
+        }
+        _themeEditor.Name = name;
+
+        if (_themeEditorOriginalName != null)
+        {
+            var idx = _model.Appearance.CustomThemes.FindIndex(t =>
+                string.Equals(t.Name, _themeEditorOriginalName, StringComparison.OrdinalIgnoreCase));
+            if (idx >= 0) _model.Appearance.CustomThemes[idx] = _themeEditor;
+            else          _model.Appearance.CustomThemes.Add(_themeEditor);
+        }
+        else
+        {
+            _model.Appearance.CustomThemes.Add(_themeEditor);
+        }
+
+        _model.Appearance.ActiveTheme = name;
+        _themeEditor = null;
+        _themeEditorOriginalName = null;
+        await ApplyThemePreviewAsync();
+    }
+
+    private async Task CancelThemeEditorAsync()
+    {
+        _themeEditor = null;
+        _themeEditorOriginalName = null;
+        _themeError = null;
+        await ApplyThemePreviewAsync();   // discard editor preview, back to selected theme
+    }
+
+    private async Task DeleteThemeAsync(CustomTheme theme)
+    {
+        _model.Appearance.CustomThemes.Remove(theme);
+        if (IsActiveTheme(theme.Name))
+        {
+            _model.Appearance.ActiveTheme = "dark";
+            await ApplyThemePreviewAsync();
+        }
+    }
+
+    private async Task ExportThemeAsync(CustomTheme theme)
+    {
+        _themeError = null;
+        var payload = new CustomTheme { Name = theme.Name, BasedOn = theme.BasedOn, Colors = theme.Colors };
+        var json = System.Text.Json.JsonSerializer.Serialize(payload,
+            new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+        var safe = string.Join("_",
+            theme.Name.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries)).Trim();
+        if (safe.Length == 0) safe = "theme";
+        await JS.InvokeVoidAsync("downloadTextFile", $"{safe}.mctheme.json", json);
+    }
+
+    private async Task ImportThemeAsync(InputFileChangeEventArgs e)
+    {
+        _themeError = null;
+        try
+        {
+            using var stream = e.File.OpenReadStream(maxAllowedSize: 256 * 1024);
+            using var reader = new System.IO.StreamReader(stream);
+            var json = await reader.ReadToEndAsync();
+            if (string.IsNullOrWhiteSpace(json)) return;
+
+            var imported = System.Text.Json.JsonSerializer.Deserialize<CustomTheme>(json,
+                new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (imported is null || string.IsNullOrWhiteSpace(imported.Name) || imported.Colors.Count == 0)
+            {
+                _themeError = Loc.T("Import fehlgeschlagen: Keine gültige Theme-Datei.",
+                                    "Import failed: not a valid theme file.");
+                return;
+            }
+
+            // Only keep known tokens with valid colour values
+            var known = ThemeCatalog.Tokens.Select(t => t.Key).ToHashSet();
+            imported.Colors = imported.Colors
+                .Where(c => known.Contains(c.Key) && ThemeCatalog.IsValidColor(c.Value))
+                .ToDictionary(c => c.Key, c => c.Value.Trim());
+            if (imported.Colors.Count == 0)
+            {
+                _themeError = Loc.T("Import fehlgeschlagen: Keine gültigen Farbwerte gefunden.",
+                                    "Import failed: no valid colour values found.");
+                return;
+            }
+
+            imported.Name = imported.Name.Trim();
+            if (imported.Name.Length > 40) imported.Name = imported.Name[..40];
+            var name = imported.Name;
+            var i = 2;
+            while (ThemeNameTaken(name, exceptName: null)) name = $"{imported.Name} ({i++})";
+            imported.Name = name;
+
+            _model.Appearance.CustomThemes.Add(imported);
+            _model.Appearance.ActiveTheme = name;
+            await ApplyThemePreviewAsync();
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            _themeError = Loc.T($"Import fehlgeschlagen: JSON-Fehler – {ex.Message}",
+                                $"Import failed: JSON error – {ex.Message}");
+        }
+        catch (Exception ex) { _themeError = $"Import: {ex.Message}"; }
     }
 
     // ── Full Settings Backup / Restore (AES-256-CBC + PBKDF2) ─────────────
@@ -3453,6 +3963,7 @@
                     ListenIp              = n.ListenIp,
                     ListenPort            = n.ListenPort,
                     IsPrimary             = n.IsPrimary,
+                    Enabled               = n.Enabled,
                     TelnetCertThumbprint  = n.TelnetCertThumbprint,
                     TelnetPassword        = n.TelnetPassword,
                     ConsoleLogEnabled     = n.ConsoleLogEnabled
@@ -3514,8 +4025,10 @@
                 TelemetryMapping       = s.TelemetryMapping
                     .Select(m => new TelemetryMappingEntry { JsonKey = m.JsonKey, Label = m.Label, Unit = m.Unit, Decimals = m.Decimals, WeatherRole = m.WeatherRole })
                     .ToList(),
-                TelemetryApiEnabled = s.TelemetryApiEnabled,
-                TelemetryApiKey     = s.TelemetryApiKey,
+                TelemetryApiEnabled    = s.TelemetryApiEnabled,
+                TelemetryApiKey        = s.TelemetryApiKey,
+                TelemetryExtUdpEnabled            = s.TelemetryExtUdpEnabled,
+                TelemetryExtUdpMinIntervalMinutes = s.TelemetryExtUdpMinIntervalMinutes,
                 Language            = s.Language,
                 DbProvider              = s.Database.Provider,
                 DbMySqlConnectionString = s.Database.MySqlConnectionString,
@@ -3634,7 +4147,12 @@
         public List<TelemetryMappingEntry> TelemetryMapping { get; set; } = [];
         public bool   TelemetryApiEnabled    { get; set; }
         public string TelemetryApiKey        { get; set; } = string.Empty;
+        public bool   TelemetryExtUdpEnabled            { get; set; }
+        public int    TelemetryExtUdpMinIntervalMinutes { get; set; } = 10;
         public string Language               { get; set; } = "de";
+
+        // Appearance / Themes
+        public AppearanceSettings Appearance { get; set; } = new();
 
         // Database
         public string DbProvider              { get; set; } = DatabaseSettings.ProviderNone;
@@ -3737,8 +4255,21 @@
             };
         }
 
-        public MeshcomSettings ToSettings() => new()
+        public MeshcomSettings ToSettings()
         {
+            // The primary node's connection identity is always sourced from the top-level
+            // "Verbindung" fields (single source of truth) rather than re-entered per node.
+            var primary = Nodes.FirstOrDefault(n => n.IsPrimary);
+            if (primary is not null)
+            {
+                primary.Callsign   = MyCallsign;
+                primary.DeviceIp   = DeviceIp;
+                primary.DevicePort = DevicePort;
+                primary.ListenIp   = ListenIp;
+                primary.ListenPort = ListenPort;
+            }
+            return new()
+            {
             Nodes               = Nodes,
             ListenIp            = ListenIp,
             ListenPort          = ListenPort,
@@ -3783,7 +4314,10 @@
             TelemetryMapping       = TelemetryMapping.ToList(),
             TelemetryApiEnabled    = TelemetryApiEnabled && WeatherApi.Provider == MeshcomWebDesk.Models.WeatherProvider.None,
             TelemetryApiKey        = TelemetryApiKey,
+            TelemetryExtUdpEnabled            = TelemetryExtUdpEnabled,
+            TelemetryExtUdpMinIntervalMinutes = TelemetryExtUdpMinIntervalMinutes,
             Language               = Language,
+            Appearance             = Appearance,
             Database               = ToDbSettings(),
             Webhook = new WebhookSettings
             {
@@ -3855,6 +4389,7 @@
             GroupLabels = GroupLabels,
             WeatherApi = WeatherApi,
             LicenseToken = LicenseToken
-        };
+            };
+        }
     }
 }

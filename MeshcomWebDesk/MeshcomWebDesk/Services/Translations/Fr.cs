@@ -135,6 +135,8 @@ internal static class Fr
                                     = "Mise en évidence LoRa debug on/off",
         ["Start OTA update – sends --ota-update to node and opens OTA web server"]
                                     = "Démarrer mise à jour OTA – envoie --ota-update au nœud",
+        ["Open the node's default web interface"]
+                                    = "Ouvrir l'interface web par défaut du nœud",
         ["Reboot node – sends --reboot to node"]
                                     = "Redémarrer le nœud – envoie --reboot au nœud",
         ["Last seen"]               = "Vu en dernier",
@@ -360,6 +362,26 @@ internal static class Fr
         ["Telemetry interval (minutes)"]
                                     = "Intervalle télémétrie (minutes)",
         ["Temperature"]             = "Température",
+        ["Send native telemetry (extudp)"] = "Envoyer la télémétrie native (extudp)",
+        ["Sends the values marked with a role below (up to 7: temp, humidity, pressure, temp 2, QNH, gas resistance, CO2) as a native telemetry telegram directly to the node as soon as at least one value changes (not time-scheduled). The node writes them into its sensor variables and immediately triggers a new position beacon whose comment includes the values just like real onboard sensors would. It ignores the telegram while it has real sensor hardware (BME280/BMP3xx/AHT20/SHT21) installed."]
+                                    = "Envoie les valeurs marquées ci-dessous avec un rôle (jusqu'à 7 : temp., humidité, pression, temp. 2, QNH, résistance gaz, CO2) sous forme de télégramme de télémétrie natif directement au nœud dès qu'au moins une valeur change (non planifié dans le temps). Le nœud les écrit dans ses propres variables de capteur et déclenche aussitôt une nouvelle balise de position dont le commentaire inclut les valeurs comme le ferait un capteur embarqué réel. Il ignore le télégramme tant qu'il dispose d'un capteur matériel réel (BME280/BMP3xx/AHT20/SHT21) installé.",
+        ["Minimum interval (minutes)"]
+                                    = "Intervalle minimum (minutes)",
+        ["The node applies no throttling of its own – this minimum interval between two extudp sends protects against flooding the mesh when a value jitters."]
+                                    = "Le nœud n'applique aucune limitation propre : cet intervalle minimum entre deux envois extudp protège contre la saturation de la mesh lorsqu'une valeur fluctue.",
+        ["Role"]                    = "Rôle",
+        ["Role for the map popup and the native extudp telegram"]
+                                    = "Rôle pour la popup de la carte et le télégramme extudp natif",
+        ["Role: drives the map popup (temp/humidity/pressure) and/or the target field in the native extudp telegram"]
+                                    = "Rôle : détermine la popup de la carte (temp./humidité/pression) et/ou le champ cible dans le télégramme extudp natif",
+        ["Temp. 2"]                 = "Temp. 2",
+        ["Gas resistance"]          = "Résistance gaz",
+        ["Extudp is active, but no value has an assigned role."]
+                                    = "Extudp est actif, mais aucune valeur n'a de rôle attribué.",
+        ["Preview native telemetry telegram (extudp)"]
+                                    = "Aperçu du télégramme de télémétrie natif (extudp)",
+        ["None of the assigned extudp values could be found in the file."]
+                                    = "Aucune des valeurs extudp attribuées n'a été trouvée dans le fichier.",
 
         // Settings – Database
         ["Database"]                = "Base de données",
@@ -869,6 +891,31 @@ internal static class Fr
         ["No stations heard yet."]  = "Aucune station encore entendue.",
         ["No, it's not that good"]  = "Non, ce n'est pas si bon",
         ["Searching…"]              = "Recherche en cours…",
+
+        // Appearance / Themes
+        ["Appearance"] = "Apparence",
+        ["Your selection is applied immediately as a preview – it becomes permanent only after “Save”."] = "La sélection est appliquée immédiatement en aperçu – elle ne devient permanente qu'après « Enregistrer ».",
+        ["Create custom theme"] = "Créer un thème personnalisé",
+        ["Import theme"] = "Importer un thème",
+        ["Import theme file (.mctheme.json)"] = "Importer un fichier de thème (.mctheme.json)",
+        ["Custom themes can be exported as a file and shared with other users."] = "Les thèmes personnalisés peuvent être exportés sous forme de fichier et partagés avec d'autres utilisateurs.",
+        ["Theme name"] = "Nom du thème",
+        ["My Theme"] = "Mon thème",
+        ["Please enter a theme name."] = "Veuillez saisir un nom de thème.",
+        ["A theme with this name already exists."] = "Un thème portant ce nom existe déjà.",
+        ["Import failed: not a valid theme file."] = "Échec de l'importation : fichier de thème non valide.",
+        ["Import failed: no valid colour values found."] = "Échec de l'importation : aucune valeur de couleur valide trouvée.",
+        ["MeshCom Dark (default)"] = "MeshCom Dark (par défaut)",
+        ["Midnight (OLED)"] = "Minuit (OLED)",
+        ["Light"] = "Clair",
+        ["High contrast"] = "Contraste élevé",
+        ["Backgrounds"] = "Arrière-plans",
+        ["Accents & structure"] = "Accents et structure",
+        ["Buttons"] = "Boutons",
+        ["Links & callsigns"] = "Liens et indicatifs",
+        ["Status colours"] = "Couleurs d'état",
+        ["Messages & notices"] = "Messages et avis",
+        ["Monitor & lists"] = "Moniteur et listes",
     };
 }
 

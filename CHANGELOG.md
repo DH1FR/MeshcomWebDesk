@@ -1,5 +1,25 @@
 ﻿# Changelog
 
+## [1.14.0] – 2026-07-24
+
+### Features
+- **Appearance settings with themes** – New 🎨 *Appearance* section in Settings: choose between four built-in themes (**MeshCom Dark** – the classic look and default, **Midnight (OLED)**, **Light**, **High Contrast**) or create your own. Custom themes are edited in a grouped colour editor (backgrounds, accents, buttons, text, links, status colours, messages, monitor), applied live as a preview and saved under a name. Themes can be **exported/imported as `.mctheme.json` files** so users can share them. Technically the entire UI stylesheet was refactored to semantic CSS custom properties; the default theme renders identical to previous releases.
+- **Native extudp telemetry** – Selected telemetry values (temp, humidity, pressure, temp 2, QNH, gas resistance, CO2) can now be sent directly to the node as a native `"type":"tele"` UDP telegram instead of only as chat text, using the fixed field names the node's firmware expects. Sends happen on value change rather than on a fixed schedule. WebDesk now also checks whether the node's firmware actually applies the values (by watching for its own telemetry echo) and automatically disables the feature if it doesn't, showing the confirmation status in Settings.
+- **Additional nodes can be disabled** – Each node under *Additional Nodes* now has an enable/disable checkbox so a node can be taken out of active use (registration, sending, chat switcher, telnet console) temporarily without deleting its configuration. The primary node's connection fields (callsign, device/listen IP + port) are now read-only there and mirror the *Connection* section above, so they no longer need to be entered twice; promoting a different node to primary moves its connection data up into that section instead.
+- **NET Console**: button to open a node's default web interface directly.
+- **Toolbar**: *Connect* button shown when disconnected, not just *Disconnect*.
+- IT/ES/FR translations added for the extudp telemetry UI.
+
+### Bugfixes
+- Own position/telemetry beacons now shown in the monitor, not just other stations'.
+- Duplicate `WeatherRole` assignments in the telemetry mapping table are cleared automatically.
+- Extudp telemetry now logs why a send was skipped instead of failing silently.
+- `TelemetryExtUdpEnabled` and the extudp slot are now persisted correctly on save.
+- Spectrum chart no longer accumulates points from previous scans.
+- Own-message callsign and chip contrast (Console Command Helper etc.) fixed in the light theme.
+
+---
+
 ## [1.12.4] – 2026-06-14
 
 ### Features
