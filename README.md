@@ -128,17 +128,20 @@ Each node profile contains:
 
 | Field | Description |
 |---|---|
+| **Enabled** | Checkbox to take a node out of active use (registration, sending, chat switcher, telnet console) temporarily without deleting its configuration. The primary node cannot be disabled. |
 | **Name** | Display name shown in the node switcher (e.g. `Balkon`, `Auto`) |
-| **Callsign** | Own callsign used for outgoing messages on this node (e.g. `OE1ABC-2`) |
-| **Device IP** | IP address of the MeshCom node |
+| **Callsign** | Own callsign used for outgoing messages on this node (e.g. `OE1ABC-2`). For the primary node this is read-only and mirrors **Settings → Connection** (see below). |
+| **Device IP** | IP address of the MeshCom node. For the primary node this is read-only and mirrors **Settings → Connection**. |
 | **Device Port** | UDP port on the node (default `1799`) |
-| **Listen IP** | Local bind address (`0.0.0.0` = all interfaces) |
+| **Listen IP** | Local bind address (`0.0.0.0` = all interfaces). For the primary node this is read-only and mirrors **Settings → Connection**. |
 | **Listen Port** | Local UDP port to receive packets from this node (default `1799`) |
 | **Primary** | Exactly one node must be marked primary – only the primary node drives MH list, Live Map, beacons, telemetry, bot and OTA/reboot |
 | **TLS Certificate Fingerprint** | SHA-256 fingerprint of this node's self-signed TLS certificate; filled automatically via *Trust & Save* on first connect |
 | **TLS Password** | Console password for this node (encrypted at rest with DPAPI) |
 
 > 💡 When multiple nodes share the same UDP port (`1799`), incoming packets are routed to the correct node by the **sender's IP address** – no port forwarding required.
+
+> 💡 The primary node's connection data (callsign, device/listen IP + port) lives in **Settings → Connection**, not in its Additional Nodes card, so it's never entered twice. Promoting a different node to primary (**Set Primary**) moves that node's connection data up into the Connection section instead, and the previous primary becomes a regular, editable secondary node.
 
 #### Node behaviour
 
@@ -148,6 +151,7 @@ Each node profile contains:
 - **Auto-replies and bot replies** are sent back through the same node that received the triggering message
 - **MH list, Live Map, beacon, bot, telemetry, OTA and reboot** only operate on the **primary node**
 - A **node switcher** dropdown appears in the Chat header whenever more than one node is configured; switching changes the visible chat tabs and monitor without reconnecting UDP
+- **Disabled nodes** are excluded from UDP registration/sending, the chat node switcher and the telnet console selector, but keep their saved configuration for later re-enabling
 
 #### State persistence
 
@@ -949,6 +953,13 @@ This client communicates with the MeshCom node using the **EXTUDP JSON protocol*
 | `msg`  | Chat message (direct, broadcast, group, ACK) | Chat tab + monitor |
 | `pos`  | Position beacon with GPS coordinates | MH list + monitor |
 | `tele` | Telemetry (temperature, humidity, pressure, battery) | MH list + monitor |
+
+> 💡 WebDesk can also **send** a `"type":"tele"` telegram to the node to inject external
+> sensor values (temp, humidity, pressure, temp 2, QNH, gas resistance, CO2) into its own
+> position beacon, on firmware that supports it – see
+> [`docs/ext_udp_telemetry_guide.md`](docs/ext_udp_telemetry_guide.md). WebDesk verifies via
+> the node's own telemetry echo that the values were actually applied and disables the
+> feature automatically if not (shown live in **Settings → Telemetry**).
 
 ### Example packets
 

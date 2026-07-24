@@ -16,7 +16,10 @@ sensor data** to any monitor/dashboard.
 ## 1. Prerequisites
 
 - The node runs firmware that includes `handleExternTelemetry()` in
-  `src/extudp_functions.cpp`.
+  `src/extudp_functions.cpp`. This is a recent addition and may not be in the
+  firmware version you are currently running — if MeshComWebDesk reports that
+  the node never confirmed the values (see section 4), that is the most likely
+  cause.
 - The node and the computer running MeshComWebDesk are on **the same
   WiFi/LAN**.
 - UDP port `1799` is not blocked by a firewall between the two.
@@ -136,6 +139,18 @@ for the exact cause:
 
 - `[EXT] tele ignored: real sensor hardware detected on this node`
 - `[EXT] tele missing recognized fields (temp/hum/press/temp2/qnh/gasres/co2)`
+
+**Without serial console access:** MeshComWebDesk also checks this automatically. After
+sending, it watches for the node's own next telemetry echo (which firmware that supports
+this feature emits immediately, right after re-beaconing the position) and compares it
+against the values just sent. **Settings → Telemetry** shows a live status next to the
+"Extudp enabled" toggle:
+
+- ✅ confirmed by the node
+- ⚠️ not confirmed – automatically disabled (older firmware without this feature, and
+  nodes with real sensor hardware installed, look identical from here: no matching echo
+  ever arrives)
+- ℹ️ not checked yet – resolved on the next send
 
 ---
 
