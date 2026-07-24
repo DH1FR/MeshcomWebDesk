@@ -1158,6 +1158,21 @@
                                   "Sends the values marked with a role below (up to 7: temp, humidity, pressure, temp 2, QNH, gas resistance, CO2) as a native telemetry telegram directly to the node as soon as at least one value changes (not time-scheduled). The node writes them into its sensor variables and immediately triggers a new position beacon whose comment includes the values just like real onboard sensors would. It ignores the telegram while it has real sensor hardware (BME280/BMP3xx/AHT20/SHT21) installed.")
                     </div>
 
+                    var extUdpConfirmed = UdpService.Status.ExtUdpTelemetryConfirmed;
+                    <span></span>
+                    @if (extUdpConfirmed == true)
+                    {
+                        <small style="color:#3fb950">✅ @Loc.T("Vom Node bestätigt – die gesendeten Werte wurden im eigenen Beacon zurückgemeldet.", "Confirmed by the node – it echoed back the values we sent in its own beacon.")</small>
+                    }
+                    else if (extUdpConfirmed == false)
+                    {
+                        <small style="color:#f85149">⚠️ @Loc.T("Der Node hat die gesendeten Werte nicht bestätigt und wurde deshalb automatisch deaktiviert. Vermutlich unterstützt die Firmware das native \"tele\"-Telegramm noch nicht (oder es ist echte Sensor-Hardware verbaut).", "The node did not confirm the sent values, so this was disabled automatically. Its firmware likely does not yet support the native \"tele\" telegram (or it has real sensor hardware installed).")</small>
+                    }
+                    else
+                    {
+                        <small style="color:#8b949e">ℹ️ @Loc.T("Wird beim nächsten Senden geprüft, ob der Node die Werte tatsächlich übernimmt.", "Will be checked on the next send whether the node actually applies the values.")</small>
+                    }
+
                     <label>
                         @Loc.T("Mindestabstand (Minuten)", "Minimum interval (minutes)")<br />
                         <small>@Loc.T("Der Node bremst selbst nicht – dieser Mindestabstand zwischen zwei extudp-Sendungen schützt bei jitternden Werten vor einer gefluteten Mesh.", "The node applies no throttling of its own – this minimum interval between two extudp sends protects against flooding the mesh when a value jitters.")</small>
@@ -3106,6 +3121,7 @@
     {
         Loc.OnChange += StateHasChanged;
         TelnetService.OnChange += OnTelnetChange;
+        UdpService.OnStatusChange += OnUdpStatusChange;
 
         // Pick up fingerprint that arrived before this page was opened
         if (!string.IsNullOrEmpty(TelnetService.UnknownCertThumbprint))
@@ -3314,7 +3330,10 @@
     {
         Loc.OnChange -= StateHasChanged;
         TelnetService.OnChange -= OnTelnetChange;
+        UdpService.OnStatusChange -= OnUdpStatusChange;
     }
+
+    private void OnUdpStatusChange() => InvokeAsync(StateHasChanged);
 
     private async Task SaveAsync()
     {

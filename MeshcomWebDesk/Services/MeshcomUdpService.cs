@@ -28,6 +28,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     private readonly BotCommandService _botCommandService;
     private readonly QsoSummaryService _qsoSummaryService;
     private readonly NodeManager _nodeManager;
+    private readonly SettingsService _settingsService;
     private MeshcomSettings _settings;
     private UdpClient? _udpClient;
 
@@ -37,6 +38,25 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     /// nothing has been sent yet in this process (not persisted across restarts).
     /// </summary>
     private List<(string Field, double Value)>? _lastExtUdpSentValues;
+
+    /// <summary>
+    /// Values (restricted to the subset of <see cref="RoleToExtUdpField"/> that WebDesk can also
+    /// parse back out of a telemetry echo: temp/hum/temp2 – pressure is excluded because the
+    /// node's own qnh/qfe preference logic makes a clean round-trip comparison ambiguous) from the
+    /// most recent extudp "tele" send, awaiting confirmation via the node's own next telemetry
+    /// echo. Set to <c>null</c> once confirmed or once <see cref="ExtUdpProbeTimeout"/> elapses.
+    /// </summary>
+    private List<(string Field, double Value)>? _pendingExtUdpProbe;
+
+    /// <summary>UTC send time of <see cref="_pendingExtUdpProbe"/>, for the timeout check.</summary>
+    private DateTime _pendingExtUdpProbeSentAt;
+
+    /// <summary>
+    /// How long to wait for the node's own telemetry echo before concluding the firmware does not
+    /// support the extudp "tele" interface. The node re-beacons its position immediately after
+    /// accepting the values, so this only needs to cover UDP/LoRa round-trip latency.
+    /// </summary>
+    private static readonly TimeSpan ExtUdpProbeTimeout = TimeSpan.FromSeconds(20);
 
     /// <summary>
     /// Maps <see cref="TelemetryMappingEntry.WeatherRole"/> to the fixed field name the node's
@@ -109,7 +129,8 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         QrzService qrzService,
         BotCommandService botCommandService,
         QsoSummaryService qsoSummaryService,
-        NodeManager nodeManager)
+        NodeManager nodeManager,
+        SettingsService settingsService)
     {
         _logger              = logger;
         _chatService         = chatService;
@@ -117,6 +138,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         _botCommandService   = botCommandService;
         _qsoSummaryService   = qsoSummaryService;
         _nodeManager         = nodeManager;
+        _settingsService     = settingsService;
         _settings            = settings.CurrentValue;
         settings.OnChange(s =>
         {
@@ -134,6 +156,15 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                     p.First.Enabled    != p.Second.Enabled);
             if (nodesChanged)
                 _ = RegisterWithDeviceAsync();
+
+            // Re-arm the firmware-capability check when the user turns extudp telemetry back on
+            // (e.g. after flashing supporting firmware), instead of leaving a stale "not
+            // confirmed" status showing until the next send resolves it.
+            if (!prev.TelemetryExtUdpEnabled && s.TelemetryExtUdpEnabled)
+            {
+                Status.ExtUdpTelemetryConfirmed = null;
+                NotifyStatusChange();
+            }
         });
 
         _chatService.OnNewDirectTab += (callsign, msg) => _ = SendAutoReplyAsync(callsign, msg.Timestamp, msg.NodeId);
@@ -283,6 +314,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                                 Status.LastRxFrom = message.From;
                                 NotifyStatusChange();
                                 _chatService.AddTelemetry(message);
+                                EvaluateExtUdpProbe(message);
                             }
                             else
                             {
@@ -1183,6 +1215,17 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             // reflects real airtime usage.
             _lastExtUdpSentValues = values.Select(kv => (kv.Key, kv.Value)).ToList();
             _lastExtUdpSentTime   = DateTime.UtcNow;
+
+            // Arm the firmware-capability probe (see EvaluateExtUdpProbe / the timeout sweep in
+            // CheckAndSendExtUdpIfChangedAsync) with only the fields WebDesk can read back out of
+            // a telemetry echo unambiguously.
+            var probeFields = values.Where(kv => kv.Key is "temp" or "hum" or "temp2")
+                                     .Select(kv => (kv.Key, kv.Value)).ToList();
+            if (probeFields.Count > 0)
+            {
+                _pendingExtUdpProbe       = probeFields;
+                _pendingExtUdpProbeSentAt = DateTime.UtcNow;
+            }
         }
         catch (Exception ex)
         {
@@ -1201,6 +1244,17 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     /// </summary>
     private async Task CheckAndSendExtUdpIfChangedAsync(MeshcomSettings s)
     {
+        // Firmware-capability check: if the node never echoed back the values from the last
+        // probe within the timeout, it does not implement the extudp "tele" interface (or has
+        // real sensor hardware installed, which behaves identically from here) – stop sending.
+        if (_pendingExtUdpProbe is not null && DateTime.UtcNow - _pendingExtUdpProbeSentAt > ExtUdpProbeTimeout)
+        {
+            _pendingExtUdpProbe = null;
+            await DisableExtUdpTelemetryAsync(
+                "the node did not echo back matching values within the expected time – its firmware likely does not implement the extudp \"tele\" interface (or has real sensor hardware installed)");
+            return;
+        }
+
         if (!s.TelemetryEnabled || !s.TelemetryExtUdpEnabled) return;
         if (!s.TelemetryMapping.Any(e => RoleToExtUdpField.ContainsKey(e.WeatherRole.Trim().ToLowerInvariant()))) return;
 
@@ -1233,6 +1287,69 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             return; // changed, but throttled – retried on the next tick as long as the change persists
 
         await SendExtUdpTeleAsync(s);
+    }
+
+    /// <summary>
+    /// Compares an incoming own-node telemetry echo against <see cref="_pendingExtUdpProbe"/>
+    /// (armed by <see cref="SendExtUdpTeleAsync"/>). Confirms extudp telemetry support the first
+    /// time a matching echo arrives; stale/unrelated echoes (e.g. from a periodic beacon that
+    /// happens to arrive while a probe is pending) are ignored rather than treated as a mismatch,
+    /// so only a full timeout (handled in <see cref="CheckAndSendExtUdpIfChangedAsync"/>) counts
+    /// as "not supported".
+    /// </summary>
+    private void EvaluateExtUdpProbe(MeshcomMessage message)
+    {
+        if (_pendingExtUdpProbe is null) return;
+        if (DateTime.UtcNow - _pendingExtUdpProbeSentAt > ExtUdpProbeTimeout)
+        {
+            _pendingExtUdpProbe = null; // timeout sweep in CheckAndSendExtUdpIfChangedAsync handles disabling
+            return;
+        }
+
+        const double tolerance = 0.1;
+        bool allMatch = _pendingExtUdpProbe.All(p => p.Field switch
+        {
+            "temp"  => message.Temp1.HasValue    && Math.Abs(message.Temp1.Value    - p.Value) < tolerance,
+            "hum"   => message.Humidity.HasValue && Math.Abs(message.Humidity.Value - p.Value) < tolerance,
+            "temp2" => message.Temp2.HasValue    && Math.Abs(message.Temp2.Value    - p.Value) < tolerance,
+            _       => true
+        });
+        if (!allMatch) return; // not our echo (yet) – keep waiting until it matches or times out
+
+        _pendingExtUdpProbe = null;
+        if (Status.ExtUdpTelemetryConfirmed != true)
+        {
+            Status.ExtUdpTelemetryConfirmed = true;
+            _logger.LogInformation("Extudp telemetry confirmed: the node echoed back the values we sent.");
+            NotifyStatusChange();
+        }
+    }
+
+    /// <summary>
+    /// Turns off <see cref="MeshcomSettings.TelemetryExtUdpEnabled"/> and persists it, so the app
+    /// stops wasting mesh airtime on a node whose firmware does not apply the values (see
+    /// <see cref="CheckAndSendExtUdpIfChangedAsync"/>'s timeout sweep). The user can re-enable it
+    /// manually in Settings at any time (e.g. after flashing supporting firmware), which re-arms
+    /// the probe on the next send.
+    /// </summary>
+    private async Task DisableExtUdpTelemetryAsync(string reason)
+    {
+        if (!_settings.TelemetryExtUdpEnabled) return; // already off
+
+        _logger.LogWarning(
+            "Disabling extudp telemetry automatically: {Reason}.", reason);
+        Status.ExtUdpTelemetryConfirmed = false;
+        NotifyStatusChange();
+
+        _settings.TelemetryExtUdpEnabled = false;
+        try
+        {
+            await _settingsService.SaveMeshcomSettingsAsync(_settings);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to persist automatic extudp telemetry disable");
+        }
     }
 
     private void SetTelemetryStatus(bool active, DateTime? nextSend)
