@@ -223,6 +223,17 @@ Each node profile contains:
 - **Collapsible sections** – all 14 setting sections can be individually expanded/collapsed; all start collapsed so the page is compact by default; state is saved in `localStorage` and **restored on every visit**
 - **Encrypted sensitive fields** – `MySqlConnectionString`, `InfluxToken`, `Qrz.Password` and `TelemetryApiKey` are encrypted with the ASP.NET Core Data Protection API before being written to `appsettings.override.json` (prefix `dp:`); existing plain-text values continue to work and are encrypted on the next save
 
+### 🎨 Appearance & Themes
+- **Settings → 🎨 Appearance** – choose between four built-in themes or create your own:
+  - **MeshCom Dark** (default) – the classic look
+  - **Midnight (OLED)** – near-black backgrounds for OLED displays
+  - **Light**
+  - **High Contrast**
+- **Live preview** – selecting a theme applies it immediately; it only becomes permanent after **Save**
+- **Custom themes** – edited in a grouped colour editor (backgrounds, accents, buttons, text, links, status colours, messages, monitor), starting from any existing theme's colours, and saved under a name
+- **Export / Import** – custom themes can be exported as `.mctheme.json` files and imported again, so users can share their theme with others
+- The entire UI stylesheet uses semantic CSS custom properties; the default theme renders identical to pre-1.14.0 releases
+
 ### 🌐 UI Language
 - Full multilingual interface: **Deutsch 🇩🇪**, **English 🇬🇧**, **Français 🇫🇷**, **Italiano 🇮🇹**, **Español 🇪🇸**
 - Language is selected in **Settings → Language** and persisted in `appsettings.override.json`
@@ -661,7 +672,8 @@ Clicking it opens a modal dialog with **four tabs**:
 
   | Category | What is backed up |
   |---|---|
-  | **Multi-Node profiles** | All node profiles (`Name`, `Callsign`, `Device IP/Port`, `Listen IP/Port`, `Primary` flag, TLS fingerprint, TLS password) |
+  | **Appearance** | Active theme and all custom themes (name + full colour set) |
+  | **Multi-Node profiles** | All node profiles (`Name`, `Callsign`, `Device IP/Port`, `Listen IP/Port`, `Primary` flag, `Enabled` flag, TLS fingerprint, TLS password) |
   | **Connection** | Primary `ListenIp`, `ListenPort`, `DeviceIp`, `DevicePort`, `MyCallsign` |
   | **Console** | `TelnetEnabled`, `ConsoleMode`, `TelnetPort`, `TelnetPassword`, `TelnetCertThumbprint`, `SerialPortName`, `SerialBaudRate` |
   | **Chat & Groups** | `Groups`, `WatchCallsigns`, watch options, `GroupLabels`, `OwnMessagesAlignLeft`, `TxCooldownSeconds`, `GatewayHighlightEnabled` |
