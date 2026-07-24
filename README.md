@@ -325,7 +325,7 @@ Automatically announces recurring events (e.g. club meetings) to a configured gr
   - **Monthly** – fixed day of month (e.g. every 15th)
   - **Nth weekday** – e.g. 2nd Tuesday of the month
   - **Last weekday** – e.g. last Friday of the month
-- **Announcement timing** – configurable lead time in days and/or hours before the event; optionally also at the exact event time
+- **Announcement timing** – any number of lead times per event as a comma-separated list, e.g. `3d, 24h, 2h` (units: `d` = days, `h` = hours, `m` = minutes; no unit = hours); optionally also at the exact event time
 - **Message placeholders:** `{title}`, `{event_date}`, `{event_time}`, `{days_until}`, `{hours_until}`  
   Example: `📅 {title} on {event_date} at {event_time} – in {days_until} days!`
 - **Next occurrence preview** – Settings shows a live preview of the next calculated send date
@@ -480,17 +480,27 @@ Automatically announces recurring events (e.g. club meetings) to a configured gr
   | `{my-freq}` | `433.175 MHz` |
 
 ### 📊 Telemetry (Telemetrie-Sender)
-- **Periodic telemetry messages**
+- **Two independent delivery paths**, both read from the same mapping table and the same source (file or HTTP POST):
+  - **Chat-text telemetry** – sent on the configured schedule (`TelemetryScheduleHours`), as a readable `TM:` message to a group/callsign
+  - **Native extudp telemetry** – sent directly to the node as a `"type":"tele"` UDP telegram (see below), on value change rather than on a schedule
 - **Source-agnostic**: any system can write the JSON file – Home Assistant, Node-RED, MQTT bridge, shell script, etc.
 - **HTTP POST endpoint** `POST /api/telemetry` – external sources (e.g. Home Assistant) can push JSON directly; no shared filesystem needed; protected by optional `X-Api-Key` header
 - **Flexible mapping** – unlimited key → label / unit / decimal-places pairs, fully configurable in the Settings UI without touching source code
-- **Auto-split**: if all values exceed 150 chars, messages are automatically split into `TM1:` / `TM2:` / … with a 2-second pause between packets
+- **Role column** – each mapping row can additionally be assigned one of 7 fixed roles (`temp`/`humidity`/`pressure`/`temp2`/`qnh`/`gasres`/`co2`); roles drive both the map popup and the native extudp telegram fields (only one row per role is used)
+- **Auto-split** (chat-text path): if all values exceed 150 chars, messages are automatically split into `TM1:` / `TM2:` / … with a 2-second pause between packets
 - **Destination** – group (e.g. `#262`), broadcast (`*`) or direct callsign (e.g. `OE1KBC-1`)
 - **Status indicator** in the status bar analogue to the beacon
 - **Live preview** in Settings: shows current file values, formatted output per entry, and exact LoRa message(s)
 - **Instant send button** in Settings for immediate test send without waiting for the interval
 - Example messages: `TM: 🌡=10.7C 🧭=1022hPa 💧=86% 🌬=0.0m/s` or split into `TM1:` / `TM2:` when needed
 - 📖 **[Home Assistant integration guide](docs/homeassistant-telemetry.md)** – complete example with weather station sensors, `rest_command` and automation
+
+#### 📡 Native extudp telemetry
+- **"Extudp enabled" toggle** – sends role-assigned values directly to the node as a `"type":"tele"` UDP telegram instead of (or alongside) the chat-text message; the node writes them straight into its own sensor variables, so they appear in its next position beacon exactly like real sensor hardware
+- **Send-on-change** – a send only happens when at least one role-assigned value differs from the last successfully sent set, throttled by a configurable minimum interval (the node applies no rate limiting of its own)
+- **Firmware-capability check** – after each send, WebDesk watches for the node's own next telemetry echo and compares it against the values just sent; if no matching echo arrives within 20 s, extudp telemetry is disabled automatically and persisted (the confirmation status ✅/⚠️/ℹ️ is shown live next to the toggle)
+- Requires firmware with `handleExternTelemetry()` support and a node with **no real onboard sensor hardware** (real sensors take priority and the external values are ignored)
+- 📖 **[Practical setup guide](docs/ext_udp_telemetry_guide.md)** and **[protocol reference](docs/ext_udp_telemetry.md)**
 
 ### 🌤️ Weather API (Wetter-API)
 - **Automatic weather data**: fetch live measurements from external weather platforms and feed them directly into the telemetry JSON file
@@ -681,8 +691,8 @@ Clicking it opens a modal dialog with **four tabs**:
   | **Bot** | `BotEnabled`, `BotExternalCommandsPath`, all user-defined bot commands (incl. external process fields) |
   | **Quick Texts** | All quick-text entries |
   | **Beacon** | `BeaconEnabled`, `BeaconGroup`, `BeaconText`, `BeaconIntervalHours` |
-  | **Calendar Beacon** | All event entries incl. `IsExternal`, `ExternalFileName`, `TimeoutSeconds` |
-  | **Telemetry** | `TelemetryEnabled`, `TelemetryFilePath`, `TelemetryGroup`, `TelemetryScheduleHours`, `TelemetryMapping`, `TelemetryApiEnabled`, `TelemetryApiKey` |
+  | **Calendar Beacon** | All event entries incl. `AnnounceLeadTimes`, `IsExternal`, `ExternalFileName`, `TimeoutSeconds` |
+  | **Telemetry** | `TelemetryEnabled`, `TelemetryFilePath`, `TelemetryGroup`, `TelemetryScheduleHours`, `TelemetryMapping` (incl. per-row `Role`), `TelemetryApiEnabled`, `TelemetryApiKey`, `TelemetryExtUdpEnabled`, `TelemetryExtUdpMinIntervalMinutes` |
   | **Station / RF** | `TxPowerDbm`, `CableType`, `CableLengthM`, `AntennaGainDbi`, `AntennaType`, `AntennaHeightM`, `FrequencyMhz`, `SystemMarginDb` |
   | **Database** | Provider, MySQL connection string, InfluxDB URL/token/org/bucket, table name, log inserts flag |
   | **QRZ.com** | `Enabled`, `Username`, `Password`, cache settings |
