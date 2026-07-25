@@ -2127,13 +2127,14 @@
     private static string AckTooltip(MeshcomMessage m)
     {
         var isGroupOrBcast = m.To == "*" || m.To.StartsWith('#');
+        var ackRtt = m.AckRoundTrip.HasValue ? $" · ACK nach {FormatPingRtt(m.AckRoundTrip.Value)}" : "";
 
         if (m.IsAcknowledged && m.IsLoraDelivered && m.IsGatewayDelivered)
-            return "✓✓ ☁️✓ Zugestellt via LoRa (direkt) + Gateway";
+            return $"✓✓ ☁️✓ Zugestellt via LoRa (direkt) + Gateway{ackRtt}";
         if (m.IsAcknowledged && m.IsGatewayDelivered)
-            return "☁️✓ Über Gateway zugestellt";
+            return $"☁️✓ Über Gateway zugestellt{ackRtt}";
         if (m.IsAcknowledged)
-            return "✓✓ Zugestellt (LoRa ACK)";
+            return $"✓✓ Zugestellt (LoRa ACK){ackRtt}";
         if (m.NodeEchoReceived == false)
             return "⚠️ Node-Echo ausgeblieben – UDP-Paket wurde möglicherweise nicht vom Node empfangen!";
         if (isGroupOrBcast && m.SequenceNumber != null)

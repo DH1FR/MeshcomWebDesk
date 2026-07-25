@@ -596,10 +596,12 @@ public class ChatService
     /// </para>
     /// </summary>
     public void MarkMessageAcknowledged(string sequenceNumber, string? ackSender = null, bool isGateway = false) =>
-        MarkMessageAcknowledged(sequenceNumber, null, ackSender, isGateway);
+        MarkMessageAcknowledged(sequenceNumber, null, ackSender, isGateway, DateTime.Now);
 
-    public void MarkMessageAcknowledged(string sequenceNumber, Guid? nodeId, string? ackSender = null, bool isGateway = false)
+    public void MarkMessageAcknowledged(string sequenceNumber, Guid? nodeId, string? ackSender = null, bool isGateway = false, DateTime? ackTimestamp = null)
     {
+        var ackedAt = ackTimestamp ?? DateTime.Now;
+
         bool Found(IEnumerable<MeshcomMessage> messages)
         {
             lock (_lock)
@@ -625,6 +627,10 @@ public class ChatService
                     // Accumulate delivery flags – never clear a flag that was already set.
                     if (isGateway)  msg.IsGatewayDelivered = true;
                     else            msg.IsLoraDelivered    = true;
+                    // Set once, on the first ACK – a later second ACK (e.g. gateway after LoRa) must not overwrite it.
+                    var rtt = ackedAt - msg.Timestamp;
+                    if (rtt >= TimeSpan.Zero)
+                        msg.AckRoundTrip ??= rtt;
                     return true;
                 }
                 return false;
@@ -656,7 +662,7 @@ public class ChatService
         if (message.SequenceNumber != null)
         {
             var isGateway = string.Equals(message.SrcType, "udp", StringComparison.OrdinalIgnoreCase);
-            MarkMessageAcknowledged(message.SequenceNumber, nodeId, message.From, isGateway);
+            MarkMessageAcknowledged(message.SequenceNumber, nodeId, message.From, isGateway, message.Timestamp);
         }
         var ackState = ResolveState(nodeId);
         bool ackMhChanged = IsPrimaryNode(nodeId) && UpdateMhList(message, GetPrimaryState());
