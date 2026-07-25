@@ -132,4 +132,10 @@ public class MeshcomMessage
     public double? Temp2    { get; set; }
     public double? Humidity { get; set; }
     public double? Pressure { get; set; }  // qnh preferred, qfe fallback
+
+    /// <summary>
+    /// Round-trip time between sending a "ping" and receiving the partner's "Pong!" reply.
+    /// Set only on the incoming Pong message when a matching outgoing ping is still pending.
+    /// </summary>
+    public TimeSpan? PingRoundTrip { get; set; }
 }

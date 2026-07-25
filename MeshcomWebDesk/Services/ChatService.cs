@@ -119,6 +119,25 @@ public class ChatService
     private readonly Dictionary<string, DateTime> _seenMessageKeys = new(StringComparer.OrdinalIgnoreCase);
     private static readonly TimeSpan DedupWindow = TimeSpan.FromMinutes(30);
 
+    /// <summary>
+    /// Outgoing pings awaiting a "Pong!" reply, keyed by "{bucketId}:{partner}" → send timestamp.
+    /// Used to compute the round-trip time shown on the matching incoming Pong (see <see cref="AddIncomingMessage"/>).
+    /// Entries older than <see cref="PingTimeout"/> are ignored and overwritten by the next ping.
+    /// </summary>
+    private readonly ConcurrentDictionary<string, DateTime> _pendingPings = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly TimeSpan PingTimeout = TimeSpan.FromMinutes(5);
+
+    private static string PendingPingKey(Guid bucketId, string partner) => $"{bucketId}:{partner.Trim()}";
+
+    /// <summary>True for the bare ping command in any of its accepted forms ("ping", "--ping", ">ping").</summary>
+    private static bool IsPingText(string text)
+    {
+        var t = text.Trim();
+        return t.Equals("ping", StringComparison.OrdinalIgnoreCase)
+            || t.Equals("--ping", StringComparison.OrdinalIgnoreCase)
+            || t.Equals(">ping", StringComparison.OrdinalIgnoreCase);
+    }
+
     /// <summary>Raised when a message is added or a tab changes.</summary>
     public event Action? OnChange;
 
@@ -302,6 +321,19 @@ public class ChatService
         // Resolve the own callsign for this node
         var myCallsign = _nodeManager?.GetCallsignForNode(nodeId) ?? _settings.MyCallsign;
 
+        // Match a Pong reply to a pending outgoing ping and compute the round-trip time.
+        if (!message.IsBroadcast && !string.IsNullOrEmpty(message.From)
+            && message.Text.TrimStart().StartsWith("Pong!", StringComparison.OrdinalIgnoreCase))
+        {
+            var pingKey = PendingPingKey(ResolveBucketId(nodeId), message.From);
+            if (_pendingPings.TryRemove(pingKey, out var sentAt))
+            {
+                var rtt = message.Timestamp - sentAt;
+                if (rtt >= TimeSpan.Zero && rtt <= PingTimeout)
+                    message.PingRoundTrip = rtt;
+            }
+        }
+
         // Determine tab key based on destination:
         //   Broadcast from known correspondent     → sender's direct tab
         //   Broadcast from unknown station         → tab "*" ("Alle")
@@ -421,6 +453,11 @@ public class ChatService
         var state = ResolveState(nodeId);
         var tabKey = message.IsBroadcast ? "*" : message.To;
         var tab = GetOrCreateTab(state, tabKey, nodeId);
+
+        // Track direct pings so the round-trip time can be shown on the partner's Pong reply.
+        if (!message.IsBroadcast && !message.To.StartsWith('#') && IsPingText(message.Text))
+            _pendingPings[PendingPingKey(ResolveBucketId(nodeId), message.To)] = message.Timestamp;
+
         lock (_lock)
         {
             AppendToMonitor(message, state);

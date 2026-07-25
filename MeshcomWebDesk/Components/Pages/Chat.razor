@@ -172,6 +172,10 @@
                                 </span>
                             }
                             <span class="msg-text">@FormatMessageWithLinks(msg.Text)</span>
+                            @if (msg.PingRoundTrip.HasValue)
+                            {
+                                <span class="msg-ping-rtt" title="@Loc.T("Laufzeit", "Round-trip time")">⏱ @FormatPingRtt(msg.PingRoundTrip.Value)</span>
+                            }
                             <button class="btn-copy-msg" title="@Loc.T("Text kopieren", "Copy text")" @onclick="() => CopyMessageAsync(msg.Text)">📋</button>
                             @if (msg.IsOutgoing)
                             {
@@ -2011,6 +2015,9 @@
         > SignalHelper.RssiWeakDbm => "rssi-fair",
         _ => "rssi-weak"
     };
+
+    private static string FormatPingRtt(TimeSpan rtt) =>
+        rtt.TotalSeconds < 1 ? $"{rtt.TotalMilliseconds:F0} ms" : $"{rtt.TotalSeconds:F1} s";
 
     // ── Monitor helpers ──────────────────────────────────────────────────────
 

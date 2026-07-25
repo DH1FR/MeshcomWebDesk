@@ -591,6 +591,14 @@ h1:focus {
     color: var(--text);
 }
 
+.msg-ping-rtt {
+    font-size: 11px;
+    margin-left: 6px;
+    color: var(--text-faint);
+    user-select: none;
+    white-space: nowrap;
+}
+
 .msg-url {
     color: var(--link);
     text-decoration: underline;

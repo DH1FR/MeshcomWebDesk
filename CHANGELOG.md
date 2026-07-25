@@ -1,5 +1,12 @@
 ﻿# Changelog
 
+## [Unreleased]
+
+### Features
+- **Ping round-trip time**: when a direct `ping`/`--ping`/`>ping` gets a `Pong!` reply from the same station within 5 minutes, the chat bubble now shows the round-trip time (⏱ ms/s) next to the reply text.
+
+---
+
 ## [1.14.0] – 2026-07-24
 
 ### Features
