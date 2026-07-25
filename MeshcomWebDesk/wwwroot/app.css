@@ -594,7 +594,7 @@ h1:focus {
 .msg-ping-rtt {
     font-size: 11px;
     margin-left: 6px;
-    color: var(--text-faint);
+    color: var(--text);
     user-select: none;
     white-space: nowrap;
 }
