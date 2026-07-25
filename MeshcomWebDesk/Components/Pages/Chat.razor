@@ -174,7 +174,11 @@
                             <span class="msg-text">@FormatMessageWithLinks(msg.Text)</span>
                             @if (msg.PingRoundTrip.HasValue)
                             {
-                                <span class="msg-ping-rtt" title="@Loc.T("Laufzeit", "Round-trip time")">⏱ @FormatPingRtt(msg.PingRoundTrip.Value)</span>
+                                <span class="msg-ping-rtt" title="@Loc.T("Laufzeit (Pong-Antwort)", "Round-trip time (Pong reply)")">⏱ @FormatPingRtt(msg.PingRoundTrip.Value)</span>
+                                @if (msg.PingAckRoundTrip.HasValue)
+                                {
+                                    <span class="msg-ping-rtt" title="@Loc.T("Laufzeit (ACK)", "Round-trip time (ACK)")">· ACK @FormatPingRtt(msg.PingAckRoundTrip.Value)</span>
+                                }
                             }
                             <button class="btn-copy-msg" title="@Loc.T("Text kopieren", "Copy text")" @onclick="() => CopyMessageAsync(msg.Text)">📋</button>
                             @if (msg.IsOutgoing)

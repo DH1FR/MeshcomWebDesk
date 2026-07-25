@@ -120,11 +120,12 @@ public class ChatService
     private static readonly TimeSpan DedupWindow = TimeSpan.FromMinutes(30);
 
     /// <summary>
-    /// Outgoing pings awaiting a "Pong!" reply, keyed by "{bucketId}:{partner}" → send timestamp.
-    /// Used to compute the round-trip time shown on the matching incoming Pong (see <see cref="AddIncomingMessage"/>).
+    /// Outgoing pings awaiting a "Pong!" reply, keyed by "{bucketId}:{partner}" → the outgoing ping message.
+    /// Storing the message itself (not just its timestamp) lets the matching incoming Pong also read
+    /// <see cref="MeshcomMessage.AckRoundTrip"/> if the ACK has already arrived (see <see cref="AddIncomingMessage"/>).
     /// Entries older than <see cref="PingTimeout"/> are ignored and overwritten by the next ping.
     /// </summary>
-    private readonly ConcurrentDictionary<string, DateTime> _pendingPings = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, MeshcomMessage> _pendingPings = new(StringComparer.OrdinalIgnoreCase);
     private static readonly TimeSpan PingTimeout = TimeSpan.FromMinutes(5);
 
     private static string PendingPingKey(Guid bucketId, string partner) => $"{bucketId}:{partner.Trim()}";
@@ -326,11 +327,17 @@ public class ChatService
             && message.Text.TrimStart().StartsWith("Pong!", StringComparison.OrdinalIgnoreCase))
         {
             var pingKey = PendingPingKey(ResolveBucketId(nodeId), message.From);
-            if (_pendingPings.TryRemove(pingKey, out var sentAt))
+            if (_pendingPings.TryRemove(pingKey, out var pingMsg))
             {
-                var rtt = message.Timestamp - sentAt;
+                var rtt = message.Timestamp - pingMsg.Timestamp;
                 if (rtt >= TimeSpan.Zero && rtt <= PingTimeout)
+                {
                     message.PingRoundTrip = rtt;
+                    // Copy over the ACK round-trip already measured on the outgoing ping, if it
+                    // arrived first (the usual case – the ACK is a fast protocol ack, the Pong is
+                    // an app-level reply that needs the partner's bot to process and send it).
+                    message.PingAckRoundTrip = pingMsg.AckRoundTrip;
+                }
             }
         }
 
@@ -456,7 +463,7 @@ public class ChatService
 
         // Track direct pings so the round-trip time can be shown on the partner's Pong reply.
         if (!message.IsBroadcast && !message.To.StartsWith('#') && IsPingText(message.Text))
-            _pendingPings[PendingPingKey(ResolveBucketId(nodeId), message.To)] = message.Timestamp;
+            _pendingPings[PendingPingKey(ResolveBucketId(nodeId), message.To)] = message;
 
         lock (_lock)
         {

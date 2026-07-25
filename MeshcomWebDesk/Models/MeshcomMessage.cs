@@ -144,4 +144,11 @@ public class MeshcomMessage
     /// Set only on the incoming Pong message when a matching outgoing ping is still pending.
     /// </summary>
     public TimeSpan? PingRoundTrip { get; set; }
+
+    /// <summary>
+    /// The ACK round-trip time already measured on the outgoing ping (see <see cref="AckRoundTrip"/>),
+    /// copied onto the incoming Pong reply so both times can be shown together. Null if the ACK
+    /// had not arrived yet when the Pong was received.
+    /// </summary>
+    public TimeSpan? PingAckRoundTrip { get; set; }
 }
