@@ -464,7 +464,7 @@
         <span class="status-sep">|</span>
         <span class="status-item udp-diag-wrap" @ref="_udpDiagWrapRef">
             <span class="status-badge @UdpStatusBadgeCss" title="@UdpStatusTooltip">@UdpStatusIcon UDP</span>
-            @if (_status.IsListening && !_status.HasReceivedData)
+            @if (_status.IsListening && !UdpDataFresh)
             {
                 <button type="button" class="udp-diag-btn" @onclick="ToggleUdpDiag"
                         title="@Loc.T("UDP-Diagnose anzeigen", "Show UDP diagnostics")">❓</button>
@@ -927,6 +927,7 @@
     private bool _showUdpDiag;
     private bool _positionUdpDiag;
     private ElementReference _udpDiagWrapRef;
+    private System.Threading.Timer? _udpStaleTimer;
 
     // QSO Summary modal state
     private bool               _qsoSummaryVisible;
@@ -1087,6 +1088,9 @@
         TelnetService.OnChange += OnTelnetChanged;
         SerialConsoleService.OnChange += OnTelnetChanged;
         NodeManager.OnSelectedNodeChanged += OnNodeChanged;
+        // Periodically re-render so the UDP badge falls back from green to yellow once
+        // UdpStaleAfter has elapsed without a new packet (no other event would trigger that).
+        _udpStaleTimer = new System.Threading.Timer(_ => OnUdpStaleTick(), null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
         // Restore active tab from service memory so the first render already shows the correct tab
         _activeTabKey = ChatService.GetActiveTabKey(_activeNodeId);
         // Server-seitig gespeicherte Tab-Reihenfolge vor dem ersten Render anwenden
@@ -1276,6 +1280,12 @@
     }
 
     private void OnTelnetChanged()
+    {
+        if (_disposed) return;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnUdpStaleTick()
     {
         if (_disposed) return;
         InvokeAsync(StateHasChanged);
@@ -1616,6 +1626,7 @@
     public void Dispose()
     {
         _disposed = true;
+        _udpStaleTimer?.Dispose();
         _dotNetRef?.Dispose();
         Loc.OnChange -= OnLocChange;
         ChatService.OnChange -= OnChatChanged;
@@ -2209,29 +2220,40 @@
     private static string BeaconTimeCss(DateTime nextSend) =>
         (nextSend - DateTime.Now).TotalMinutes < 10 ? "beacon-time beacon-time-soon" : "beacon-time";
 
+    /// <summary>No packet received for longer than this counts as stale (back to "waiting for signal").</summary>
+    private static readonly TimeSpan UdpStaleAfter = TimeSpan.FromMinutes(15);
+
+    /// <summary>True once data has arrived but nothing more for longer than <see cref="UdpStaleAfter"/>.</summary>
+    private bool UdpDataStale =>
+        _status.LastRxTime.HasValue && DateTime.Now - _status.LastRxTime.Value > UdpStaleAfter;
+
+    private bool UdpDataFresh => _status.HasReceivedData && !UdpDataStale;
+
     private string UdpStatusCss => !_status.IsListening ? "status-err"
-        : _status.HasReceivedData ? "status-ok"
+        : UdpDataFresh ? "status-ok"
         : "status-warn";
 
     private string UdpStatusIcon => !_status.IsListening ? "🔴"
-        : _status.HasReceivedData ? "🟢"
+        : UdpDataFresh ? "🟢"
         : "🟡";
 
     private string UdpStatusBadgeCss => !_status.IsListening ? "status-badge-err"
-        : _status.HasReceivedData ? "status-badge-ok"
+        : UdpDataFresh ? "status-badge-ok"
         : "status-badge-warn";
 
     private string UdpStatusLabel => !_status.IsListening
         ? Loc.T("Kein Socket", "No socket")
-        : _status.HasReceivedData
+        : UdpDataFresh
             ? Loc.T("Empfang OK", "Receiving")
             : Loc.T("Warte auf Signal", "Waiting for signal");
 
     private string UdpStatusTooltip => !_status.IsListening
         ? Loc.T("UDP: Kein Socket – Port nicht geöffnet", "UDP: No socket – port not open")
-        : _status.HasReceivedData
+        : UdpDataFresh
             ? Loc.T("UDP: Empfang OK", "UDP: Receiving OK")
-            : Loc.T("UDP: Warte auf Signal – meist liegt's am Node. Klicke auf ❓ für Diagnose.", "UDP: Waiting for signal – usually the node. Click ❓ for diagnostics.");
+            : UdpDataStale
+                ? Loc.T("UDP: Seit über 15 Minuten kein Paket mehr – meist liegt's am Node. Klicke auf ❓ für Diagnose.", "UDP: No packet for over 15 minutes – usually the node. Click ❓ for diagnostics.")
+                : Loc.T("UDP: Warte auf Signal – meist liegt's am Node. Klicke auf ❓ für Diagnose.", "UDP: Waiting for signal – usually the node. Click ❓ for diagnostics.");
 
     private void ToggleUdpDiag()
     {
