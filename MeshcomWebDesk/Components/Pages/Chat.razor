@@ -464,44 +464,47 @@
         <span class="status-sep">|</span>
         <span class="status-item udp-diag-wrap" @ref="_udpDiagWrapRef">
             <span class="status-badge @UdpStatusBadgeCss" title="@UdpStatusTooltip">@UdpStatusIcon UDP</span>
-            <button type="button" class="udp-diag-btn" @onclick="ToggleUdpDiag"
-                    title="@Loc.T("UDP-Diagnose anzeigen", "Show UDP diagnostics")">❓</button>
-            @if (_showUdpDiag)
+            @if (_status.IsListening && !_status.HasReceivedData)
             {
-                <div class="udp-diag-panel">
-                    <div class="udp-diag-title">@Loc.T("UDP-Empfangsdiagnose", "UDP receive diagnostics")</div>
-                    <p class="udp-diag-text">
-                        @Loc.T(
-                            "Kein Empfang liegt fast immer am Node, nicht an WebDesk:",
-                            "No reception is almost always caused by the node, not WebDesk:")
-                    </p>
-                    <ul class="udp-diag-checklist">
-                        <li>@Loc.T("Am Node: ext UDP muss auf ON stehen", "On the node: ext UDP must be set to ON")</li>
-                        <li>@Loc.T("Am Node: ext UDP-Ziel-IP muss exakt auf die IP unten zeigen, Port 1799", "On the node: the ext UDP target IP must point exactly to the IP below, port 1799")</li>
-                        <li>@Loc.T("Firewall auf diesem PC: eingehendes UDP auf Port 1799 zulassen", "Firewall on this PC: allow inbound UDP on port 1799")</li>
-                        <li>@Loc.T("Der Node selbst empfängt möglicherweise nichts vom Mesh", "The node itself may not be receiving anything from the mesh")</li>
-                    </ul>
-                    @if (_localIps.Count > 0)
-                    {
-                        <div class="udp-diag-ips">
-                            <span class="udp-diag-ips-label">@Loc.T("Eigene IP (für ext UDP am Node):", "Own IP (for ext UDP on the node):")</span>
-                            @foreach (var ip in _localIps)
-                            {
-                                var ipPort = $"{ip}:{_settings.ListenPort}";
-                                <button type="button" class="udp-diag-ip"
-                                        @onclick="() => CopyMessageAsync(ipPort)"
-                                        title="@Loc.T("In Zwischenablage kopieren", "Copy to clipboard")">
-                                    📋 @ipPort
-                                </button>
-                            }
-                        </div>
-                    }
-                    <a class="udp-diag-link"
-                       href="@($"https://github.com/DH1FR/MeshcomWebDesk/blob/master/docs/node-connection-{Loc.Current}.md")"
-                       target="_blank" rel="noopener">
-                        @Loc.T("Ausführliche Anleitung öffnen", "Open detailed guide") →
-                    </a>
-                </div>
+                <button type="button" class="udp-diag-btn" @onclick="ToggleUdpDiag"
+                        title="@Loc.T("UDP-Diagnose anzeigen", "Show UDP diagnostics")">❓</button>
+                @if (_showUdpDiag)
+                {
+                    <div class="udp-diag-panel">
+                        <div class="udp-diag-title">@Loc.T("UDP-Empfangsdiagnose", "UDP receive diagnostics")</div>
+                        <p class="udp-diag-text">
+                            @Loc.T(
+                                "Kein Empfang liegt fast immer am Node, nicht an WebDesk:",
+                                "No reception is almost always caused by the node, not WebDesk:")
+                        </p>
+                        <ul class="udp-diag-checklist">
+                            <li>@Loc.T("Am Node: ext UDP muss auf ON stehen", "On the node: ext UDP must be set to ON")</li>
+                            <li>@Loc.T("Am Node: ext UDP-Ziel-IP muss exakt auf die IP unten zeigen, Port 1799", "On the node: the ext UDP target IP must point exactly to the IP below, port 1799")</li>
+                            <li>@Loc.T("Firewall auf diesem PC: eingehendes UDP auf Port 1799 zulassen", "Firewall on this PC: allow inbound UDP on port 1799")</li>
+                            <li>@Loc.T("Der Node selbst empfängt möglicherweise nichts vom Mesh", "The node itself may not be receiving anything from the mesh")</li>
+                        </ul>
+                        @if (_localIps.Count > 0)
+                        {
+                            <div class="udp-diag-ips">
+                                <span class="udp-diag-ips-label">@Loc.T("Eigene IP (für ext UDP am Node):", "Own IP (for ext UDP on the node):")</span>
+                                @foreach (var ip in _localIps)
+                                {
+                                    var ipPort = $"{ip}:{_settings.ListenPort}";
+                                    <button type="button" class="udp-diag-ip"
+                                            @onclick="() => CopyMessageAsync(ipPort)"
+                                            title="@Loc.T("In Zwischenablage kopieren", "Copy to clipboard")">
+                                        📋 @ipPort
+                                    </button>
+                                }
+                            </div>
+                        }
+                        <a class="udp-diag-link"
+                           href="@($"https://github.com/DH1FR/MeshcomWebDesk/blob/master/docs/node-connection-{Loc.Current}.md")"
+                           target="_blank" rel="noopener">
+                            @Loc.T("Ausführliche Anleitung öffnen", "Open detailed guide") →
+                        </a>
+                    </div>
+                }
             }
         </span>
         @if (MonitorSink.IsEnabled)
@@ -2225,7 +2228,7 @@
             : Loc.T("Warte auf Signal", "Waiting for signal");
 
     private string UdpStatusTooltip => !_status.IsListening
-        ? Loc.T("UDP: Kein Socket – Port nicht geöffnet. Klicke auf ❓ für Diagnose.", "UDP: No socket – port not open. Click ❓ for diagnostics.")
+        ? Loc.T("UDP: Kein Socket – Port nicht geöffnet", "UDP: No socket – port not open")
         : _status.HasReceivedData
             ? Loc.T("UDP: Empfang OK", "UDP: Receiving OK")
             : Loc.T("UDP: Warte auf Signal – meist liegt's am Node. Klicke auf ❓ für Diagnose.", "UDP: Waiting for signal – usually the node. Click ❓ for diagnostics.");
