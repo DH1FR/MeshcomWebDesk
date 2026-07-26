@@ -319,6 +319,25 @@ window.meshcomChat = (function () {
             overlay.addEventListener('click', (e) => { if (e.target === overlay) dismiss(); });
         },
 
+        // ── UDP-Diagnose-Popover: als position:fixed positionieren, da die Statusleiste
+        // overflow:hidden hat und ein absolut positioniertes Panel sonst abgeschnitten wird.
+        positionUdpDiag: (wrapEl) => {
+            var panel = wrapEl && wrapEl.querySelector('.udp-diag-panel');
+            if (!panel) return;
+            var rect = wrapEl.getBoundingClientRect();
+
+            var left = rect.left;
+            var maxLeft = window.innerWidth - panel.offsetWidth - 8;
+            if (left > maxLeft) left = Math.max(8, maxLeft);
+            panel.style.left = left + 'px';
+
+            // Bevorzugt oberhalb öffnen (Statusleiste sitzt am unteren Bildschirmrand);
+            // falls kein Platz, stattdessen unterhalb öffnen.
+            var top = rect.top - panel.offsetHeight - 4;
+            if (top < 4) top = rect.bottom + 4;
+            panel.style.top = top + 'px';
+        },
+
         // ── SendBar: fügt Text an der aktuellen Cursorposition ein ──
         insertAtCursor: (id, text) => {
             var el = document.getElementById(id);
