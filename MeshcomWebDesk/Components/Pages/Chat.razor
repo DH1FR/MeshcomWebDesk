@@ -49,7 +49,7 @@
                 @if (node.IsPrimary) { <span>★</span> }
                 @node.Name
                 <small style="opacity:.7;font-size:.75em">@node.Callsign</small>
-                @if (battery.HasValue) { <span style="color:@BattColor(battery.Value)">🔋</span> }
+                @if (battery.HasValue) { <span style="color:@BattColor(battery.Value)"><BatteryIcon Percent="battery.Value" /></span> }
             </button>
         }
     </div>
@@ -543,7 +543,7 @@
         {
             <span class="status-sep status-medium">|</span>
             <span class="status-item status-medium" title="@Loc.T($"Akkustand des Nodes: {_status.OwnBattery}%", $"Node battery level: {_status.OwnBattery}%")">
-                <span class="status-badge @BattStatusBadgeCss(_status.OwnBattery.Value)">🔋 @_status.OwnBattery%</span>
+                <span class="status-badge @BattStatusBadgeCss(_status.OwnBattery.Value)"><BatteryIcon Percent="_status.OwnBattery.Value" /> @_status.OwnBattery%</span>
             </span>
         }
         @if (_status.OwnLatitude.HasValue && _status.OwnLongitude.HasValue)

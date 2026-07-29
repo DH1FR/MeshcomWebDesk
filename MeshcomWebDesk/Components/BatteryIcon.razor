@@ -1,0 +1,28 @@
+@* Small inline battery icon whose fill bar visually reflects the charge percentage. *@
+@* The fill uses currentColor, so wrap in an element with a `color` style/class to tint it. *@
+<svg width="@Width" height="@Height" viewBox="0 0 24 12" xmlns="http://www.w3.org/2000/svg"
+     style="vertical-align:middle;flex-shrink:0" role="img" aria-label="@($"{Math.Clamp(Percent, 0, 100)}%")">
+    <rect x="0.5" y="0.5" width="20" height="11" rx="2" fill="none" stroke="var(--text-muted)" stroke-width="1" />
+    <rect x="21" y="4" width="2" height="4" rx="1" fill="var(--text-muted)" />
+    @if (FillWidth > 0)
+    {
+        <rect x="2.5" y="2.5" width="@FillWidthCss" height="7" rx="1" fill="currentColor" />
+    }
+</svg>
+
+@code {
+    /// <summary>Battery charge level in percent (0-100). Values outside that range are clamped.</summary>
+    [Parameter] public int Percent { get; set; }
+
+    /// <summary>Rendered width in pixels (viewBox keeps a fixed 2:1 aspect ratio).</summary>
+    [Parameter] public int Width { get; set; } = 18;
+
+    /// <summary>Rendered height in pixels.</summary>
+    [Parameter] public int Height { get; set; } = 9;
+
+    private const double MaxFillWidth = 16.0;
+
+    private double FillWidth => Math.Clamp(Percent, 0, 100) / 100.0 * MaxFillWidth;
+
+    private string FillWidthCss => FillWidth.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+}
