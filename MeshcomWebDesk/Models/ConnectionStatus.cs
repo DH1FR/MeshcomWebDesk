@@ -81,6 +81,9 @@ public class ConnectionStatus
     /// <summary>Hardware ID of the connected node (from hw_id field).</summary>
     public int? NodeHwId { get; set; }
 
+    /// <summary>Battery level (%) of the connected node, from its own position/telemetry beacons.</summary>
+    public int? OwnBattery { get; set; }
+
     // ── Extudp "tele" capability check ────────────────────────────────────
 
     /// <summary>

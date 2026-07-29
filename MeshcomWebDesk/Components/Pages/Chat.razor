@@ -37,9 +37,11 @@
                 _                        => "unknown"
             };
             var lastSeen = NodeManager.GetLastSeen(node.Id);
+            var battery  = GetNodeBattery(node.Id, node.Callsign);
             var tooltip  = lastSeen.HasValue
                 ? $"{node.Callsign}  |  {node.DeviceIp}:{node.DevicePort}  |  {Loc.T("Zuletzt", "Last seen")}: {FormatLastSeen(lastSeen.Value)}"
                 : $"{node.Callsign}  |  {node.DeviceIp}:{node.DevicePort}  |  {Loc.T("Noch kein Paket", "No packet yet")}";
+            if (battery.HasValue) tooltip += $"  |  {Loc.T("Akku", "Battery")}: {battery}%";
             <button class="node-switcher-btn @(NodeManager.SelectedNode?.Id == node.Id ? "active" : "")"
                     @onclick="() => SelectNode(node.Id)"
                     title="@tooltip">
@@ -47,6 +49,7 @@
                 @if (node.IsPrimary) { <span>★</span> }
                 @node.Name
                 <small style="opacity:.7;font-size:.75em">@node.Callsign</small>
+                @if (battery.HasValue) { <span style="color:@BattColor(battery.Value)">🔋</span> }
             </button>
         }
     </div>
@@ -534,6 +537,13 @@
             <span class="status-sep status-medium">|</span>
             <span class="status-item status-medium" title="@Loc.T($"Node Hardware · Firmware: {_status.NodeFirmware}", $"Node hardware · Firmware: {_status.NodeFirmware}")">
                 <span class="status-badge status-badge-info">⚙️ @MeshcomLookup.HwName(_status.NodeHwId)@if (!string.IsNullOrEmpty(_status.NodeFirmware)) {<text>&nbsp;·&nbsp;@_status.NodeFirmware</text>}</span>
+            </span>
+        }
+        @if (_status.OwnBattery.HasValue)
+        {
+            <span class="status-sep status-medium">|</span>
+            <span class="status-item status-medium" title="@Loc.T($"Akkustand des Nodes: {_status.OwnBattery}%", $"Node battery level: {_status.OwnBattery}%")">
+                <span class="status-badge @BattStatusBadgeCss(_status.OwnBattery.Value)">🔋 @_status.OwnBattery%</span>
             </span>
         }
         @if (_status.OwnLatitude.HasValue && _status.OwnLongitude.HasValue)
@@ -2268,6 +2278,26 @@
         > SignalHelper.RssiWeakDbm => "status-badge-warn",
         _     => "status-badge-err"
     };
+
+    private static string BattStatusBadgeCss(int batt) => batt switch
+    {
+        > 60 => "status-badge-ok",
+        > 10 => "status-badge-warn",
+        _    => "status-badge-err"
+    };
+
+    private static string BattColor(int batt) => batt switch
+    {
+        > 60 => "var(--ok)",
+        > 10 => "var(--warn-strong)",
+        _    => "var(--error)"
+    };
+
+    /// <summary>Battery level (%) of a node's own callsign, from that node's MH list.</summary>
+    private int? GetNodeBattery(Guid nodeId, string callsign) =>
+        ChatService.GetMhList(nodeId)
+            .FirstOrDefault(s => string.Equals(s.Callsign, callsign, StringComparison.OrdinalIgnoreCase))
+            ?.Battery;
 
     private string DbStatusIcon       => MonitorSink.LastWriteOk == null ? "🟡"
         : MonitorSink.LastWriteOk.Value ? "🟢" : "🔴";
