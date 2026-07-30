@@ -52,6 +52,19 @@ public sealed class NodeManager
     public DateTime? GetLastSeen(Guid nodeId) =>
         _lastSeen.TryGetValue(nodeId, out var t) ? t : null;
 
+    // ── Own battery tracking ──────────────────────────────────────────────
+    // Kept here (not in ChatService's MH list) because the MH list is only
+    // updated for the primary node's traffic – every configured node needs
+    // its own battery reading regardless of which one is primary.
+    private readonly ConcurrentDictionary<Guid, int> _nodeBattery = new();
+
+    /// <summary>Records the battery level (%) reported by a node's own position/telemetry beacon.</summary>
+    public void SetNodeBattery(Guid nodeId, int percent) => _nodeBattery[nodeId] = percent;
+
+    /// <summary>Returns the last known battery level (%) for a node, or null if never reported.</summary>
+    public int? GetNodeBattery(Guid nodeId) =>
+        _nodeBattery.TryGetValue(nodeId, out var v) ? v : null;
+
     /// <summary>Returns the online status of a node based on the last received packet time.</summary>
     public NodeOnlineStatus GetNodeStatus(Guid nodeId)
     {

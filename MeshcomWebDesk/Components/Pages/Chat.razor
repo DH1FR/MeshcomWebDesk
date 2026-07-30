@@ -37,7 +37,7 @@
                 _                        => "unknown"
             };
             var lastSeen = NodeManager.GetLastSeen(node.Id);
-            var battery  = GetNodeBattery(node.Id, node.Callsign);
+            var battery  = NodeManager.GetNodeBattery(node.Id);
             var tooltip  = lastSeen.HasValue
                 ? $"{node.Callsign}  |  {node.DeviceIp}:{node.DevicePort}  |  {Loc.T("Zuletzt", "Last seen")}: {FormatLastSeen(lastSeen.Value)}"
                 : $"{node.Callsign}  |  {node.DeviceIp}:{node.DevicePort}  |  {Loc.T("Noch kein Paket", "No packet yet")}";
@@ -2292,12 +2292,6 @@
         > 10 => "var(--warn-strong)",
         _    => "var(--error)"
     };
-
-    /// <summary>Battery level (%) of a node's own callsign, from that node's MH list.</summary>
-    private int? GetNodeBattery(Guid nodeId, string callsign) =>
-        ChatService.GetMhList(nodeId)
-            .FirstOrDefault(s => string.Equals(s.Callsign, callsign, StringComparison.OrdinalIgnoreCase))
-            ?.Battery;
 
     private string DbStatusIcon       => MonitorSink.LastWriteOk == null ? "🟡"
         : MonitorSink.LastWriteOk.Value ? "🟢" : "🔴";
