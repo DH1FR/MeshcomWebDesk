@@ -53,7 +53,7 @@
                 @if (_station.Battery.HasValue)
                 {
                     <span class="mh-sc-lbl">🔋</span>
-                    <span>@_station.Battery%</span>
+                    <span><BatteryIcon Percent="_station.Battery.Value" /> @_station.Battery%</span>
                 }
                 @if (_station.Latitude.HasValue && _station.Longitude.HasValue)
                 {

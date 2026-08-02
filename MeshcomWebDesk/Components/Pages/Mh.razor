@@ -157,7 +157,7 @@
                                             @if (s.Battery.HasValue)
                                             {
                                                 <span class="mh-sc-lbl">🔋</span>
-                                                <span class="@BattClass(s.Battery.Value)">@s.Battery%</span>
+                                                <span class="@BattClass(s.Battery.Value)"><BatteryIcon Percent="s.Battery.Value" /> @s.Battery%</span>
                                             }
                                             @if (distCard.HasValue)
                                             {
@@ -263,7 +263,7 @@
                             <td class="col-center mh-batt">
                                 @if (s.Battery.HasValue)
                                 {
-                                    <span class="@BattClass(s.Battery.Value)" title="@Loc.T($"Akku {s.Battery}%", $"Battery {s.Battery}%")">@s.Battery%</span>
+                                    <span class="@BattClass(s.Battery.Value)" title="@Loc.T($"Akku {s.Battery}%", $"Battery {s.Battery}%")"><BatteryIcon Percent="s.Battery.Value" /> @s.Battery%</span>
                                 }
                                 else
                                 {
