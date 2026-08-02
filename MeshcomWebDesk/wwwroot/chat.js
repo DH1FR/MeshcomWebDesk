@@ -246,6 +246,8 @@ window.meshcomChat = (function () {
         setSettingsSections: (csv) => localStorage.setItem('meshcom-settings-sections', csv ?? ''),
         getLoraHighlight:    () => localStorage.getItem('meshcom-lora-highlight') === '1',
         setLoraHighlight:    (v) => localStorage.setItem('meshcom-lora-highlight', v ? '1' : '0'),
+        getWelcomedMinorVersion: () => localStorage.getItem('meshcom-welcomed-minor-version') || '',
+        setWelcomedMinorVersion: (v) => localStorage.setItem('meshcom-welcomed-minor-version', v || ''),
 
         // ── Nachricht in Zwischenablage kopieren ──
         copyToClipboard: (text) => {

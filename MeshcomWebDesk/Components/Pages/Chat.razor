@@ -906,6 +906,10 @@
     </div>
 }
 
+    @if (_showDonationDialog)
+    {
+        <WelcomeDonationDialog Version="@_appVersion" OnDismiss="DismissDonationDialog" />
+    }
     </ChildContent>
     <ErrorContent Context="ex">
         <div style="padding:1rem;color:#ff6b6b;background:#1a1a2e;border:1px solid #ff6b6b;border-radius:6px;margin:1rem">
@@ -1073,14 +1077,24 @@
     private List<CqAlert> _cqAlerts = [];
     private bool _playCqSound;
 
-    // ── Welcome dialog ────────────────────────────────────────────────────
+    // ── Welcome / donation dialog ───────────────────────────────────────────
     private static readonly string _appVersion =
         typeof(Chat).Assembly.GetName().Version is { } v
             ? $"{v.Major}.{v.Minor}.{v.Build}" : "?";
+    private bool _showDonationDialog;
+    private string _pendingDonationVersionKey = "";
+
+    private async Task DismissDonationDialog()
+    {
+        _showDonationDialog = false;
+        try { await JS.InvokeVoidAsync("meshcomChat.setWelcomedMinorVersion", _pendingDonationVersionKey); }
+        catch (JSException) { }
+    }
 
     [Inject] private IConfiguration Configuration { get; set; } = default!;
     [Inject] private IOptionsMonitor<MeshcomSettings> SettingsOptions { get; set; } = default!;
     [Inject] private IJSRuntime JS { get; set; } = default!;
+    [Inject] private AppLicenseService AppLicense { get; set; } = default!;
 
     protected override void OnInitialized()
     {
@@ -1195,6 +1209,25 @@
 
             if (needsRender)
                 StateHasChanged();
+
+            // Coffee-donation prompt: shown once per minor version, skipped once a valid license exists.
+            if (!AppLicense.IsLicensed)
+            {
+                try
+                {
+                    var minorKey = typeof(Chat).Assembly.GetName().Version is { } ver
+                        ? $"{ver.Major}.{ver.Minor}" : _appVersion;
+                    var welcomed = await JS.InvokeAsync<string>("meshcomChat.getWelcomedMinorVersion");
+                    if (welcomed != minorKey)
+                    {
+                        _pendingDonationVersionKey = minorKey;
+                        await Task.Delay(3000);
+                        _showDonationDialog = true;
+                        StateHasChanged();
+                    }
+                }
+                catch (JSException) { }
+            }
         }
 
         if (_scrollMessages)

@@ -1,0 +1,30 @@
+@* Coffee-donation prompt shown once per minor version to unlicensed users. *@
+@inject LanguageService Loc
+
+<div class="welcome-overlay" @onclick="Dismiss">
+    <div class="welcome-modal" @onclick:stopPropagation="true">
+        <div class="welcome-icon">☕</div>
+        <p class="welcome-title">MeshCom WebDesk v@(Version)</p>
+        <p class="welcome-text">
+            @Loc.T(
+                "Gefällt dir MeshCom WebDesk? Dann spendier mir für die viele Arbeit einen Kaffee! 😊",
+                "Do you like MeshCom WebDesk? Then buy me a coffee for all the hard work! 😊")
+        </p>
+        <p class="welcome-author">© Ralf Altenbrand (DH1FR) · dh1fr@darc.de</p>
+        <div class="welcome-buttons">
+            <a class="welcome-btn-coffee" href="https://paypal.me/DH1FR" target="_blank" rel="noopener" @onclick="Dismiss">
+                💳 PayPal · paypal.me/DH1FR
+            </a>
+            <button class="welcome-btn-dismiss" @onclick="Dismiss">
+                😐 @Loc.T("Nein, so gut ist es auch nicht", "No, it's not that good")
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Version { get; set; } = "";
+    [Parameter] public EventCallback OnDismiss { get; set; }
+
+    private Task Dismiss() => OnDismiss.InvokeAsync();
+}

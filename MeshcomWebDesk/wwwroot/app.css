@@ -2755,6 +2755,7 @@ h1:focus {
     flex-shrink: 0;
     white-space: nowrap;
     overflow: hidden;
+}
 
 /* ── Welcome / Coffee dialog ─────────────────────────────────────────── */
 .welcome-overlay {
@@ -2834,17 +2835,6 @@ h1:focus {
     background: var(--surface-alt);
     color: var(--text-muted);
     border: 1px solid var(--border-strong);
-    border-radius: 8px;
-    padding: 0.55rem 1rem;
-    font-size: 0.85rem;
-    cursor: pointer;
-    transition: background 0.15s;
-}
-
-.welcome-btn-dismiss:hover {
-    background: #2d333b;
-    color: var(--text-soft);
-}
     border-radius: 8px;
     padding: 0.55rem 1rem;
     font-size: 0.85rem;
