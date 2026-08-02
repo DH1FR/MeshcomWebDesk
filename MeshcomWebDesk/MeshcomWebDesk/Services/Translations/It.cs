@@ -474,5 +474,18 @@ internal static class It
         ["Status colours"] = "Colori di stato",
         ["Messages & notices"] = "Messaggi e avvisi",
         ["Monitor & lists"] = "Monitor e liste",
+
+        // UDP diagnostics
+        ["Show UDP diagnostics"] = "Mostra diagnostica UDP",
+        ["UDP: No socket – port not open. Click ❓ for diagnostics."] = "UDP: nessun socket – porta non aperta. Clicca su ❓ per la diagnostica.",
+        ["UDP: Waiting for signal – usually the node. Click ❓ for diagnostics."] = "UDP: in attesa di segnale – di solito è il node. Clicca su ❓ per la diagnostica.",
+        ["UDP receive diagnostics"] = "Diagnostica ricezione UDP",
+        ["No reception is almost always caused by the node, not WebDesk:"] = "L'assenza di ricezione è quasi sempre causata dal node, non da WebDesk:",
+        ["On the node: ext UDP must be set to ON"] = "Sul node: ext UDP deve essere impostato su ON",
+        ["On the node: the ext UDP target IP must point exactly to the IP below, port 1799"] = "Sul node: l'IP di destinazione ext UDP deve puntare esattamente all'IP sotto indicato, porta 1799",
+        ["Firewall on this PC: allow inbound UDP on port 1799"] = "Firewall su questo PC: consenti UDP in ingresso sulla porta 1799",
+        ["The node itself may not be receiving anything from the mesh"] = "Il node stesso potrebbe non ricevere nulla dalla mesh",
+        ["Own IP (for ext UDP on the node):"] = "IP proprio (per ext UDP sul node):",
+        ["Open detailed guide"] = "Apri la guida dettagliata",
     };
 }

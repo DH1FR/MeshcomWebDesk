@@ -79,6 +79,12 @@ public class MeshcomMessage
     public bool IsAcknowledged { get; set; }
 
     /// <summary>
+    /// Round-trip time between sending this outgoing message and receiving the first delivery ACK
+    /// (LoRa or gateway) for it. Set once and never overwritten by a later, second ACK.
+    /// </summary>
+    public TimeSpan? AckRoundTrip { get; set; }
+
+    /// <summary>
     /// True once the local node echoed back the outgoing message (src_type:"node"),
     /// confirming the UDP packet was received and processed by the node.
     /// Null = monitoring not yet timed out, False = timeout elapsed without echo.
@@ -132,4 +138,17 @@ public class MeshcomMessage
     public double? Temp2    { get; set; }
     public double? Humidity { get; set; }
     public double? Pressure { get; set; }  // qnh preferred, qfe fallback
+
+    /// <summary>
+    /// Round-trip time between sending a "ping" and receiving the partner's "Pong!" reply.
+    /// Set only on the incoming Pong message when a matching outgoing ping is still pending.
+    /// </summary>
+    public TimeSpan? PingRoundTrip { get; set; }
+
+    /// <summary>
+    /// The ACK round-trip time already measured on the outgoing ping (see <see cref="AckRoundTrip"/>),
+    /// copied onto the incoming Pong reply so both times can be shown together. Null if the ACK
+    /// had not arrived yet when the Pong was received.
+    /// </summary>
+    public TimeSpan? PingAckRoundTrip { get; set; }
 }

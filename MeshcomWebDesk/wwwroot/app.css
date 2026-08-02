@@ -591,6 +591,14 @@ h1:focus {
     color: var(--text);
 }
 
+.msg-ping-rtt {
+    font-size: 11px;
+    margin-left: 6px;
+    color: var(--text);
+    user-select: none;
+    white-space: nowrap;
+}
+
 .msg-url {
     color: var(--link);
     text-decoration: underline;
@@ -1752,6 +1760,62 @@ h1:focus {
 .status-badge-neutral { background: var(--bg-elevated); color: var(--text-muted); border: 1px solid var(--border-strong); }
 .status-badge-info    { background: var(--chip-info-bg); color: var(--link); border: 1px solid #1f6feb; }
 
+/* UDP diagnostics popover */
+.udp-diag-wrap { position: relative; display: inline-flex; align-items: center; gap: 2px; }
+.udp-diag-btn {
+    padding: 0 3px;
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 11px;
+    line-height: 1.6;
+}
+.udp-diag-btn:hover { color: var(--link); }
+.udp-diag-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 200;
+    width: 300px;
+    max-height: min(70vh, 420px);
+    overflow-y: auto;
+    box-sizing: border-box;
+    white-space: normal;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px #0008;
+    padding: .65rem .75rem;
+    font-size: .8rem;
+    font-weight: 400;
+    line-height: 1.4;
+    color: var(--text-soft);
+}
+.udp-diag-title { font-weight: 600; margin-bottom: .35rem; }
+.udp-diag-text { margin: 0 0 .4rem 0; }
+.udp-diag-checklist { margin: 0 0 .5rem 1rem; padding: 0; }
+.udp-diag-checklist li { margin-bottom: .3rem; }
+.udp-diag-ips { margin-bottom: .5rem; }
+.udp-diag-ips-label { display: block; color: var(--text-muted); margin-bottom: .3rem; }
+.udp-diag-ip {
+    display: block;
+    width: 100%;
+    margin-bottom: .25rem;
+    padding: .3rem .5rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-strong);
+    background: var(--surface-alt);
+    color: var(--link);
+    text-align: left;
+    cursor: pointer;
+    font-size: .8rem;
+    font-family: inherit;
+}
+.udp-diag-ip:hover { background: var(--border-strong); }
+.udp-diag-link { color: var(--link); text-decoration: none; font-size: .8rem; }
+.udp-diag-link:hover { text-decoration: underline; }
+
 .status-mute-btn {
     background: none;
     border: none;
@@ -2691,6 +2755,7 @@ h1:focus {
     flex-shrink: 0;
     white-space: nowrap;
     overflow: hidden;
+}
 
 /* ── Welcome / Coffee dialog ─────────────────────────────────────────── */
 .welcome-overlay {
@@ -2770,17 +2835,6 @@ h1:focus {
     background: var(--surface-alt);
     color: var(--text-muted);
     border: 1px solid var(--border-strong);
-    border-radius: 8px;
-    padding: 0.55rem 1rem;
-    font-size: 0.85rem;
-    cursor: pointer;
-    transition: background 0.15s;
-}
-
-.welcome-btn-dismiss:hover {
-    background: #2d333b;
-    color: var(--text-soft);
-}
     border-radius: 8px;
     padding: 0.55rem 1rem;
     font-size: 0.85rem;

@@ -237,7 +237,15 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<MeshcomWebDesk.Ser
 builder.Services.AddHostedService(sp => sp.GetRequiredService<CalendarBeaconService>());
 
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+    .AddInteractiveServerComponents(options =>
+    {
+        // Default (10) is tuned for low-frequency apps. MeshcomWebDesk pushes frequent
+        // UI updates (live chat, telemetry, tab badges), so a slow/throttled client
+        // (real network instead of localhost, backgrounded browser tab) can fall behind
+        // and exceed the default buffer, desyncing the circuit
+        // (client-side "Cannot read properties of null (reading 'removeChild')" crash).
+        options.MaxBufferedUnacknowledgedRenderBatches = 100;
+    });
 
 var app = builder.Build();
 

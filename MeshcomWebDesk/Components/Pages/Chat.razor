@@ -37,9 +37,11 @@
                 _                        => "unknown"
             };
             var lastSeen = NodeManager.GetLastSeen(node.Id);
+            var battery  = NodeManager.GetNodeBattery(node.Id);
             var tooltip  = lastSeen.HasValue
                 ? $"{node.Callsign}  |  {node.DeviceIp}:{node.DevicePort}  |  {Loc.T("Zuletzt", "Last seen")}: {FormatLastSeen(lastSeen.Value)}"
                 : $"{node.Callsign}  |  {node.DeviceIp}:{node.DevicePort}  |  {Loc.T("Noch kein Paket", "No packet yet")}";
+            if (battery.HasValue) tooltip += $"  |  {Loc.T("Akku", "Battery")}: {battery}%";
             <button class="node-switcher-btn @(NodeManager.SelectedNode?.Id == node.Id ? "active" : "")"
                     @onclick="() => SelectNode(node.Id)"
                     title="@tooltip">
@@ -47,6 +49,7 @@
                 @if (node.IsPrimary) { <span>★</span> }
                 @node.Name
                 <small style="opacity:.7;font-size:.75em">@node.Callsign</small>
+                @if (battery.HasValue) { <span style="color:@BattColor(battery.Value)"><BatteryIcon Percent="battery.Value" /></span> }
             </button>
         }
     </div>
@@ -172,6 +175,14 @@
                                 </span>
                             }
                             <span class="msg-text">@FormatMessageWithLinks(msg.Text)</span>
+                            @if (msg.PingRoundTrip.HasValue)
+                            {
+                                <span class="msg-ping-rtt" title="@Loc.T("Laufzeit (Pong-Antwort)", "Round-trip time (Pong reply)")">⏱ @FormatPingRtt(msg.PingRoundTrip.Value)</span>
+                                @if (msg.PingAckRoundTrip.HasValue)
+                                {
+                                    <span class="msg-ping-rtt" title="@Loc.T("Laufzeit (ACK)", "Round-trip time (ACK)")">· ACK @FormatPingRtt(msg.PingAckRoundTrip.Value)</span>
+                                }
+                            }
                             <button class="btn-copy-msg" title="@Loc.T("Text kopieren", "Copy text")" @onclick="() => CopyMessageAsync(msg.Text)">📋</button>
                             @if (msg.IsOutgoing)
                             {
@@ -314,7 +325,7 @@
                             @if (m.Temp1.HasValue && m.Temp1 != 0)  { <span>🌡️ @m.Temp1.Value.ToString("F1")°C</span> }
                             @if (m.Humidity.HasValue && m.Humidity != 0) { <span class="mon-alt">&nbsp;·&nbsp;💧 @m.Humidity.Value.ToString("F0")%</span> }
                             @if (m.Pressure.HasValue && m.Pressure != 0) { <span class="mon-alt">&nbsp;·&nbsp;🧭 @m.Pressure.Value.ToString("F1") hPa</span> }
-                            @if (m.Battery.HasValue) { <span class="mon-alt">&nbsp;·&nbsp;🔋 @m.Battery%</span> }
+                            @if (m.Battery.HasValue) { <span class="mon-alt">&nbsp;·&nbsp;</span><span style="color:@BattColor(m.Battery.Value)"><BatteryIcon Percent="m.Battery.Value" /> @m.Battery%</span> }
                         </span>
                     }
                     else if (m.IsPositionBeacon && m.Latitude.HasValue)
@@ -333,7 +344,8 @@
                             }
                             @if (m.Battery.HasValue)
                             {
-                                <span class="mon-alt">&nbsp;·&nbsp;🔋 @m.Battery%</span>
+                                <span class="mon-alt">&nbsp;·&nbsp;</span>
+                                <span style="color:@BattColor(m.Battery.Value)"><BatteryIcon Percent="m.Battery.Value" /> @m.Battery%</span>
                             }
                             @if (!string.IsNullOrEmpty(MeshcomLookup.HwName(m.HwId)))
                             {
@@ -454,8 +466,50 @@
             </button>
         }
         <span class="status-sep">|</span>
-        <span class="status-item" title="@UdpStatusTooltip">
-            <span class="status-badge @UdpStatusBadgeCss">@UdpStatusIcon UDP</span>
+        <span class="status-item udp-diag-wrap" @ref="_udpDiagWrapRef">
+            <span class="status-badge @UdpStatusBadgeCss" title="@UdpStatusTooltip">@UdpStatusIcon UDP</span>
+            @if (_status.IsListening && !UdpDataFresh)
+            {
+                <button type="button" class="udp-diag-btn" @onclick="ToggleUdpDiag"
+                        title="@Loc.T("UDP-Diagnose anzeigen", "Show UDP diagnostics")">❓</button>
+                @if (_showUdpDiag)
+                {
+                    <div class="udp-diag-panel">
+                        <div class="udp-diag-title">@Loc.T("UDP-Empfangsdiagnose", "UDP receive diagnostics")</div>
+                        <p class="udp-diag-text">
+                            @Loc.T(
+                                "Kein Empfang liegt fast immer am Node, nicht an WebDesk:",
+                                "No reception is almost always caused by the node, not WebDesk:")
+                        </p>
+                        <ul class="udp-diag-checklist">
+                            <li>@Loc.T("Am Node: ext UDP muss auf ON stehen", "On the node: ext UDP must be set to ON")</li>
+                            <li>@Loc.T("Am Node: ext UDP-Ziel-IP muss exakt auf die IP unten zeigen, Port 1799", "On the node: the ext UDP target IP must point exactly to the IP below, port 1799")</li>
+                            <li>@Loc.T("Firewall auf diesem PC: eingehendes UDP auf Port 1799 zulassen", "Firewall on this PC: allow inbound UDP on port 1799")</li>
+                            <li>@Loc.T("Der Node selbst empfängt möglicherweise nichts vom Mesh", "The node itself may not be receiving anything from the mesh")</li>
+                        </ul>
+                        @if (_localIps.Count > 0)
+                        {
+                            <div class="udp-diag-ips">
+                                <span class="udp-diag-ips-label">@Loc.T("Eigene IP (für ext UDP am Node):", "Own IP (for ext UDP on the node):")</span>
+                                @foreach (var ip in _localIps)
+                                {
+                                    var ipPort = $"{ip}:{_settings.ListenPort}";
+                                    <button type="button" class="udp-diag-ip"
+                                            @onclick="() => CopyMessageAsync(ipPort)"
+                                            title="@Loc.T("In Zwischenablage kopieren", "Copy to clipboard")">
+                                        📋 @ipPort
+                                    </button>
+                                }
+                            </div>
+                        }
+                        <a class="udp-diag-link"
+                           href="@($"https://github.com/DH1FR/MeshcomWebDesk/blob/master/docs/node-connection-{Loc.Current}.md")"
+                           target="_blank" rel="noopener">
+                            @Loc.T("Ausführliche Anleitung öffnen", "Open detailed guide") →
+                        </a>
+                    </div>
+                }
+            }
         </span>
         @if (MonitorSink.IsEnabled)
         {
@@ -484,6 +538,13 @@
             <span class="status-sep status-medium">|</span>
             <span class="status-item status-medium" title="@Loc.T($"Node Hardware · Firmware: {_status.NodeFirmware}", $"Node hardware · Firmware: {_status.NodeFirmware}")">
                 <span class="status-badge status-badge-info">⚙️ @MeshcomLookup.HwName(_status.NodeHwId)@if (!string.IsNullOrEmpty(_status.NodeFirmware)) {<text>&nbsp;·&nbsp;@_status.NodeFirmware</text>}</span>
+            </span>
+        }
+        @if (_status.OwnBattery.HasValue)
+        {
+            <span class="status-sep status-medium">|</span>
+            <span class="status-item status-medium" title="@Loc.T($"Akkustand des Nodes: {_status.OwnBattery}%", $"Node battery level: {_status.OwnBattery}%")">
+                <span class="status-badge @BattStatusBadgeCss(_status.OwnBattery.Value)"><BatteryIcon Percent="_status.OwnBattery.Value" /> @_status.OwnBattery%</span>
             </span>
         }
         @if (_status.OwnLatitude.HasValue && _status.OwnLongitude.HasValue)
@@ -845,6 +906,10 @@
     </div>
 }
 
+    @if (_showDonationDialog)
+    {
+        <WelcomeDonationDialog Version="@_appVersion" OnDismiss="DismissDonationDialog" />
+    }
     </ChildContent>
     <ErrorContent Context="ex">
         <div style="padding:1rem;color:#ff6b6b;background:#1a1a2e;border:1px solid #ff6b6b;border-radius:6px;margin:1rem">
@@ -873,6 +938,11 @@
     private MeshcomSettings _settings = new();
     private bool _showMonitor = false;
     private SendBar? _sendBar;
+    private List<string> _localIps = [];
+    private bool _showUdpDiag;
+    private bool _positionUdpDiag;
+    private ElementReference _udpDiagWrapRef;
+    private System.Threading.Timer? _udpStaleTimer;
 
     // QSO Summary modal state
     private bool               _qsoSummaryVisible;
@@ -1007,14 +1077,24 @@
     private List<CqAlert> _cqAlerts = [];
     private bool _playCqSound;
 
-    // ── Welcome dialog ────────────────────────────────────────────────────
+    // ── Welcome / donation dialog ───────────────────────────────────────────
     private static readonly string _appVersion =
         typeof(Chat).Assembly.GetName().Version is { } v
             ? $"{v.Major}.{v.Minor}.{v.Build}" : "?";
+    private bool _showDonationDialog;
+    private string _pendingDonationVersionKey = "";
+
+    private async Task DismissDonationDialog()
+    {
+        _showDonationDialog = false;
+        try { await JS.InvokeVoidAsync("meshcomChat.setWelcomedMinorVersion", _pendingDonationVersionKey); }
+        catch (JSException) { }
+    }
 
     [Inject] private IConfiguration Configuration { get; set; } = default!;
     [Inject] private IOptionsMonitor<MeshcomSettings> SettingsOptions { get; set; } = default!;
     [Inject] private IJSRuntime JS { get; set; } = default!;
+    [Inject] private AppLicenseService AppLicense { get; set; } = default!;
 
     protected override void OnInitialized()
     {
@@ -1022,6 +1102,7 @@
         _settings = SettingsOptions.CurrentValue;
         _myCallsign = _settings.MyCallsign;
         _status = UdpService.Status;
+        _localIps = NetworkHelper.GetLocalIpv4Addresses();
         ChatService.OnChange += OnChatChanged;
         ChatService.OnEchoTimeout += OnEchoTimeout;
         UdpService.OnStatusChange += OnStatusChanged;
@@ -1032,6 +1113,9 @@
         TelnetService.OnChange += OnTelnetChanged;
         SerialConsoleService.OnChange += OnTelnetChanged;
         NodeManager.OnSelectedNodeChanged += OnNodeChanged;
+        // Periodically re-render so the UDP badge falls back from green to yellow once
+        // UdpStaleAfter has elapsed without a new packet (no other event would trigger that).
+        _udpStaleTimer = new System.Threading.Timer(_ => OnUdpStaleTick(), null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
         // Restore active tab from service memory so the first render already shows the correct tab
         _activeTabKey = ChatService.GetActiveTabKey(_activeNodeId);
         // Server-seitig gespeicherte Tab-Reihenfolge vor dem ersten Render anwenden
@@ -1125,12 +1209,38 @@
 
             if (needsRender)
                 StateHasChanged();
+
+            // Coffee-donation prompt: shown once per minor version, skipped once a valid license exists.
+            if (!AppLicense.IsLicensed)
+            {
+                try
+                {
+                    var minorKey = typeof(Chat).Assembly.GetName().Version is { } ver
+                        ? $"{ver.Major}.{ver.Minor}" : _appVersion;
+                    var welcomed = await JS.InvokeAsync<string>("meshcomChat.getWelcomedMinorVersion");
+                    if (welcomed != minorKey)
+                    {
+                        _pendingDonationVersionKey = minorKey;
+                        await Task.Delay(3000);
+                        _showDonationDialog = true;
+                        StateHasChanged();
+                    }
+                }
+                catch (JSException) { }
+            }
         }
 
         if (_scrollMessages)
         {
             _scrollMessages = false;
             try { await JS.InvokeVoidAsync("scrollToBottom", "tab-messages"); }
+            catch (JSException) { }
+        }
+
+        if (_positionUdpDiag)
+        {
+            _positionUdpDiag = false;
+            try { await JS.InvokeVoidAsync("meshcomChat.positionUdpDiag", _udpDiagWrapRef); }
             catch (JSException) { }
         }
 
@@ -1214,6 +1324,12 @@
     }
 
     private void OnTelnetChanged()
+    {
+        if (_disposed) return;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnUdpStaleTick()
     {
         if (_disposed) return;
         InvokeAsync(StateHasChanged);
@@ -1554,6 +1670,7 @@
     public void Dispose()
     {
         _disposed = true;
+        _udpStaleTimer?.Dispose();
         _dotNetRef?.Dispose();
         Loc.OnChange -= OnLocChange;
         ChatService.OnChange -= OnChatChanged;
@@ -2012,6 +2129,9 @@
         _ => "rssi-weak"
     };
 
+    private static string FormatPingRtt(TimeSpan rtt) =>
+        rtt.TotalSeconds < 1 ? $"{rtt.TotalMilliseconds:F0} ms" : $"{rtt.TotalSeconds:F1} s";
+
     // ── Monitor helpers ──────────────────────────────────────────────────────
 
     private static string MonType(MeshcomMessage m)
@@ -2120,13 +2240,14 @@
     private static string AckTooltip(MeshcomMessage m)
     {
         var isGroupOrBcast = m.To == "*" || m.To.StartsWith('#');
+        var ackRtt = m.AckRoundTrip.HasValue ? $" · ACK nach {FormatPingRtt(m.AckRoundTrip.Value)}" : "";
 
         if (m.IsAcknowledged && m.IsLoraDelivered && m.IsGatewayDelivered)
-            return "✓✓ ☁️✓ Zugestellt via LoRa (direkt) + Gateway";
+            return $"✓✓ ☁️✓ Zugestellt via LoRa (direkt) + Gateway{ackRtt}";
         if (m.IsAcknowledged && m.IsGatewayDelivered)
-            return "☁️✓ Über Gateway zugestellt";
+            return $"☁️✓ Über Gateway zugestellt{ackRtt}";
         if (m.IsAcknowledged)
-            return "✓✓ Zugestellt (LoRa ACK)";
+            return $"✓✓ Zugestellt (LoRa ACK){ackRtt}";
         if (m.NodeEchoReceived == false)
             return "⚠️ Node-Echo ausgeblieben – UDP-Paket wurde möglicherweise nicht vom Node empfangen!";
         if (isGroupOrBcast && m.SequenceNumber != null)
@@ -2143,35 +2264,67 @@
     private static string BeaconTimeCss(DateTime nextSend) =>
         (nextSend - DateTime.Now).TotalMinutes < 10 ? "beacon-time beacon-time-soon" : "beacon-time";
 
+    /// <summary>No packet received for longer than this counts as stale (back to "waiting for signal").</summary>
+    private static readonly TimeSpan UdpStaleAfter = TimeSpan.FromMinutes(15);
+
+    /// <summary>True once data has arrived but nothing more for longer than <see cref="UdpStaleAfter"/>.</summary>
+    private bool UdpDataStale =>
+        _status.LastRxTime.HasValue && DateTime.Now - _status.LastRxTime.Value > UdpStaleAfter;
+
+    private bool UdpDataFresh => _status.HasReceivedData && !UdpDataStale;
+
     private string UdpStatusCss => !_status.IsListening ? "status-err"
-        : _status.HasReceivedData ? "status-ok"
+        : UdpDataFresh ? "status-ok"
         : "status-warn";
 
     private string UdpStatusIcon => !_status.IsListening ? "🔴"
-        : _status.HasReceivedData ? "🟢"
+        : UdpDataFresh ? "🟢"
         : "🟡";
 
     private string UdpStatusBadgeCss => !_status.IsListening ? "status-badge-err"
-        : _status.HasReceivedData ? "status-badge-ok"
+        : UdpDataFresh ? "status-badge-ok"
         : "status-badge-warn";
 
     private string UdpStatusLabel => !_status.IsListening
         ? Loc.T("Kein Socket", "No socket")
-        : _status.HasReceivedData
+        : UdpDataFresh
             ? Loc.T("Empfang OK", "Receiving")
             : Loc.T("Warte auf Signal", "Waiting for signal");
 
     private string UdpStatusTooltip => !_status.IsListening
         ? Loc.T("UDP: Kein Socket – Port nicht geöffnet", "UDP: No socket – port not open")
-        : _status.HasReceivedData
+        : UdpDataFresh
             ? Loc.T("UDP: Empfang OK", "UDP: Receiving OK")
-            : Loc.T("UDP: Warte auf Signal", "UDP: Waiting for signal");
+            : UdpDataStale
+                ? Loc.T("UDP: Seit über 15 Minuten kein Paket mehr – meist liegt's am Node. Klicke auf ❓ für Diagnose.", "UDP: No packet for over 15 minutes – usually the node. Click ❓ for diagnostics.")
+                : Loc.T("UDP: Warte auf Signal – meist liegt's am Node. Klicke auf ❓ für Diagnose.", "UDP: Waiting for signal – usually the node. Click ❓ for diagnostics.");
+
+    private void ToggleUdpDiag()
+    {
+        _showUdpDiag = !_showUdpDiag;
+        if (_showUdpDiag)
+            _positionUdpDiag = true;
+    }
 
     private static string RssiStatusBadgeCss(int rssi) => rssi switch
     {
         > SignalHelper.RssiGoodDbm => "status-badge-ok",
         > SignalHelper.RssiWeakDbm => "status-badge-warn",
         _     => "status-badge-err"
+    };
+
+    private static string BattStatusBadgeCss(int batt) => batt switch
+    {
+        > 60 => "status-badge-ok",
+        > 10 => "status-badge-warn",
+        _    => "status-badge-err"
+    };
+
+    private static string BattColor(int batt) => batt switch
+    {
+        > 60 => "var(--ok)",
+        > 10 => "var(--warn-strong)",
+        _    => "var(--error)"
     };
 
     private string DbStatusIcon       => MonitorSink.LastWriteOk == null ? "🟡"

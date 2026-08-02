@@ -291,8 +291,17 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                                 Status.NodeHwId = message.HwId;
                                 metaChanged = true;
                             }
-                            _logger.LogDebug("Node echo meta: firmware={Fw} hw_id={HwId} NodeFirmware={NodeFw} NodeHwId={NodeHwId}",
-                                message.Firmware, message.HwId, Status.NodeFirmware, Status.NodeHwId);
+                            if (message.Battery.HasValue && Status.OwnBattery != message.Battery)
+                            {
+                                Status.OwnBattery = message.Battery;
+                                metaChanged = true;
+                            }
+                            // Status is a single app-wide instance (last writer wins across nodes), so
+                            // also record the battery per node – needed for the multi-node switcher UI.
+                            if (message.Battery.HasValue && sourceNode is not null)
+                                _nodeManager.SetNodeBattery(sourceNode.Id, message.Battery.Value);
+                            _logger.LogDebug("Node echo meta: firmware={Fw} hw_id={HwId} batt={Batt} NodeFirmware={NodeFw} NodeHwId={NodeHwId}",
+                                message.Firmware, message.HwId, message.Battery, Status.NodeFirmware, Status.NodeHwId);
                             if (metaChanged) NotifyStatusChange();
 
                             // Own pos/tele broadcasts are generated autonomously by the node

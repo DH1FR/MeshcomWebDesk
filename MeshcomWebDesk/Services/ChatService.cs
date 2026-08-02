@@ -119,6 +119,26 @@ public class ChatService
     private readonly Dictionary<string, DateTime> _seenMessageKeys = new(StringComparer.OrdinalIgnoreCase);
     private static readonly TimeSpan DedupWindow = TimeSpan.FromMinutes(30);
 
+    /// <summary>
+    /// Outgoing pings awaiting a "Pong!" reply, keyed by "{bucketId}:{partner}" → the outgoing ping message.
+    /// Storing the message itself (not just its timestamp) lets the matching incoming Pong also read
+    /// <see cref="MeshcomMessage.AckRoundTrip"/> if the ACK has already arrived (see <see cref="AddIncomingMessage"/>).
+    /// Entries older than <see cref="PingTimeout"/> are ignored and overwritten by the next ping.
+    /// </summary>
+    private readonly ConcurrentDictionary<string, MeshcomMessage> _pendingPings = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly TimeSpan PingTimeout = TimeSpan.FromMinutes(5);
+
+    private static string PendingPingKey(Guid bucketId, string partner) => $"{bucketId}:{partner.Trim()}";
+
+    /// <summary>True for the bare ping command in any of its accepted forms ("ping", "--ping", ">ping").</summary>
+    private static bool IsPingText(string text)
+    {
+        var t = text.Trim();
+        return t.Equals("ping", StringComparison.OrdinalIgnoreCase)
+            || t.Equals("--ping", StringComparison.OrdinalIgnoreCase)
+            || t.Equals(">ping", StringComparison.OrdinalIgnoreCase);
+    }
+
     /// <summary>Raised when a message is added or a tab changes.</summary>
     public event Action? OnChange;
 
@@ -302,6 +322,25 @@ public class ChatService
         // Resolve the own callsign for this node
         var myCallsign = _nodeManager?.GetCallsignForNode(nodeId) ?? _settings.MyCallsign;
 
+        // Match a Pong reply to a pending outgoing ping and compute the round-trip time.
+        if (!message.IsBroadcast && !string.IsNullOrEmpty(message.From)
+            && message.Text.TrimStart().StartsWith("Pong!", StringComparison.OrdinalIgnoreCase))
+        {
+            var pingKey = PendingPingKey(ResolveBucketId(nodeId), message.From);
+            if (_pendingPings.TryRemove(pingKey, out var pingMsg))
+            {
+                var rtt = message.Timestamp - pingMsg.Timestamp;
+                if (rtt >= TimeSpan.Zero && rtt <= PingTimeout)
+                {
+                    message.PingRoundTrip = rtt;
+                    // Copy over the ACK round-trip already measured on the outgoing ping, if it
+                    // arrived first (the usual case – the ACK is a fast protocol ack, the Pong is
+                    // an app-level reply that needs the partner's bot to process and send it).
+                    message.PingAckRoundTrip = pingMsg.AckRoundTrip;
+                }
+            }
+        }
+
         // Determine tab key based on destination:
         //   Broadcast from known correspondent     → sender's direct tab
         //   Broadcast from unknown station         → tab "*" ("Alle")
@@ -421,6 +460,11 @@ public class ChatService
         var state = ResolveState(nodeId);
         var tabKey = message.IsBroadcast ? "*" : message.To;
         var tab = GetOrCreateTab(state, tabKey, nodeId);
+
+        // Track direct pings so the round-trip time can be shown on the partner's Pong reply.
+        if (!message.IsBroadcast && !message.To.StartsWith('#') && IsPingText(message.Text))
+            _pendingPings[PendingPingKey(ResolveBucketId(nodeId), message.To)] = message;
+
         lock (_lock)
         {
             AppendToMonitor(message, state);
@@ -559,10 +603,12 @@ public class ChatService
     /// </para>
     /// </summary>
     public void MarkMessageAcknowledged(string sequenceNumber, string? ackSender = null, bool isGateway = false) =>
-        MarkMessageAcknowledged(sequenceNumber, null, ackSender, isGateway);
+        MarkMessageAcknowledged(sequenceNumber, null, ackSender, isGateway, DateTime.Now);
 
-    public void MarkMessageAcknowledged(string sequenceNumber, Guid? nodeId, string? ackSender = null, bool isGateway = false)
+    public void MarkMessageAcknowledged(string sequenceNumber, Guid? nodeId, string? ackSender = null, bool isGateway = false, DateTime? ackTimestamp = null)
     {
+        var ackedAt = ackTimestamp ?? DateTime.Now;
+
         bool Found(IEnumerable<MeshcomMessage> messages)
         {
             lock (_lock)
@@ -588,6 +634,10 @@ public class ChatService
                     // Accumulate delivery flags – never clear a flag that was already set.
                     if (isGateway)  msg.IsGatewayDelivered = true;
                     else            msg.IsLoraDelivered    = true;
+                    // Set once, on the first ACK – a later second ACK (e.g. gateway after LoRa) must not overwrite it.
+                    var rtt = ackedAt - msg.Timestamp;
+                    if (rtt >= TimeSpan.Zero)
+                        msg.AckRoundTrip ??= rtt;
                     return true;
                 }
                 return false;
@@ -619,7 +669,7 @@ public class ChatService
         if (message.SequenceNumber != null)
         {
             var isGateway = string.Equals(message.SrcType, "udp", StringComparison.OrdinalIgnoreCase);
-            MarkMessageAcknowledged(message.SequenceNumber, nodeId, message.From, isGateway);
+            MarkMessageAcknowledged(message.SequenceNumber, nodeId, message.From, isGateway, message.Timestamp);
         }
         var ackState = ResolveState(nodeId);
         bool ackMhChanged = IsPrimaryNode(nodeId) && UpdateMhList(message, GetPrimaryState());

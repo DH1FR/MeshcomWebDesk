@@ -1,9 +1,8 @@
 @page "/console-commands"
 @using MeshcomWebDesk.Models
 @using MeshcomWebDesk.Services
+@using MeshcomWebDesk.Helpers
 @using Microsoft.Extensions.Options
-@using System.Net.NetworkInformation
-@using System.Net.Sockets
 @rendermode InteractiveServer
 @inject ConsoleCommandHelperService CmdHelper
 @inject IOptionsMonitor<MeshcomSettings> SettingsMon
@@ -379,15 +378,6 @@
     private List<MhEntry> _mhEntries = [];
     private bool _mhComplete;
 
-    private static List<string> GetLocalIpv4Addresses()
-        => NetworkInterface.GetAllNetworkInterfaces()
-            .Where(n => n.OperationalStatus == OperationalStatus.Up
-                     && n.NetworkInterfaceType != NetworkInterfaceType.Loopback)
-            .SelectMany(n => n.GetIPProperties().UnicastAddresses)
-            .Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork)
-            .Select(a => a.Address.ToString())
-            .ToList();
-
     private List<string> ConsoleLines
     {
         get
@@ -404,7 +394,7 @@
     {
         CmdHelper.OnChange += HandleChange;
         CmdHelper.OnCommandFailed += HandleCommandFailed;
-        _localIps = GetLocalIpv4Addresses();
+        _localIps = NetworkHelper.GetLocalIpv4Addresses();
         foreach (var def in ConsoleCommandDefinitions.All)
         {
             _editValues[def.Name] = CmdHelper.CurrentValues.TryGetValue(def.Name, out var v) ? v : string.Empty;

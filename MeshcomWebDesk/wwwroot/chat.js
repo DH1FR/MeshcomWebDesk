@@ -246,6 +246,8 @@ window.meshcomChat = (function () {
         setSettingsSections: (csv) => localStorage.setItem('meshcom-settings-sections', csv ?? ''),
         getLoraHighlight:    () => localStorage.getItem('meshcom-lora-highlight') === '1',
         setLoraHighlight:    (v) => localStorage.setItem('meshcom-lora-highlight', v ? '1' : '0'),
+        getWelcomedMinorVersion: () => localStorage.getItem('meshcom-welcomed-minor-version') || '',
+        setWelcomedMinorVersion: (v) => localStorage.setItem('meshcom-welcomed-minor-version', v || ''),
 
         // ── Nachricht in Zwischenablage kopieren ──
         copyToClipboard: (text) => {
@@ -317,6 +319,25 @@ window.meshcomChat = (function () {
             var dismiss = () => { if (overlay.parentNode) document.body.removeChild(overlay); };
             closeBtn.addEventListener('click', dismiss);
             overlay.addEventListener('click', (e) => { if (e.target === overlay) dismiss(); });
+        },
+
+        // ── UDP-Diagnose-Popover: als position:fixed positionieren, da die Statusleiste
+        // overflow:hidden hat und ein absolut positioniertes Panel sonst abgeschnitten wird.
+        positionUdpDiag: (wrapEl) => {
+            var panel = wrapEl && wrapEl.querySelector('.udp-diag-panel');
+            if (!panel) return;
+            var rect = wrapEl.getBoundingClientRect();
+
+            var left = rect.left;
+            var maxLeft = window.innerWidth - panel.offsetWidth - 8;
+            if (left > maxLeft) left = Math.max(8, maxLeft);
+            panel.style.left = left + 'px';
+
+            // Bevorzugt oberhalb öffnen (Statusleiste sitzt am unteren Bildschirmrand);
+            // falls kein Platz, stattdessen unterhalb öffnen.
+            var top = rect.top - panel.offsetHeight - 4;
+            if (top < 4) top = rect.bottom + 4;
+            panel.style.top = top + 'px';
         },
 
         // ── SendBar: fügt Text an der aktuellen Cursorposition ein ──
