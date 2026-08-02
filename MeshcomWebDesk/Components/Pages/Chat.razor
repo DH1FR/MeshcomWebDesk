@@ -325,7 +325,7 @@
                             @if (m.Temp1.HasValue && m.Temp1 != 0)  { <span>🌡️ @m.Temp1.Value.ToString("F1")°C</span> }
                             @if (m.Humidity.HasValue && m.Humidity != 0) { <span class="mon-alt">&nbsp;·&nbsp;💧 @m.Humidity.Value.ToString("F0")%</span> }
                             @if (m.Pressure.HasValue && m.Pressure != 0) { <span class="mon-alt">&nbsp;·&nbsp;🧭 @m.Pressure.Value.ToString("F1") hPa</span> }
-                            @if (m.Battery.HasValue) { <span class="mon-alt">&nbsp;·&nbsp;<BatteryIcon Percent="m.Battery.Value" /> @m.Battery%</span> }
+                            @if (m.Battery.HasValue) { <span class="mon-alt">&nbsp;·&nbsp;</span><span style="color:@BattColor(m.Battery.Value)"><BatteryIcon Percent="m.Battery.Value" /> @m.Battery%</span> }
                         </span>
                     }
                     else if (m.IsPositionBeacon && m.Latitude.HasValue)
@@ -344,7 +344,8 @@
                             }
                             @if (m.Battery.HasValue)
                             {
-                                <span class="mon-alt">&nbsp;·&nbsp;<BatteryIcon Percent="m.Battery.Value" /> @m.Battery%</span>
+                                <span class="mon-alt">&nbsp;·&nbsp;</span>
+                                <span style="color:@BattColor(m.Battery.Value)"><BatteryIcon Percent="m.Battery.Value" /> @m.Battery%</span>
                             }
                             @if (!string.IsNullOrEmpty(MeshcomLookup.HwName(m.HwId)))
                             {
