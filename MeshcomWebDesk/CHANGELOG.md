@@ -1,5 +1,20 @@
 ﻿# Changelog
 
+## [1.14.1] – released
+
+### Features
+- **Ping round-trip time**: when a direct `ping`/`--ping`/`>ping` gets a `Pong!` reply from the same station within 5 minutes, the chat bubble now shows the round-trip time (⏱ ms/s) next to the reply text.
+- **ACK round-trip time**: tracked alongside the Pong round-trip and shown on the Pong reply itself.
+- **UDP receive diagnostics popover**: a ❓ button next to the UDP status badge (visible once it falls back to yellow after 15 minutes without a new packet) shows the node's local IP addresses and a troubleshooting checklist.
+- **Battery level icon**: the static 🔋 emoji is now a small fill-proportional, colour-coded icon reflecting the charge percentage; used consistently in the chat status bar, node switcher, monitor list, MH table and callsign popup, and now shown for every configured node instead of only the primary one.
+
+### Bugfixes
+- Service worker no longer throws an invalid `Response` on a failed fetch, which could leave the browser tab hanging after resuming from sleep.
+- Fixed a Chrome-only circuit crash (`removeChild`/`insertBefore` on `null`) when switching chat tabs or sending a message, caused by Chrome's automatic page translation rewriting the DOM behind Blazor's back; the app now opts out via `translate="no"`.
+- Hardened the Blazor circuit against render-batch backlog on slower connections (`MaxBufferedUnacknowledgedRenderBatches` raised from the default).
+
+---
+
 ## [1.14.0] – released
 
 ### Features

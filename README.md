@@ -29,20 +29,16 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
-## 🆕 What's New in v1.14.0
+## 🆕 What's New in v1.14.1
 
 ### ✨ Features
-- **Appearance settings with themes** – New 🎨 *Appearance* section in Settings: choose between four built-in themes (MeshCom Dark, Midnight/OLED, Light, High Contrast) or create your own in a grouped colour editor, applied live as a preview and saved under a name. Themes can be exported/imported as `.mctheme.json` files to share.
-- **Native extudp telemetry** – Selected telemetry values (temp, humidity, pressure, temp 2, QNH, gas resistance, CO2) can now be sent directly to the node as a native `"type":"tele"` UDP telegram instead of only as chat text, on value change rather than a fixed schedule. WebDesk checks whether the node's firmware actually applies the values (via its own telemetry echo) and disables the feature automatically if not, with the confirmation status shown in Settings.
-- **Additional nodes can be disabled** – Each node under *Additional Nodes* now has an enable/disable checkbox to take it out of active use temporarily without deleting its configuration. The primary node's connection fields now mirror the *Connection* section above read-only instead of needing to be entered twice; promoting a different node to primary moves its data up into that section.
-- **NET Console**: button to open a node's default web interface directly.
-- **Toolbar**: *Connect* button shown when disconnected, not just *Disconnect*.
+- **Ping & ACK round-trip time** – when a direct `ping`/`--ping`/`>ping` gets a `Pong!` reply from the same station within 5 minutes, the chat bubble now shows the round-trip time (⏱ ms/s) next to the reply text, alongside the ACK round-trip time.
+- **UDP receive diagnostics** – a ❓ button next to the UDP status badge (shown once it falls back to yellow after 15 minutes without a new packet) opens a popover with the node's local IP addresses and a troubleshooting checklist.
+- **Battery level as a fill-proportional icon** – the static 🔋 emoji next to node battery readings is now a small icon whose fill bar reflects the charge percentage, colour-coded ok/warn/low. Used consistently in the chat status bar, node switcher, monitor list, MH table and callsign popup, and now shown for every configured node instead of only the primary one.
 
 ### 🔧 Bug Fixes
-- **Own beacons shown in the monitor** – Own position/telemetry beacons now appear in the monitor, not just other stations'.
-- **Telemetry mapping**: duplicate `WeatherRole` assignments are cleared automatically; skipped extudp sends are now logged with a reason instead of failing silently; `TelemetryExtUdpEnabled` and the extudp slot are persisted correctly on save.
-- **Spectrum chart** no longer accumulates points from previous scans.
-- **Light theme contrast** fixed for own-message callsigns and chips (Console Command Helper etc.).
+- **Service worker**: no longer throws an invalid `Response` on a failed fetch, which could leave the browser tab hanging after the laptop resumes from sleep.
+- **Chrome tab crash**: switching chat tabs or sending a message could crash the page in Chrome (never Firefox), caused by Chrome's automatic page translation rewriting the DOM behind Blazor's back; the app now opts out of translation.
 
 ---
 
