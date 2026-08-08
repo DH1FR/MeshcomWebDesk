@@ -12,6 +12,7 @@
 ## [1.14.1] – released
 
 ### Features
+- **Map connection view rework**: relay links are now aggregated per hop segment instead of per full path, using a shared LoRa signal-quality scale (RSSI/SNR) across the map, MH list and chat monitor. Adds a time filter (15 min/1 h/6 h/all) and a minimum-usage filter for relay segments, direction arrows, a focus mode that dims unrelated links while a marker popup is open, and diff-based marker updates so open popups survive live updates.
 - **Ping round-trip time**: when a direct `ping`/`--ping`/`>ping` gets a `Pong!` reply from the same station within 5 minutes, the chat bubble now shows the round-trip time (⏱ ms/s) next to the reply text.
 - **ACK round-trip time**: tracked alongside the Pong round-trip and shown on the Pong reply itself.
 - **UDP receive diagnostics popover**: a ❓ button next to the UDP status badge (visible once it falls back to yellow after 15 minutes without a new packet) shows the node's local IP addresses and a troubleshooting checklist.

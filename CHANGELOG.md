@@ -16,6 +16,7 @@
 ## [1.14.1] – 2026-08-02
 
 ### Features
+- **Map connection view rework** – relay links are now aggregated per hop segment instead of per full path, using a shared LoRa signal-quality scale (RSSI/SNR) across the map, MH list and chat monitor. Adds a time filter (15 min/1 h/6 h/all) and a minimum-usage filter for relay segments, direction arrows, a focus mode that dims unrelated links while a marker popup is open, and diff-based marker updates so open popups survive live updates.
 - **Ping & ACK round-trip time** – when a direct `ping`/`--ping`/`>ping` gets a `Pong!` reply from the same station within 5 minutes, the chat bubble now shows the round-trip time (⏱ ms/s) next to the reply text, alongside the ACK round-trip time.
 - **UDP receive diagnostics** – a ❓ button next to the UDP status badge (shown once it falls back to yellow after 15 minutes without a new packet) opens a popover with the node's local IP addresses and a troubleshooting checklist.
 - **Battery level as a fill-proportional icon** – the static 🔋 emoji next to node battery readings is now a small icon whose fill bar reflects the charge percentage, colour-coded ok/warn/low. Used consistently in the chat status bar, node switcher, monitor list, MH table and callsign popup, and now shown for every configured node instead of only the primary one.
