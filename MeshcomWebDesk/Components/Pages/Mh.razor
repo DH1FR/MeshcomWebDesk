@@ -118,7 +118,7 @@
                                     </span>
                                     @if (!string.IsNullOrEmpty(MeshcomLookup.HwName(s.HwId)))
                                     {
-                                        <span class="mh-hw-badge">@MeshcomLookup.HwName(s.HwId)</span>
+                                        <span class="mh-hw-badge">@MeshcomLookup.HwIcon(s.HwId)@MeshcomLookup.HwName(s.HwId)</span>
                                     }
                                     @if (!string.IsNullOrEmpty(s.Firmware))
                                     {
@@ -133,7 +133,7 @@
                                             <span class="mh-sc-call">@s.Callsign</span>
                                             @if (!string.IsNullOrEmpty(MeshcomLookup.HwName(s.HwId)))
                                             {
-                                                <span class="mh-hw-badge">@MeshcomLookup.HwName(s.HwId)</span>
+                                                <span class="mh-hw-badge">@MeshcomLookup.HwIcon(s.HwId)@MeshcomLookup.HwName(s.HwId)</span>
                                             }
                                         </div>
                                         @if (qrzCard is not null)

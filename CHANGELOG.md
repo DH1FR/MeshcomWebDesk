@@ -4,6 +4,15 @@
 
 ---
 
+## [1.14.2] – 2026-08-08
+
+### Features
+- **New hardware ID** – added `hw_id` 61 (T-WATCH-S3) to the hardware name lookup.
+- **New console command `--setlog on/off`** – shows incoming LoRa packets (Message/Position/Hey/ACK) in an overview, without needing to enable the other debug outputs; available in the Console Command Helper's Debug group.
+- **Hardware-type icons** – the hardware badge in the MH monitor and the multi-node switcher buttons now shows a small icon for hardware with a distinctive form factor (⌚ T-WATCH-S3, ⌨️ T-DECK family, 🔌 T-ETH-ELITE); generic LoRa boards stay text-only. Hidden on small screens in the node switcher to preserve the existing mobile layout.
+
+---
+
 ## [1.14.1] – 2026-08-02
 
 ### Features

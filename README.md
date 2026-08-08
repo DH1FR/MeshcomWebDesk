@@ -29,16 +29,12 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
-## 🆕 What's New in v1.14.1
+## 🆕 What's New in v1.14.2
 
 ### ✨ Features
-- **Ping & ACK round-trip time** – when a direct `ping`/`--ping`/`>ping` gets a `Pong!` reply from the same station within 5 minutes, the chat bubble now shows the round-trip time (⏱ ms/s) next to the reply text, alongside the ACK round-trip time.
-- **UDP receive diagnostics** – a ❓ button next to the UDP status badge (shown once it falls back to yellow after 15 minutes without a new packet) opens a popover with the node's local IP addresses and a troubleshooting checklist.
-- **Battery level as a fill-proportional icon** – the static 🔋 emoji next to node battery readings is now a small icon whose fill bar reflects the charge percentage, colour-coded ok/warn/low. Used consistently in the chat status bar, node switcher, monitor list, MH table and callsign popup, and now shown for every configured node instead of only the primary one.
-
-### 🔧 Bug Fixes
-- **Service worker**: no longer throws an invalid `Response` on a failed fetch, which could leave the browser tab hanging after the laptop resumes from sleep.
-- **Chrome tab crash**: switching chat tabs or sending a message could crash the page in Chrome (never Firefox), caused by Chrome's automatic page translation rewriting the DOM behind Blazor's back; the app now opts out of translation.
+- **New hardware ID** – added `hw_id` 61 (T-WATCH-S3) to the hardware name lookup.
+- **New console command `--setlog on/off`** – shows incoming LoRa packets (Message/Position/Hey/ACK) in an overview, without needing to enable the other debug outputs; available in the Console Command Helper's Debug group.
+- **Hardware-type icons** – the hardware badge in the MH monitor and the multi-node switcher buttons now shows a small icon for hardware with a distinctive form factor (⌚ T-WATCH-S3, ⌨️ T-DECK family, 🔌 T-ETH-ELITE); generic LoRa boards stay text-only. Hidden on small screens in the node switcher to preserve the existing mobile layout.
 
 ---
 

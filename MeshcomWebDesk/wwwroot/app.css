@@ -3229,6 +3229,7 @@ h1:focus {
 .node-switcher-btn:hover{background:var(--border-strong);color:var(--text-soft)}
 .node-switcher-btn.active{background:#1f6feb;border-color:#1f6feb;color:var(--text-on-accent);font-weight:600}
 .node-switcher-btn span{margin-right:3px;color:#f0c040}
+.node-switcher-btn .node-hw-icon{margin-right:0;color:inherit}
 /* Online status dot */
 .node-status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .node-status-dot.online{background:var(--ok)}
@@ -3303,6 +3304,7 @@ a.btn-sm                            { display: inline-flex; }  /* <a>-Tag-Fix */
     .btn-label { display: none; }
     .telnet-header .btn-sm { padding: .25rem .4rem; font-size: .9rem; min-width: 2rem; }
     .node-switcher-select { max-width: 110px; font-size: .8rem; }
+    .node-hw-icon { display: none; }
 }
 /* Sehr kleine Screens (iPhone SE etc.): Titel verkürzen */
 @media (max-width: 420px) {
