@@ -183,6 +183,9 @@ public static class ConsoleCommandDefinitions
                 ParsePattern = @"SETCONT\s+(on|off)", OptimisticUpdate = true },
         new() { Name = "posted",       Group = ConsoleCommandGroup.Debug, Type = ConsoleCommandType.Action,
                 Description = "Posted-Status anzeigen" },
+        new() { Name = "setlog",       Group = ConsoleCommandGroup.Debug, Type = ConsoleCommandType.Toggle,
+                Description = "Eingehende LoRa-Pakete übersichtlich anzeigen (Message/Position/Hey/ACK)",
+                OptimisticUpdate = true },
 
         // ── SoftSerial ────────────────────────────────────────────────────
         new() { Name = "softser",     Group = ConsoleCommandGroup.System, Type = ConsoleCommandType.Toggle,
