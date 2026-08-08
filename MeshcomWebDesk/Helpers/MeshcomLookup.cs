@@ -50,6 +50,20 @@ public static class MeshcomLookup
     };
 
     /// <summary>
+    /// Maps hardware_id to a small glyph for compact UI badges/buttons, for the handful of
+    /// hardware types with a visually distinctive form factor. Returns empty string for the
+    /// generic LoRa boards (T-BEAM/TLORA/HELTEC/...), where no icon would be meaningful.
+    /// Includes a trailing space when non-empty so callers can concatenate directly with HwName.
+    /// </summary>
+    public static string HwIcon(int? hwId) => hwId switch
+    {
+        8 or 46 or 50 => "⌨️ ",  // T-DECK / T-DECK-PLUS / T-DECK-PRO
+        53            => "🔌 ",  // T-ETH-ELITE
+        61            => "⌚ ",  // T-WATCH-S3
+        _             => string.Empty
+    };
+
+    /// <summary>
     /// Builds a display firmware string from the raw firmware value and sub-version character.
     /// Handles both integer (35) and string ("4.35") firmware values.
     /// Returns empty string when firmware is 0 or missing.

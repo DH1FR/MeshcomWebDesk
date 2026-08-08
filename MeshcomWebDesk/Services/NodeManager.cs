@@ -65,6 +65,19 @@ public sealed class NodeManager
     public int? GetNodeBattery(Guid nodeId) =>
         _nodeBattery.TryGetValue(nodeId, out var v) ? v : null;
 
+    // ── Own hardware-type tracking ──────────────────────────────────────────
+    // Same rationale as battery above: Status.NodeHwId is a single app-wide instance
+    // (last writer wins across nodes), but the multi-node switcher UI needs each
+    // node's own hardware type regardless of which one is primary.
+    private readonly ConcurrentDictionary<Guid, int> _nodeHwId = new();
+
+    /// <summary>Records the hardware_id reported by a node's own position/telemetry beacon.</summary>
+    public void SetNodeHwId(Guid nodeId, int hwId) => _nodeHwId[nodeId] = hwId;
+
+    /// <summary>Returns the last known hardware_id for a node, or null if never reported.</summary>
+    public int? GetNodeHwId(Guid nodeId) =>
+        _nodeHwId.TryGetValue(nodeId, out var v) ? v : null;
+
     /// <summary>Returns the online status of a node based on the last received packet time.</summary>
     public NodeOnlineStatus GetNodeStatus(Guid nodeId)
     {

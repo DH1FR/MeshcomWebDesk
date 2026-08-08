@@ -38,6 +38,7 @@
             };
             var lastSeen = NodeManager.GetLastSeen(node.Id);
             var battery  = NodeManager.GetNodeBattery(node.Id);
+            var hwIcon   = MeshcomLookup.HwIcon(NodeManager.GetNodeHwId(node.Id));
             var tooltip  = lastSeen.HasValue
                 ? $"{node.Callsign}  |  {node.DeviceIp}:{node.DevicePort}  |  {Loc.T("Zuletzt", "Last seen")}: {FormatLastSeen(lastSeen.Value)}"
                 : $"{node.Callsign}  |  {node.DeviceIp}:{node.DevicePort}  |  {Loc.T("Noch kein Paket", "No packet yet")}";
@@ -47,6 +48,7 @@
                     title="@tooltip">
                 <span class="node-status-dot @dotClass"></span>
                 @if (node.IsPrimary) { <span>★</span> }
+                @if (!string.IsNullOrEmpty(hwIcon)) { <span class="node-hw-icon" title="@MeshcomLookup.HwName(NodeManager.GetNodeHwId(node.Id))">@hwIcon</span> }
                 @node.Name
                 <small style="opacity:.7;font-size:.75em">@node.Callsign</small>
                 @if (battery.HasValue) { <span style="color:@BattColor(battery.Value)"><BatteryIcon Percent="battery.Value" /></span> }
