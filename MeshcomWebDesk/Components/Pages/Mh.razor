@@ -49,7 +49,7 @@
             <span class="mh-subtitle">
                 @filteredList.Count
                 @if (!string.IsNullOrWhiteSpace(_searchText)) { <span class="mh-search-total"> / @_stations.Count</span> }
-                @Loc.T("Station", "Station")@(filteredList.Count != 1 ? Loc.T("en", "s") : "")
+                @(" ")@Loc.T("Station", "Station")@(filteredList.Count != 1 ? Loc.T("en", "s") : "")
             </span>
         </div>
         @if (_stations.Count > 0)
