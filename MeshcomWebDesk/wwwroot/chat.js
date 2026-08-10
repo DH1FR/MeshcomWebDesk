@@ -357,6 +357,33 @@ window.meshcomChat = (function () {
             if (counter) updateSendCounter(counter, el.value);
         },
 
+        // ── SendBar: fügt einen QuickText an der Cursorposition ein (mit Leerzeichen davor/danach, falls nötig) ──
+        insertQuickTextAtCursor: (id, text, maxLength) => {
+            var el = document.getElementById(id);
+            if (!el) return;
+            var start = el.selectionStart;
+            var end   = el.selectionEnd;
+            var val   = el.value;
+
+            var prefix = (start > 0 && !/\s/.test(val.charAt(start - 1))) ? ' ' : '';
+            var suffix = (end < val.length && !/\s/.test(val.charAt(end))) ? ' ' : '';
+            var insertText = prefix + text + suffix;
+
+            var newVal = val.substring(0, start) + insertText + val.substring(end);
+            var pos    = start + insertText.length;
+            if (newVal.length > maxLength) {
+                newVal = newVal.substring(0, maxLength);
+                pos    = Math.min(pos, newVal.length);
+            }
+
+            el.value = newVal;
+            el.setSelectionRange(pos, pos);
+            el.focus();
+            var bar     = el.closest('.send-bar');
+            var counter = bar && bar.querySelector('.char-counter');
+            if (counter) updateSendCounter(counter, el.value);
+        },
+
         // ── SendBar: liest den aktuellen Wert des Eingabefelds ──
         getSendBarValue: (id) => {
             var el = document.getElementById(id);
