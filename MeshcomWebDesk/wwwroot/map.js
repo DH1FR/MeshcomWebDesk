@@ -22,16 +22,35 @@ window.meshcomMap = (function () {
     // Signal thresholds; overwritten from C# (SignalHelper) via init()
     var _sig = { rssiGood: -105, rssiWeak: -115, snrGood: 0, snrWeak: -10 };
 
+    // Popup/tooltip strings; overwritten from C# (LanguageService) via init().
+    // Defaults are German so behaviour is unchanged if init() is called without i18n.
+    var _i18n = {
+        justNow:        'gerade',
+        minAgo:          'vor {n} min',
+        hAgo:            'vor {n} h',
+        dAgo:            'vor {n} d',
+        aiInfo:          '🤖 KI-Info',
+        aiAnalyzing:     '⏳ KI analysiert…',
+        upstreamHop:     'vorgelagerter Hop – Linkqualität unbekannt',
+        partialPath:     'unvollst. Pfad',
+        measuredRange:   '📡 Gemessene Reichweite',
+        fsplRange:       'FSPL-Reichweite:',
+        systemMargin:    'Systemreserve:',
+        antennaHeight:   'Antennenhöhe:',
+        frequency:       'Frequenz:',
+        fsplNote:        'Freiraumdämpfung, ohne Geländeberücksichtigung'
+    };
+
     function esc(s) {
         return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
     function formatAge(mins) {
         if (mins == null || mins < 0) return '';
-        if (mins <  2)    return 'gerade';
-        if (mins <  60)   return 'vor ' + Math.round(mins)      + ' min';
-        if (mins < 1440)  return 'vor ' + Math.round(mins / 60) + ' h';
-        return 'vor ' + Math.round(mins / 1440) + ' d';
+        if (mins <  2)    return _i18n.justNow;
+        if (mins <  60)   return _i18n.minAgo.replace('{n}', Math.round(mins));
+        if (mins < 1440)  return _i18n.hAgo.replace('{n}', Math.round(mins / 60));
+        return _i18n.dAgo.replace('{n}', Math.round(mins / 1440));
     }
 
     function saveView() {
@@ -138,7 +157,7 @@ window.meshcomMap = (function () {
             + '" target="_blank" rel="noopener" style="font-size:11px;color:#58a6ff">🔗 aprs.fi</a>';
         var aiBtn = '<br><button onclick="meshcomMap.requestAiInfo(\'' + esc(s.callsign) + '\')" '
             + 'id="ai-btn-' + esc(s.callsign.replace(/[^a-zA-Z0-9]/g,'-')) + '" '
-            + 'style="margin-top:5px;font-size:11px;background:#1a3a5c;color:#79c0ff;border:1px solid #3a6a8a;border-radius:4px;padding:2px 8px;cursor:pointer">🤖 KI-Info</button>'
+            + 'style="margin-top:5px;font-size:11px;background:#1a3a5c;color:#79c0ff;border:1px solid #3a6a8a;border-radius:4px;padding:2px 8px;cursor:pointer">' + _i18n.aiInfo + '</button>'
             + '<div id="ai-result-' + esc(s.callsign.replace(/[^a-zA-Z0-9]/g,'-')) + '" style="font-size:11px;margin-top:4px;color:#c9d1d9;max-width:260px;white-space:pre-wrap"></div>';
         return '<b>' + esc(s.callsign) + '</b>' + (s.isGateway ? ' <span style="font-size:10px;font-weight:700;background:#0d2b1a;color:#3fb950;border-radius:3px;padding:1px 5px;margin-left:4px">GW</span>' : '') + qrzLine + badgeLine + relayLine + telemLine
             + (s.text     ? '<br><span style="font-size:12px">' + esc(s.text) + '</span>' : '')
@@ -209,7 +228,7 @@ window.meshcomMap = (function () {
     }
 
     return {
-        init: function (elementId, ownLat, ownLon, dotNetRef, sigThresholds) {
+        init: function (elementId, ownLat, ownLon, dotNetRef, sigThresholds, i18n) {
             if (_map) { _map.remove(); _map = null; }
             _lastBounds     = null;
             _initialFitDone = false;
@@ -220,6 +239,7 @@ window.meshcomMap = (function () {
             _ownMarker      = null;
             _ownKey         = null;
             if (sigThresholds) _sig = sigThresholds;
+            if (i18n) Object.assign(_i18n, i18n);
 
             var saved = null;
             try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch (e) { }
@@ -284,8 +304,8 @@ window.meshcomMap = (function () {
                         if (seg.rssi != null) label += 'RSSI ' + seg.rssi + ' dBm';
                         if (seg.snr  != null) label += (seg.rssi != null ? ' / ' : '') + 'SNR ' + seg.snr.toFixed(1) + ' dB';
                     }
-                    if (!seg.lastHop) label += '<br><small>vorgelagerter Hop – Linkqualität unbekannt</small>';
-                    if (seg.partial)  label += '<br><i>unvollst. Pfad</i>';
+                    if (!seg.lastHop) label += '<br><small>' + _i18n.upstreamHop + '</small>';
+                    if (seg.partial)  label += '<br><i>' + _i18n.partialPath + '</i>';
 
                     // 1. Dark halo (drawn first = below) for contrast against map tiles
                     var halo = L.polyline(coords, {
@@ -479,7 +499,7 @@ window.meshcomMap = (function () {
             var safeId = callsign.replace(/[^a-zA-Z0-9]/g, '-');
             var el = document.getElementById('ai-result-' + safeId);
             var btn = document.getElementById('ai-btn-' + safeId);
-            if (el)  el.innerHTML  = '<span style="color:#8b949e">⏳ KI analysiert…</span>';
+            if (el)  el.innerHTML  = '<span style="color:#8b949e">' + _i18n.aiAnalyzing + '</span>';
             if (btn) btn.disabled  = true;
             _dotNet.invokeMethodAsync('OnAiPopupRequestAsync', callsign);
         },
@@ -489,7 +509,7 @@ window.meshcomMap = (function () {
             var el  = document.getElementById('ai-result-' + safeId);
             var btn = document.getElementById('ai-btn-'    + safeId);
             if (el)  el.innerHTML  = html;
-            if (btn) { btn.disabled = false; btn.textContent = '🤖 KI-Info'; }
+            if (btn) { btn.disabled = false; btn.textContent = _i18n.aiInfo; }
         },
 
         // ── Reichweiten-Wolke ─────────────────────────────────────────────
@@ -528,7 +548,7 @@ window.meshcomMap = (function () {
                     fill:        false,
                     dashArray:   '6,4',
                     interactive: false
-                }).bindTooltip('📡 Gemessene Reichweite', { sticky: true, className: 'relay-tooltip' })
+                }).bindTooltip(_i18n.measuredRange, { sticky: true, className: 'relay-tooltip' })
                   .addTo(_coverageLayer);
             }
 
@@ -556,12 +576,12 @@ window.meshcomMap = (function () {
             _fsplLayer = L.layerGroup();
 
             var tooltipHtml =
-                '📻 <b>FSPL-Reichweite: ' + (d_km >= 1 ? d_km.toFixed(1) + ' km' : Math.round(d_m) + ' m') + '</b>' +
+                '📻 <b>' + _i18n.fsplRange + ' ' + (d_km >= 1 ? d_km.toFixed(1) + ' km' : Math.round(d_m) + ' m') + '</b>' +
                 '<br>EIRP: ' + eirpDbm.toFixed(1) + ' dBm' +
-                '<br>Systemreserve: ' + systemMarginDb + ' dB' +
-                '<br>Antennenhöhe: ' + antennaHeightM + ' m' +
-                '<br>Frequenz: ' + freqMhz + ' MHz' +
-                '<br><small style="color:#8b949e">Freiraumdämpfung, ohne Geländeberücksichtigung</small>';
+                '<br>' + _i18n.systemMargin + ' ' + systemMarginDb + ' dB' +
+                '<br>' + _i18n.antennaHeight + ' ' + antennaHeightM + ' m' +
+                '<br>' + _i18n.frequency + ' ' + freqMhz + ' MHz' +
+                '<br><small style="color:#8b949e">' + _i18n.fsplNote + '</small>';
 
             // Äußerer Kreis (max. Reichweite) – gelb, gut sichtbar
             L.circle([lat, lon], {
