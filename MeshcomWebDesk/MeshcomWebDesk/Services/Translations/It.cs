@@ -24,6 +24,7 @@ internal static class It
         ["Please choose beacon intervals carefully."] = "Si prega di scegliere gli intervalli di beacon con attenzione.",
 
         // General
+        ["a.s.l."]                  = "s.l.m.",
         ["Accept"]                  = "Accetta",
         ["Actions"]                 = "Azioni",
         ["Active"]                  = "Attivo",

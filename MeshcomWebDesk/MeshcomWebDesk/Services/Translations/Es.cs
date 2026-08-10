@@ -24,6 +24,7 @@ internal static class Es
         ["Please choose beacon intervals carefully."] = "Por favor, elige los intervalos de baliza con cuidado.",
 
         // General
+        ["a.s.l."]                  = "s.n.m.",
         ["Accept"]                  = "Aceptar",
         ["Actions"]                 = "Acciones",
         ["Active"]                  = "Activo",

@@ -25,7 +25,7 @@
             <span class="mh-ownpos-val">
                 @GeoHelper.FormatCoord(_status.OwnLatitude, _status.OwnLongitude)
                 @if (_status.OwnAltitude.HasValue)
-                { <span class="mh-ownpos-alt">&nbsp;· @_status.OwnAltitude m ü.NN</span> }
+                { <span class="mh-ownpos-alt">&nbsp;· @_status.OwnAltitude m @Loc.T("ü.NN", "a.s.l.")</span> }
             </span>
             <span class="mh-ownpos-src">[Node]</span>
             <a class="mh-osm-link" href="@GeoHelper.OsmUrl(_status.OwnLatitude!.Value, _status.OwnLongitude!.Value)"
