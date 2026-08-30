@@ -430,12 +430,39 @@
 
                 <label>
                     @Loc.T("Gateway-Quelle", "Gateway Source")<br />
-                    <small>@Loc.T("Server für die Gateway-Liste.", "Server for the gateway list.")</small>
+                    <small>@Loc.T("Eingebautes Dashboard für die Gateway-Liste.", "Built-in dashboard for the gateway list.")</small>
                 </label>
                 <select @bind="_model.GatewayServer">
                     <option value="oe">🇦🇹 OE – meshcom.oevsv.at</option>
                     <option value="dl">🇩🇪 DL – meshcom.hamnet.network</option>
+                    <option value="it">🇮🇹 IT – meshcom.dig-italia.it</option>
+                    <option value="both">🇦🇹 + 🇩🇪 OE + DL</option>
+                    <option value="none">@Loc.T("Keine (nur eigene Quellen)", "None (custom sources only)")</option>
                 </select>
+
+                <label>
+                    @Loc.T("Eigene Gateway-Quellen", "Custom Gateway Sources")<br />
+                    <small>@Loc.T("Zusätzliche Dashboards. Die URL muss auf die rakgw.html-Seite eines MeshCom-Dashboards zeigen.", "Additional dashboards. The URL must point to the rakgw.html page of a MeshCom dashboard.")</small>
+                </label>
+                <div style="display:flex;flex-direction:column;gap:0.4rem">
+                    @foreach (var src in _model.GatewaySources)
+                    {
+                        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                            <input type="checkbox" @bind="src.Enabled" title="@Loc.T("Aktiv", "Enabled")" />
+                            <input type="text" @bind="src.Name" placeholder="@Loc.T("Name (z. B. IT – dig-italia)", "Name (e.g. IT – dig-italia)")"
+                                   style="flex:0 0 180px" />
+                            <input type="text" @bind="src.Url" placeholder="https://…/rakgw.html"
+                                   style="flex:1 1 260px" />
+                            <button type="button" class="btn-remove" @onclick="() => _model.GatewaySources.Remove(src)">✕</button>
+                        </div>
+                    }
+                    <div>
+                        <button type="button" class="btn-add"
+                                @onclick="() => _model.GatewaySources.Add(new GatewaySourceEntry())">
+                            + @Loc.T("Quelle hinzufügen", "Add Source")
+                        </button>
+                    </div>
+                </div>
             </div>
             }
         </div>
@@ -3293,6 +3320,9 @@
             TxCooldownSeconds       = s.TxCooldownSeconds,
             GatewayHighlightEnabled = s.GatewayHighlightEnabled,
             GatewayServer           = s.GatewayServer,
+            GatewaySources          = s.GatewaySources
+                .Select(g => new GatewaySourceEntry { Name = g.Name, Url = g.Url, Enabled = g.Enabled })
+                .ToList(),
             TelnetEnabled           = s.TelnetEnabled,
             ConsoleMode             = s.ConsoleMode == "tls" ? "hmac" : s.ConsoleMode,
             TelnetPort              = s.TelnetPort,
@@ -3931,6 +3961,7 @@
 
             // Null-safety: ensure nested objects and collections exist
             imported.QuickTexts       ??= [];
+            imported.GatewaySources   ??= [];
             imported.GroupLabels      ??= [];
             imported.BotCommands      ??= [];
             imported.CalendarBeacons  ??= [];
@@ -4084,6 +4115,9 @@
                 TxCooldownSeconds       = s.TxCooldownSeconds,
                 GatewayHighlightEnabled = s.GatewayHighlightEnabled,
                 GatewayServer           = s.GatewayServer,
+                GatewaySources          = s.GatewaySources
+                    .Select(g => new GatewaySourceEntry { Name = g.Name, Url = g.Url, Enabled = g.Enabled })
+                    .ToList(),
                 TelnetEnabled           = s.TelnetEnabled,
                 ConsoleMode             = s.ConsoleMode == "tls" ? "hmac" : s.ConsoleMode,
                 TelnetPort              = s.TelnetPort,
@@ -4219,6 +4253,7 @@
         public int    TxCooldownSeconds         { get; set; } = 5;
         public bool   GatewayHighlightEnabled  { get; set; } = true;
         public string GatewayServer            { get; set; } = "oe";
+        public List<GatewaySourceEntry> GatewaySources { get; set; } = [];
         public bool   TelnetEnabled            { get; set; } = false;
         public string ConsoleMode             { get; set; } = "hmac";
         public int    TelnetPort              { get; set; } = 2323;
@@ -4377,6 +4412,10 @@
             TxCooldownSeconds       = TxCooldownSeconds,
             GatewayHighlightEnabled = GatewayHighlightEnabled,
             GatewayServer           = GatewayServer,
+            GatewaySources          = GatewaySources
+                .Where(g => !string.IsNullOrWhiteSpace(g.Url))
+                .Select(g => new GatewaySourceEntry { Name = g.Name?.Trim() ?? "", Url = g.Url.Trim(), Enabled = g.Enabled })
+                .ToList(),
             TelnetEnabled           = TelnetEnabled,
             ConsoleMode             = ConsoleMode,
             TelnetPort              = TelnetPort,

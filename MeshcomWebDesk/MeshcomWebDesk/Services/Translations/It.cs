@@ -335,6 +335,15 @@ internal static class It
         ["Signal strength"]         = "Potenza segnale",
         ["SNR"]                     = "SNR",
 
+        // Settings – Gateway source
+        ["Gateway Source"]          = "Sorgente gateway",
+        ["Built-in dashboard for the gateway list."] = "Dashboard integrato per la lista gateway.",
+        ["None (custom sources only)"] = "Nessuno (solo sorgenti personalizzate)",
+        ["Custom Gateway Sources"]  = "Sorgenti gateway personalizzate",
+        ["Additional dashboards. The URL must point to the rakgw.html page of a MeshCom dashboard."] = "Dashboard aggiuntivi. L'URL deve puntare alla pagina rakgw.html di un dashboard MeshCom.",
+        ["Name (e.g. IT – dig-italia)"] = "Nome (es. IT – dig-italia)",
+        ["Add Source"]              = "Aggiungi sorgente",
+
         // Settings – Station / HF
         ["Station / HF parameters"] = "Parametri stazione / HF",
         ["Station parameters"]      = "Parametri stazione",
