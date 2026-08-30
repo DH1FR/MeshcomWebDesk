@@ -260,6 +260,10 @@
                     {
                         <span class="mon-src @SrcTypeCss(m.SrcType)">@SrcTypeLabel(m.SrcType)</span>
                     }
+                    @if (m.IsOutgoing && string.Equals(m.SrcType, "hub", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <span class="mon-src mon-src-other" title="@Loc.T("Über den KISS-Hub eingespeist", "Injected via the KISS hub")">🔀 Hub</span>
+                    }
 
                     @* Routing: From [⟶ Relay1 ⟶ Relay2 …] → To *@
                     @if (!string.IsNullOrEmpty(m.From))

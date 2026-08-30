@@ -470,6 +470,36 @@ public sealed class KissClientService : BackgroundService
             return false;
         }
         finally { conn.WriteLock.Release(); }
+
+        // Surface hub-injected traffic in the monitor (monitor-only, no chat tab).
+        var ax = Ax25Ui.Decode(ax25Payload);
+        if (ax is not null)
+        {
+            var info = AprsInfo.Parse(ax.Info);
+            var m = new MeshcomMessage
+            {
+                NodeId     = nodeId,
+                From       = ax.Src,
+                IsOutgoing = true,
+                SrcType    = "hub",
+                RawData    = $"[hub {hubClientId}] {ReconstructTnc2(ax)}",
+                Text       = ax.Info,
+            };
+            if (info is { Kind: AprsInfoKind.Position, Position: { } p })
+            {
+                m.To = "*"; m.IsPositionBeacon = true;
+                m.Latitude = p.Lat; m.Longitude = p.Lon; m.Altitude = info.AltitudeMeters;
+                m.AprsComment = string.IsNullOrWhiteSpace(p.Comment) ? null : p.Comment;
+            }
+            else if (info is { Kind: AprsInfoKind.Message, Message: { } tm })
+            {
+                m.To = string.IsNullOrEmpty(tm.Addressee) ? "*" : tm.Addressee;
+                m.Text = tm.Text;
+            }
+            _chat.AddRawMessage(m);
+        }
+        _logger.LogDebug("KISS hub TX [{Node}] from client {Client}: {Frame}", nodeId, hubClientId,
+            ax is null ? Convert.ToHexString(ax25Payload) : ReconstructTnc2(ax));
         return true;
     }
 
