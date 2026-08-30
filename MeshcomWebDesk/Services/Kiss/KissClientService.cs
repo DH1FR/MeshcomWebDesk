@@ -325,7 +325,12 @@ public sealed class KissClientService : BackgroundService
                 {
                     _logger.LogDebug("KISS RX ACK from {From} → target {To} seq {Seq}",
                         msg.From, msg.To, msg.SequenceNumber ?? "(none)");
-                    _chat.AddAck(msg);
+                    // Only mark our own outgoing messages when the ACK is actually addressed to
+                    // one of our nodes – an ACK for a hub client (foreign callsign) is monitor-only.
+                    if (IsOwnCallsign(tm.Addressee))
+                        _chat.AddAck(msg);
+                    else
+                        _chat.AddRawMessage(msg);
                 }
                 else if (string.Equals(ax.Src, node.Callsign, StringComparison.OrdinalIgnoreCase))
                 {
@@ -357,6 +362,15 @@ public sealed class KissClientService : BackgroundService
         _status[node.Id] = prev with { LastRxUtc = DateTime.UtcNow, RxFrames = prev.RxFrames + 1 };
         RaiseStatusChange();
     }
+
+    /// <summary>
+    /// True when <paramref name="call"/> is exactly one of our own node callsigns (incl. SSID).
+    /// An ACK for a hub client shares the operator's base call but a different SSID, so a base
+    /// match is not enough here.
+    /// </summary>
+    private bool IsOwnCallsign(string? call) =>
+        !string.IsNullOrEmpty(call) &&
+        _settings.CurrentValue.Nodes.Any(n => string.Equals(n.Callsign, call, StringComparison.OrdinalIgnoreCase));
 
     private static string ReconstructTnc2(Ax25Frame ax)
     {
