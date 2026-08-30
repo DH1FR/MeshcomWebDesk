@@ -336,6 +336,15 @@ internal static class Fr
         ["Signal strength"]         = "Force du signal",
         ["SNR"]                     = "RSB",
 
+        // Settings – Gateway source
+        ["Gateway Source"]          = "Source de passerelles",
+        ["Built-in dashboard for the gateway list."] = "Tableau de bord intégré pour la liste des passerelles.",
+        ["None (custom sources only)"] = "Aucune (sources personnalisées uniquement)",
+        ["Custom Gateway Sources"]  = "Sources de passerelles personnalisées",
+        ["Additional dashboards. The URL must point to the rakgw.html page of a MeshCom dashboard."] = "Tableaux de bord supplémentaires. L'URL doit pointer vers la page rakgw.html d'un tableau de bord MeshCom.",
+        ["Name (e.g. IT – dig-italia)"] = "Nom (p. ex. IT – dig-italia)",
+        ["Add Source"]              = "Ajouter une source",
+
         // Settings – Station / HF
         ["Station / HF parameters"] = "Paramètres station / HF",
         ["Station parameters"]      = "Paramètres station",

@@ -341,16 +341,25 @@ public class MeshcomSettings
     public int TxCooldownSeconds { get; set; } = 5;
 
     /// <summary>
-    /// When true, gateway stations (fetched from meshcom.oevsv.at) are highlighted
-    /// with a special colour and 🌐 symbol in the MH list and on the map.
+    /// When true, gateway stations (fetched from the configured MeshCom dashboard(s)) are
+    /// highlighted with a special colour and 🌐 symbol in the MH list and on the map.
     /// </summary>
     public bool GatewayHighlightEnabled { get; set; } = true;
 
     /// <summary>
-    /// Gateway server source for the highlight list.
-    /// Allowed values: "oe" (meshcom.oevsv.at, default), "dl" (meshcom.hamnet.network), "both".
+    /// Built-in gateway dashboard preset(s) for the highlight list.
+    /// Allowed values: "oe" (meshcom.oevsv.at, default), "dl" (meshcom.hamnet.network),
+    /// "it" (meshcom.dig-italia.it), the legacy "both" alias (= oe + dl), "none",
+    /// or a space-separated combination (e.g. "oe it").
+    /// User-defined sources in <see cref="GatewaySources"/> are always merged on top.
     /// </summary>
     public string GatewayServer { get; set; } = "oe";
+
+    /// <summary>
+    /// User-defined gateway dashboard sources, merged with the <see cref="GatewayServer"/> preset(s).
+    /// Each URL must point to the <c>rakgw.html</c> page of a MeshCom dashboard.
+    /// </summary>
+    public List<GatewaySourceEntry> GatewaySources { get; set; } = [];
 
     // ── Telnet / Console ─────────────────────────────────────────────────
 

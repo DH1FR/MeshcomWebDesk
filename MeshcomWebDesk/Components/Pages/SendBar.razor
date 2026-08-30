@@ -165,10 +165,9 @@
     private async Task LoadQuickText(string text)
     {
         var expanded = await UdpService.ExpandVariablesAsync(text, Callsign);
-        _text       = expanded.Length > MaxLength ? expanded[..MaxLength] : expanded;
         _flyoutOpen = false;
         _rendered   = false;
-        await JS.InvokeVoidAsync("meshcomChat.setSendBarValue", "send-bar-input", _text);
+        await JS.InvokeVoidAsync("meshcomChat.insertQuickTextAtCursor", "send-bar-input", expanded, MaxLength);
     }
 
     [JSInvokable]

@@ -4,6 +4,20 @@
 
 ---
 
+## [1.14.3] – 2026-08-30
+
+### Features
+- **Custom gateway sources** – the *Gateway Source* setting now offers the Italian dashboard (`meshcom.dig-italia.it`) as a built-in preset alongside OE and DL, plus an "OE + DL" and a "None" option. Below it, an arbitrary number of additional dashboards can be added by URL (each must point to a MeshCom dashboard `rakgw.html` page); callsigns from every enabled source are merged. Source changes now take effect immediately instead of after the next 15-minute refresh.
+
+### Bugfixes
+- **Gateway list empty (OE/DL)** – the MeshCom dashboards moved their gateway page from `gateways.html` to `rakgw.html`; the OE URL had started returning 404, so the default gateway highlight list was empty. All preset URLs updated.
+- **Map popup/tooltip text localized** – marker popups and tooltips on the live map showed hardcoded German strings regardless of the selected UI language; they now follow the language setting.
+- **Own-position altitude unit localized** – the altitude unit next to the own position in the MH window was not translated.
+- **Quick text insertion** – picking a quick text now inserts it at the cursor position instead of overwriting whatever is already in the input field.
+- **MH header spacing** – added the missing space between the station count and its label in the MH monitor header.
+
+---
+
 ## [1.14.2] – 2026-08-08
 
 ### Features

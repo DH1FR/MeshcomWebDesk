@@ -341,6 +341,12 @@ public class SettingsService
                 ["TxCooldownSeconds"]       = s.TxCooldownSeconds,
                 ["GatewayHighlightEnabled"] = s.GatewayHighlightEnabled,
                 ["GatewayServer"]           = s.GatewayServer,
+                ["GatewaySources"] = new JsonArray(s.GatewaySources.Select(g => (JsonNode?)new JsonObject
+                {
+                    ["Name"]    = g.Name,
+                    ["Url"]     = g.Url,
+                    ["Enabled"] = g.Enabled
+                }).ToArray()),
                 ["TelnetEnabled"]           = s.TelnetEnabled,
                 ["ConsoleMode"]             = s.ConsoleMode,
                 ["TelnetPort"]              = s.TelnetPort,

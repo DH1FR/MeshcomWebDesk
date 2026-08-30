@@ -276,6 +276,23 @@
                         rssiWeak = SignalHelper.RssiWeakDbm,
                         snrGood  = SignalHelper.SnrGoodDb,
                         snrWeak  = SignalHelper.SnrWeakDb
+                    },
+                    new
+                    {
+                        justNow       = Loc.T("gerade", "just now"),
+                        minAgo        = Loc.T("vor {n} min", "{n} min ago"),
+                        hAgo          = Loc.T("vor {n} h", "{n} h ago"),
+                        dAgo          = Loc.T("vor {n} d", "{n} d ago"),
+                        aiInfo        = Loc.T("🤖 KI-Info", "🤖 AI Info"),
+                        aiAnalyzing   = Loc.T("⏳ KI analysiert…", "⏳ AI analyzing…"),
+                        upstreamHop   = Loc.T("vorgelagerter Hop – Linkqualität unbekannt", "upstream hop – link quality unknown"),
+                        partialPath   = Loc.T("unvollst. Pfad", "partial path"),
+                        measuredRange = Loc.T("📡 Gemessene Reichweite", "📡 Measured range"),
+                        fsplRange     = Loc.T("FSPL-Reichweite:", "FSPL range:"),
+                        systemMargin  = Loc.T("Systemreserve:", "System margin:"),
+                        antennaHeight = Loc.T("Antennenhöhe:", "Antenna height:"),
+                        frequency     = Loc.T("Frequenz:", "Frequency:"),
+                        fsplNote      = Loc.T("Freiraumdämpfung, ohne Geländeberücksichtigung", "Free-space path loss, terrain not accounted for")
                     });
                 _mapInitialized = true;
                 await UpdateMarkersAsync();

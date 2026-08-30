@@ -24,6 +24,7 @@ internal static class Es
         ["Please choose beacon intervals carefully."] = "Por favor, elige los intervalos de baliza con cuidado.",
 
         // General
+        ["a.s.l."]                  = "s.n.m.",
         ["Accept"]                  = "Aceptar",
         ["Actions"]                 = "Acciones",
         ["Active"]                  = "Activo",
@@ -335,6 +336,15 @@ internal static class Es
         ["Gateway"]                 = "Pasarela",
         ["Signal strength"]         = "Potencia de señal",
         ["SNR"]                     = "SNR",
+
+        // Settings – Gateway source
+        ["Gateway Source"]          = "Fuente de pasarelas",
+        ["Built-in dashboard for the gateway list."] = "Panel integrado para la lista de pasarelas.",
+        ["None (custom sources only)"] = "Ninguna (solo fuentes propias)",
+        ["Custom Gateway Sources"]  = "Fuentes de pasarelas personalizadas",
+        ["Additional dashboards. The URL must point to the rakgw.html page of a MeshCom dashboard."] = "Paneles adicionales. La URL debe apuntar a la página rakgw.html de un panel MeshCom.",
+        ["Name (e.g. IT – dig-italia)"] = "Nombre (p. ej. IT – dig-italia)",
+        ["Add Source"]              = "Añadir fuente",
 
         // Settings – Station / HF
         ["Station / HF parameters"] = "Parámetros estación / HF",
