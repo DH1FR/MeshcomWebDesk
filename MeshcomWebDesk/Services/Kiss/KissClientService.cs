@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
 using MeshcomWebDesk.Models;
 
@@ -321,7 +322,14 @@ public sealed class KissClientService : BackgroundService
                 msg.Text           = tm.Text;
                 msg.SequenceNumber = tm.SequenceNumber;
                 msg.IsAck          = tm.IsAck;
-                if (tm.IsAck)
+                if (!tm.IsAck && TimeSyncRx.IsMatch(tm.Text))
+                {
+                    // MeshCom network time-sync broadcast ("{CET}2026-08-30 18:43:36") –
+                    // monitor only, no chat tab (same as the ext-udp path).
+                    msg.IsTimeSync = true;
+                    _chat.AddRawMessage(msg);
+                }
+                else if (tm.IsAck)
                 {
                     _logger.LogDebug("KISS RX ACK from {From} → target {To} seq {Seq}",
                         msg.From, msg.To, msg.SequenceNumber ?? "(none)");
@@ -362,6 +370,10 @@ public sealed class KissClientService : BackgroundService
         _status[node.Id] = prev with { LastRxUtc = DateTime.UtcNow, RxFrames = prev.RxFrames + 1 };
         RaiseStatusChange();
     }
+
+    /// <summary>MeshCom network time-sync broadcast, e.g. "{CET}2026-08-30 18:43:36".</summary>
+    private static readonly Regex TimeSyncRx =
+        new(@"^\{[A-Z]{2,5}\}\d{4}-\d{2}-\d{2}", RegexOptions.Compiled);
 
     /// <summary>
     /// True when <paramref name="call"/> is exactly one of our own node callsigns (incl. SSID).
