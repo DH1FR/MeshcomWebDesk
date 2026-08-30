@@ -172,6 +172,8 @@ public class SettingsService
                     ["ListenPort"]           = n.ListenPort,
                     ["IsPrimary"]            = n.IsPrimary,
                     ["Enabled"]              = n.Enabled,
+                    ["Transport"]            = n.Transport.ToString(),
+                    ["KissPort"]             = n.KissPort,
                     ["TelnetCertThumbprint"] = n.TelnetCertThumbprint,
                     ["TelnetPassword"]       = Encrypt(n.TelnetPassword),
                     ["ConsoleLogEnabled"]    = n.ConsoleLogEnabled
@@ -294,6 +296,13 @@ public class SettingsService
                     ["PublishTelemetry"] = s.Mqtt.PublishTelemetry,
                     ["SubscribeEnabled"] = s.Mqtt.SubscribeEnabled,
                     ["LogRequests"]      = s.Mqtt.LogRequests
+                },
+                ["KissHub"] = new JsonObject
+                {
+                    ["Enabled"] = s.KissHub.Enabled,
+                    ["Port"]    = s.KissHub.Port,
+                    ["NodeId"]  = s.KissHub.NodeId?.ToString(),
+                    ["BindLan"] = s.KissHub.BindLan,
                 },
                 ["Qrz"] = new JsonObject
                 {

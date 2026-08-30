@@ -33,6 +33,15 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     private UdpClient? _udpClient;
 
     /// <summary>
+    /// KISS transport, injected after construction (<see cref="SetKissTransport"/>) to avoid a
+    /// DI cycle. When a target node uses <see cref="NodeTransport.Kiss"/>, sends are routed here.
+    /// </summary>
+    private Kiss.KissClientService? _kiss;
+
+    /// <summary>Wires the KISS transport in after the container is built (see Program.cs).</summary>
+    public void SetKissTransport(Kiss.KissClientService kiss) => _kiss = kiss;
+
+    /// <summary>
     /// (extudp field name, value) pairs from the last successfully sent extudp "tele" telegram.
     /// Used by <see cref="CheckAndSendExtUdpIfChangedAsync"/> to detect changes; <c>null</c> means
     /// nothing has been sent yet in this process (not persisted across restarts).
@@ -1410,6 +1419,32 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             var deviceIp       = sendingNode?.DeviceIp  ?? _settings.DeviceIp;
             var devicePort     = sendingNode?.DevicePort ?? _settings.DevicePort;
 
+            // Transport weiche: a KISS/TCP node is served by KissClientService, not the UDP socket.
+            if (sendingNode?.Transport == NodeTransport.Kiss && _kiss is not null)
+            {
+                var resolvedKissTabKey = tabKey ?? destination;
+                var kissOutgoing = new MeshcomMessage
+                {
+                    From           = fromCallsign,
+                    To             = resolvedKissTabKey,
+                    Text           = text,
+                    IsOutgoing     = true,
+                    RawData        = $"{fromCallsign}>APRS::{destination}:{text}",
+                    SequenceNumber = "TX",
+                    NodeId         = selectedNodeId,
+                };
+                _chatService.AddOutgoingMessage(kissOutgoing);
+                var sent = await _kiss.SendMessageFrameAsync(sendingNode, destination, text, kissOutgoing);
+                if (sent)
+                {
+                    Status.TxCount++;
+                    Status.LastTxTime = DateTime.Now;
+                    NotifyStatusChange();
+                }
+                _chatService.NotifyExternalChange();
+                return;
+            }
+
             var json = JsonSerializer.Serialize(new { type = "msg", dst = destination, msg = text });
             var bytes = Encoding.UTF8.GetBytes(json);
 
@@ -1468,6 +1503,24 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     }
 
     private void NotifyStatusChange() => OnStatusChange?.Invoke();
+
+    /// <summary>
+    /// Feeds an RX frame decoded by another transport (currently KISS) into the shared
+    /// <see cref="ConnectionStatus"/> so the status bar (RX count, last RX, RSSI/SNR)
+    /// keeps working when the primary node is not on ext-udp.
+    /// </summary>
+    public void RecordTransportRx(MeshcomMessage message)
+    {
+        if (message.Rssi.HasValue)
+        {
+            Status.LastRssi = message.Rssi;
+            Status.LastSnr  = message.Snr;
+        }
+        Status.RxCount++;
+        Status.LastRxTime = message.Timestamp;
+        Status.LastRxFrom = message.From;
+        NotifyStatusChange();
+    }
 
     /// <summary>
     /// Updates the own GPS position (called from browser geolocation or node position beacon).

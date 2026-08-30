@@ -231,6 +231,10 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<GatewayService>())
 builder.Services.AddSingleton<IMeshcomSender>(sp => sp.GetRequiredService<MeshcomUdpService>());
 builder.Services.AddSingleton<IMeshcomVariableExpander>(sp => sp.GetRequiredService<MeshcomUdpService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<MeshcomUdpService>());
+builder.Services.AddSingleton<MeshcomWebDesk.Services.Kiss.KissClientService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<MeshcomWebDesk.Services.Kiss.KissClientService>());
+builder.Services.AddSingleton<MeshcomWebDesk.Services.Kiss.KissHubService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<MeshcomWebDesk.Services.Kiss.KissHubService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<DataPersistenceService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<MqttService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<MeshcomWebDesk.Services.WeatherApiPollingService>());
@@ -253,6 +257,10 @@ var app = builder.Build();
 var chatService = app.Services.GetRequiredService<ChatService>();
 chatService.SetMqttService(app.Services.GetRequiredService<MqttService>());
 chatService.SetNodeManager(app.Services.GetRequiredService<NodeManager>());
+
+// Wire the KISS transport into the UDP service for TX routing (avoids a DI cycle).
+app.Services.GetRequiredService<MeshcomUdpService>()
+   .SetKissTransport(app.Services.GetRequiredService<MeshcomWebDesk.Services.Kiss.KissClientService>());
 
 if (!app.Environment.IsDevelopment())
 {

@@ -499,5 +499,40 @@ internal static class Es
         ["The node itself may not be receiving anything from the mesh"] = "Es posible que el propio node no esté recibiendo nada de la mesh",
         ["Own IP (for ext UDP on the node):"] = "IP propia (para ext UDP en el node):",
         ["Open detailed guide"] = "Abrir guía detallada",
+
+        // KISS/TCP transport
+        ["How WebDesk reaches this node"] = "Cómo WebDesk se conecta a este node",
+        ["KISS port"] = "Puerto KISS",
+        ["Fixed: 8001 (firmware v1)"] = "Fijo: 8001 (firmware v1)",
+        ["ESP32 nodes only. While WebDesk is connected via KISS no other KISS program can use this node. Enable TX / RxMeta on the node with --kiss tx on / --kiss meta on."]
+            = "Solo nodes ESP32. Mientras WebDesk está conectado por KISS ningún otro programa KISS puede usar este node. Activa TX / RxMeta en el node con --kiss tx on / --kiss meta on.",
+        ["Neighbours (heard directly)"] = "Vecinos (oídos directamente)",
+        ["Relay nodes (/R=)"] = "Nodos repetidores (/R=)",
+        ["Full APRS comment (KISS only)"] = "Comentario APRS completo (solo KISS)",
+        ["connected"] = "conectado",
+        ["connecting…"] = "conectando…",
+        ["node unreachable"] = "node inaccesible",
+        ["busy (another KISS client)"] = "ocupado (otro cliente KISS)",
+        ["inactive"] = "inactivo",
+        ["KISS: in TX ring"] = "KISS: en el búfer TX",
+        ["KISS: call rejected"] = "KISS: indicativo rechazado",
+        ["KISS: TX off"] = "KISS: TX desactivado",
+        ["KISS: bad frame"] = "KISS: trama inválida",
+        ["KISS: no response"] = "KISS: sin respuesta",
+
+        // KISS hub
+        ["KISS Hub"] = "Hub KISS",
+        ["WebDesk holds the single KISS connection to the node and opens its own KISS/TCP listener. Direwolf, YAAC, APRSdroid etc. then connect to WebDesk instead of the node."]
+            = "WebDesk mantiene la única conexión KISS al node y abre su propio listener KISS/TCP. Direwolf, YAAC, APRSdroid, etc. se conectan entonces a WebDesk en lugar del node.",
+        ["Start the KISS hub listener"] = "Iniciar el listener del hub KISS",
+        ["Primary node"] = "Node primario",
+        ["Reachable from"] = "Accesible desde",
+        ["This PC only (localhost)"] = "Solo este PC (localhost)",
+        ["LAN – all interfaces"] = "LAN – todas las interfaces",
+        ["No authentication – only enable on a trusted network. Downstream apps must use your callsign (any SSID) or the node rejects transmits."]
+            = "Sin autenticación – actívalo solo en una red de confianza. Las apps deben usar tu indicativo (cualquier SSID) o el node rechaza el envío.",
+        ["Hub inactive."] = "Hub inactivo.",
+        ["Target node"] = "Node objetivo",
+        ["no KISS node"] = "sin node KISS",
     };
 }

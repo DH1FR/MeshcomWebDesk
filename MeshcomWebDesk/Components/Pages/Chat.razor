@@ -1,6 +1,7 @@
 ﻿@page "/"
 @using MeshcomWebDesk.Models
 @using MeshcomWebDesk.Services
+@using MeshcomWebDesk.Services.Kiss
 @using MeshcomWebDesk.Helpers
 @using Microsoft.Extensions.Options
 @using System.Text.RegularExpressions
@@ -18,6 +19,7 @@
 @inject SerialConsoleService SerialConsoleService
 @inject HmacConsoleService HmacConsoleService
 @inject NodeManager NodeManager
+@inject MeshcomWebDesk.Services.Kiss.KissClientService KissService
 @implements IDisposable
 
 <PageTitle>MeshCom Web Client</PageTitle>
@@ -357,6 +359,11 @@
                             {
                                 <span class="mh-fw-badge">@m.Firmware</span>
                             }
+                            @if (m.NeighbourCount.HasValue)
+                            {
+                                <span class="mon-alt">&nbsp;·&nbsp;</span>
+                                <span class="mon-nb" title="@Loc.T("Nachbarn (direkt gehört)", "Neighbours (heard directly)")">👥&nbsp;@m.NeighbourCount</span>
+                            }
                         </span>
                     }
                     else if (!string.IsNullOrEmpty(m.Text) && !m.Text.StartsWith('{'))
@@ -392,6 +399,31 @@
                                 <span class="mon-snr">/ @m.Snr.Value.ToString("F1")&nbsp;dB</span>
                             }
                         </span>
+                    }
+
+                    @* KISS TX result for own outgoing frames *@
+                    @if (m.IsOutgoing && m.TxResult.HasValue)
+                    {
+                        <span class="mon-txresult @(m.TxResult == KissTxResult.Accepted ? "mon-txresult-ok" : "mon-txresult-bad")"
+                              title="@KissTxResultTitle(m.TxResult.Value)">@KissTxResultLabel(m.TxResult.Value)</span>
+                    }
+
+                    @* KISS extras: full APRS comment + relay-node list + digipeater path *@
+                    @if (m.DigipeaterPath is { Length: > 0 } dp && string.IsNullOrEmpty(m.RelayPath))
+                    {
+                        @foreach (var hop in dp.Split(','))
+                        {
+                            <span class="mon-relay-arrow">⟶</span>
+                            <span class="mon-relay-node" title="@hop">@hop</span>
+                        }
+                    }
+                    @if (m.RelayNodeList is { Length: > 0 } rl)
+                    {
+                        <span class="mon-relaylist" title="@Loc.T("Relay-Knoten (/R=)", "Relay nodes (/R=)")">🛰️ @rl.TrimEnd(';')</span>
+                    }
+                    @if (m.AprsComment is { Length: > 0 } cmt)
+                    {
+                        <span class="mon-aprs-comment" title="@Loc.T("Vollständiger APRS-Kommentar (nur KISS)", "Full APRS comment (KISS only)")">@cmt</span>
                     }
                 </div>
             }
@@ -469,6 +501,12 @@
         }
         <span class="status-sep">|</span>
         <span class="status-item udp-diag-wrap" @ref="_udpDiagWrapRef">
+            @if (PrimaryIsKiss)
+            {
+                <span class="status-badge @KissStatusBadgeCss" title="@KissStatusTooltip">@KissStatusIcon KISS</span>
+            }
+            else
+            {
             <span class="status-badge @UdpStatusBadgeCss" title="@UdpStatusTooltip">@UdpStatusIcon UDP</span>
             @if (_status.IsListening && !UdpDataFresh)
             {
@@ -512,6 +550,7 @@
                     </div>
                 }
             }
+            }
         </span>
         @if (MonitorSink.IsEnabled)
         {
@@ -529,7 +568,7 @@
         }
         <span class="status-sep status-compact">|</span>
         <span class="status-item status-compact">
-            <span class="status-badge status-badge-neutral">📡 @_settings.DeviceIp:@_settings.DevicePort</span>
+            <span class="status-badge status-badge-neutral">📡 @_settings.DeviceIp:@(PrimaryIsKiss ? (NodeManager.PrimaryNode?.KissPort ?? 8001) : _settings.DevicePort)</span>
         </span>
         <span class="status-sep">|</span>
         <span class="status-item">
@@ -1108,6 +1147,7 @@
         ChatService.OnChange += OnChatChanged;
         ChatService.OnEchoTimeout += OnEchoTimeout;
         UdpService.OnStatusChange += OnStatusChanged;
+        KissService.OnStatusChange += OnStatusChanged;
         ChatService.OnWatchlistHit += HandleWatchlistHit;
         ChatService.OnCqHeard += HandleCqHeard;
         ChatService.OnNewDirectTab += HandleNewDirectTab;
@@ -1678,6 +1718,7 @@
         ChatService.OnChange -= OnChatChanged;
         ChatService.OnEchoTimeout -= OnEchoTimeout;
         UdpService.OnStatusChange -= OnStatusChanged;
+        KissService.OnStatusChange -= OnStatusChanged;
         ChatService.OnWatchlistHit -= HandleWatchlistHit;
         ChatService.OnCqHeard -= HandleCqHeard;
         ChatService.OnNewDirectTab -= HandleNewDirectTab;
@@ -2157,6 +2198,24 @@
         _ => "badge-sys"
     };
 
+    private string KissTxResultLabel(KissTxResult r) => r switch
+    {
+        KissTxResult.Accepted         => Loc.T("KISS: im TX-Ring", "KISS: in TX ring"),
+        KissTxResult.RejectedCallsign => Loc.T("KISS: Call abgelehnt", "KISS: call rejected"),
+        KissTxResult.RejectedTxOff    => Loc.T("KISS: TX aus", "KISS: TX off"),
+        KissTxResult.RejectedFrame    => Loc.T("KISS: Frame ungültig", "KISS: bad frame"),
+        _                             => Loc.T("KISS: keine Antwort", "KISS: no response"),
+    };
+
+    private string KissTxResultTitle(KissTxResult r) => r switch
+    {
+        KissTxResult.Accepted         => Loc.T("Node hat den Frame in den TX-Ring übernommen (noch nicht zugestellt).", "Node accepted the frame into its TX ring (not yet delivered)."),
+        KissTxResult.RejectedCallsign => Loc.T("Node hat abgelehnt: Basis-Rufzeichen passt nicht zum Node.", "Node rejected: base callsign does not match the node."),
+        KissTxResult.RejectedTxOff    => Loc.T("Node hat abgelehnt: --kiss tx ist am Node aus.", "Node rejected: --kiss tx is off on the node."),
+        KissTxResult.RejectedFrame    => Loc.T("Node hat abgelehnt: Frame/Payload nicht verwertbar.", "Node rejected: frame/payload not usable."),
+        _                             => Loc.T("Kein TX-Result-Frame vom Node erhalten.", "No TX-result frame received from the node."),
+    };
+
     private static string MonRowClass(MeshcomMessage m) =>
         m.IsOutgoing ? "mon-row-tx" :
         m.IsTimeSync ? "mon-row-sys" :
@@ -2307,6 +2366,39 @@
         if (_showUdpDiag)
             _positionUdpDiag = true;
     }
+
+    // ── KISS transport status (shown instead of the UDP badge when the primary node uses KISS) ──
+
+    private bool PrimaryIsKiss => NodeManager.PrimaryNode?.Transport == NodeTransport.Kiss;
+
+    private KissNodeStatus KissPrimaryStatus =>
+        NodeManager.PrimaryNode is { } n
+            ? KissService.GetStatus(n.Id)
+            : new KissNodeStatus(KissConnectionState.Disabled, null, 0, null);
+
+    private string KissStatusIcon => KissPrimaryStatus.State switch
+    {
+        KissConnectionState.Connected  => "🟢",
+        KissConnectionState.Connecting => "🟡",
+        _                              => "🔴",
+    };
+
+    private string KissStatusBadgeCss => KissPrimaryStatus.State switch
+    {
+        KissConnectionState.Connected  => "status-badge-ok",
+        KissConnectionState.Connecting => "status-badge-warn",
+        _                              => "status-badge-err",
+    };
+
+    private string KissStatusTooltip => KissPrimaryStatus.State switch
+    {
+        KissConnectionState.Connected  => Loc.T("KISS/TCP: verbunden", "KISS/TCP: connected"),
+        KissConnectionState.Connecting => Loc.T("KISS/TCP: verbinde…", "KISS/TCP: connecting…"),
+        KissConnectionState.NodeGone   => Loc.T("KISS/TCP: Node nicht erreichbar (Reboot / Netz?)", "KISS/TCP: node unreachable (reboot / network?)"),
+        KissConnectionState.SlotBusy   => Loc.T("KISS/TCP: belegt – ein anderer KISS-Client hängt am Node", "KISS/TCP: busy – another KISS client is connected to the node"),
+        KissConnectionState.Error      => Loc.T("KISS/TCP: Fehler", "KISS/TCP: error") + (KissPrimaryStatus.Detail is { } d ? $" – {d}" : ""),
+        _                              => Loc.T("KISS/TCP: inaktiv", "KISS/TCP: inactive"),
+    };
 
     private static string RssiStatusBadgeCss(int rssi) => rssi switch
     {
