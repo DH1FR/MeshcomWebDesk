@@ -29,12 +29,17 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
-## 🆕 What's New in v1.14.2
+## 🆕 What's New in v1.14.3
 
 ### ✨ Features
-- **New hardware ID** – added `hw_id` 61 (T-WATCH-S3) to the hardware name lookup.
-- **New console command `--setlog on/off`** – shows incoming LoRa packets (Message/Position/Hey/ACK) in an overview, without needing to enable the other debug outputs; available in the Console Command Helper's Debug group.
-- **Hardware-type icons** – the hardware badge in the MH monitor and the multi-node switcher buttons now shows a small icon for hardware with a distinctive form factor (⌚ T-WATCH-S3, ⌨️ T-DECK family, 🔌 T-ETH-ELITE); generic LoRa boards stay text-only. Hidden on small screens in the node switcher to preserve the existing mobile layout.
+- **Custom gateway sources** – the *Gateway Source* setting adds the Italian dashboard (`meshcom.dig-italia.it`) as a built-in preset next to OE and DL, plus "OE + DL" and "None". Any number of additional dashboards can be added by URL; callsigns from every enabled source are merged, and changes take effect immediately.
+
+### 🔧 Bug Fixes
+- **Gateway list empty (OE/DL)** – the MeshCom dashboards moved their gateway page to `rakgw.html` and the OE URL had started returning 404, leaving the gateway highlight list empty. Preset URLs updated.
+- **Map popup/tooltip text localized** – live-map marker popups and tooltips no longer show hardcoded German regardless of the UI language.
+- **Own-position altitude unit localized** in the MH window.
+- **Quick texts** are inserted at the cursor position instead of overwriting the input field.
+- **MH header spacing** – missing space between the station count and its label restored.
 
 ---
 
