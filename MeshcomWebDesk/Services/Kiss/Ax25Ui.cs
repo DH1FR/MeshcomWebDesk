@@ -49,10 +49,22 @@ public static class Ax25Ui
         if (b[p] != ControlUi || b[p + 1] != PidNoLayer3) return null;
         p += 2;
 
-        // MeshCom message/comment text is UTF-8 on the wire (emoji, umlauts …).
-        var info = Encoding.UTF8.GetString(b[p..]);
+        var info = DecodeInfoText(b[p..]);
         var digis = addrs.Skip(2).Select(a => a.Call).ToList();
         return new Ax25Frame(addrs[0].Call, addrs[1].Call, digis, info);
+    }
+
+    private static readonly Encoding Utf8Strict =
+        Encoding.GetEncoding("utf-8", EncoderFallback.ReplacementFallback, DecoderFallback.ExceptionFallback);
+
+    /// <summary>
+    /// MeshCom-native KISS clients send UTF-8 (emoji, umlauts); classic APRS software
+    /// (Direwolf, PinPoint …) sends Latin-1 / CP1252. Try strict UTF-8, fall back to Latin-1.
+    /// </summary>
+    private static string DecodeInfoText(ReadOnlySpan<byte> bytes)
+    {
+        try { return Utf8Strict.GetString(bytes); }
+        catch (DecoderFallbackException) { return Encoding.Latin1.GetString(bytes); }
     }
 
     private static bool TryDecodeAddress(ReadOnlySpan<byte> a, out string call, out bool last)
