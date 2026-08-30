@@ -273,9 +273,10 @@
                 </select>
 
                 <label>@Loc.T("Erreichbar von", "Reachable from")</label>
-                <select @bind="_model.KissHubBindLan">
-                    <option value="false">@Loc.T("Nur dieser PC (localhost)", "This PC only (localhost)")</option>
-                    <option value="true">@Loc.T("LAN – alle Schnittstellen", "LAN – all interfaces")</option>
+                <select value="@(_model.KissHubBindLan ? "lan" : "local")"
+                        @onchange='e => _model.KissHubBindLan = (e.Value as string) == "lan"'>
+                    <option value="local">@Loc.T("Nur dieser PC (localhost)", "This PC only (localhost)")</option>
+                    <option value="lan">@Loc.T("LAN – alle Schnittstellen", "LAN – all interfaces")</option>
                 </select>
             </div>
             <p class="settings-hint">⚠️ @Loc.T(
