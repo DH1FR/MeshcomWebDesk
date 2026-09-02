@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
@@ -150,16 +151,28 @@ public sealed class KissClientService : BackgroundService
                 tcp.NoDelay = true;
                 await using var stream = tcp.GetStream();
 
+                // Optional HMAC auth: the node sends "NONCE: <hex>" in clear text before any KISS
+                // byte when its operator set "--kiss auth on". First byte 0xC0 = no auth.
+                var (authOk, authUsed, stashed) = await KissAuthAsync(stream, node.TelnetPassword ?? string.Empty, ct);
+                if (!authOk)
+                    throw new KissAuthException();
+
                 var conn = new WorkerConnection(stream);
                 _connections[node.Id] = conn;
                 SetStatus(node.Id, KissConnectionState.Connected, null);
-                _logger.LogInformation("KISS connected to node '{Name}' ({Ip}:{Port})", node.Name, node.DeviceIp, node.KissPort);
+                _logger.LogInformation("KISS connected to node '{Name}' ({Ip}:{Port}){Auth}", node.Name, node.DeviceIp, node.KissPort,
+                    authUsed ? " [authenticated]" : "");
                 backoff = TimeSpan.FromSeconds(1);
 
                 var deframer = new KissDeframer();
                 var rx = new byte[4096];
                 var rxCtx = new KissRxContext();
                 var firstRead = true;
+
+                // A byte read during auth detection that turned out to be KISS data.
+                if (stashed is { } sb0)
+                    foreach (var frame in deframer.Push([sb0]))
+                        HandleFrame(node, frame, rxCtx);
 
                 while (!ct.IsCancellationRequested)
                 {
@@ -182,6 +195,11 @@ public sealed class KissClientService : BackgroundService
             {
                 break;
             }
+            catch (KissAuthException)
+            {
+                SetStatus(node.Id, KissConnectionState.Error, "KISS authentication rejected – check the node password (--passwd)");
+                _logger.LogWarning("KISS auth rejected by node '{Name}'", node.Name);
+            }
             catch (SocketException ex)
             {
                 SetStatus(node.Id, KissConnectionState.NodeGone, ex.SocketErrorCode.ToString());
@@ -203,6 +221,61 @@ public sealed class KissClientService : BackgroundService
         }
 
         SetStatus(node.Id, KissConnectionState.Disabled, null);
+    }
+
+    // ── Optional HMAC authentication ─────────────────────────────────────
+
+    private sealed class KissAuthException : Exception { }
+
+    /// <summary>
+    /// Handles the optional pre-KISS auth handshake. The node sends
+    /// <c>"NONCE: &lt;32 hex&gt;\r\n"</c> in clear text; we reply
+    /// <c>HMAC-SHA256(passwd, nonce_bytes)</c> as 64 hex + CRLF and expect <c>"OK"</c>.
+    /// Detection: the first byte is <c>0xC0</c> (FEND) → no auth; <c>'N'</c> → handshake.
+    /// Returns <c>(ok, authUsed, stashedByte)</c> — <c>stashedByte</c> is a KISS byte that was
+    /// read during detection and must be fed to the deframer.
+    /// </summary>
+    private async Task<(bool Ok, bool Used, byte? Stashed)> KissAuthAsync(
+        NetworkStream stream, string password, CancellationToken ct)
+    {
+        using var to = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        to.CancelAfter(TimeSpan.FromSeconds(15));
+
+        var one = new byte[1];
+        if (await stream.ReadAsync(one.AsMemory(0, 1), to.Token) == 0) return (false, false, null);
+        if (one[0] != (byte)'N') return (true, false, one[0]);   // 0xC0 or anything else → plain KISS
+
+        // Read the rest of the "NONCE: <hex>" line (we already consumed 'N').
+        var line = new StringBuilder("N");
+        var b = new byte[1];
+        while (line.Length < 128)
+        {
+            if (await stream.ReadAsync(b.AsMemory(0, 1), to.Token) == 0) return (false, false, null);
+            if (b[0] is (byte)'\r' or (byte)'\n') break;
+            line.Append((char)b[0]);
+        }
+
+        var parts = line.ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 2 || parts[1].Length != 32) return (false, true, null);
+
+        byte[] nonce;
+        try { nonce = Convert.FromHexString(parts[1]); }
+        catch { return (false, true, null); }
+
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(password.Trim()));
+        var resp = Convert.ToHexString(hmac.ComputeHash(nonce)).ToLowerInvariant();
+        await stream.WriteAsync(Encoding.ASCII.GetBytes(resp + "\r\n"), to.Token);
+
+        // Read the "OK" / "FAIL" reply line, skipping any leftover CR/LF from the NONCE line.
+        var reply = new StringBuilder();
+        while (reply.Length < 16)
+        {
+            if (await stream.ReadAsync(b.AsMemory(0, 1), to.Token) == 0) break;
+            if (b[0] is (byte)'\r') continue;
+            if (b[0] is (byte)'\n') { if (reply.Length > 0) break; else continue; }
+            reply.Append((char)b[0]);
+        }
+        return (reply.ToString().Trim().Equals("OK", StringComparison.OrdinalIgnoreCase), true, null);
     }
 
     // ── Frame handling ───────────────────────────────────────────────────
@@ -401,6 +474,17 @@ public sealed class KissClientService : BackgroundService
         public NetworkStream Stream { get; } = stream;
         public SemaphoreSlim WriteLock { get; } = new(1, 1);
         public ConcurrentQueue<PendingKissTx> PendingTx { get; } = new();
+
+        // The node rejects injection faster than 8 frames/s (0xF0 status 0x05). Pace our own
+        // writes to a strict 125 ms spacing. Only touched under WriteLock.
+        private long _nextSendTicks;
+        public async Task PaceAsync()
+        {
+            var now  = Environment.TickCount64;
+            var wait = _nextSendTicks - now;
+            if (wait > 0) await Task.Delay((int)wait);
+            _nextSendTicks = Math.Max(now, _nextSendTicks) + 125;
+        }
     }
 
     /// <summary>
@@ -451,7 +535,7 @@ public sealed class KissClientService : BackgroundService
         _logger.LogDebug("KISS TX [{Node}] as {Call}: {Info}", node.Name, node.Callsign, info);
 
         await conn.WriteLock.WaitAsync();
-        try { await conn.Stream.WriteAsync(kiss); }
+        try { await conn.PaceAsync(); await conn.Stream.WriteAsync(kiss); }
         catch (Exception ex)
         {
             conn.PendingTx.TryDequeue(out _);
@@ -488,7 +572,7 @@ public sealed class KissClientService : BackgroundService
         conn.PendingTx.Enqueue(new PendingKissTx(null, hubClientId));
 
         await conn.WriteLock.WaitAsync();
-        try { await conn.Stream.WriteAsync(kiss); }
+        try { await conn.PaceAsync(); await conn.Stream.WriteAsync(kiss); }
         catch (Exception ex)
         {
             conn.PendingTx.TryDequeue(out _);
@@ -563,6 +647,7 @@ public sealed class KissClientService : BackgroundService
             0x02 => KissTxResult.RejectedCallsign,
             0x03 => KissTxResult.RejectedTxOff,
             0x04 => KissTxResult.RejectedFrame,
+            0x05 => KissTxResult.RejectedRateLimit,
             _    => KissTxResult.RejectedFrame,
         };
         if (msgId is not null) outgoing.MsgId = msgId;

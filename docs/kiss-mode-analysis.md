@@ -44,6 +44,27 @@ Die KISS/TCP-Schnittstelle ist auf ESP32-Firmware **v1.2 bereits ausgeliefert**
 **Testknoten:** `DH1FR-2` unter `192.168.1.102:8001` läuft mit der neuen
 Firmware (v1.2).
 
+### Firmware-Update (nach v1.2) — umgesetzt
+
+- **TX-Result `0x05`** = abgelehnt, Injektions-Rate > 8 Frames/s. `0x04` deckt jetzt
+  zusätzlich „Adressfeld nicht terminiert" und „control/PID ≠ 0x03/0xF0" ab.
+  → `KissTxResult.RejectedRateLimit`; WebDesk pact eigene Writes auf 125 ms Abstand
+  (`WorkerConnection.PaceAsync`).
+- **Optionaler HMAC-Auth-Handshake** (`--kiss auth on` + `--passwd` am Node, Default
+  aus): Node sendet `NONCE: <32 hex>\r\n` im Klartext, Client antwortet
+  `HMAC-SHA256(passwd, nonce_bytes)` als 64 hex + CRLF, Node `OK` / `FAIL`. Erkennung
+  am ersten Byte (`0xC0` = kein Auth, `'N'` = Handshake). WebDesk: `KissAuthAsync`
+  in `KissClientService`, Passwort = `NodeProfile.TelnetPassword` (wie net console),
+  15 s Frist, Reconnect-Backoff bei `FAIL`.
+- **Client→Mesh APRS-ACK** (F1): der Node macht aus `:<addr9>:ackNN` jetzt einen
+  echten MeshCom-ACK unter dem Client-Call → der Hub reicht Client-ACK-Frames
+  unverändert durch, kein WebDesk-Handling nötig.
+- **`--via` im Pfad / `::text` / `{` im Text / Backpressure / `--kiss off` /
+  Half-open / RxMeta / HEY-Queue** (F3–F14): reine Node-Verbesserungen, kein
+  WebDesk-Handlungsbedarf (Reconnect-mit-Backoff besteht bereits).
+- Zweistellige SSIDs (`-16…-99`) erscheinen jetzt als `-15` (AX.25 hat nur 4
+  SSID-Bits) — weiterhin verlustbehaftet, Kenntnisnahme.
+
 ---
 
 ## 1. Anforderung

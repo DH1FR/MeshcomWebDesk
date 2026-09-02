@@ -201,8 +201,8 @@
                                     <span class="kiss-status kiss-status-@ks.State.ToString().ToLowerInvariant()">@KissStatusLabel(ks)</span>
                                 </div>
                                 <small style="color:#8b949e">ℹ️ @Loc.T(
-                                    "Nur ESP32-Nodes. Solange WebDesk per KISS verbunden ist, kann kein weiteres KISS-Programm denselben Node nutzen. TX/RxMeta am Node mit --kiss tx on / --kiss meta on freischalten.",
-                                    "ESP32 nodes only. While WebDesk is connected via KISS no other KISS program can use this node. Enable TX / RxMeta on the node with --kiss tx on / --kiss meta on.")</small>
+                                    "Nur ESP32-Nodes. Solange WebDesk per KISS verbunden ist, kann kein weiteres KISS-Programm denselben Node nutzen. TX/RxMeta am Node mit --kiss tx on / --kiss meta on freischalten. Bei --kiss auth on am Node wird das oben eingetragene TLS-Passwort auch für KISS verwendet.",
+                                    "ESP32 nodes only. While WebDesk is connected via KISS no other KISS program can use this node. Enable TX / RxMeta on the node with --kiss tx on / --kiss meta on. With --kiss auth on the TLS password above is also used for KISS authentication.")</small>
                             }
                         </div>
                         @* ── TLS Console ── *@

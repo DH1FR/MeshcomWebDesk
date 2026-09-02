@@ -34,8 +34,14 @@ public enum KissTxResult
     /// <summary>Rejected: <c>--kiss tx</c> is off on the node (status 0x03).</summary>
     RejectedTxOff = 3,
 
-    /// <summary>Rejected: frame / payload not usable (status 0x04).</summary>
+    /// <summary>
+    /// Rejected: frame / payload not usable (status 0x04) – malformed AX.25, unterminated
+    /// address field, or control/PID ≠ 0x03/0xF0 (connected-mode AX.25 is refused).
+    /// </summary>
     RejectedFrame = 4,
+
+    /// <summary>Rejected: injection rate limit exceeded (&gt; 8 frames/s, status 0x05).</summary>
+    RejectedRateLimit = 5,
 
     /// <summary>No TX-result frame received within the expected window.</summary>
     NoResponse = 99,

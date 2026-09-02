@@ -2208,6 +2208,7 @@
         KissTxResult.RejectedCallsign => Loc.T("KISS: Call abgelehnt", "KISS: call rejected"),
         KissTxResult.RejectedTxOff    => Loc.T("KISS: TX aus", "KISS: TX off"),
         KissTxResult.RejectedFrame    => Loc.T("KISS: Frame ungültig", "KISS: bad frame"),
+        KissTxResult.RejectedRateLimit => Loc.T("KISS: Rate-Limit", "KISS: rate limited"),
         _                             => Loc.T("KISS: keine Antwort", "KISS: no response"),
     };
 
@@ -2216,7 +2217,8 @@
         KissTxResult.Accepted         => Loc.T("Node hat den Frame in den TX-Ring übernommen (noch nicht zugestellt).", "Node accepted the frame into its TX ring (not yet delivered)."),
         KissTxResult.RejectedCallsign => Loc.T("Node hat abgelehnt: Basis-Rufzeichen passt nicht zum Node.", "Node rejected: base callsign does not match the node."),
         KissTxResult.RejectedTxOff    => Loc.T("Node hat abgelehnt: --kiss tx ist am Node aus.", "Node rejected: --kiss tx is off on the node."),
-        KissTxResult.RejectedFrame    => Loc.T("Node hat abgelehnt: Frame/Payload nicht verwertbar.", "Node rejected: frame/payload not usable."),
+        KissTxResult.RejectedFrame    => Loc.T("Node hat abgelehnt: Frame/Payload nicht verwertbar (kein UI-Frame?).", "Node rejected: frame/payload not usable (not a UI frame?)."),
+        KissTxResult.RejectedRateLimit => Loc.T("Node hat abgelehnt: Injektions-Rate (> 8 Frames/s) überschritten.", "Node rejected: injection rate (> 8 frames/s) exceeded."),
         _                             => Loc.T("Kein TX-Result-Frame vom Node erhalten.", "No TX-result frame received from the node."),
     };
 
