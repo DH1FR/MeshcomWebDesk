@@ -105,13 +105,15 @@ public sealed class KissClientService : BackgroundService
             .Where(n => n.Enabled && n.Transport == NodeTransport.Kiss)
             .ToList();
 
-        // Stop workers whose node was removed, disabled, or had its endpoint changed.
+        // Stop workers whose node was removed, disabled, or had its endpoint / callsign /
+        // auth password changed (so a freshly-entered password takes effect without a restart).
         foreach (var (id, worker) in _workers.ToArray())
         {
             var match = desired.FirstOrDefault(n => n.Id == id);
             bool endpointChanged = match is not null &&
                 (match.DeviceIp != worker.Node.DeviceIp || match.KissPort != worker.Node.KissPort ||
-                 match.Callsign != worker.Node.Callsign);
+                 match.Callsign != worker.Node.Callsign ||
+                 (match.TelnetPassword ?? "") != (worker.Node.TelnetPassword ?? ""));
             if (match is null || endpointChanged)
             {
                 worker.Cts.Cancel();
