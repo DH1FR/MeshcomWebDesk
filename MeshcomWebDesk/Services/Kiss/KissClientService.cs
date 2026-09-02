@@ -147,7 +147,14 @@ public sealed class KissClientService : BackgroundService
                 using (var connectCts = CancellationTokenSource.CreateLinkedTokenSource(ct))
                 {
                     connectCts.CancelAfter(TimeSpan.FromSeconds(10));
-                    await tcp.ConnectAsync(node.DeviceIp, node.KissPort, connectCts.Token);
+                    try
+                    {
+                        await tcp.ConnectAsync(node.DeviceIp, node.KissPort, connectCts.Token);
+                    }
+                    catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+                    {
+                        throw new SocketException((int)SocketError.TimedOut);   // connect timed out → clean "node unreachable"
+                    }
                 }
 
                 tcp.NoDelay = true;
