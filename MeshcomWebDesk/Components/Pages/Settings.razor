@@ -203,6 +203,12 @@
                                 <small style="color:#8b949e">ℹ️ @Loc.T(
                                     "Nur ESP32-Nodes. Solange WebDesk per KISS verbunden ist, kann kein weiteres KISS-Programm denselben Node nutzen. TX/RxMeta am Node mit --kiss tx on / --kiss meta on freischalten. Bei --kiss auth on am Node wird das oben eingetragene TLS-Passwort auch für KISS verwendet.",
                                     "ESP32 nodes only. While WebDesk is connected via KISS no other KISS program can use this node. Enable TX / RxMeta on the node with --kiss tx on / --kiss meta on. With --kiss auth on the TLS password above is also used for KISS authentication.")</small>
+                                @if (KissSsidTooHigh(node.IsPrimary ? _model.MyCallsign : node.Callsign))
+                                {
+                                    <small style="color:#f85149;display:block;margin-top:.3rem">⚠️ @Loc.T(
+                                        "Rufzeichen-SSID > 15: KISS-Empfang funktioniert, aber Senden nicht – AX.25 kennt nur SSID 0–15. Für KISS-TX eine SSID ≤ 15 verwenden.",
+                                        "Callsign SSID > 15: KISS receive works, but sending does not – AX.25 only has SSID 0–15. Use an SSID ≤ 15 for KISS TX.")</small>
+                                }
                             }
                         </div>
                         @* ── TLS Console ── *@
@@ -3460,6 +3466,14 @@
     }
 
     private void OnUdpStatusChange() => InvokeAsync(StateHasChanged);
+
+    /// <summary>True when the callsign has an SSID above 15 – KISS TX (AX.25, 4 SSID bits) can't send under it.</summary>
+    private static bool KissSsidTooHigh(string? callsign)
+    {
+        if (string.IsNullOrWhiteSpace(callsign)) return false;
+        var dash = callsign.IndexOf('-');
+        return dash >= 0 && int.TryParse(callsign[(dash + 1)..], out var ssid) && ssid > 15;
+    }
 
     private string KissStatusLabel(MeshcomWebDesk.Services.Kiss.KissNodeStatus s) => s.State switch
     {

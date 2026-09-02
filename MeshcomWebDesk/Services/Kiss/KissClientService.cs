@@ -525,7 +525,7 @@ public sealed class KissClientService : BackgroundService
         if (ax is null)
         {
             outgoing.TxResult = KissTxResult.RejectedFrame;
-            _logger.LogWarning("KISS TX: cannot encode AX.25 frame for '{Call}' (base callsign > 6 chars?)", node.Callsign);
+            _logger.LogWarning("KISS TX: cannot encode AX.25 frame for '{Call}' – base callsign > 6 chars or SSID > 15 (AX.25 limit)", node.Callsign);
             return false;
         }
 
