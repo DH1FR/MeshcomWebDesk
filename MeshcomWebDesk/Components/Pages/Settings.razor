@@ -217,23 +217,6 @@
                             <small>@Loc.T("--passwd am Node · für NET-Console (HMAC) und (bei --kiss auth on) für KISS", "--passwd on the node · for the NET console (HMAC) and (with --kiss auth on) for KISS")</small>
                         </label>
                         <input type="password" @bind="node.TelnetPassword" placeholder="••••••••" autocomplete="new-password" />
-                        <label>
-                            @Loc.T("TLS Zertifikat-Fingerprint", "TLS Certificate Fingerprint")<br />
-                            <small>@Loc.T("Leer = beim ersten Verbinden anzeigen", "Empty = show on first connect")</small>
-                        </label>
-                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                            <input type="text" @bind="node.TelnetCertThumbprint"
-                                   placeholder="AA:BB:CC:…"
-                                   style="flex:1;min-width:200px;font-family:monospace;font-size:11px;" />
-                            @if (!string.IsNullOrEmpty(node.TelnetCertThumbprint))
-                            {
-                                <button class="btn-danger" style="padding:2px 8px;font-size:11px;"
-                                        @onclick="() => node.TelnetCertThumbprint = string.Empty"
-                                        title="@Loc.T("Fingerprint löschen (First-Connect-Modus)", "Clear fingerprint (first-connect mode)")">
-                                    🗑
-                                </button>
-                            }
-                        </div>
 
                         @* ── Console Log ── *@
                         <label>
