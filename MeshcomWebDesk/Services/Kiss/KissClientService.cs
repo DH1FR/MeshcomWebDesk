@@ -153,7 +153,15 @@ public sealed class KissClientService : BackgroundService
 
                 // Optional HMAC auth: the node sends "NONCE: <hex>" in clear text before any KISS
                 // byte when its operator set "--kiss auth on". First byte 0xC0 = no auth.
-                var (authOk, authUsed, stashed) = await KissAuthAsync(stream, node.TelnetPassword ?? string.Empty, ct);
+                bool authOk, authUsed; byte? stashed;
+                try
+                {
+                    (authOk, authUsed, stashed) = await KissAuthAsync(stream, node.TelnetPassword ?? string.Empty, ct);
+                }
+                catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+                {
+                    throw new KissAuthException();   // handshake stalled (no OK/FAIL within 15 s)
+                }
                 if (!authOk)
                     throw new KissAuthException();
 
@@ -238,12 +246,25 @@ public sealed class KissClientService : BackgroundService
     private async Task<(bool Ok, bool Used, byte? Stashed)> KissAuthAsync(
         NetworkStream stream, string password, CancellationToken ct)
     {
+        // An auth node sends "NONCE:" *immediately* after accept. A no-auth node may stay silent
+        // for minutes on a quiet mesh, so only wait ~4 s for the first byte: nothing → no auth.
+        var one = new byte[1];
+        try
+        {
+            using var firstByteTo = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            firstByteTo.CancelAfter(TimeSpan.FromSeconds(4));
+            if (await stream.ReadAsync(one.AsMemory(0, 1), firstByteTo.Token) == 0) return (false, false, null);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            return (true, false, null);   // silent node → assume no auth, proceed to the read loop
+        }
+
+        if (one[0] != (byte)'N') return (true, false, one[0]);   // 0xC0 or anything else → plain KISS
+
+        // From here it's the auth handshake – 15 s for the whole exchange.
         using var to = CancellationTokenSource.CreateLinkedTokenSource(ct);
         to.CancelAfter(TimeSpan.FromSeconds(15));
-
-        var one = new byte[1];
-        if (await stream.ReadAsync(one.AsMemory(0, 1), to.Token) == 0) return (false, false, null);
-        if (one[0] != (byte)'N') return (true, false, one[0]);   // 0xC0 or anything else → plain KISS
 
         // Read the rest of the "NONCE: <hex>" line (we already consumed 'N').
         var line = new StringBuilder("N");
