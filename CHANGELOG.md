@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Features
+- **Map: neighbour count & beacon comment** – for stations heard over KISS/TCP the Live Map popup now shows the `/N` neighbour count (`👥 N`) and the operator's beacon comment (machine extensions like `/B= /A= /R=` stripped). A well-meshed station (`/N` ≥ 6) gets a slightly larger marker dot so hubs stand out; new legend entry.
+
 ---
 
 ## [1.15.0] – 2026-09-03

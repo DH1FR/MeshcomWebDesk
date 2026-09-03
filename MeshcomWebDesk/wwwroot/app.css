@@ -2701,6 +2701,18 @@ h1:focus {
     box-shadow: 0 0 0 3px rgba(227, 179, 65, 0.45), 0 0 0 6px rgba(227, 179, 65, 0.2), 0 0 5px rgba(0, 0, 0, 0.7);
 }
 
+/* Well-meshed hub (/N ≥ 6, KISS only): larger dot. Composes with the relay rings. */
+.aprs-dot.aprs-hub {
+    width: 16px;
+    height: 16px;
+    border-width: 2.5px;
+}
+.leg-dot.aprs-hub {
+    width: 15px;
+    height: 15px;
+    border-width: 2.5px;
+}
+
 /* Direction arrow at relay segment midpoints */
 .relay-arrow {
     width: 16px;

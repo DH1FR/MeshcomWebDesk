@@ -480,6 +480,7 @@ internal static class Fr
         ["0\u00a0= unlimited (never refresh)"] = "0\u00a0= illimité (ne jamais actualiser)",
         ["1 relay hop"]             = "1 saut relais",
         ["2+ relay hops"]           = "2+ sauts relais",
+        ["Well-meshed (≥6 neighbours, KISS only)"] = "Bien maillé (≥6 voisins, KISS uniquement)",
         ["25 km radius around own position"] = "Rayon de 25 km autour de ma position",
         ["50 km radius around own position"] = "Rayon de 50 km autour de ma position",
         ["Acknowledgements (ACK)"]  = "Accusés de réception (ACK)",

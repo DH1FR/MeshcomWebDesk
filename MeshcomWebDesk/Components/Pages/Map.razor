@@ -116,6 +116,10 @@
                         <span>@Loc.T("2+ Relay-Hops", "2+ relay hops")</span>
                     </div>
                     <div class="map-legend-row">
+                        <span class="leg-dot aprs-hub"></span>
+                        <span>@Loc.T("Gut vernetzt (≥6 Nachbarn, nur KISS)", "Well-meshed (≥6 neighbours, KISS only)")</span>
+                    </div>
+                    <div class="map-legend-row">
                         <span class="leg-dot-own"></span>
                         <span>@Loc.T("Eigene Position", "Own position")</span>
                     </div>
@@ -285,6 +289,7 @@
                         dAgo          = Loc.T("vor {n} d", "{n} d ago"),
                         aiInfo        = Loc.T("🤖 KI-Info", "🤖 AI Info"),
                         aiAnalyzing   = Loc.T("⏳ KI analysiert…", "⏳ AI analyzing…"),
+                        neighbours    = Loc.T("Nachbarn (direkt gehört)", "Neighbours (heard directly)"),
                         upstreamHop   = Loc.T("vorgelagerter Hop – Linkqualität unbekannt", "upstream hop – link quality unknown"),
                         partialPath   = Loc.T("unvollst. Pfad", "partial path"),
                         measuredRange = Loc.T("📡 Gemessene Reichweite", "📡 Measured range"),
@@ -338,6 +343,8 @@
                     qrzLoc    = qrz?.Location,
                     hopCount  = s.HopCount,
                     relayPath = s.LastRelayPath,
+                    neighbourCount = s.NeighbourCount,
+                    aprsComment    = s.AprsComment,
                     locator   = GeoHelper.ToMaidenhead(s.Latitude!.Value, s.Longitude!.Value),
                     temp      = s.Temp1,
                     humidity  = s.Humidity,
