@@ -238,6 +238,16 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                     var sourceNode = _nodeManager.ResolveNodeByIp(sourceIp);
                     var myCallsign = sourceNode?.Callsign ?? _settings.MyCallsign;
 
+                    // A node on the KISS transport is served by KissClientService – ignore any
+                    // ext-udp copies it still sends (e.g. --extudp left on), otherwise every
+                    // frame is shown twice (and with a different, SSID-truncated callsign).
+                    if (sourceNode?.Transport == NodeTransport.Kiss)
+                    {
+                        if (_settings.LogUdpTraffic)
+                            _logger.LogDebug("Ignoring ext-udp packet from KISS node '{Name}' ({Ip})", sourceNode.Name, sourceIp);
+                        continue;
+                    }
+
                     // Update last-seen timestamp so the UI can show online status
                     if (sourceNode is not null)
                         _nodeManager.MarkNodeSeen(sourceNode.Id);
