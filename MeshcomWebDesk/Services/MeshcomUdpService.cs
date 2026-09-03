@@ -266,36 +266,21 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                         // Tag the message with the node it arrived from
                         message.NodeId = sourceNode?.Id;
 
-                        // Any parsed ext-udp packet means ext-udp is alive for this node – record it
-                        // before the KISS filter below (which drops foreign RF copies but not the
-                        // node's own data). The UI turns this into an "ext-udp" health dot.
+                        // Record that ext-udp is alive for this node (feeds the "ext-udp" health
+                        // dot next to the KISS one). We do NOT drop ext-udp frames from a KISS
+                        // node any more: KISS can be a thin/unreliable path (the firmware never
+                        // sends telemetry-only frames over it, and a DM addressed to the node is
+                        // not relayed either), so dropping the ext-udp copy silently loses
+                        // messages. ChatService dedup (msg_id + text-fallback key) collapses the
+                        // KISS/ext-udp doubles – and SrcInfo (0x20) now keeps the callsigns
+                        // consistent so that dedup actually matches.
                         if (sourceNode is not null)
                         {
                             var extUdpWasStale = !_lastExtUdpRxUtc.TryGetValue(sourceNode.Id, out var prevExtUdp)
                                                  || DateTime.UtcNow - prevExtUdp > TimeSpan.FromMinutes(1);
                             _lastExtUdpRxUtc[sourceNode.Id] = DateTime.UtcNow;
-                            // On a KISS node the foreign-traffic packets below are dropped without a
-                            // status notify – nudge the UI so the "ext-udp" dot goes green promptly.
                             if (extUdpWasStale && sourceNode.Transport == NodeTransport.Kiss)
                                 NotifyStatusChange();
-                        }
-
-                        // A node on the KISS transport receives foreign RF traffic via
-                        // KissClientService already – drop the ext-udp copy of those frames
-                        // (otherwise every foreign frame shows twice, and pre-SrcInfo with a
-                        // different SSID-truncated callsign). But KEEP what KISS by design does
-                        // NOT deliver: the node's own position / message echo (src == our call)
-                        // and structured telemetry objects. ACKs are kept as a safety net.
-                        if (sourceNode?.Transport == NodeTransport.Kiss)
-                        {
-                            var isOwnFrame = string.Equals(message.From, myCallsign, StringComparison.OrdinalIgnoreCase);
-                            if (!isOwnFrame && !message.IsTelemetry && !message.IsAck)
-                            {
-                                if (_settings.LogUdpTraffic)
-                                    _logger.LogDebug("Ignoring ext-udp RF copy from KISS node '{Name}' – {From} (KISS delivers this)",
-                                        sourceNode.Name, message.From);
-                                continue;
-                            }
                         }
 
                         // Update signal stats from LoRa metadata
