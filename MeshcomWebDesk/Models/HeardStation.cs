@@ -45,6 +45,12 @@ public class HeardStation
     /// <summary>Battery level in percent (from "batt" field in position/telemetry packets).</summary>
     public int? Battery { get; set; }
 
+    /// <summary>
+    /// Neighbour count from the "/N" APRS comment extension of the last position beacon
+    /// (only available when this node is reached over KISS/TCP). Null when never reported.
+    /// </summary>
+    public int? NeighbourCount { get; set; }
+
     /// <summary>Hardware ID (from "hw_id" field).</summary>
     public int? HwId { get; set; }
 

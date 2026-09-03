@@ -5,6 +5,8 @@
 @inject IOptionsMonitor<MeshcomSettings> SettingsMonitor
 @inject SettingsService SettingsService
 @inject MeshcomUdpService UdpService
+@inject MeshcomWebDesk.Services.Kiss.KissClientService KissService
+@inject MeshcomWebDesk.Services.Kiss.KissHubService KissHub
 @inject NodeManager NodeManager
 @inject LanguageService Loc
 @inject DatabaseSetupService DatabaseSetupService
@@ -179,29 +181,53 @@
                         </label>
                         <input type="number" value="@node.ListenPort" readonly style="opacity:0.6;cursor:not-allowed;" />
                         }
-                        @* ── TLS Console ── *@
+                        @* ── KISS/TCP (add-on to the ext-udp base) ── *@
                         <label>
-                            @Loc.T("TLS Passwort", "TLS Password")<br />
-                            <small>@Loc.T("Leer = kein Passwort (--passwd am Node)", "Empty = no password (--passwd on node)")</small>
+                            @Loc.T("KISS/TCP", "KISS/TCP")<br />
+                            <small>@Loc.T("Zusätzlich zur ext-udp-Basis – roher Monitor, Sendequittung, KISS-Hub", "On top of the ext-udp base – raw monitor, TX result, KISS hub")</small>
                         </label>
-                        <input type="password" @bind="node.TelnetPassword" placeholder="••••••••" autocomplete="new-password" />
-                        <label>
-                            @Loc.T("TLS Zertifikat-Fingerprint", "TLS Certificate Fingerprint")<br />
-                            <small>@Loc.T("Leer = beim ersten Verbinden anzeigen", "Empty = show on first connect")</small>
-                        </label>
-                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                            <input type="text" @bind="node.TelnetCertThumbprint"
-                                   placeholder="AA:BB:CC:…"
-                                   style="flex:1;min-width:200px;font-family:monospace;font-size:11px;" />
-                            @if (!string.IsNullOrEmpty(node.TelnetCertThumbprint))
+                        <div>
+                            <label class="settings-toggle" title="@Loc.T("KISS/TCP-Verbindung zu diesem Node zusätzlich aufbauen", "Additionally open a KISS/TCP connection to this node")">
+                                <input type="checkbox"
+                                       @bind:get="node.Transport == NodeTransport.Kiss"
+                                       @bind:set="v => node.Transport = v ? NodeTransport.Kiss : NodeTransport.ExtUdp" />
+                                <span>@(node.Transport == NodeTransport.Kiss ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
+                            </label>
+                            @if (node.Transport == NodeTransport.Kiss)
                             {
-                                <button class="btn-danger" style="padding:2px 8px;font-size:11px;"
-                                        @onclick="() => node.TelnetCertThumbprint = string.Empty"
-                                        title="@Loc.T("Fingerprint löschen (First-Connect-Modus)", "Clear fingerprint (first-connect mode)")">
-                                    🗑
-                                </button>
+                                <div style="margin-top:.4rem;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                                    <span>@Loc.T("KISS-Port", "KISS port")</span>
+                                    <input type="number" value="@node.KissPort" readonly style="width:80px;opacity:0.6;cursor:not-allowed"
+                                           title="@Loc.T("Fest: 8001 (Firmware v1)", "Fixed: 8001 (firmware v1)")" />
+                                    @{ var ks = KissService.GetStatus(node.Id); }
+                                    <span class="kiss-status kiss-status-@ks.State.ToString().ToLowerInvariant()">@KissStatusLabel(ks)</span>
+                                </div>
+                                <small style="color:#8b949e">ℹ️ @Loc.T(
+                                    "ext-udp bleibt aktiv – KISS kommt nur obendrauf. Nur ESP32-Nodes. Solange WebDesk per KISS verbunden ist, kann kein weiteres KISS-Programm denselben Node nutzen (dafür der KISS-Hub). TX/RxMeta am Node mit --kiss tx on / --kiss meta on freischalten. Bei --kiss auth on wird das Node-Passwort auch für KISS verwendet.",
+                                    "ext-udp stays active – KISS is added on top. ESP32 nodes only. While WebDesk is connected via KISS no other KISS program can use this node directly (use the KISS hub for that). Enable TX / RxMeta on the node with --kiss tx on / --kiss meta on. With --kiss auth on the node password is also used for KISS.")</small>
+                                <small style="color:#8b949e;display:block;margin-top:.3rem">@Loc.T(
+                                    "KISS liefert Fremdstationen (Monitor/Chat), Sendequittung und RSSI/SNR pro Frame. Die eigene Position des Nodes, das Telemetrie-Panel und Firmware/HW kommen weiterhin über ext-udp – am Node „--extudp on“ lassen.",
+                                    "KISS carries foreign stations (monitor/chat), the TX result and per-frame RSSI/SNR. The node's own position, the telemetry panel and its firmware/HW keep coming from ext-udp – keep \"--extudp on\" on the node.")</small>
+                                @if (ExtUdpMissing(node))
+                                {
+                                    <small style="color:#d29922;display:block;margin-top:.3rem">⚠️ @Loc.T(
+                                        "Seit über 5 min kein ext-udp-Paket von diesem Node. Eigene Position / Telemetrie / Firmware fehlen. Am Node prüfen: „--extudp on“ und ext-udp-Ziel-IP = dieser Rechner (Port 1799).",
+                                        "No ext-udp packet from this node for over 5 min. Own position / telemetry / firmware are missing. Check on the node: \"--extudp on\" and the ext-udp target IP = this host (port 1799).")</small>
+                                }
+                                @if (KissSsidTooHigh(node.IsPrimary ? _model.MyCallsign : node.Callsign))
+                                {
+                                    <small style="color:#f85149;display:block;margin-top:.3rem">⚠️ @Loc.T(
+                                        "Rufzeichen-SSID > 15: KISS-Empfang funktioniert, aber Senden nicht – AX.25 kennt nur SSID 0–15. Für KISS-TX eine SSID ≤ 15 verwenden.",
+                                        "Callsign SSID > 15: KISS receive works, but sending does not – AX.25 only has SSID 0–15. Use an SSID ≤ 15 for KISS TX.")</small>
+                                }
                             }
                         </div>
+                        @* ── TLS Console ── *@
+                        <label>
+                            @Loc.T("Node-Passwort", "Node password")<br />
+                            <small>@Loc.T("--passwd am Node · für NET-Console (HMAC) und (bei --kiss auth on) für KISS", "--passwd on the node · for the NET console (HMAC) and (with --kiss auth on) for KISS")</small>
+                        </label>
+                        <input type="password" @bind="node.TelnetPassword" placeholder="••••••••" autocomplete="new-password" />
 
                         @* ── Console Log ── *@
                         <label>
@@ -216,6 +242,66 @@
                 </div>
             }
             <button class="btn-secondary" style="margin-top:.5rem" @onclick="AddNode">+ @Loc.T("Node hinzufügen", "Add Node")</button>
+            }
+        </div>
+
+        <!-- KISS Hub -->
+        <div class="settings-section @(IsOpen("kisshub") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("kisshub")'>🔀 @Loc.T("KISS-Hub", "KISS Hub") <span class="section-chevron">@(IsOpen("kisshub") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("kisshub")) {
+            var hub = KissHub.GetStatus();
+            <p class="settings-hint">@Loc.T(
+                "WebDesk hält die eine KISS-Verbindung zum Node und öffnet selbst einen KISS/TCP-Listener. Direwolf, YAAC, APRSdroid usw. verbinden sich dann zu WebDesk statt zum Node.",
+                "WebDesk holds the single KISS connection to the node and opens its own KISS/TCP listener. Direwolf, YAAC, APRSdroid etc. then connect to WebDesk instead of the node.")</p>
+            <div class="settings-grid">
+                <label class="settings-toggle" title="@Loc.T("KISS-Hub-Listener starten", "Start the KISS hub listener")">
+                    <input type="checkbox" @bind="_model.KissHubEnabled" />
+                    <span>@(_model.KissHubEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
+                </label>
+                <span></span>
+
+                <label>@Loc.T("Port", "Port")</label>
+                <input type="number" @bind="_model.KissHubPort" min="1" max="65535" style="width:120px" />
+
+                <label>@Loc.T("Node", "Node")</label>
+                <select @bind="_model.KissHubNodeId">
+                    <option value="">@Loc.T("Primär-Node", "Primary node")</option>
+                    @foreach (var n in _model.Nodes.Where(n => n.Transport == NodeTransport.Kiss))
+                    {
+                        <option value="@n.Id">@n.Name (@n.Callsign)</option>
+                    }
+                </select>
+
+                <label>@Loc.T("Erreichbar von", "Reachable from")</label>
+                <select value="@(_model.KissHubBindLan ? "lan" : "local")"
+                        @onchange='e => _model.KissHubBindLan = (e.Value as string) == "lan"'>
+                    <option value="local">@Loc.T("Nur dieser PC (localhost)", "This PC only (localhost)")</option>
+                    <option value="lan">@Loc.T("LAN – alle Schnittstellen", "LAN – all interfaces")</option>
+                </select>
+            </div>
+            <p class="settings-hint">⚠️ @Loc.T(
+                "Keine Authentifizierung – nur in einem vertrauenswürdigen Netz aktivieren. Downstream-Apps müssen dein Rufzeichen (beliebige SSID) verwenden, sonst verwirft der Node das Senden.",
+                "No authentication – only enable on a trusted network. Downstream apps must use your callsign (any SSID) or the node rejects transmits.")</p>
+            <div class="settings-status-line">
+                @if (!_model.KissHubEnabled)
+                {
+                    <span>@Loc.T("Hub inaktiv.", "Hub inactive.")</span>
+                }
+                else if (hub.Error is { } err)
+                {
+                    <span class="kiss-status kiss-status-error">@Loc.T("Fehler", "Error"): @err</span>
+                }
+                else
+                {
+                    <span class="kiss-status @(hub.Listening ? "kiss-status-connected" : "kiss-status-connecting")">
+                        @(hub.Listening ? Loc.T($"hört auf {hub.Bind}:{hub.Port}", $"listening on {hub.Bind}:{hub.Port}") : Loc.T("startet…", "starting…"))
+                    </span>
+                    <span>·</span>
+                    <span title="@Loc.T("Ziel-Node", "Target node")">@(hub.TargetNodeName ?? Loc.T("kein KISS-Node", "no KISS node")) @(hub.TargetConnected ? "🟢" : "🔴")</span>
+                    <span>·</span>
+                    <span>@Loc.T($"{hub.Clients.Count} Client(s)", $"{hub.Clients.Count} client(s)")@(hub.Clients.Count > 0 ? ": " + string.Join(", ", hub.Clients) : "")</span>
+                }
+            </div>
             }
         </div>
 
@@ -3149,6 +3235,8 @@
         Loc.OnChange += StateHasChanged;
         TelnetService.OnChange += OnTelnetChange;
         UdpService.OnStatusChange += OnUdpStatusChange;
+        KissService.OnStatusChange += OnUdpStatusChange;
+        KissHub.OnStatusChange += OnUdpStatusChange;
 
         // Pick up fingerprint that arrived before this page was opened
         if (!string.IsNullOrEmpty(TelnetService.UnknownCertThumbprint))
@@ -3181,6 +3269,8 @@
                 ListenPort            = n.ListenPort,
                 IsPrimary             = n.IsPrimary,
                 Enabled               = n.Enabled,
+                Transport             = n.Transport,
+                KissPort              = n.KissPort,
                 TelnetCertThumbprint  = n.TelnetCertThumbprint,
                 TelnetPassword        = n.TelnetPassword,
                 ConsoleLogEnabled     = n.ConsoleLogEnabled
@@ -3279,6 +3369,10 @@
             WebhookOnMessage        = s.Webhook.OnMessage,
             WebhookOnPosition       = s.Webhook.OnPosition,
             WebhookOnTelemetry      = s.Webhook.OnTelemetry,
+            KissHubEnabled          = s.KissHub.Enabled,
+            KissHubPort             = s.KissHub.Port,
+            KissHubNodeId           = s.KissHub.NodeId?.ToString() ?? string.Empty,
+            KissHubBindLan          = s.KissHub.BindLan,
             MqttEnabled             = s.Mqtt.Enabled,
             MqttHost                = s.Mqtt.Host,
             MqttPort                = s.Mqtt.Port,
@@ -3361,9 +3455,38 @@
         Loc.OnChange -= StateHasChanged;
         TelnetService.OnChange -= OnTelnetChange;
         UdpService.OnStatusChange -= OnUdpStatusChange;
+        KissService.OnStatusChange -= OnUdpStatusChange;
+        KissHub.OnStatusChange -= OnUdpStatusChange;
     }
 
     private void OnUdpStatusChange() => InvokeAsync(StateHasChanged);
+
+    /// <summary>True when the callsign has an SSID above 15 – KISS TX (AX.25, 4 SSID bits) can't send under it.</summary>
+    private static bool KissSsidTooHigh(string? callsign)
+    {
+        if (string.IsNullOrWhiteSpace(callsign)) return false;
+        var dash = callsign.IndexOf('-');
+        return dash >= 0 && int.TryParse(callsign[(dash + 1)..], out var ssid) && ssid > 15;
+    }
+
+    /// <summary>True when a KISS-transport node has had no ext-udp packet for over 5 minutes –
+    /// its own position / telemetry / firmware are then missing (KISS never sends them).</summary>
+    private bool ExtUdpMissing(NodeProfile node)
+    {
+        if (node.Transport != NodeTransport.Kiss) return false;
+        var last = UdpService.LastExtUdpRxUtc(node.Id);
+        return last is null || DateTime.UtcNow - last.Value > TimeSpan.FromMinutes(5);
+    }
+
+    private string KissStatusLabel(MeshcomWebDesk.Services.Kiss.KissNodeStatus s) => s.State switch
+    {
+        MeshcomWebDesk.Services.Kiss.KissConnectionState.Connected  => Loc.T("verbunden", "connected"),
+        MeshcomWebDesk.Services.Kiss.KissConnectionState.Connecting => Loc.T("verbinde…", "connecting…"),
+        MeshcomWebDesk.Services.Kiss.KissConnectionState.NodeGone   => Loc.T("Node nicht erreichbar", "node unreachable"),
+        MeshcomWebDesk.Services.Kiss.KissConnectionState.SlotBusy   => Loc.T("belegt (anderer KISS-Client)", "busy (another KISS client)"),
+        MeshcomWebDesk.Services.Kiss.KissConnectionState.Error      => Loc.T("Fehler", "error") + (s.Detail is null ? "" : $": {s.Detail}"),
+        _ => Loc.T("inaktiv", "inactive"),
+    };
 
     private async Task SaveAsync()
     {
@@ -3995,6 +4118,8 @@
                     ListenPort            = n.ListenPort,
                     IsPrimary             = n.IsPrimary,
                     Enabled               = n.Enabled,
+                    Transport             = n.Transport,
+                    KissPort              = n.KissPort,
                     TelnetCertThumbprint  = n.TelnetCertThumbprint,
                     TelnetPassword        = n.TelnetPassword,
                     ConsoleLogEnabled     = n.ConsoleLogEnabled
@@ -4074,6 +4199,10 @@
                 WebhookOnMessage   = s.Webhook.OnMessage,
                 WebhookOnPosition  = s.Webhook.OnPosition,
                 WebhookOnTelemetry = s.Webhook.OnTelemetry,
+                KissHubEnabled          = (s.KissHub ?? new()).Enabled,
+                KissHubPort             = (s.KissHub ?? new()).Port,
+                KissHubNodeId           = (s.KissHub ?? new()).NodeId?.ToString() ?? string.Empty,
+                KissHubBindLan          = (s.KissHub ?? new()).BindLan,
                 MqttEnabled             = s.Mqtt.Enabled,
                 MqttHost                = s.Mqtt.Host,
                 MqttPort                = s.Mqtt.Port,
@@ -4206,6 +4335,11 @@
         public bool   WebhookOnTelemetry { get; set; }
 
         // MQTT
+        public bool   KissHubEnabled       { get; set; }
+        public int    KissHubPort          { get; set; } = 8001;
+        public string KissHubNodeId        { get; set; } = string.Empty;   // "" = primary node
+        public bool   KissHubBindLan       { get; set; }
+
         public bool   MqttEnabled          { get; set; }
         public string MqttHost             { get; set; } = "localhost";
         public int    MqttPort             { get; set; } = 1883;
@@ -4361,6 +4495,13 @@
                 OnMessage   = WebhookOnMessage,
                 OnPosition  = WebhookOnPosition,
                 OnTelemetry = WebhookOnTelemetry
+            },
+            KissHub = new MeshcomWebDesk.Models.KissHubSettings
+            {
+                Enabled = KissHubEnabled,
+                Port    = KissHubPort,
+                NodeId  = Guid.TryParse(KissHubNodeId, out var khn) ? khn : null,
+                BindLan = KissHubBindLan
             },
             Mqtt = new MeshcomWebDesk.Models.MqttSettings
             {

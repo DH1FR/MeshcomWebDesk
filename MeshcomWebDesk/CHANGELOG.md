@@ -1,5 +1,24 @@
 ﻿# Changelog
 
+## [1.15.0] – released
+
+### Features
+- **KISS/TCP as an optional per-node add-on**: each node can *additionally* be connected over its KISS/TCP interface (TCP port 8001, ESP32 firmware v1.4+), on top of the always-on ext-udp base – a checkbox per node in Settings. Over KISS the monitor gains the full APRS position comment, the digipeater path, the `/R=` relay-node list, the `/N` neighbour count and RSSI/SNR per frame. Sending works over KISS with a per-send delivery result from the node's `0xF0` frame. Optional HMAC-SHA256 auth (`--kiss auth on`) reuses the node password.
+- **KISS hub**: WebDesk holds the single KISS connection to a node and re-serves it as its own KISS/TCP listener, so Dire Wolf, YAAC, APRSdroid etc. connect through WebDesk instead of competing for the node's one slot. Port, target node and localhost/LAN binding configurable under Settings → KISS Hub.
+- **SrcInfo frame (KISS `0x20`)**: origin callsigns with an SSID above 15 (`-16`…`-99`, clamped to `-15` in the AX.25 address field) are restored from a separate frame and used as the real sender for display and as the reply addressee.
+- **KISS and ext-udp as separate status indicators** for a KISS-primary node; a yellow ext-udp dot flags when the node's own position / telemetry / firmware data is not arriving.
+- **Per-node password** feeding NET Console (HMAC) and KISS auth; the unused TLS certificate fingerprint field was removed.
+- **KISS console commands** `--kiss`, `--kiss tx`, `--kiss meta` in the Console Command Helper.
+
+### Bugfixes
+- Bare `ackNNN` / `rejNNN` acknowledgements are now recognised, so delivery checkmarks are set for ACKs from standard APRS clients (e.g. PinPoint).
+- MeshCom time-sync broadcasts are kept out of the chat over KISS (monitor only), matching ext-udp.
+- A hub client's ACK is no longer misattributed to WebDesk's own outgoing messages that share a base callsign.
+- KISS info fields decode as UTF-8 with a Latin-1 fallback (Dire Wolf / PinPoint send CP1252).
+- A KISS connect timeout shows as a clean "node unreachable" status; auth detection no longer stalls on a quiet no-auth node.
+
+---
+
 ## [1.14.3] – released
 
 ### Features

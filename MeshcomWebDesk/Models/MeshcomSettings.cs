@@ -248,6 +248,9 @@ public class MeshcomSettings
     /// <summary>Optional MQTT integration: publish events to a broker and/or receive send-commands.</summary>
     public MqttSettings Mqtt { get; set; } = new();
 
+    /// <summary>Optional KISS hub: re-serve a KISS node's traffic to several downstream apps.</summary>
+    public KissHubSettings KissHub { get; set; } = new();
+
     /// <summary>Optional external weather data provider (AWEKAS, Weather Underground).</summary>
     public WeatherApiSettings WeatherApi { get; set; } = new();
 

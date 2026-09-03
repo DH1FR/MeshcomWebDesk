@@ -619,10 +619,14 @@ public class ChatService
                 if (msg == null && ackSender != null)
                 {
                     var cutoff = DateTime.Now.AddMinutes(-10);
-                    msg = messages.FirstOrDefault(m =>
-                        m.IsOutgoing &&
-                        m.Timestamp >= cutoff &&
-                        string.Equals(m.To, ackSender, StringComparison.OrdinalIgnoreCase));
+                    bool ToAckSender(MeshcomMessage m) =>
+                        m.IsOutgoing && m.Timestamp >= cutoff &&
+                        string.Equals(m.To, ackSender, StringComparison.OrdinalIgnoreCase);
+                    // Oldest still-unacknowledged message first, so a burst of ACKs marches
+                    // through the pending messages in order. Fall back to the newest already-
+                    // acknowledged one only for a repeat ACK (e.g. gateway after LoRa).
+                    msg = messages.FirstOrDefault(m => ToAckSender(m) && !m.IsAcknowledged)
+                       ?? messages.LastOrDefault(ToAckSender);
                 }
 
                 if (msg != null)
@@ -648,11 +652,15 @@ public class ChatService
         // In multi-node setups the outgoing message may have been sent from a different node
         // than the one that received the ACK (e.g. DH1FR-99 sent Pong, DH1FR-2 ACKs it back
         // and the ACK arrives at DH1FR-2's WebDesk – but the Pong lives in DH1FR-99's state).
-        if (!Found(ResolveState(nodeId).Messages))
+        bool acked = Found(ResolveState(nodeId).Messages);
+        if (!acked)
         {
             foreach (var state in _nodeState.Values)
-                if (Found(state.Messages)) break;
+                if (Found(state.Messages)) { acked = true; break; }
         }
+
+        _logger.LogDebug("MarkMessageAcknowledged: seq={Seq} ackSender={Sender} → {Result}",
+            sequenceNumber, ackSender ?? "(none)", acked ? "matched" : "NO match");
 
         NotifyChange();
     }
@@ -1030,6 +1038,7 @@ public class ChatService
                     Altitude         = message.Altitude,
                     LastPositionTime = message.Latitude.HasValue ? message.Timestamp : null,
                     Battery          = message.Battery,
+                    NeighbourCount   = message.NeighbourCount,
                     HwId             = message.HwId,
                     Firmware         = message.Firmware,
                     LastRelayPath        = message.RelayPath,
@@ -1059,6 +1068,7 @@ public class ChatService
                 if (message.Rssi.HasValue)    { s.LastRssi = message.Rssi;  mhChanged = true; }
                 if (message.Snr.HasValue)     { s.LastSnr  = message.Snr;   mhChanged = true; }
                 if (message.Battery.HasValue) { s.Battery  = message.Battery; mhChanged = true; }
+                if (message.NeighbourCount.HasValue) { s.NeighbourCount = message.NeighbourCount; mhChanged = true; }
                 if (message.HwId.HasValue)    s.HwId     = message.HwId;
                 if (!string.IsNullOrEmpty(message.Firmware)) s.Firmware = message.Firmware;
                 if (!string.IsNullOrEmpty(message.SrcType))  s.LastSrcType = message.SrcType;
@@ -1099,6 +1109,29 @@ public class ChatService
             });
 
         return mhChanged;
+    }
+
+    /// <summary>
+    /// Patches RSSI/SNR onto an already-recorded station and the last monitor row for it.
+    /// Used by the KISS transport, where the signal values arrive in a separate RxMeta frame
+    /// that is delivered just after the data frame has already been dispatched.
+    /// </summary>
+    public void ApplySignalMetadata(Guid? nodeId, string callsign, int? rssi, double? snr)
+    {
+        if (string.IsNullOrEmpty(callsign) || (rssi is null && snr is null)) return;
+
+        bool mhChanged = false;
+        lock (_lock)
+        {
+            if (IsPrimaryNode(nodeId) && GetPrimaryState().MhList.TryGetValue(callsign, out var st))
+            {
+                if (rssi.HasValue) st.LastRssi = rssi;
+                if (snr.HasValue)  st.LastSnr  = snr;
+                mhChanged = true;
+            }
+        }
+        if (mhChanged) OnMhChange?.Invoke();
+        NotifyChange();
     }
 
     /// <summary>
@@ -1237,5 +1270,12 @@ public class ChatService
     {
         OnChange?.Invoke();
     }
+
+    /// <summary>
+    /// Raises <see cref="OnChange"/> so the UI re-renders after an existing message was
+    /// mutated in place (e.g. the KISS transport attaching a TX-result / msg_id to an
+    /// outgoing row). Adds nothing to any collection.
+    /// </summary>
+    public void NotifyExternalChange() => NotifyChange();
 }
 

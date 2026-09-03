@@ -1029,6 +1029,42 @@ h1:focus {
 .mon-signal.rssi-weak { color: var(--error-soft); background: #3d1010; }
 .mon-snr { opacity: 0.9; }
 
+/* ===== KISS transport extras in the monitor ===== */
+.mon-nb { color: var(--text-dim); font-size: 10px; white-space: nowrap; }
+.mon-relaylist {
+    font-size: 10px;
+    color: var(--text-dim);
+    background: var(--surface-2, rgba(127,127,127,0.12));
+    border-radius: 3px;
+    padding: 1px 5px;
+    white-space: nowrap;
+}
+.mon-aprs-comment {
+    flex-basis: 100%;
+    margin-top: 2px;
+    font-size: 10px;
+    color: var(--text-muted);
+    font-family: var(--font-mono, monospace);
+    word-break: break-all;
+    opacity: 0.85;
+}
+.mon-txresult {
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    white-space: nowrap;
+}
+.mon-txresult-ok  { color: #6ee57a; background: #0f3d20; }
+.mon-txresult-bad { color: var(--error-soft); background: #3d1010; }
+
+/* KISS connection status chip in Settings node card */
+.kiss-status { font-size: 11px; padding: 1px 6px; border-radius: 3px; background: rgba(127,127,127,0.15); }
+.kiss-status-connected  { color: #6ee57a; background: #0f3d20; }
+.kiss-status-connecting { color: var(--warn); background: #3d3000; }
+.kiss-status-nodegone,
+.kiss-status-slotbusy,
+.kiss-status-error      { color: var(--error-soft); background: #3d1010; }
+
 /* ===== MH Page (Most Recently Heard) ===== */
 .mh-page {
     height: 100%;
@@ -2156,6 +2192,16 @@ h1:focus {
     font-size: 11px;
     color: var(--text-dim);
     line-height: 1.3;
+}
+
+.settings-status-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: .5rem;
+    font-size: 12px;
+    color: var(--text-muted);
 }
 
 .settings-toggle {

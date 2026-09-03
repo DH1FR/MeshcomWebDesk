@@ -33,6 +33,15 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     private UdpClient? _udpClient;
 
     /// <summary>
+    /// KISS transport, injected after construction (<see cref="SetKissTransport"/>) to avoid a
+    /// DI cycle. When a target node uses <see cref="NodeTransport.Kiss"/>, sends are routed here.
+    /// </summary>
+    private Kiss.KissClientService? _kiss;
+
+    /// <summary>Wires the KISS transport in after the container is built (see Program.cs).</summary>
+    public void SetKissTransport(Kiss.KissClientService kiss) => _kiss = kiss;
+
+    /// <summary>
     /// (extudp field name, value) pairs from the last successfully sent extudp "tele" telegram.
     /// Used by <see cref="CheckAndSendExtUdpIfChangedAsync"/> to detect changes; <c>null</c> means
     /// nothing has been sent yet in this process (not persisted across restarts).
@@ -91,6 +100,16 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     /// <summary>Live connection and statistics status. Updated on every relevant event.</summary>
     public ConnectionStatus Status { get; } = new();
 
+    /// <summary>UTC time the last ext-udp packet was attributed to a given node, by node id.
+    /// Lets the UI show a separate "ext-udp alive" indicator next to the KISS one – on a KISS
+    /// node ext-udp still carries the node's own position / telemetry / firmware, which KISS
+    /// never sends.</summary>
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, DateTime> _lastExtUdpRxUtc = new();
+
+    /// <summary>UTC time of the last ext-udp packet from <paramref name="nodeId"/>, or null if none seen.</summary>
+    public DateTime? LastExtUdpRxUtc(Guid nodeId) =>
+        _lastExtUdpRxUtc.TryGetValue(nodeId, out var t) ? t : null;
+
     /// <summary>Raised whenever <see cref="Status"/> changes so UI components can refresh.</summary>
     public event Action? OnStatusChange;
 
@@ -99,23 +118,25 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     private static partial Regex TrailingSequencePattern();
 
     /// <summary>
-    /// Matches ACK messages in two formats:
-    ///   APRS-style  : "NOCALL-2 :ack187"  or "NOCALL-2  :ack187" (space-padded addressee)
-    ///   MeshCom inline: "NOCALL-2:ack187" (callsign immediately followed by :ackNNN, no space)
+    /// Matches ACK/REJ messages in three formats:
+    ///   APRS pure     : "ack187" / "rej187" (standard APRS clients: PinPoint, Direwolf, …)
+    ///   APRS-style    : "NOCALL-2 :ack187" (space-padded addressee)
+    ///   MeshCom inline : "NOCALL-2:ack187" (callsign immediately followed by :ackNNN)
     /// </summary>
-    [GeneratedRegex(@"^\S+\s*:ack\d+$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(?:\S+\s*:)?(?:ack|rej)\d+$", RegexOptions.IgnoreCase)]
     private static partial Regex AckPattern();
 
     /// <summary>Captures the sequence number from a trailing {NNN} marker, e.g. "{034" → "034".</summary>
     [GeneratedRegex(@"\{(\d+)$")]
     private static partial Regex SequenceNumberPattern();
 
-    /// <summary>Captures the sequence number from an ACK text, e.g. "NOCALL-2:ack034" or "NOCALL-2  :ack034" → "034".</summary>
-    [GeneratedRegex(@":ack(\d+)$", RegexOptions.IgnoreCase)]
+    /// <summary>Captures the sequence number from an ACK text: "NOCALL-2:ack034" or bare "ack034" → "034".</summary>
+    [GeneratedRegex(@"(?:ack|rej)(\d+)$", RegexOptions.IgnoreCase)]
     private static partial Regex AckSequencePattern();
 
-    /// <summary>Captures the target callsign from a MeshCom inline ACK, e.g. "DL3DCW-12:ack881" → "DL3DCW-12".</summary>
-    [GeneratedRegex(@"^(\S+?)\s*:ack\d+$", RegexOptions.IgnoreCase)]
+    /// <summary>Captures the target callsign from a MeshCom inline ACK, e.g. "DL3DCW-12:ack881" → "DL3DCW-12".
+    /// Does not match the bare APRS form "ack881" (there the JSON dst is the real target).</summary>
+    [GeneratedRegex(@"^(\S+?)\s*:(?:ack|rej)\d+$", RegexOptions.IgnoreCase)]
     private static partial Regex AckTargetPattern();
 
     /// <summary>Detects MeshCom network time-sync broadcasts, e.g. "{CET}2026-04-07 18:11:58".</summary>
@@ -244,6 +265,23 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                     {
                         // Tag the message with the node it arrived from
                         message.NodeId = sourceNode?.Id;
+
+                        // Record that ext-udp is alive for this node (feeds the "ext-udp" health
+                        // dot next to the KISS one). We do NOT drop ext-udp frames from a KISS
+                        // node any more: KISS can be a thin/unreliable path (the firmware never
+                        // sends telemetry-only frames over it, and a DM addressed to the node is
+                        // not relayed either), so dropping the ext-udp copy silently loses
+                        // messages. ChatService dedup (msg_id + text-fallback key) collapses the
+                        // KISS/ext-udp doubles – and SrcInfo (0x20) now keeps the callsigns
+                        // consistent so that dedup actually matches.
+                        if (sourceNode is not null)
+                        {
+                            var extUdpWasStale = !_lastExtUdpRxUtc.TryGetValue(sourceNode.Id, out var prevExtUdp)
+                                                 || DateTime.UtcNow - prevExtUdp > TimeSpan.FromMinutes(1);
+                            _lastExtUdpRxUtc[sourceNode.Id] = DateTime.UtcNow;
+                            if (extUdpWasStale && sourceNode.Transport == NodeTransport.Kiss)
+                                NotifyStatusChange();
+                        }
 
                         // Update signal stats from LoRa metadata
                         if (message.Rssi.HasValue)
@@ -1410,6 +1448,32 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             var deviceIp       = sendingNode?.DeviceIp  ?? _settings.DeviceIp;
             var devicePort     = sendingNode?.DevicePort ?? _settings.DevicePort;
 
+            // Transport weiche: a KISS/TCP node is served by KissClientService, not the UDP socket.
+            if (sendingNode?.Transport == NodeTransport.Kiss && _kiss is not null)
+            {
+                var resolvedKissTabKey = tabKey ?? destination;
+                var kissOutgoing = new MeshcomMessage
+                {
+                    From           = fromCallsign,
+                    To             = resolvedKissTabKey,
+                    Text           = text,
+                    IsOutgoing     = true,
+                    RawData        = $"{fromCallsign}>APRS::{destination}:{text}",
+                    SequenceNumber = "TX",
+                    NodeId         = selectedNodeId,
+                };
+                _chatService.AddOutgoingMessage(kissOutgoing);
+                var sent = await _kiss.SendMessageFrameAsync(sendingNode, destination, text, kissOutgoing);
+                if (sent)
+                {
+                    Status.TxCount++;
+                    Status.LastTxTime = DateTime.Now;
+                    NotifyStatusChange();
+                }
+                _chatService.NotifyExternalChange();
+                return;
+            }
+
             var json = JsonSerializer.Serialize(new { type = "msg", dst = destination, msg = text });
             var bytes = Encoding.UTF8.GetBytes(json);
 
@@ -1468,6 +1532,24 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     }
 
     private void NotifyStatusChange() => OnStatusChange?.Invoke();
+
+    /// <summary>
+    /// Feeds an RX frame decoded by another transport (currently KISS) into the shared
+    /// <see cref="ConnectionStatus"/> so the status bar (RX count, last RX, RSSI/SNR)
+    /// keeps working when the primary node is not on ext-udp.
+    /// </summary>
+    public void RecordTransportRx(MeshcomMessage message)
+    {
+        if (message.Rssi.HasValue)
+        {
+            Status.LastRssi = message.Rssi;
+            Status.LastSnr  = message.Snr;
+        }
+        Status.RxCount++;
+        Status.LastRxTime = message.Timestamp;
+        Status.LastRxFrom = message.From;
+        NotifyStatusChange();
+    }
 
     /// <summary>
     /// Updates the own GPS position (called from browser geolocation or node position beacon).
@@ -1564,14 +1646,12 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                 msg = TrailingSequencePattern().Replace(msg, string.Empty);
             }
 
-            // Detect ACK messages in two formats:
-            //   APRS-style  : "NOCALL-2 :ack187"    (space before colon, padded addressee)
-            //   MeshCom     : "NOCALL-2:ack881"     (no space; callsign directly followed by :ackNNN)
+            // Detect ACK/REJ messages: bare APRS "ack187" (standard clients), APRS-style
+            // "NOCALL-2 :ack187", or MeshCom inline "NOCALL-2:ack881".
             var isAck = !isPositionBeacon && AckPattern().IsMatch(msg.Trim());
 
             if (isAck)
             {
-                // Extract sequence number from the :ackNNN part
                 var ackSeqMatch = AckSequencePattern().Match(msg);
                 if (ackSeqMatch.Success)
                     seqNum = ackSeqMatch.Groups[1].Value;
@@ -1579,7 +1659,8 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                 // For MeshCom inline ACKs the DST field from the JSON ("*" or group) is not the
                 // real ACK target – the target callsign is encoded inside the msg text itself
                 // (e.g. "DL3DCW-12:ack881").  Override dst so MarkMessageAcknowledged can find
-                // the correct outgoing message tab.
+                // the correct outgoing message tab. The bare form ("ack881") carries no target,
+                // so the JSON dst (the real addressee) is kept.
                 var ackTargetMatch = AckTargetPattern().Match(msg.Trim());
                 if (ackTargetMatch.Success)
                     dst = ackTargetMatch.Groups[1].Value;

@@ -938,6 +938,49 @@ internal static class Fr
         ["The node itself may not be receiving anything from the mesh"] = "Il est possible que le node lui-même ne reçoive rien du mesh",
         ["Own IP (for ext UDP on the node):"] = "IP propre (pour ext UDP sur le node) :",
         ["Open detailed guide"] = "Ouvrir le guide détaillé",
+
+        // KISS/TCP transport
+        ["How WebDesk reaches this node"] = "Comment WebDesk atteint ce node",
+        ["KISS port"] = "Port KISS",
+        ["Fixed: 8001 (firmware v1)"] = "Fixe : 8001 (firmware v1)",
+        ["ESP32 nodes only. While WebDesk is connected via KISS no other KISS program can use this node. Enable TX / RxMeta on the node with --kiss tx on / --kiss meta on."]
+            = "Nodes ESP32 uniquement. Tant que WebDesk est connecté en KISS, aucun autre programme KISS ne peut utiliser ce node. Activez TX / RxMeta sur le node avec --kiss tx on / --kiss meta on.",
+        ["On top of the ext-udp base – raw monitor, TX result, KISS hub"] = "En plus de la base ext-udp – moniteur brut, accusé d'émission, hub KISS",
+        ["Additionally open a KISS/TCP connection to this node"] = "Ouvrir en plus une connexion KISS/TCP vers ce node",
+        ["ext-udp stays active – KISS is added on top. ESP32 nodes only. While WebDesk is connected via KISS no other KISS program can use this node directly (use the KISS hub for that). Enable TX / RxMeta on the node with --kiss tx on / --kiss meta on. With --kiss auth on the node password is also used for KISS."]
+            = "ext-udp reste actif – KISS s'ajoute par-dessus. Nodes ESP32 uniquement. Tant que WebDesk est connecté en KISS, aucun autre programme KISS ne peut utiliser ce node directement (utilisez le hub KISS pour cela). Activez TX / RxMeta sur le node avec --kiss tx on / --kiss meta on. Avec --kiss auth on, le mot de passe du node sert aussi pour KISS.",
+        ["KISS carries foreign stations (monitor/chat), the TX result and per-frame RSSI/SNR. The node's own position, the telemetry panel and its firmware/HW keep coming from ext-udp – keep \"--extudp on\" on the node."]
+            = "KISS transporte les stations distantes (moniteur/chat), l'accusé d'émission et le RSSI/SNR par trame. La position propre du node, le panneau de télémétrie et le firmware/HW continuent d'arriver via ext-udp – laissez \"--extudp on\" sur le node.",
+        ["No ext-udp packet from this node for over 5 min. Own position / telemetry / firmware are missing. Check on the node: \"--extudp on\" and the ext-udp target IP = this host (port 1799)."]
+            = "Aucun paquet ext-udp de ce node depuis plus de 5 min. Position propre / télémétrie / firmware manquants. Vérifiez sur le node : \"--extudp on\" et l'IP cible ext-udp = cet ordinateur (port 1799).",
+        ["Neighbours (heard directly)"] = "Voisins (entendus directement)",
+        ["Relay nodes (/R=)"] = "Nœuds relais (/R=)",
+        ["Full APRS comment (KISS only)"] = "Commentaire APRS complet (KISS uniquement)",
+        ["connected"] = "connecté",
+        ["connecting…"] = "connexion…",
+        ["node unreachable"] = "node injoignable",
+        ["busy (another KISS client)"] = "occupé (autre client KISS)",
+        ["inactive"] = "inactif",
+        ["KISS: in TX ring"] = "KISS : dans le tampon TX",
+        ["KISS: call rejected"] = "KISS : indicatif refusé",
+        ["KISS: TX off"] = "KISS : TX désactivé",
+        ["KISS: bad frame"] = "KISS : trame invalide",
+        ["KISS: no response"] = "KISS : pas de réponse",
+
+        // KISS hub
+        ["KISS Hub"] = "Hub KISS",
+        ["WebDesk holds the single KISS connection to the node and opens its own KISS/TCP listener. Direwolf, YAAC, APRSdroid etc. then connect to WebDesk instead of the node."]
+            = "WebDesk garde l'unique connexion KISS au node et ouvre son propre écouteur KISS/TCP. Direwolf, YAAC, APRSdroid, etc. se connectent alors à WebDesk au lieu du node.",
+        ["Start the KISS hub listener"] = "Démarrer l'écouteur du hub KISS",
+        ["Primary node"] = "Node principal",
+        ["Reachable from"] = "Accessible depuis",
+        ["This PC only (localhost)"] = "Ce PC uniquement (localhost)",
+        ["LAN – all interfaces"] = "LAN – toutes les interfaces",
+        ["No authentication – only enable on a trusted network. Downstream apps must use your callsign (any SSID) or the node rejects transmits."]
+            = "Aucune authentification – à n'activer que sur un réseau de confiance. Les apps doivent utiliser ton indicatif (n'importe quel SSID), sinon le node refuse l'émission.",
+        ["Hub inactive."] = "Hub inactif.",
+        ["Target node"] = "Node cible",
+        ["no KISS node"] = "aucun node KISS",
     };
 }
 

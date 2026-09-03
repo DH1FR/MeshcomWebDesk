@@ -45,15 +45,21 @@ public class HmacConsoleService : IConsoleService, IAsyncDisposable
         _consoleLog      = consoleLog;
     }
 
-    public async Task ConnectAsync(string? hostOverride = null)
+    Task IConsoleService.ConnectAsync(string? hostOverride) => ConnectAsync(hostOverride);
+
+    /// <param name="hostOverride">Node IP; falls back to <c>settings.DeviceIp</c>.</param>
+    /// <param name="passwordOverride">HMAC password for this node; falls back to the top-level
+    /// <c>settings.TelnetPassword</c>. Needed for multi-node setups with per-node passwords.</param>
+    public async Task ConnectAsync(string? hostOverride = null, string? passwordOverride = null)
     {
         await _lock.WaitAsync();
         try
         {
             if (IsConnected) return;
 
-            var s    = _settingsMonitor.CurrentValue;
-            var host = hostOverride ?? s.DeviceIp;
+            var s        = _settingsMonitor.CurrentValue;
+            var host     = hostOverride ?? s.DeviceIp;
+            var password = string.IsNullOrEmpty(passwordOverride) ? s.TelnetPassword : passwordOverride;
             var port = s.TelnetPort;           // Standard 2323
 
             _cts = new CancellationTokenSource();
@@ -100,7 +106,7 @@ public class HmacConsoleService : IConsoleService, IAsyncDisposable
 
             // ── Schritt 3: HMAC-SHA256 berechnen ─────────────────────────────
             var nonceBytes = Convert.FromHexString(nonceHex);
-            using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(s.TelnetPassword));
+            using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(password));
             var response   = Convert.ToHexString(hmac.ComputeHash(nonceBytes)).ToLower();
 
             // ── Schritt 4: Response senden ────────────────────────────────────

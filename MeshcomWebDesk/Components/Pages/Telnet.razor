@@ -451,7 +451,10 @@
         }
         else if (_isHmac)
         {
-            await HmacConsoleService.ConnectAsync(ActiveNodeIp);
+            var node = ActiveNodeProfile;
+            await HmacConsoleService.ConnectAsync(
+                hostOverride:     node?.DeviceIp ?? ActiveNodeIp,
+                passwordOverride: node is null || string.IsNullOrEmpty(node.TelnetPassword) ? null : node.TelnetPassword);
         }
         else
         {

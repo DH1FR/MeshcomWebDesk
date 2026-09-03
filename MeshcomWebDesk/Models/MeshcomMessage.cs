@@ -139,6 +139,35 @@ public class MeshcomMessage
     public double? Humidity { get; set; }
     public double? Pressure { get; set; }  // qnh preferred, qfe fallback
 
+    // ── KISS/TCP transport extras (only the KISS RX path fills these) ────────
+
+    /// <summary>
+    /// Full APRS position comment as received over KISS (everything after the symbol),
+    /// e.g. "Ralf, F34, AVSK#MeshComWebDesk/B=100/A=000827/N9/P=1016.7/H=56.0/T=23.3/R=262;2626;".
+    /// EXTUDP "pos" packets do not carry this. Null for non-KISS or non-position frames.
+    /// </summary>
+    public string? AprsComment { get; set; }
+
+    /// <summary>
+    /// Digipeater path from the AX.25 address field of a KISS data frame
+    /// ("RELAY1,RELAY2"), i.e. the mesh relays that forwarded the packet. Null when
+    /// heard directly or not via KISS. For KISS frames this is also mirrored into
+    /// <see cref="RelayPath"/> (prefixed with the origin call) so the MH list / map work.
+    /// </summary>
+    public string? DigipeaterPath { get; set; }
+
+    /// <summary>Neighbour count from the "/N" APRS comment extension. Null when absent.</summary>
+    public int? NeighbourCount { get; set; }
+
+    /// <summary>Relay-node list from the "/R=" APRS comment extension (verbatim, e.g. "262;2626;26269;9;").</summary>
+    public string? RelayNodeList { get; set; }
+
+    /// <summary>
+    /// For an outgoing message injected over KISS: the node's TX-result (KISS type 0xF0,
+    /// firmware v1.2+). Null for EXTUDP sends or while still awaiting the result.
+    /// </summary>
+    public KissTxResult? TxResult { get; set; }
+
     /// <summary>
     /// Round-trip time between sending a "ping" and receiving the partner's "Pong!" reply.
     /// Set only on the incoming Pong message when a matching outgoing ping is still pending.
