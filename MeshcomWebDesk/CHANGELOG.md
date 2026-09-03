@@ -1,6 +1,6 @@
 ﻿# Changelog
 
-## [1.15.0] – in development (dev)
+## [1.15.0] – released
 
 ### Features
 - **KISS/TCP as an optional per-node add-on**: each node can *additionally* be connected over its KISS/TCP interface (TCP port 8001, ESP32 firmware v1.4+), on top of the always-on ext-udp base – a checkbox per node in Settings. Over KISS the monitor gains the full APRS position comment, the digipeater path, the `/R=` relay-node list, the `/N` neighbour count and RSSI/SNR per frame. Sending works over KISS with a per-send delivery result from the node's `0xF0` frame. Optional HMAC-SHA256 auth (`--kiss auth on`) reuses the node password.
