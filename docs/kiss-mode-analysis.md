@@ -64,6 +64,19 @@ Firmware (v1.2).
   WebDesk-Handlungsbedarf (Reconnect-mit-Backoff besteht bereits).
 - Zweistellige SSIDs (`-16…-99`) erscheinen jetzt als `-15` (AX.25 hat nur 4
   SSID-Bits) — weiterhin verlustbehaftet, Kenntnisnahme.
+- **Folge — Antworten an SSID > 15 über KISS unmöglich:** die Firmware kürzt die
+  Absender-SSID, bevor das Frame über KISS geht, also sieht WebDesk `OE3LCR-55`
+  nur als `OE3LCR-15`. Eine Antwort geht dann an `-15` (falscher/nicht existenter
+  Node) — **still, ohne Fehler**. `Ax25Ui.Encode` weist SSID > 15 ohnehin ab.
+  Kein WebDesk-Fix möglich (SSID-Info ist weg, bevor WebDesk sie sieht).
+  Workaround: für einen Node, über den man SSID>15-Partner erreichen muss,
+  ext-udp statt KISS (behält die volle SSID). **Firmware-Idee:** das volle
+  Rufzeichen zusätzlich im APRS-Info-Kommentar mitgeben, dann könnte WebDesk es
+  parsen und beim Antworten wieder einsetzen.
+- **Node + `--extudp on` + KISS-Transport:** ext-udp-Pakete von einem
+  KISS-Transport-Node werden in `MeshcomUdpService` verworfen (`continue`), sonst
+  jede Nachricht doppelt (KISS + ext-udp, mit unterschiedlicher, KISS-seitig
+  gekürzter SSID → Dedup greift nicht).
 
 ---
 
