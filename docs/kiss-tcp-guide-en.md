@@ -1,14 +1,18 @@
 # Guide: KISS/TCP transport & KISS hub
 
-WebDesk can talk to a MeshCom node in two ways:
+WebDesk always talks to a node over **ext-udp**. **KISS/TCP is an optional
+add-on** on top of that – enabling it opens a second connection to the same node;
+ext-udp keeps running.
 
-| | ext-udp (default) | KISS/TCP |
+| | ext-udp (always on) | KISS/TCP (add-on) |
 |---|---|---|
 | Protocol | MeshCom EXTUDP JSON, UDP 1799 | KISS framing over TCP 8001 |
 | What the node sends | pre-digested `msg` / `pos` / `tele` JSON | the raw received AX.25/APRS frame |
 | Node requirement | `--extudp on` + target IP | firmware **v1.4+**, `--kiss on` |
+| Carries the node's own position / telemetry / firmware | ✅ | ❌ |
+| Full APRS comment / digipeater path / `/R=` / per-frame RSSI-SNR | ❌ | ✅ |
 
-This guide covers **why** you would use KISS, how to enable it, and how to run
+This guide covers **why** you would add KISS, how to enable it, and how to run
 the **KISS hub** so other KISS programs (Dire Wolf, YAAC, APRSdroid …) can share
 the node.
 
@@ -106,10 +110,10 @@ Helper** (Network group). WebDesk takes whatever the node offers – if `tx` or
 
 ### In WebDesk
 
-**Settings → the node's card → *Transport*** → **KISS/TCP (+ ext-udp for node's
-own data)**. The port is fixed at `8001`. A status line shows the live
-connection state (connecting / connected / node unreachable / slot busy /
-error).
+**Settings → the node's card → *KISS/TCP*** → tick the checkbox. This adds a KISS
+connection on top of ext-udp; it does not disable ext-udp. The port is fixed at
+`8001`. A status line shows the live connection state (connecting / connected /
+node unreachable / slot busy / error).
 
 ---
 

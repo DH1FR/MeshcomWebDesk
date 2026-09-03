@@ -181,16 +181,18 @@
                         </label>
                         <input type="number" value="@node.ListenPort" readonly style="opacity:0.6;cursor:not-allowed;" />
                         }
-                        @* ── Transport ── *@
+                        @* ── KISS/TCP (add-on to the ext-udp base) ── *@
                         <label>
-                            @Loc.T("Transport", "Transport")<br />
-                            <small>@Loc.T("Wie WebDesk diesen Node erreicht", "How WebDesk reaches this node")</small>
+                            @Loc.T("KISS/TCP", "KISS/TCP")<br />
+                            <small>@Loc.T("Zusätzlich zur ext-udp-Basis – roher Monitor, Sendequittung, KISS-Hub", "On top of the ext-udp base – raw monitor, TX result, KISS hub")</small>
                         </label>
                         <div>
-                            <select @bind="node.Transport">
-                                <option value="@NodeTransport.ExtUdp">@Loc.T("ext-udp (Standard)", "ext-udp (default)")</option>
-                                <option value="@NodeTransport.Kiss">@Loc.T("KISS/TCP (+ ext-udp für Eigendaten)", "KISS/TCP (+ ext-udp for node's own data)")</option>
-                            </select>
+                            <label class="settings-toggle" title="@Loc.T("KISS/TCP-Verbindung zu diesem Node zusätzlich aufbauen", "Additionally open a KISS/TCP connection to this node")">
+                                <input type="checkbox"
+                                       @bind:get="node.Transport == NodeTransport.Kiss"
+                                       @bind:set="v => node.Transport = v ? NodeTransport.Kiss : NodeTransport.ExtUdp" />
+                                <span>@(node.Transport == NodeTransport.Kiss ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
+                            </label>
                             @if (node.Transport == NodeTransport.Kiss)
                             {
                                 <div style="margin-top:.4rem;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -201,11 +203,11 @@
                                     <span class="kiss-status kiss-status-@ks.State.ToString().ToLowerInvariant()">@KissStatusLabel(ks)</span>
                                 </div>
                                 <small style="color:#8b949e">ℹ️ @Loc.T(
-                                    "Nur ESP32-Nodes. Solange WebDesk per KISS verbunden ist, kann kein weiteres KISS-Programm denselben Node nutzen. TX/RxMeta am Node mit --kiss tx on / --kiss meta on freischalten. Bei --kiss auth on am Node wird das oben eingetragene TLS-Passwort auch für KISS verwendet.",
-                                    "ESP32 nodes only. While WebDesk is connected via KISS no other KISS program can use this node. Enable TX / RxMeta on the node with --kiss tx on / --kiss meta on. With --kiss auth on the TLS password above is also used for KISS authentication.")</small>
+                                    "ext-udp bleibt aktiv – KISS kommt nur obendrauf. Nur ESP32-Nodes. Solange WebDesk per KISS verbunden ist, kann kein weiteres KISS-Programm denselben Node nutzen (dafür der KISS-Hub). TX/RxMeta am Node mit --kiss tx on / --kiss meta on freischalten. Bei --kiss auth on wird das Node-Passwort auch für KISS verwendet.",
+                                    "ext-udp stays active – KISS is added on top. ESP32 nodes only. While WebDesk is connected via KISS no other KISS program can use this node directly (use the KISS hub for that). Enable TX / RxMeta on the node with --kiss tx on / --kiss meta on. With --kiss auth on the node password is also used for KISS.")</small>
                                 <small style="color:#8b949e;display:block;margin-top:.3rem">@Loc.T(
-                                    "KISS liefert Fremdstationen (Monitor/Chat), Sendequittung und RSSI/SNR pro Frame. Die eigene Position des Nodes, das Telemetrie-Panel und Firmware/HW kommen weiterhin nur über ext-udp – am Node „--extudp on“ lassen.",
-                                    "KISS carries foreign stations (monitor/chat), the TX result and per-frame RSSI/SNR. The node's own position, the telemetry panel and its firmware/HW still come only via ext-udp – keep \"--extudp on\" on the node.")</small>
+                                    "KISS liefert Fremdstationen (Monitor/Chat), Sendequittung und RSSI/SNR pro Frame. Die eigene Position des Nodes, das Telemetrie-Panel und Firmware/HW kommen weiterhin über ext-udp – am Node „--extudp on“ lassen.",
+                                    "KISS carries foreign stations (monitor/chat), the TX result and per-frame RSSI/SNR. The node's own position, the telemetry panel and its firmware/HW keep coming from ext-udp – keep \"--extudp on\" on the node.")</small>
                                 @if (ExtUdpMissing(node))
                                 {
                                     <small style="color:#d29922;display:block;margin-top:.3rem">⚠️ @Loc.T(

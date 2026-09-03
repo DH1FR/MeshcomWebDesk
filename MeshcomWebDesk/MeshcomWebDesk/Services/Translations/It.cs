@@ -504,10 +504,12 @@ internal static class It
         ["Fixed: 8001 (firmware v1)"] = "Fisso: 8001 (firmware v1)",
         ["ESP32 nodes only. While WebDesk is connected via KISS no other KISS program can use this node. Enable TX / RxMeta on the node with --kiss tx on / --kiss meta on."]
             = "Solo nodes ESP32. Finché WebDesk è connesso via KISS nessun altro programma KISS può usare questo node. Abilita TX / RxMeta sul node con --kiss tx on / --kiss meta on.",
-        ["ext-udp (default)"] = "ext-udp (predefinito)",
-        ["KISS/TCP (+ ext-udp for node's own data)"] = "KISS/TCP (+ ext-udp per i dati propri del node)",
-        ["KISS carries foreign stations (monitor/chat), the TX result and per-frame RSSI/SNR. The node's own position, the telemetry panel and its firmware/HW still come only via ext-udp – keep \"--extudp on\" on the node."]
-            = "KISS trasporta le stazioni esterne (monitor/chat), l'esito TX e RSSI/SNR per frame. La posizione propria del node, il pannello telemetria e firmware/HW arrivano ancora solo via ext-udp – lascia \"--extudp on\" sul node.",
+        ["On top of the ext-udp base – raw monitor, TX result, KISS hub"] = "In aggiunta alla base ext-udp – monitor grezzo, esito TX, hub KISS",
+        ["Additionally open a KISS/TCP connection to this node"] = "Apri in aggiunta una connessione KISS/TCP a questo node",
+        ["ext-udp stays active – KISS is added on top. ESP32 nodes only. While WebDesk is connected via KISS no other KISS program can use this node directly (use the KISS hub for that). Enable TX / RxMeta on the node with --kiss tx on / --kiss meta on. With --kiss auth on the node password is also used for KISS."]
+            = "ext-udp resta attivo – KISS si aggiunge sopra. Solo nodes ESP32. Finché WebDesk è connesso via KISS nessun altro programma KISS può usare questo node direttamente (usa l'hub KISS per quello). Abilita TX / RxMeta sul node con --kiss tx on / --kiss meta on. Con --kiss auth on la password del node vale anche per KISS.",
+        ["KISS carries foreign stations (monitor/chat), the TX result and per-frame RSSI/SNR. The node's own position, the telemetry panel and its firmware/HW keep coming from ext-udp – keep \"--extudp on\" on the node."]
+            = "KISS trasporta le stazioni esterne (monitor/chat), l'esito TX e RSSI/SNR per frame. La posizione propria del node, il pannello telemetria e firmware/HW continuano ad arrivare da ext-udp – lascia \"--extudp on\" sul node.",
         ["No ext-udp packet from this node for over 5 min. Own position / telemetry / firmware are missing. Check on the node: \"--extudp on\" and the ext-udp target IP = this host (port 1799)."]
             = "Nessun pacchetto ext-udp da questo node da oltre 5 min. Mancano posizione propria / telemetria / firmware. Verifica sul node: \"--extudp on\" e IP di destinazione ext-udp = questo computer (porta 1799).",
         ["Neighbours (heard directly)"] = "Vicini (uditi direttamente)",
