@@ -138,8 +138,9 @@ Each node profile contains:
 | **Listen IP** | Local bind address (`0.0.0.0` = all interfaces). For the primary node this is read-only and mirrors **Settings → Connection**. |
 | **Listen Port** | Local UDP port to receive packets from this node (default `1799`) |
 | **Primary** | Exactly one node must be marked primary – only the primary node drives MH list, Live Map, beacons, telemetry, bot and OTA/reboot |
-| **TLS Certificate Fingerprint** | SHA-256 fingerprint of this node's self-signed TLS certificate; filled automatically via *Trust & Save* on first connect |
-| **TLS Password** | Console password for this node (encrypted at rest with DPAPI) |
+| **Transport** | *ext-udp* (default) or *KISS/TCP* – how WebDesk receives from / sends to this node (see [KISS/TCP Transport](#-kisstcp-transport)) |
+| **KISS Port** | TCP port of the node's KISS interface (fixed `8001` on firmware v1), shown only when Transport = KISS/TCP |
+| **Node Password** | `--passwd` on the node – used for the NET Console (HMAC) and, with `--kiss auth on`, for KISS authentication. Encrypted at rest (DPAPI / AES). |
 
 > 💡 When multiple nodes share the same UDP port (`1799`), incoming packets are routed to the correct node by the **sender's IP address** – no port forwarding required.
 
@@ -159,6 +160,100 @@ Each node profile contains:
 
 - All node states (tabs, monitor messages) are saved and restored independently per node on restart
 - The primary node's MH list is saved separately
+
+---
+
+### 📡 KISS/TCP Transport
+
+By default WebDesk talks to a node over **ext-udp** (the MeshCom EXTUDP JSON
+protocol on UDP 1799). Since v1.15.0 each node can instead be reached over its
+**KISS/TCP** interface (TCP port 8001, ESP32 firmware **v1.4+**) – selected per
+node in **Settings → *Transport***. ext-udp stays the default.
+
+📘 Full reference: [`docs/kiss-tcp-guide-en.md`](docs/kiss-tcp-guide-en.md)
+
+#### Why KISS?
+
+ext-udp gives WebDesk a clean JSON view of `msg` / `pos` / `tele` frames, but the
+node has already thrown away most of the raw APRS detail by then. Over KISS the
+node hands WebDesk the **raw received frame**, so the monitor can show what
+ext-udp cannot:
+
+- the **full APRS position comment** (`…/B= /A= /N /P= /H= /T= /R=`), not just lat/lon/alt
+- the **digipeater path** the frame actually travelled
+- the **`/R=` relay-node list** and **`/N` neighbour count** as their own badges
+- **RSSI / SNR per frame** (needs `--kiss meta on` on the node)
+- everything in a **standard AX.25/APRS format** any APRS tool can read
+
+Sending works over KISS too: each send gets a **per-send delivery result** from
+the node's `0xF0` frame – *accepted* (with the assigned `msg_id`) or *rejected*
+with the reason (wrong callsign, TX off, oversized frame, rate limit).
+
+#### KISS and ext-udp are complementary – not either/or
+
+KISS is a **narrower** feed. The MeshCom firmware never sends the node's **own**
+transmissions or **telemetry-only** frames over KISS, and it does not relay a DM
+addressed to the node itself. So ext-udp is still needed for:
+
+| Only via ext-udp | Also / better via KISS |
+|---|---|
+| the node's **own position** on the map | foreign stations' position / messages / ACKs |
+| the **structured telemetry panel** (temp/hum/pressure as numbers) | the full position **comment** incl. raw `/T= /H=` |
+| the node's **firmware / hardware** identification | the **digipeater path**, `/R=` list, `/N` count |
+| **injecting** external sensor telemetry into the node | **RSSI/SNR per frame**, `0xF0` TX result |
+
+For a KISS-primary node the status bar therefore shows **two** indicators –
+**KISS** and **ext-udp** – and the ext-udp dot turns **yellow** (with a hint)
+when the node's own data stops arriving. Recommendation: leave `--extudp on` on
+the node and run both in parallel.
+
+Duplicate frames that arrive over both paths are collapsed by the normal
+deduplication (by `msg_id`, with a sender/text fallback key).
+
+#### Authentication
+
+With `--kiss auth on` on the node, WebDesk performs the same HMAC-SHA256
+challenge/response as the NET Console, using the **per-node password**. With auth
+enabled, a plain KISS client (Dire Wolf / YAAC) can no longer connect directly –
+use the KISS hub (below) for those.
+
+#### 🔀 KISS hub
+
+A MeshCom node accepts exactly **one** KISS/TCP connection. WebDesk can hold that
+one connection and **re-serve it as its own KISS/TCP listener**, so **Dire Wolf,
+YAAC, APRSdroid** and other KISS clients connect *through* WebDesk instead of
+fighting over the node's single slot.
+
+Configure it under **Settings → 🔀 KISS Hub**:
+
+| Setting | Meaning |
+|---|---|
+| **Active** | Start / stop the hub listener |
+| **Port** | TCP port the hub listens on (downstream apps connect here; default `8001`) |
+| **Node** | Which node's traffic to serve (default: the primary node – must be on the KISS transport) |
+| **Reachable from** | *This PC only (localhost)* or *LAN – all interfaces* |
+
+- **RX:** every `type 0x00` data frame the node receives fans out to **all**
+  connected downstream clients.
+- **TX:** a `type 0x00` frame from any downstream client is injected via the node,
+  and the node's `0xF0` result is routed back to **that** client.
+- RxMeta (`0x10`) and TX-result (`0xF0`) frames stay WebDesk-internal; non-data
+  frames from downstream are ignored.
+- Per-client bounded queue (drop-oldest) so a slow client cannot stall the others.
+
+> ⚠️ The hub has **no authentication of its own** – only enable LAN access on a
+> trusted network. Downstream apps must transmit under **your callsign** (any
+> SSID) or the node rejects the frame with a `0x02` result.
+
+#### Two-digit SSIDs
+
+AX.25 addresses carry only a 4-bit SSID, so a MeshCom origin callsign with an
+SSID of `-16`…`-99` is clamped to `-15` on the wire. When that happens the
+firmware sends the real callsign in a separate **SrcInfo** frame (`0x20`), which
+WebDesk uses as the true sender for the monitor **and as the reply addressee** –
+so a reply to a two-digit-SSID station is addressed correctly. (Standard KISS
+clients ignore this frame; the hub does not forward it, so downstream apps still
+see the clamped `-15`.)
 
 ---
 

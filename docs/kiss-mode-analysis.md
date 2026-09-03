@@ -1,8 +1,8 @@
 # KISS/TCP als Node-Transport in WebDesk — Analyse
 
-Status: **Phase A + B + C implementiert** (RX + erweiterte Monitoransicht + TX mit
-0xF0-Result + KISS-Hub) und verifiziert. Branch: `feature/kiss-mode`, noch nicht
-committet.
+Status: **ausgeliefert in v1.15.0** (Phase A + B + C: RX + erweiterte
+Monitoransicht + TX mit 0xF0-Result + KISS-Hub + SrcInfo 0x20). Nach `dev`
+gemergt (2026-09-03). Nutzer-Doku: [`kiss-tcp-guide-en.md`](kiss-tcp-guide-en.md).
 
 Umsetzungsplan/Details: `~/.claude/plans/ancient-sniffing-hollerith.md`.
 
