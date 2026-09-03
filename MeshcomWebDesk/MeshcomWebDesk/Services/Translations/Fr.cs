@@ -945,6 +945,12 @@ internal static class Fr
         ["Fixed: 8001 (firmware v1)"] = "Fixe : 8001 (firmware v1)",
         ["ESP32 nodes only. While WebDesk is connected via KISS no other KISS program can use this node. Enable TX / RxMeta on the node with --kiss tx on / --kiss meta on."]
             = "Nodes ESP32 uniquement. Tant que WebDesk est connecté en KISS, aucun autre programme KISS ne peut utiliser ce node. Activez TX / RxMeta sur le node avec --kiss tx on / --kiss meta on.",
+        ["ext-udp (default)"] = "ext-udp (par défaut)",
+        ["KISS/TCP (+ ext-udp for node's own data)"] = "KISS/TCP (+ ext-udp pour les données propres du node)",
+        ["KISS carries foreign stations (monitor/chat), the TX result and per-frame RSSI/SNR. The node's own position, the telemetry panel and its firmware/HW still come only via ext-udp – keep \"--extudp on\" on the node."]
+            = "KISS transporte les stations distantes (moniteur/chat), l'accusé d'émission et le RSSI/SNR par trame. La position propre du node, le panneau de télémétrie et le firmware/HW n'arrivent toujours que via ext-udp – laissez \"--extudp on\" sur le node.",
+        ["No ext-udp packet from this node for over 5 min. Own position / telemetry / firmware are missing. Check on the node: \"--extudp on\" and the ext-udp target IP = this host (port 1799)."]
+            = "Aucun paquet ext-udp de ce node depuis plus de 5 min. Position propre / télémétrie / firmware manquants. Vérifiez sur le node : \"--extudp on\" et l'IP cible ext-udp = cet ordinateur (port 1799).",
         ["Neighbours (heard directly)"] = "Voisins (entendus directement)",
         ["Relay nodes (/R=)"] = "Nœuds relais (/R=)",
         ["Full APRS comment (KISS only)"] = "Commentaire APRS complet (KISS uniquement)",

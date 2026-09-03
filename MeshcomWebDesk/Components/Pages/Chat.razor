@@ -508,6 +508,7 @@
             @if (PrimaryIsKiss)
             {
                 <span class="status-badge @KissStatusBadgeCss" title="@KissStatusTooltip">@KissStatusIcon KISS</span>
+                <span class="status-badge @ExtUdpAuxBadgeCss" title="@ExtUdpAuxTooltip">@ExtUdpAuxIcon ext-udp</span>
             }
             else
             {
@@ -2398,13 +2399,32 @@
 
     private string KissStatusTooltip => KissPrimaryStatus.State switch
     {
-        KissConnectionState.Connected  => Loc.T("KISS/TCP: verbunden", "KISS/TCP: connected"),
+        KissConnectionState.Connected  => Loc.T("KISS/TCP: verbunden – Monitor, Fremdverkehr, Sendequittung", "KISS/TCP: connected – monitor, foreign traffic, TX result")
+                                          + (KissPrimaryStatus.RxFrames > 0 ? $" · RX {KissPrimaryStatus.RxFrames}" : ""),
         KissConnectionState.Connecting => Loc.T("KISS/TCP: verbinde…", "KISS/TCP: connecting…"),
         KissConnectionState.NodeGone   => Loc.T("KISS/TCP: Node nicht erreichbar (Reboot / Netz?)", "KISS/TCP: node unreachable (reboot / network?)"),
         KissConnectionState.SlotBusy   => Loc.T("KISS/TCP: belegt – ein anderer KISS-Client hängt am Node", "KISS/TCP: busy – another KISS client is connected to the node"),
         KissConnectionState.Error      => Loc.T("KISS/TCP: Fehler", "KISS/TCP: error") + (KissPrimaryStatus.Detail is { } d ? $" – {d}" : ""),
         _                              => Loc.T("KISS/TCP: inaktiv", "KISS/TCP: inactive"),
     };
+
+    // ── ext-udp auxiliary indicator (shown next to KISS: ext-udp still carries the node's
+    //    own position / telemetry / firmware, which KISS never sends) ──
+
+    private DateTime? PrimaryExtUdpRxUtc =>
+        NodeManager.PrimaryNode is { } n ? UdpService.LastExtUdpRxUtc(n.Id) : null;
+
+    private bool PrimaryExtUdpFresh =>
+        PrimaryExtUdpRxUtc is { } t && DateTime.UtcNow - t < TimeSpan.FromMinutes(5);
+
+    private string ExtUdpAuxIcon     => PrimaryExtUdpFresh ? "🟢" : "🟡";
+    private string ExtUdpAuxBadgeCss => PrimaryExtUdpFresh ? "status-badge-ok" : "status-badge-warn";
+
+    private string ExtUdpAuxTooltip => PrimaryExtUdpFresh
+        ? Loc.T("ext-udp: aktiv – liefert die Eigendaten des Nodes (Position, Telemetrie, Firmware/HW)",
+                "ext-udp: active – delivers the node's own data (position, telemetry, firmware/HW)")
+        : Loc.T("ext-udp: seit über 5 min kein Paket. KISS liefert die Eigendaten des Nodes nicht – eigene Position, Telemetrie-Panel und Firmware/HW fehlen. Am Node \"--extudp on\" setzen und die Ziel-IP auf diesen Rechner zeigen lassen (Port 1799).",
+                "ext-udp: no packet for over 5 min. KISS does not deliver the node's own data – own position, telemetry panel and firmware/HW are missing. Set \"--extudp on\" on the node and point its target IP to this host (port 1799).");
 
     private static string RssiStatusBadgeCss(int rssi) => rssi switch
     {

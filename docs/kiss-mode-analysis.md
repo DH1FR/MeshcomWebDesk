@@ -360,6 +360,19 @@ Close). In der Node-Switcher-UI und im Monitor-Header anzeigen. `ConnectionStatu
 (app-weit) bleibt für den Primär-Node; ideal wäre langfristig eine
 `ConcurrentDictionary<Guid, NodeRuntimeStatus>`.
 
+**Zwei getrennte Indikatoren für einen KISS-Primär-Node (2026-09-03).** Da KISS
+und ext-udp komplementär sind (KISS: Fremdverkehr/Monitor/TX-Quittung; ext-udp:
+*eigene* Position, Telemetrie-Panel, Firmware/HW), zeigt die Statusleiste in
+`Chat.razor` beide nebeneinander: `🟢 KISS` (aus `KissNodeStatus`) **und**
+`🟢/🟡 ext-udp`. Das ext-udp-Lämpchen ist grün, wenn in den letzten 5 min ein
+ext-udp-Paket dem Node zugeordnet wurde (`MeshcomUdpService.LastExtUdpRxUtc`,
+`ConcurrentDictionary<Guid,DateTime>`), sonst gelb mit Hinweis „`--extudp on` am
+Node fehlt". Analog eine ⚠️-Zeile in der Settings-Node-Karte (`ExtUdpMissing`).
+Der Transport-Auswahltext heißt jetzt „KISS/TCP (+ ext-udp für Eigendaten)" —
+`Transport = Kiss` bedeutet KISS für RX/TX **plus** ext-udp für die Eigendaten
+(seit e19afa9 wertet der UDP-Pfad die Eigen-Frames eines KISS-Node weiter aus,
+nur die Fremd-RF-Kopien werden verworfen).
+
 ### 5.7 WebDesk als KISS-Hub (löst den Single-Client-Konflikt)
 
 **Problem:** Der Node akzeptiert auf Port 8001 **genau eine** TCP-Verbindung.

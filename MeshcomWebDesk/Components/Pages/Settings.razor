@@ -188,8 +188,8 @@
                         </label>
                         <div>
                             <select @bind="node.Transport">
-                                <option value="@NodeTransport.ExtUdp">ext-udp (UDP 1799)</option>
-                                <option value="@NodeTransport.Kiss">KISS/TCP</option>
+                                <option value="@NodeTransport.ExtUdp">@Loc.T("ext-udp (Standard)", "ext-udp (default)")</option>
+                                <option value="@NodeTransport.Kiss">@Loc.T("KISS/TCP (+ ext-udp für Eigendaten)", "KISS/TCP (+ ext-udp for node's own data)")</option>
                             </select>
                             @if (node.Transport == NodeTransport.Kiss)
                             {
@@ -203,6 +203,15 @@
                                 <small style="color:#8b949e">ℹ️ @Loc.T(
                                     "Nur ESP32-Nodes. Solange WebDesk per KISS verbunden ist, kann kein weiteres KISS-Programm denselben Node nutzen. TX/RxMeta am Node mit --kiss tx on / --kiss meta on freischalten. Bei --kiss auth on am Node wird das oben eingetragene TLS-Passwort auch für KISS verwendet.",
                                     "ESP32 nodes only. While WebDesk is connected via KISS no other KISS program can use this node. Enable TX / RxMeta on the node with --kiss tx on / --kiss meta on. With --kiss auth on the TLS password above is also used for KISS authentication.")</small>
+                                <small style="color:#8b949e;display:block;margin-top:.3rem">@Loc.T(
+                                    "KISS liefert Fremdstationen (Monitor/Chat), Sendequittung und RSSI/SNR pro Frame. Die eigene Position des Nodes, das Telemetrie-Panel und Firmware/HW kommen weiterhin nur über ext-udp – am Node „--extudp on“ lassen.",
+                                    "KISS carries foreign stations (monitor/chat), the TX result and per-frame RSSI/SNR. The node's own position, the telemetry panel and its firmware/HW still come only via ext-udp – keep \"--extudp on\" on the node.")</small>
+                                @if (ExtUdpMissing(node))
+                                {
+                                    <small style="color:#d29922;display:block;margin-top:.3rem">⚠️ @Loc.T(
+                                        "Seit über 5 min kein ext-udp-Paket von diesem Node. Eigene Position / Telemetrie / Firmware fehlen. Am Node prüfen: „--extudp on“ und ext-udp-Ziel-IP = dieser Rechner (Port 1799).",
+                                        "No ext-udp packet from this node for over 5 min. Own position / telemetry / firmware are missing. Check on the node: \"--extudp on\" and the ext-udp target IP = this host (port 1799).")</small>
+                                }
                                 @if (KissSsidTooHigh(node.IsPrimary ? _model.MyCallsign : node.Callsign))
                                 {
                                     <small style="color:#f85149;display:block;margin-top:.3rem">⚠️ @Loc.T(
@@ -3456,6 +3465,15 @@
         if (string.IsNullOrWhiteSpace(callsign)) return false;
         var dash = callsign.IndexOf('-');
         return dash >= 0 && int.TryParse(callsign[(dash + 1)..], out var ssid) && ssid > 15;
+    }
+
+    /// <summary>True when a KISS-transport node has had no ext-udp packet for over 5 minutes –
+    /// its own position / telemetry / firmware are then missing (KISS never sends them).</summary>
+    private bool ExtUdpMissing(NodeProfile node)
+    {
+        if (node.Transport != NodeTransport.Kiss) return false;
+        var last = UdpService.LastExtUdpRxUtc(node.Id);
+        return last is null || DateTime.UtcNow - last.Value > TimeSpan.FromMinutes(5);
     }
 
     private string KissStatusLabel(MeshcomWebDesk.Services.Kiss.KissNodeStatus s) => s.State switch

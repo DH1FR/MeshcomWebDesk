@@ -100,6 +100,16 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     /// <summary>Live connection and statistics status. Updated on every relevant event.</summary>
     public ConnectionStatus Status { get; } = new();
 
+    /// <summary>UTC time the last ext-udp packet was attributed to a given node, by node id.
+    /// Lets the UI show a separate "ext-udp alive" indicator next to the KISS one – on a KISS
+    /// node ext-udp still carries the node's own position / telemetry / firmware, which KISS
+    /// never sends.</summary>
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, DateTime> _lastExtUdpRxUtc = new();
+
+    /// <summary>UTC time of the last ext-udp packet from <paramref name="nodeId"/>, or null if none seen.</summary>
+    public DateTime? LastExtUdpRxUtc(Guid nodeId) =>
+        _lastExtUdpRxUtc.TryGetValue(nodeId, out var t) ? t : null;
+
     /// <summary>Raised whenever <see cref="Status"/> changes so UI components can refresh.</summary>
     public event Action? OnStatusChange;
 
@@ -255,6 +265,20 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                     {
                         // Tag the message with the node it arrived from
                         message.NodeId = sourceNode?.Id;
+
+                        // Any parsed ext-udp packet means ext-udp is alive for this node – record it
+                        // before the KISS filter below (which drops foreign RF copies but not the
+                        // node's own data). The UI turns this into an "ext-udp" health dot.
+                        if (sourceNode is not null)
+                        {
+                            var extUdpWasStale = !_lastExtUdpRxUtc.TryGetValue(sourceNode.Id, out var prevExtUdp)
+                                                 || DateTime.UtcNow - prevExtUdp > TimeSpan.FromMinutes(1);
+                            _lastExtUdpRxUtc[sourceNode.Id] = DateTime.UtcNow;
+                            // On a KISS node the foreign-traffic packets below are dropped without a
+                            // status notify – nudge the UI so the "ext-udp" dot goes green promptly.
+                            if (extUdpWasStale && sourceNode.Transport == NodeTransport.Kiss)
+                                NotifyStatusChange();
+                        }
 
                         // A node on the KISS transport receives foreign RF traffic via
                         // KissClientService already – drop the ext-udp copy of those frames
