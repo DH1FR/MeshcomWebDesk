@@ -21,6 +21,14 @@ public static class KissFraming
     /// <summary>RxMeta frame, port 1 – snr:int8, rssi:int16 LE (only with <c>--kiss meta on</c>).</summary>
     public const byte TypeRxMeta = 0x10;
 
+    /// <summary>
+    /// SrcInfo frame, port 2 – full origin callsign (ASCII, incl. real SSID), node → client.
+    /// Sent immediately <b>before</b> the <c>0x00</c> data frame, and only when the origin's
+    /// SSID &gt; 15 had to be clamped to <c>-15</c> in the AX.25 <c>src</c> field. Use it as the
+    /// true source of the following data frame (display + reply addressee).
+    /// </summary>
+    public const byte TypeSrcInfo = 0x20;
+
     /// <summary>TX-result frame, port 15 – status:int8 [+ msg_id:uint32 LE] (firmware v1.2+, node → client).</summary>
     public const byte TypeTxResult = 0xF0;
 

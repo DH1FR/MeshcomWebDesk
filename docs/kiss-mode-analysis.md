@@ -62,17 +62,27 @@ Firmware (v1.2).
 - **`--via` im Pfad / `::text` / `{` im Text / Backpressure / `--kiss off` /
   Half-open / RxMeta / HEY-Queue** (F3–F14): reine Node-Verbesserungen, kein
   WebDesk-Handlungsbedarf (Reconnect-mit-Backoff besteht bereits).
-- Zweistellige SSIDs (`-16…-99`) erscheinen jetzt als `-15` (AX.25 hat nur 4
-  SSID-Bits) — weiterhin verlustbehaftet, Kenntnisnahme.
-- **Folge — Antworten an SSID > 15 über KISS unmöglich:** die Firmware kürzt die
-  Absender-SSID, bevor das Frame über KISS geht, also sieht WebDesk `OE3LCR-55`
-  nur als `OE3LCR-15`. Eine Antwort geht dann an `-15` (falscher/nicht existenter
-  Node) — **still, ohne Fehler**. `Ax25Ui.Encode` weist SSID > 15 ohnehin ab.
-  Kein WebDesk-Fix möglich (SSID-Info ist weg, bevor WebDesk sie sieht).
-  Workaround: für einen Node, über den man SSID>15-Partner erreichen muss,
-  ext-udp statt KISS (behält die volle SSID). **Firmware-Idee:** das volle
-  Rufzeichen zusätzlich im APRS-Info-Kommentar mitgeben, dann könnte WebDesk es
-  parsen und beim Antworten wieder einsetzen.
+- Zweistellige SSIDs (`-16…-99`) erscheinen im AX.25-`src`-Feld als `-15` (nur 4
+  SSID-Bits) — **gelöst durch den SrcInfo-Frame (`0x20`), siehe unten.**
+- **SrcInfo-Frame (`0x20`, Port 2) — gelöst 2026-09-03.** Wenn die Firmware eine
+  Absender-SSID > 15 auf `-15` kürzen musste, sendet sie **unmittelbar vor** dem
+  zugehörigen `0x00`-Datenframe einen Zusatzframe mit dem vollen Rufzeichen als
+  ASCII (`FEND 0x20 "OE3LCR-55" FEND`, keine Länge/Terminator, normales
+  SLIP-Escaping). WebDesk (`KissClientService`):
+  `KissFraming.TypeSrcInfo` + `KissRxContext.PendingSrcInfo` puffert das Rufzeichen
+  und `HandleDataFrame(..., srcInfoOverride)` setzt es als echten Absender ein —
+  für `MeshcomMessage.From`, `RelayPath`, den Monitor **und den Antwort-Adressaten**
+  (die APRS-Message-Addressee lebt im Info-Feld als 9-Zeichen-Text, `:OE3LCR-55:hi`
+  erreicht den Zwei-Ziffern-SSID-Node problemlos; nur das AX.25-*Quell*-Adressfeld
+  ist 4-Bit-begrenzt, und unser eigener Node-Call ist nie > 15). 5-s-Fenster wie
+  bei RxMeta. Standard-KISS-Clients ignorieren Port 2 → keine Regression.
+  Verifiziert mit `FakeKissNode` (Position + Direktnachricht von `OE3LCR-55`,
+  vorangestellter `0x20`): Monitor zeigt `OE3LCR-55`, Antwort geht als
+  `:OE3LCR-55:…` raus.
+- **Grenze — KISS-Hub:** der Hub reicht weiterhin nur `type 0x00` an Downstream-
+  Clients durch; ein `0x20` wird **nicht** weitergeleitet. Downstream-Clients
+  (Direwolf/YAAC/APRSdroid) sehen die gekürzte `-15`-SSID. Für die allermeisten
+  Standard-Clients ist das ohne Belang (sie ignorieren Port 2 ohnehin).
 - **Node + `--extudp on` + KISS-Transport:** ext-udp-Pakete von einem
   KISS-Transport-Node werden in `MeshcomUdpService` verworfen (`continue`), sonst
   jede Nachricht doppelt (KISS + ext-udp, mit unterschiedlicher, KISS-seitig
@@ -279,6 +289,9 @@ Pro KISS-Node ein Worker:
 3. `type 0x00` → **AX.25-UI-Decoder**: Adressfeld (6 Zeichen `>>1`, SSID-Byte,
    `ext`-Bit), Digipeater-Liste, `0x03 0xF0`, Info-Feld.
 4. `type 0x10` → **RxMeta** puffern, an den **nächsten** Data-Frame hängen.
+   `type 0x20` → **SrcInfo** (volles Rufzeichen, ASCII) puffern, als echten
+   Absender des **nächsten** Data-Frames einsetzen (die Firmware kürzt SSID > 15
+   im AX.25-`src` auf `-15` und schickt den echten Call davor).
 5. Info-Feld → `MeshcomMessage`:
    - `!` / `=` / `@` / `/` → Position: lat/lon/alt via APRS-Parse; **Kommentar
      komplett** in neues Feld (§5.5).

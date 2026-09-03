@@ -316,6 +316,11 @@ public sealed class KissClientService : BackgroundService
     {
         public MeshcomMessage? LastMessage;
         public DateTime LastMessageAt;
+
+        /// <summary>Full origin callsign from a SrcInfo (0x20) frame, to be applied to the
+        /// <b>next</b> data frame (spec: SrcInfo precedes the 0x00 frame it belongs to).</summary>
+        public string? PendingSrcInfo;
+        public DateTime PendingSrcInfoAt;
     }
 
     private void HandleFrame(NodeProfile node, byte[] frame, KissRxContext ctx)
@@ -346,17 +351,31 @@ public sealed class KissClientService : BackgroundService
                 }
                 return;
 
+            case KissFraming.TypeSrcInfo:
+                // True origin call of the *next* 0x00 frame (AX.25 src was clamped to -15).
+                // ASCII on the wire; be lenient and keep only printable chars.
+                var call = new string(Encoding.Latin1.GetString(payload)
+                    .Where(c => c is > ' ' and < (char)0x7F).ToArray()).Trim().Trim('"');
+                ctx.PendingSrcInfo   = string.IsNullOrEmpty(call) ? null : call;
+                ctx.PendingSrcInfoAt = DateTime.UtcNow;
+                return;
+
             case KissFraming.TypeTxResult:
                 HandleTxResult(node, payload);
                 return;
 
             case KissFraming.TypeData:
+                string? srcOverride = ctx.PendingSrcInfo is { } psi &&
+                                      DateTime.UtcNow - ctx.PendingSrcInfoAt < TimeSpan.FromSeconds(5)
+                    ? psi : null;
+                ctx.PendingSrcInfo = null;
+
                 if (OnNodeDataFrame is { } hubFanout)
                 {
                     var copy = payload.ToArray();
                     try { hubFanout(node.Id, copy); } catch { /* hub handler threw */ }
                 }
-                HandleDataFrame(node, payload, ctx);
+                HandleDataFrame(node, payload, ctx, srcOverride);
                 return;
 
             default:
@@ -365,7 +384,11 @@ public sealed class KissClientService : BackgroundService
         }
     }
 
-    private void HandleDataFrame(NodeProfile node, ReadOnlySpan<byte> payload, KissRxContext ctx)
+    /// <param name="srcInfoOverride">Full origin callsign from a preceding SrcInfo (0x20) frame,
+    /// used in place of the AX.25 <c>src</c> (which was clamped to a 4-bit SSID) as the true
+    /// sender – for the monitor display, the chat tab and the reply addressee.</param>
+    private void HandleDataFrame(NodeProfile node, ReadOnlySpan<byte> payload, KissRxContext ctx,
+        string? srcInfoOverride = null)
     {
         var ax = Ax25Ui.Decode(payload);
         if (ax is null)
@@ -382,19 +405,23 @@ public sealed class KissClientService : BackgroundService
         var info = AprsInfo.Parse(ax.Info);
         var digis = ax.Digipeaters.Count > 0 ? string.Join(",", ax.Digipeaters) : null;
 
-        _logger.LogDebug("KISS RX [{Node}] {Kind} {Src}>{Dst}{Path} : {Info}",
-            node.Name, info.Kind, ax.Src, ax.Dest,
+        // The AX.25 src carries only a 4-bit SSID; a SrcInfo (0x20) frame restores the real call.
+        var src = string.IsNullOrEmpty(srcInfoOverride) ? ax.Src : srcInfoOverride;
+
+        _logger.LogDebug("KISS RX [{Node}] {Kind} {Src}{Clamped}>{Dst}{Path} : {Info}",
+            node.Name, info.Kind, src,
+            string.IsNullOrEmpty(srcInfoOverride) ? "" : $" (AX.25 {ax.Src})", ax.Dest,
             digis is null ? "" : $" via {digis}", ax.Info);
 
         var msg = new MeshcomMessage
         {
             NodeId         = node.Id,
-            From           = ax.Src,
+            From           = src,
             SrcType        = "lora",
-            RawData        = ReconstructTnc2(ax),
+            RawData        = ReconstructTnc2(ax, src),
             DigipeaterPath = digis,
             // MH list / map convention: index 0 = origin, then relays.
-            RelayPath      = digis is null ? null : $"{ax.Src},{digis}",
+            RelayPath      = digis is null ? null : $"{src},{digis}",
         };
 
         switch (info.Kind)
@@ -413,7 +440,7 @@ public sealed class KissClientService : BackgroundService
                 msg.Humidity         = info.Humidity;
                 msg.Pressure         = info.Pressure;
 
-                if (string.Equals(ax.Src, node.Callsign, StringComparison.OrdinalIgnoreCase) &&
+                if (string.Equals(src, node.Callsign, StringComparison.OrdinalIgnoreCase) &&
                     _nodes.PrimaryNode?.Id == node.Id)
                     _udp.SetOwnPosition(p.Lat, p.Lon, info.AltitudeMeters, "Node (KISS)");
 
@@ -443,7 +470,7 @@ public sealed class KissClientService : BackgroundService
                     else
                         _chat.AddRawMessage(msg);
                 }
-                else if (string.Equals(ax.Src, node.Callsign, StringComparison.OrdinalIgnoreCase))
+                else if (string.Equals(src, node.Callsign, StringComparison.OrdinalIgnoreCase))
                 {
                     // Echo of a message this node transmitted (e.g. heard back off a relay) –
                     // the TX row is already shown; just confirm the outgoing message.
@@ -487,10 +514,10 @@ public sealed class KissClientService : BackgroundService
         !string.IsNullOrEmpty(call) &&
         _settings.CurrentValue.Nodes.Any(n => string.Equals(n.Callsign, call, StringComparison.OrdinalIgnoreCase));
 
-    private static string ReconstructTnc2(Ax25Frame ax)
+    private static string ReconstructTnc2(Ax25Frame ax, string? srcOverride = null)
     {
         var path = ax.Digipeaters.Count > 0 ? "," + string.Join(",", ax.Digipeaters) : string.Empty;
-        return $"{ax.Src}>{ax.Dest}{path}:{ax.Info}";
+        return $"{(string.IsNullOrEmpty(srcOverride) ? ax.Src : srcOverride)}>{ax.Dest}{path}:{ax.Info}";
     }
 
     // ── TX (Phase B) ─────────────────────────────────────────────────────
