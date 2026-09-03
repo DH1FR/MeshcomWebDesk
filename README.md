@@ -29,17 +29,22 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
-## 🆕 What's New in v1.14.3
+## 🆕 What's New in v1.15.0
 
 ### ✨ Features
-- **Custom gateway sources** – the *Gateway Source* setting adds the Italian dashboard (`meshcom.dig-italia.it`) as a built-in preset next to OE and DL, plus "OE + DL" and "None". Any number of additional dashboards can be added by URL; callsigns from every enabled source are merged, and changes take effect immediately.
+- **KISS/TCP as an optional per-node transport** – each node can be reached over its **KISS/TCP** interface (port 8001, ESP32 firmware v1.4+) instead of ext-udp, chosen per node in Settings. ext-udp stays the default. Over KISS the monitor shows what ext-udp cannot: the **full APRS position comment**, the **digipeater path**, the **`/R=` relay list** and **`/N` neighbour count**, and **RSSI/SNR per frame**. Sending works over KISS with a per-send delivery result; optional HMAC authentication (`--kiss auth on`) reuses the node password.
+- **KISS hub** – WebDesk can hold the node's single KISS connection and re-serve it as its own KISS/TCP listener, so **Dire Wolf, YAAC, APRSdroid** and other KISS clients connect *through* WebDesk instead of competing for the node's one slot.
+- **Two-digit SSIDs preserved** – origin callsigns with an SSID above 15 (`-16`…`-99`), which AX.25 cannot carry, are restored from the node's SrcInfo frame and used for display and for addressing replies.
+- **KISS and ext-udp shown as separate status dots** – on a KISS-primary node the two complementary paths (KISS = foreign traffic/monitor/TX result, ext-udp = the node's own position/telemetry/firmware) each get their own indicator, so a missing path is visible.
+- **Per-node password** for the NET Console and KISS auth; the unused TLS certificate fingerprint field was removed.
+- `--kiss`, `--kiss tx`, `--kiss meta` added to the Console Command Helper.
 
 ### 🔧 Bug Fixes
-- **Gateway list empty (OE/DL)** – the MeshCom dashboards moved their gateway page to `rakgw.html` and the OE URL had started returning 404, leaving the gateway highlight list empty. Preset URLs updated.
-- **Map popup/tooltip text localized** – live-map marker popups and tooltips no longer show hardcoded German regardless of the UI language.
-- **Own-position altitude unit localized** in the MH window.
-- **Quick texts** are inserted at the cursor position instead of overwriting the input field.
-- **MH header spacing** – missing space between the station count and its label restored.
+- **Bare `ackNNN` / `rejNNN` acknowledgements** are recognised, so delivery checkmarks are set for ACKs from standard APRS clients such as PinPoint.
+- MeshCom **time-sync broadcasts** are kept out of the chat over KISS (monitor only), matching ext-udp.
+- A **hub client's ACK** is no longer misattributed to WebDesk's own outgoing messages that share a base callsign.
+- KISS info fields decode as **UTF-8 with a Latin-1 fallback** (Dire Wolf / PinPoint send CP1252).
+- A KISS **connect timeout** shows as a clean "node unreachable" status; auth detection no longer stalls on a quiet no-auth node.
 
 ---
 
