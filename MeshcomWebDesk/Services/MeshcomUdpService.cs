@@ -238,16 +238,6 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                     var sourceNode = _nodeManager.ResolveNodeByIp(sourceIp);
                     var myCallsign = sourceNode?.Callsign ?? _settings.MyCallsign;
 
-                    // A node on the KISS transport is served by KissClientService – ignore any
-                    // ext-udp copies it still sends (e.g. --extudp left on), otherwise every
-                    // frame is shown twice (and with a different, SSID-truncated callsign).
-                    if (sourceNode?.Transport == NodeTransport.Kiss)
-                    {
-                        if (_settings.LogUdpTraffic)
-                            _logger.LogDebug("Ignoring ext-udp packet from KISS node '{Name}' ({Ip})", sourceNode.Name, sourceIp);
-                        continue;
-                    }
-
                     // Update last-seen timestamp so the UI can show online status
                     if (sourceNode is not null)
                         _nodeManager.MarkNodeSeen(sourceNode.Id);
@@ -265,6 +255,24 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                     {
                         // Tag the message with the node it arrived from
                         message.NodeId = sourceNode?.Id;
+
+                        // A node on the KISS transport receives foreign RF traffic via
+                        // KissClientService already – drop the ext-udp copy of those frames
+                        // (otherwise every foreign frame shows twice, and pre-SrcInfo with a
+                        // different SSID-truncated callsign). But KEEP what KISS by design does
+                        // NOT deliver: the node's own position / message echo (src == our call)
+                        // and structured telemetry objects. ACKs are kept as a safety net.
+                        if (sourceNode?.Transport == NodeTransport.Kiss)
+                        {
+                            var isOwnFrame = string.Equals(message.From, myCallsign, StringComparison.OrdinalIgnoreCase);
+                            if (!isOwnFrame && !message.IsTelemetry && !message.IsAck)
+                            {
+                                if (_settings.LogUdpTraffic)
+                                    _logger.LogDebug("Ignoring ext-udp RF copy from KISS node '{Name}' – {From} (KISS delivers this)",
+                                        sourceNode.Name, message.From);
+                                continue;
+                            }
+                        }
 
                         // Update signal stats from LoRa metadata
                         if (message.Rssi.HasValue)
