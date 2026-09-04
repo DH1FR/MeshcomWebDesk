@@ -137,7 +137,7 @@ public class MeshcomMessage
     public double? Temp1    { get; set; }
     public double? Temp2    { get; set; }
     public double? Humidity { get; set; }
-    public double? Pressure { get; set; }  // qnh preferred, qfe fallback
+    public double? Pressure { get; set; }  // hPa; qnh preferred, qfe only for src_type "node" (see MeshcomUdpService)
 
     // ── KISS/TCP transport extras (only the KISS RX path fills these) ────────
 
