@@ -427,7 +427,8 @@
                     }
                     @if (m.AprsComment is { Length: > 0 } cmt)
                     {
-                        <span class="mon-aprs-comment" title="@Loc.T("Vollständiger APRS-Kommentar (nur KISS)", "Full APRS comment (KISS only)")">@cmt</span>
+                        <span class="mon-aprs-comment"
+                              title="@($"{Loc.T("APRS-Kommentar (nur KISS)", "APRS comment (KISS only)")}: {cmt}")">@cmt</span>
                     }
                 </div>
             }

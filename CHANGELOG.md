@@ -5,6 +5,9 @@
 ### Features
 - **Map: neighbour count & beacon comment** – for stations heard over KISS/TCP the Live Map popup now shows the `/N` neighbour count (`👥 N`) and the operator's beacon comment (machine extensions like `/B= /A= /R=` stripped). A well-meshed station (`/N` ≥ 6) gets a slightly larger marker dot so hubs stand out; new legend entry.
 
+### Bugfixes
+- **Monitor layout on narrow windows / phones** – a KISS position row's APRS comment was wrapped character-by-character into a tall thin column, blowing up the row height and leaving large gaps around the other fields. Monitor rows now wrap cleanly onto a second/third line and the comment sits on its own line, truncated with an ellipsis (full text in the tooltip). Regression from v1.15.0.
+
 ---
 
 ## [1.15.0] – 2026-09-03

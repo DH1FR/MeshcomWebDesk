@@ -907,7 +907,10 @@ h1:focus {
 .mon-row {
     display: flex;
     align-items: center;
-    gap: 6px;
+    flex-wrap: wrap;          /* narrow widths: header parts wrap to a 2nd/3rd line
+                                 instead of overflowing; the APRS comment (flex-basis:100%)
+                                 gets its own line as intended */
+    gap: 3px 6px;             /* row-gap / column-gap */
     padding: 3px 10px;
     border-bottom: 1px solid var(--surface-alt);
     border-left: 3px solid transparent;
@@ -1004,7 +1007,7 @@ h1:focus {
 .mon-bcast { color: #f0883e; }
 
 /* Content */
-.mon-content { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mon-content { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mon-text    { color: var(--mon-text); }
 .mon-text::before { content: ''; }
 .mon-pos     { color: #56d4db; }
@@ -1041,11 +1044,14 @@ h1:focus {
 }
 .mon-aprs-comment {
     flex-basis: 100%;
+    min-width: 0;
     margin-top: 2px;
     font-size: 10px;
     color: var(--text-muted);
     font-family: var(--font-mono, monospace);
-    word-break: break-all;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;   /* full text in the title tooltip – no character-column wrap */
     opacity: 0.85;
 }
 .mon-txresult {
