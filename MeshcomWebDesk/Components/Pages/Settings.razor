@@ -198,7 +198,7 @@
                                 <div style="margin-top:.4rem;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                                     <span>@Loc.T("KISS-Port", "KISS port")</span>
                                     <input type="number" value="@node.KissPort" readonly style="width:80px;opacity:0.6;cursor:not-allowed"
-                                           title="@Loc.T("Fest: 8001 (Firmware v1)", "Fixed: 8001 (firmware v1)")" />
+                                           title="@Loc.T("Fest 8001 – vom Node vorgegeben", "Fixed at 8001 – set by the node")" />
                                     @{ var ks = KissService.GetStatus(node.Id); }
                                     <span class="kiss-status kiss-status-@ks.State.ToString().ToLowerInvariant()">@KissStatusLabel(ks)</span>
                                 </div>

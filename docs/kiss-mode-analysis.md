@@ -38,13 +38,18 @@ Was in Phase A + B umgesetzt wurde:
 Referenz-Spezifikation (Firmware-Seite, verbindlicher Draht-Kontrakt):
 `C:\SRC\RA\MeshComFirmware\MeshCom-Firmware\docs\kiss_tcp_protocol.md`
 sowie `kiss_mode_analysis.md` und `kiss_tcp_test.md` im selben Ordner.
-Die KISS/TCP-Schnittstelle ist auf ESP32-Firmware **v1.2 bereits ausgeliefert**
-(v1.1 getestet 2026-08-30, Heltec V3; v1.2 = TX-Result-Frame, §3.4).
+Die **KISS/TCP-Erweiterung** ist ein Beitrag zur MeshCom-Firmware (PR #1114).
+„v1.1…v1.4" ist die *eigene* Iterationsnummer dieser Erweiterung — **nicht** eine
+MeshCom-Firmware-Version (die vergeben die MeshCom-Maintainer, z. B. `4.35p`).
+In user-facing Text von WebDesk steht deshalb nur „eine MeshCom-Firmware mit
+KISS/TCP-Schnittstelle", ohne Nummer. Meilensteine der Erweiterung:
+v1.1 Positions-Injection + Callsign-Gate (getestet 2026-08-30, Heltec V3),
+v1.2 TX-Result-Frame `0xF0` (§3.4), v1.3 Msg-Number-Translation,
+v1.4 SrcInfo-Frame `0x20`.
 
-**Testknoten:** `DH1FR-2` unter `192.168.1.102:8001` läuft mit der neuen
-Firmware (v1.2).
+**Testknoten:** `DH1FR-2` unter `192.168.1.102:8001`.
 
-### Firmware-Update (nach v1.2) — umgesetzt
+### Firmware-Update (nach Erweiterungs-v1.2) — umgesetzt
 
 - **TX-Result `0x05`** = abgelehnt, Injektions-Rate > 8 Frames/s. `0x04` deckt jetzt
   zusätzlich „Adressfeld nicht terminiert" und „control/PID ≠ 0x03/0xF0" ab.
@@ -221,7 +226,7 @@ public enum NodeTransport { ExtUdp, Kiss }
 
 // NodeProfile
 public NodeTransport Transport { get; set; } = NodeTransport.ExtUdp;
-public int KissPort { get; set; } = 8001;   // fix in Firmware v1, Feld für später
+public int KissPort { get; set; } = 8001;   // vom Node vorgegeben, Feld für später
 ```
 
 **Kein `KissTx`- oder `KissMeta`-Schalter in WebDesk** (Entscheidung):
@@ -234,7 +239,7 @@ public int KissPort { get; set; } = 8001;   // fix in Firmware v1, Feld für sp�
   Konfig-Schalter, sondern eine **read-only Statusanzeige** „KISS TX: ok /
   abgelehnt (Grund)", gespeist aus dem TX-Result-Frame (§3.4).
 
-### 3.4 TX-Result-Frame (Firmware KISS v1.2)
+### 3.4 TX-Result-Frame (KISS/TCP-Erweiterung v1.2)
 
 Das Protokoll wurde erweitert: der Node antwortet auf **jeden** vom Client
 gesendeten `type 0x00`-Frame mit einem Result-Frame auf **KISS-Port 15
@@ -440,7 +445,7 @@ Deframer/Framer/AX.25-Bausteine sind dann schon da, der Hub ist im Wesentlichen
 | 6.7 | **RxMeta-Zuordnung.** Reihenfolge Data→Meta laut Doku garantiert, aber TCP-Reassembly muss stimmen. | Meta immer an den unmittelbar vorher dekodierten Data-Frame hängen; kommt kein Meta, bleibt RSSI/SNR `null`. |
 | 6.8 | **Dedup / `msg_id` bei RX.** Firmware dedupt vor KISS. Eingehende KISS-Frames haben kein `msg_id` (kein APRS-Feld). | Kein zusätzliches Dedup nötig. Eigene TX bekommen `msg_id` aus dem `0xF0`-Frame (§3.4); nur bei **eingehenden** Frames bleiben `msg_id`-Features im Monitor leer. |
 | 6.9 | **Eigene Position.** Kommt die eigene Bake über KISS? Laut Doku ja (`!`-Frame mit `src` = eigener Call). | `SetOwnPosition()` greift wie bei ext-udp. |
-| 6.10 | **KISS-TX-Bestätigung.** War offen: erfährt WebDesk, ob der Node einen gesendeten Frame angenommen/verworfen hat? | **Geklärt durch Firmware KISS v1.2** — TX-Result-Frame `0xF0` (§3.4). Status + Grund + `msg_id` pro gesendetem Frame. |
+| 6.10 | **KISS-TX-Bestätigung.** War offen: erfährt WebDesk, ob der Node einen gesendeten Frame angenommen/verworfen hat? | **Geklärt durch KISS/TCP-Erweiterung v1.2** — TX-Result-Frame `0xF0` (§3.4). Status + Grund + `msg_id` pro gesendetem Frame. |
 | 6.11 | **APRS-Message-ACK bricht für Standard-Clients.** Der KISS-TX-Pfad der Firmware (`sendMessage()`) wirft bei DMs das Client-`{nn` weg und hängt eine eigene `{node_msgid` an. Ein Standard-Client (PinPoint, Direwolf, APRSdroid) wartet auf `ack<seine-Nummer>`, bekommt `ack<node-Nummer>` → kein Match → Retransmit-Schleife. | **Firmware-Fix:** im KISS-TX-Pfad das mitgesendete `{nn` **behalten** statt renummerieren. Dann matcht der ACK von selbst — für alle KISS-Clients, auch direkt am Node. Ein Hub-seitiger Workaround (`{nn` ⇄ msg_id-Map, ACK-Rewrite) wurde verworfen (fragil, hilft nur über den WebDesk-Hub). **Bis dahin:** Standard-Clients sehen für ausgehende Messages keine ACK-Bestätigung; RX + Positionen + eingehende Messages funktionieren. WebDesk-Nebenfix: ein ACK, der an einen fremden Call (Hub-Client) adressiert ist, markiert nicht mehr fälschlich eigene Chat-Nachrichten. |
 
 ---

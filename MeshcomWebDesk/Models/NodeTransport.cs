@@ -21,7 +21,7 @@ public enum NodeTransport
 
 /// <summary>
 /// Result reported by the node for a frame injected over KISS/TCP
-/// (KISS port 15 / type 0xF0 TX-result frame, firmware v1.2+).
+/// (KISS port 15 / type 0xF0 TX-result frame, KISS/TCP extension v1.2+).
 /// </summary>
 public enum KissTxResult
 {

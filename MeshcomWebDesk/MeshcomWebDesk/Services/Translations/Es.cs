@@ -503,7 +503,7 @@ internal static class Es
         // KISS/TCP transport
         ["How WebDesk reaches this node"] = "Cómo WebDesk se conecta a este node",
         ["KISS port"] = "Puerto KISS",
-        ["Fixed: 8001 (firmware v1)"] = "Fijo: 8001 (firmware v1)",
+        ["Fixed at 8001 – set by the node"] = "Fijo en 8001 – definido por el node",
         ["ESP32 nodes only. While WebDesk is connected via KISS no other KISS program can use this node. Enable TX / RxMeta on the node with --kiss tx on / --kiss meta on."]
             = "Solo nodes ESP32. Mientras WebDesk está conectado por KISS ningún otro programa KISS puede usar este node. Activa TX / RxMeta en el node con --kiss tx on / --kiss meta on.",
         ["On top of the ext-udp base – raw monitor, TX result, KISS hub"] = "Además de la base ext-udp: monitor en bruto, resultado de TX, hub KISS",

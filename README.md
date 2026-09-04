@@ -32,7 +32,7 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 ## 🆕 What's New in v1.15.0
 
 ### ✨ Features
-- **KISS/TCP as an optional per-node add-on** – each node can *additionally* be connected over its **KISS/TCP** interface (port 8001, ESP32 firmware v1.4+), on top of the always-on ext-udp base – a checkbox per node in Settings. Over KISS the monitor shows what ext-udp cannot: the **full APRS position comment**, the **digipeater path**, the **`/R=` relay list** and **`/N` neighbour count**, and **RSSI/SNR per frame**. Sending works over KISS with a per-send delivery result; optional HMAC authentication (`--kiss auth on`) reuses the node password.
+- **KISS/TCP as an optional per-node add-on** – each node can *additionally* be connected over its **KISS/TCP** interface (port 8001; needs a MeshCom firmware with the KISS/TCP interface), on top of the always-on ext-udp base – a checkbox per node in Settings. Over KISS the monitor shows what ext-udp cannot: the **full APRS position comment**, the **digipeater path**, the **`/R=` relay list** and **`/N` neighbour count**, and **RSSI/SNR per frame**. Sending works over KISS with a per-send delivery result; optional HMAC authentication (`--kiss auth on`) reuses the node password.
 - **KISS hub** – WebDesk can hold the node's single KISS connection and re-serve it as its own KISS/TCP listener, so **Dire Wolf, YAAC, APRSdroid** and other KISS clients connect *through* WebDesk instead of competing for the node's one slot.
 - **Two-digit SSIDs preserved** – origin callsigns with an SSID above 15 (`-16`…`-99`), which AX.25 cannot carry, are restored from the node's SrcInfo frame and used for display and for addressing replies.
 - **KISS and ext-udp shown as separate status dots** – on a KISS-primary node the two complementary paths (KISS = foreign traffic/monitor/TX result, ext-udp = the node's own position/telemetry/firmware) each get their own indicator, so a missing path is visible.
@@ -139,7 +139,7 @@ Each node profile contains:
 | **Listen Port** | Local UDP port to receive packets from this node (default `1799`) |
 | **Primary** | Exactly one node must be marked primary – only the primary node drives MH list, Live Map, beacons, telemetry, bot and OTA/reboot |
 | **KISS/TCP** | Checkbox – additionally connect to this node over KISS/TCP, on top of the always-on ext-udp base (see [KISS/TCP Transport](#-kisstcp-transport)) |
-| **KISS Port** | TCP port of the node's KISS interface (fixed `8001` on firmware v1), shown only when KISS/TCP is enabled |
+| **KISS Port** | TCP port of the node's KISS interface (fixed at `8001` by the node), shown only when KISS/TCP is enabled |
 | **Node Password** | `--passwd` on the node – used for the NET Console (HMAC) and, with `--kiss auth on`, for KISS authentication. Encrypted at rest (DPAPI / AES). |
 
 > 💡 When multiple nodes share the same UDP port (`1799`), incoming packets are routed to the correct node by the **sender's IP address** – no port forwarding required.
@@ -168,9 +168,9 @@ Each node profile contains:
 WebDesk always talks to a node over **ext-udp** (the MeshCom EXTUDP JSON protocol
 on UDP 1799) – that is the baseline and cannot be turned off in WebDesk. Since
 v1.15.0 each node can **additionally** be connected over its **KISS/TCP**
-interface (TCP port 8001, ESP32 firmware **v1.4+**). It is an **add-on, not a
-replacement**: enabling KISS opens a second connection to the node; ext-udp keeps
-running alongside it.
+interface (TCP port 8001), provided the node runs a MeshCom firmware that
+includes KISS/TCP. It is an **add-on, not a replacement**: enabling KISS opens a
+second connection to the node; ext-udp keeps running alongside it.
 
 Enable it per node in **Settings → the node's card → *KISS/TCP*** (a checkbox).
 
