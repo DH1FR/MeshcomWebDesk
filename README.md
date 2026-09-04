@@ -31,6 +31,13 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ## 🆕 What's New in v1.15.0
 
+> [!IMPORTANT]
+> **A MeshCom firmware with the KISS/TCP interface is required for the KISS
+> features of this release.** The KISS/TCP transport and the KISS hub only work
+> with a node whose firmware provides KISS/TCP (available when `--kiss` shows up
+> on the node console). Nodes without it keep working over ext-udp exactly as
+> before – only the new KISS options are then unavailable.
+
 ### ✨ Features
 - **KISS/TCP as an optional per-node add-on** – each node can *additionally* be connected over its **KISS/TCP** interface (port 8001; needs a MeshCom firmware with the KISS/TCP interface), on top of the always-on ext-udp base – a checkbox per node in Settings. Over KISS the monitor shows what ext-udp cannot: the **full APRS position comment**, the **digipeater path**, the **`/R=` relay list** and **`/N` neighbour count**, and **RSSI/SNR per frame**. Sending works over KISS with a per-send delivery result; optional HMAC authentication (`--kiss auth on`) reuses the node password.
 - **KISS hub** – WebDesk can hold the node's single KISS connection and re-serve it as its own KISS/TCP listener, so **Dire Wolf, YAAC, APRSdroid** and other KISS clients connect *through* WebDesk instead of competing for the node's one slot.
