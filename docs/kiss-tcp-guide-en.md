@@ -8,7 +8,7 @@ ext-udp keeps running.
 |---|---|---|
 | Protocol | MeshCom EXTUDP JSON, UDP 1799 | KISS framing over TCP 8001 |
 | What the node sends | pre-digested `msg` / `pos` / `tele` JSON | the raw received AX.25/APRS frame |
-| Node requirement | `--extudp on` + target IP | firmware **v1.4+**, `--kiss on` |
+| Node requirement | `--extudp on` + target IP | a MeshCom firmware with the KISS/TCP interface, `--kiss on` |
 | Carries the node's own position / telemetry / firmware | ✅ | ❌ |
 | Full APRS comment / digipeater path / `/R=` / per-frame RSSI-SNR | ❌ | ✅ |
 
