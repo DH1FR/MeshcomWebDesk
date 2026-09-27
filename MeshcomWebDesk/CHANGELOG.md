@@ -1,5 +1,18 @@
 ﻿# Changelog
 
+## [1.15.1] – released
+
+### Features
+- **New hardware IDs**: added `hw_id` 58 (HELTEC-E213 / Heltec Vision Master E213), 59 (ESP32-LORAPRS-E22) and 60 (ESP32-LORAPRS-RA01) to the hardware name lookup; documented the previously-added `hw_id` 61 (T-WATCH-S3) in the README table.
+- **Live Map: neighbour count & beacon comment**: for stations heard over KISS/TCP the map popup now shows the `/N` neighbour count (`👥 N`) and the operator's beacon comment (machine extensions like `/B= /A= /R=` stripped). A well-meshed station (`/N` ≥ 6) gets a slightly larger marker dot; new legend entry.
+
+### Bugfixes
+- **Monitor layout on narrow windows / phones**: a KISS position row's APRS comment was wrapped character-by-character into a tall thin column. Monitor rows now wrap cleanly and the comment sits on its own line, truncated with an ellipsis (full text in the tooltip). Regression from v1.15.0.
+- **Absurd air pressure for some weather stations**: a heard station's ext-udp telemetry carries the barometric *altitude* under the `qfe` key, not the pressure, so BME680-equipped nodes showed values like `191 hPa`. WebDesk now ignores `qfe` for heard stations and range-checks every pressure to a plausible 540–1080 hPa. Upstream firmware bug.
+- **Chat ACK/delivery tooltip not localized**: the message delivery-state tooltip was hardcoded in German; now localized with ES/FR/IT strings added. The status bar for a KISS-primary node also shows ext-udp before KISS now.
+
+---
+
 ## [1.15.0] – released
 
 ### Features

@@ -19,7 +19,7 @@ A **Blazor Server** web application for communicating with a [MeshCom 4.0](https
 Built with **.NET 10** and **Blazor Interactive Server**.
 
 > **MeshCom Firmware:** Compatible with [icssw-org/MeshCom-Firmware](https://github.com/icssw-org/MeshCom-Firmware) v4.35+  
-> Hardware IDs 1–57 supported (`TLORA`, `T-BEAM`, `T-ECHO`, `T-DECK`, `T-DECK-PLUS`, `T-DECK-PRO`, `T-ETH-ELITE`, `HELTEC-V1`–`V4`, `HELTEC-T114`, `HELTEC-WPAPER`, `RAK4631`, `EBYTE-E22`, `T5-EPAPER`, `T3-S3`, `T-CONNECT-PRO`, …)
+> Hardware IDs 1–61 supported (`TLORA`, `T-BEAM`, `T-ECHO`, `T-DECK`, `T-DECK-PLUS`, `T-DECK-PRO`, `T-ETH-ELITE`, `HELTEC-V1`–`V4`, `HELTEC-T114`, `HELTEC-E213`, `HELTEC-WPAPER`, `RAK4631`, `EBYTE-E22`, `T5-EPAPER`, `T3-S3`, `T-CONNECT-PRO`, `ESP32-LORAPRS`, `T-WATCH-S3`, …)
 
 > 💾 **Ready-to-run binaries** (Windows & Linux) – no build required:  
 > 👉 [**Download latest release**](https://github.com/DH1FR/MeshcomWebDesk/releases/latest)
@@ -29,29 +29,16 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
-## 🆕 What's New in v1.15.0
-
-> [!IMPORTANT]
-> **A MeshCom firmware with the KISS/TCP interface is required for the KISS
-> features of this release.** The KISS/TCP transport and the KISS hub only work
-> with a node whose firmware provides KISS/TCP (available when `--kiss` shows up
-> on the node console). Nodes without it keep working over ext-udp exactly as
-> before – only the new KISS options are then unavailable.
+## 🆕 What's New in v1.15.1
 
 ### ✨ Features
-- **KISS/TCP as an optional per-node add-on** – each node can *additionally* be connected over its **KISS/TCP** interface (port 8001; needs a MeshCom firmware with the KISS/TCP interface), on top of the always-on ext-udp base – a checkbox per node in Settings. Over KISS the monitor shows what ext-udp cannot: the **full APRS position comment**, the **digipeater path**, the **`/R=` relay list** and **`/N` neighbour count**, and **RSSI/SNR per frame**. Sending works over KISS with a per-send delivery result; optional HMAC authentication (`--kiss auth on`) reuses the node password.
-- **KISS hub** – WebDesk can hold the node's single KISS connection and re-serve it as its own KISS/TCP listener, so **Dire Wolf, YAAC, APRSdroid** and other KISS clients connect *through* WebDesk instead of competing for the node's one slot.
-- **Two-digit SSIDs preserved** – origin callsigns with an SSID above 15 (`-16`…`-99`), which AX.25 cannot carry, are restored from the node's SrcInfo frame and used for display and for addressing replies.
-- **KISS and ext-udp shown as separate status dots** – on a KISS-primary node the two complementary paths (KISS = foreign traffic/monitor/TX result, ext-udp = the node's own position/telemetry/firmware) each get their own indicator, so a missing path is visible.
-- **Per-node password** for the NET Console and KISS auth; the unused TLS certificate fingerprint field was removed.
-- `--kiss`, `--kiss tx`, `--kiss meta` added to the Console Command Helper.
+- **New hardware IDs** – added `hw_id` 58 (HELTEC-E213 / Heltec Vision Master E213), 59 (ESP32-LORAPRS-E22) and 60 (ESP32-LORAPRS-RA01) to the hardware name lookup; the previously-added `hw_id` 61 (T-WATCH-S3) is now also documented in the hardware ID table below.
+- **Live Map: neighbour count & beacon comment** – for stations heard over KISS/TCP the map popup now shows the `/N` neighbour count (`👥 N`) and the operator's beacon comment (machine extensions like `/B= /A= /R=` stripped). A well-meshed station (`/N` ≥ 6) gets a slightly larger marker dot so hubs stand out; new legend entry.
 
 ### 🔧 Bug Fixes
-- **Bare `ackNNN` / `rejNNN` acknowledgements** are recognised, so delivery checkmarks are set for ACKs from standard APRS clients such as PinPoint.
-- MeshCom **time-sync broadcasts** are kept out of the chat over KISS (monitor only), matching ext-udp.
-- A **hub client's ACK** is no longer misattributed to WebDesk's own outgoing messages that share a base callsign.
-- KISS info fields decode as **UTF-8 with a Latin-1 fallback** (Dire Wolf / PinPoint send CP1252).
-- A KISS **connect timeout** shows as a clean "node unreachable" status; auth detection no longer stalls on a quiet no-auth node.
+- **Monitor layout on narrow windows / phones** – a KISS position row's APRS comment was wrapped character-by-character into a tall thin column, blowing up the row height and leaving large gaps around the other fields. Monitor rows now wrap cleanly and the comment sits on its own line, truncated with an ellipsis (full text in the tooltip). Regression from v1.15.0.
+- **Absurd air pressure in the monitor / on the map for some weather stations** – a heard station's ext-udp telemetry carries the barometric *altitude* under the `qfe` key, not the pressure, so a node with a BME680 (e.g. `DM3KS-13`) showed values like `191 hPa`. WebDesk now ignores `qfe` for heard stations and range-checks every pressure to a plausible 540–1080 hPa. Upstream firmware bug.
+- **Chat ACK/delivery tooltip not localized** – the tooltip explaining a message's delivery state was hardcoded in German, so ES/FR/IT users always saw German text there. It now goes through the normal translation system, with ES/FR/IT strings added. The status bar for a KISS-primary node also now shows the **ext-udp** badge before **KISS**.
 
 ---
 
