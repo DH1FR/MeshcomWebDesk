@@ -1152,6 +1152,10 @@ This client communicates with the MeshCom node using the **EXTUDP JSON protocol*
 | 55 | T3-S3-V1.3 | LilyGO T3-S3 v1.3 |
 | 56 | T-CONNECT-PRO | LilyGO T-Connect Pro |
 | 57 | HELTEC-WPAPER | Heltec Wireless Paper |
+| 58 | HELTEC-E213 | Heltec Vision Master E213 |
+| 59 | ESP32-LORAPRS-E22 | ESP32 LoRaPRS (Ebyte E22) |
+| 60 | ESP32-LORAPRS-RA01 | ESP32 LoRaPRS (Ai-Thinker RA-01) |
+| 61 | T-WATCH-S3 | LilyGO T-Watch S3 |
 
 > **Note:** Altitude in position packets follows APRS convention (feet). The client converts to metres automatically.
 

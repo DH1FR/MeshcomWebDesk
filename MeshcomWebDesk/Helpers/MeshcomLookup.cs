@@ -44,6 +44,9 @@ public static class MeshcomLookup
         55 => "T3-S3-V1.3",
         56 => "T-CONNECT-PRO",
         57 => "HELTEC-WPAPER",
+        58 => "HELTEC-E213",
+        59 => "ESP32-LORAPRS-E22",
+        60 => "ESP32-LORAPRS-RA01",
         61 => "T-WATCH-S3",
         null => string.Empty,
         var id => $"HW-{id}"
