@@ -57,12 +57,13 @@ public class NodeProfile
     /// How WebDesk receives from / sends to this node. <see cref="NodeTransport.ExtUdp"/>
     /// (default) uses the shared UDP socket; <see cref="NodeTransport.Kiss"/> opens a
     /// dedicated KISS/TCP connection to <see cref="DeviceIp"/>:<see cref="KissPort"/>.
-    /// KISS is ESP32-firmware only. See <c>docs/kiss-mode-analysis.md</c>.
+    /// Needs a MeshCom firmware that provides the KISS/TCP interface (ESP32 boards only).
+    /// See <c>docs/kiss-mode-analysis.md</c>.
     /// </summary>
     public NodeTransport Transport { get; set; } = NodeTransport.ExtUdp;
 
     /// <summary>
-    /// TCP port of the node's KISS server (firmware v1: fixed 8001). Only used when
+    /// TCP port of the node's KISS server (fixed at 8001 by the node). Only used when
     /// <see cref="Transport"/> is <see cref="NodeTransport.Kiss"/>.
     /// </summary>
     public int KissPort { get; set; } = 8001;

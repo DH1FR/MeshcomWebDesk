@@ -501,7 +501,7 @@ internal static class It
         // KISS/TCP transport
         ["How WebDesk reaches this node"] = "Come WebDesk raggiunge questo node",
         ["KISS port"] = "Porta KISS",
-        ["Fixed: 8001 (firmware v1)"] = "Fisso: 8001 (firmware v1)",
+        ["Fixed at 8001 – set by the node"] = "Fisso a 8001 – impostato dal node",
         ["ESP32 nodes only. While WebDesk is connected via KISS no other KISS program can use this node. Enable TX / RxMeta on the node with --kiss tx on / --kiss meta on."]
             = "Solo nodes ESP32. Finché WebDesk è connesso via KISS nessun altro programma KISS può usare questo node. Abilita TX / RxMeta sul node con --kiss tx on / --kiss meta on.",
         ["On top of the ext-udp base – raw monitor, TX result, KISS hub"] = "In aggiunta alla base ext-udp – monitor grezzo, esito TX, hub KISS",
@@ -540,5 +540,14 @@ internal static class It
         ["Hub inactive."] = "Hub inattivo.",
         ["Target node"] = "Node di destinazione",
         ["no KISS node"] = "nessun node KISS",
+
+        // Chat – ACK / delivery status
+        ["Delivered via LoRa (direct) + gateway"] = "Consegnato via LoRa (diretto) + gateway",
+        ["Delivered via gateway"]                  = "Consegnato via gateway",
+        ["Delivered (LoRa ACK)"]                   = "Consegnato (ACK LoRa)",
+        ["No node echo – the UDP packet may not have reached the node!"] = "Nessun eco dal node – il pacchetto UDP potrebbe non essere arrivato al node!",
+        ["Sent – no ACK expected for group/broadcast"] = "Inviato – nessun ACK previsto per gruppo/broadcast",
+        ["Sent · waiting for confirmation (ACK)…"] = "Inviato · in attesa di conferma (ACK)…",
+        ["Waiting for node echo…"]                 = "In attesa dell'eco del node…",
     };
 }

@@ -1039,6 +1039,7 @@ public class ChatService
                     LastPositionTime = message.Latitude.HasValue ? message.Timestamp : null,
                     Battery          = message.Battery,
                     NeighbourCount   = message.NeighbourCount,
+                    AprsComment      = message.AprsComment,
                     HwId             = message.HwId,
                     Firmware         = message.Firmware,
                     LastRelayPath        = message.RelayPath,
@@ -1069,6 +1070,7 @@ public class ChatService
                 if (message.Snr.HasValue)     { s.LastSnr  = message.Snr;   mhChanged = true; }
                 if (message.Battery.HasValue) { s.Battery  = message.Battery; mhChanged = true; }
                 if (message.NeighbourCount.HasValue) { s.NeighbourCount = message.NeighbourCount; mhChanged = true; }
+                if (!string.IsNullOrWhiteSpace(message.AprsComment)) { s.AprsComment = message.AprsComment; mhChanged = true; }
                 if (message.HwId.HasValue)    s.HwId     = message.HwId;
                 if (!string.IsNullOrEmpty(message.Firmware)) s.Firmware = message.Firmware;
                 if (!string.IsNullOrEmpty(message.SrcType))  s.LastSrcType = message.SrcType;

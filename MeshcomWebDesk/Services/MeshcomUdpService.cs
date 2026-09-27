@@ -977,6 +977,15 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     }
 
     /// <summary>
+    /// True when <paramref name="hpa"/> is a physically plausible surface air pressure.
+    /// Guards the extudp telemetry parser against non-pressure values that arrive under
+    /// the <c>qfe</c>/<c>qnh</c> keys – e.g. a heard station's <c>qfe</c> actually carries
+    /// the APRS <c>/F=</c> field, which the firmware fills with the barometric altitude in
+    /// metres (~150–250), not a pressure. Range covers the WMO record extremes with margin.
+    /// </summary>
+    private static bool IsPlausiblePressure(double hpa) => hpa is >= 540 and <= 1080;
+
+    /// <summary>
     /// Reads the telemetry JSON file and builds the flat "key=value unit" string
     /// from the configured <see cref="MeshcomSettings.TelemetryMapping"/>.
     /// Returns <c>null</c> when the file does not exist, cannot be parsed, or yields no values.
@@ -1751,10 +1760,17 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                 if (root.TryGetProperty("temp1", out var t1) && t1.ValueKind == JsonValueKind.Number) temp1    = t1.GetDouble();
                 if (root.TryGetProperty("temp2", out var t2) && t2.ValueKind == JsonValueKind.Number) temp2    = t2.GetDouble();
                 if (root.TryGetProperty("hum",   out var hm) && hm.ValueKind == JsonValueKind.Number) humidity = hm.GetDouble();
-                // Prefer qnh (sea-level) over qfe (station pressure)
-                if (root.TryGetProperty("qnh", out var qnh) && qnh.ValueKind == JsonValueKind.Number && qnh.GetDouble() > 0)
+
+                // Pressure: prefer qnh (sea-level). The "qfe" key is only a real station
+                // pressure for the node's own telemetry (src_type "node"); for a heard
+                // station (src_type "lora") it carries the APRS "/F=" field, which the
+                // firmware fills with the barometric altitude in metres, not a pressure –
+                // the real "/P=" value is never forwarded in the tele JSON (upstream bug;
+                // MCProxy drops "qfe" for "lora" the same way). Only accept plausible hPa.
+                if (root.TryGetProperty("qnh", out var qnh) && qnh.ValueKind == JsonValueKind.Number && IsPlausiblePressure(qnh.GetDouble()))
                     pressure = qnh.GetDouble();
-                else if (root.TryGetProperty("qfe", out var qfe) && qfe.ValueKind == JsonValueKind.Number && qfe.GetDouble() > 0)
+                else if (!string.Equals(srcType, "lora", StringComparison.OrdinalIgnoreCase) &&
+                         root.TryGetProperty("qfe", out var qfe) && qfe.ValueKind == JsonValueKind.Number && IsPlausiblePressure(qfe.GetDouble()))
                     pressure = qfe.GetDouble();
             }
 

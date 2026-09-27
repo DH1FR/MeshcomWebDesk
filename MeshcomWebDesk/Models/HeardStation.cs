@@ -51,6 +51,13 @@ public class HeardStation
     /// </summary>
     public int? NeighbourCount { get; set; }
 
+    /// <summary>
+    /// Full APRS position comment of the last beacon (operator text plus the raw MeshCom
+    /// extension set). Only populated when the station was heard over KISS/TCP – ext-udp
+    /// discards the comment. Null when never received.
+    /// </summary>
+    public string? AprsComment { get; set; }
+
     /// <summary>Hardware ID (from "hw_id" field).</summary>
     public int? HwId { get; set; }
 

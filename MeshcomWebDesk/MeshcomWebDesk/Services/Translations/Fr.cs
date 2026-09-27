@@ -480,6 +480,7 @@ internal static class Fr
         ["0\u00a0= unlimited (never refresh)"] = "0\u00a0= illimité (ne jamais actualiser)",
         ["1 relay hop"]             = "1 saut relais",
         ["2+ relay hops"]           = "2+ sauts relais",
+        ["Well-meshed (≥6 neighbours, KISS only)"] = "Bien maillé (≥6 voisins, KISS uniquement)",
         ["25 km radius around own position"] = "Rayon de 25 km autour de ma position",
         ["50 km radius around own position"] = "Rayon de 50 km autour de ma position",
         ["Acknowledgements (ACK)"]  = "Accusés de réception (ACK)",
@@ -942,7 +943,7 @@ internal static class Fr
         // KISS/TCP transport
         ["How WebDesk reaches this node"] = "Comment WebDesk atteint ce node",
         ["KISS port"] = "Port KISS",
-        ["Fixed: 8001 (firmware v1)"] = "Fixe : 8001 (firmware v1)",
+        ["Fixed at 8001 – set by the node"] = "Fixe à 8001 – défini par le node",
         ["ESP32 nodes only. While WebDesk is connected via KISS no other KISS program can use this node. Enable TX / RxMeta on the node with --kiss tx on / --kiss meta on."]
             = "Nodes ESP32 uniquement. Tant que WebDesk est connecté en KISS, aucun autre programme KISS ne peut utiliser ce node. Activez TX / RxMeta sur le node avec --kiss tx on / --kiss meta on.",
         ["On top of the ext-udp base – raw monitor, TX result, KISS hub"] = "En plus de la base ext-udp – moniteur brut, accusé d'émission, hub KISS",
@@ -981,6 +982,15 @@ internal static class Fr
         ["Hub inactive."] = "Hub inactif.",
         ["Target node"] = "Node cible",
         ["no KISS node"] = "aucun node KISS",
+
+        // Chat – ACK / delivery status
+        ["Delivered via LoRa (direct) + gateway"] = "Livré via LoRa (direct) + gateway",
+        ["Delivered via gateway"]                  = "Livré via gateway",
+        ["Delivered (LoRa ACK)"]                   = "Livré (ACK LoRa)",
+        ["No node echo – the UDP packet may not have reached the node!"] = "Aucun écho du node – le paquet UDP n'a peut-être pas atteint le node !",
+        ["Sent – no ACK expected for group/broadcast"] = "Envoyé – aucun ACK attendu pour groupe/broadcast",
+        ["Sent · waiting for confirmation (ACK)…"] = "Envoyé · en attente de confirmation (ACK)…",
+        ["Waiting for node echo…"]                 = "En attente de l'écho du node…",
     };
 }
 

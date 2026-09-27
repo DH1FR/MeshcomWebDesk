@@ -29,7 +29,7 @@ public static class KissFraming
     /// </summary>
     public const byte TypeSrcInfo = 0x20;
 
-    /// <summary>TX-result frame, port 15 – status:int8 [+ msg_id:uint32 LE] (firmware v1.2+, node → client).</summary>
+    /// <summary>TX-result frame, port 15 – status:int8 [+ msg_id:uint32 LE] (KISS/TCP extension v1.2+, node → client).</summary>
     public const byte TypeTxResult = 0xF0;
 
     /// <summary>

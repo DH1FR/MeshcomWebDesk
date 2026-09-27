@@ -87,20 +87,31 @@ window.meshcomMap = (function () {
         return 1 - 0.7 * (mins - 15) / (1440 - 15);
     }
 
-    // APRS-style marker: filled circle (signal colour) + optional relay ring + callsign label
-    function stationIcon(callsign, tier, hopCount, hasTelem, isGateway) {
+    // APRS-style marker: filled circle (signal colour) + optional relay ring + callsign label.
+    // nbCount = "/N" neighbour count (KISS only): a well-meshed hub gets a slightly larger dot.
+    function stationIcon(callsign, tier, hopCount, hasTelem, isGateway, nbCount) {
         var sigClass   = tierClass(tier);
         var relayClass = hopCount > 1 ? ' aprs-relay-2'
                        : hopCount > 0 ? ' aprs-relay-1'
                        :                '';
         var gwClass   = isGateway ? ' aprs-gateway' : '';
+        var hubClass  = (nbCount != null && nbCount >= 6) ? ' aprs-hub' : '';
+        var anchor    = hubClass ? 8 : 6;
         var gwIcon    = isGateway ? '<span class="aprs-gw-icon">🌐</span>' : '';
         var telemIcon = hasTelem ? '<span class="aprs-telem-icon">🌡️</span>' : '';
         var html = '<div class="aprs-wrap">'
-                 + '<div class="aprs-dot ' + sigClass + relayClass + gwClass + '"></div>'
+                 + '<div class="aprs-dot ' + sigClass + relayClass + gwClass + hubClass + '"></div>'
                  + '<div class="aprs-label' + (isGateway ? ' aprs-label-gateway' : '') + '">' + gwIcon + esc(callsign) + telemIcon + '</div>'
                  + '</div>';
-        return L.divIcon({ className: '', html: html, iconAnchor: [6, 6] });
+        return L.divIcon({ className: '', html: html, iconAnchor: [anchor, anchor] });
+    }
+
+    // Strip the machine-readable MeshCom extension set (/B= /A= /N9 /P= /H= /T= /R= …)
+    // from an APRS position comment, leaving just the operator's own text.
+    function cleanComment(c) {
+        if (!c) return '';
+        var cut = c.search(/\s*\/[A-Z][0-9=]/);
+        return (cut >= 0 ? c.slice(0, cut) : c).trim();
     }
 
     // Own position: gold diamond + label (+ green gateway ring when isGateway)
@@ -136,6 +147,15 @@ window.meshcomMap = (function () {
             var relayText = hops.slice(1).map(function(h) { return esc(h.trim()); }).join(' ⟶ ');
             relayLine = '<br><span style="font-size:11px;color:#8b949e">Via: ' + relayText + '</span>';
         }
+        var nbLine = '';
+        if (s.neighbourCount != null) {
+            nbLine = '<br><span style="font-size:11px;color:#8b949e">👥 ' + s.neighbourCount + ' ' + _i18n.neighbours + '</span>';
+        }
+        var commentLine = '';
+        var cc = cleanComment(s.aprsComment);
+        if (cc) {
+            commentLine = '<br><span style="font-size:11px;color:#c8d8e8;font-style:italic">' + esc(cc) + '</span>';
+        }
         var telemLine = '';
         if (s.temp != null || s.humidity != null || s.pressure != null) {
             telemLine = '<br><span style="font-size:11px;color:#c8d8e8">';
@@ -159,7 +179,7 @@ window.meshcomMap = (function () {
             + 'id="ai-btn-' + esc(s.callsign.replace(/[^a-zA-Z0-9]/g,'-')) + '" '
             + 'style="margin-top:5px;font-size:11px;background:#1a3a5c;color:#79c0ff;border:1px solid #3a6a8a;border-radius:4px;padding:2px 8px;cursor:pointer">' + _i18n.aiInfo + '</button>'
             + '<div id="ai-result-' + esc(s.callsign.replace(/[^a-zA-Z0-9]/g,'-')) + '" style="font-size:11px;margin-top:4px;color:#c9d1d9;max-width:260px;white-space:pre-wrap"></div>';
-        return '<b>' + esc(s.callsign) + '</b>' + (s.isGateway ? ' <span style="font-size:10px;font-weight:700;background:#0d2b1a;color:#3fb950;border-radius:3px;padding:1px 5px;margin-left:4px">GW</span>' : '') + qrzLine + badgeLine + relayLine + telemLine
+        return '<b>' + esc(s.callsign) + '</b>' + (s.isGateway ? ' <span style="font-size:10px;font-weight:700;background:#0d2b1a;color:#3fb950;border-radius:3px;padding:1px 5px;margin-left:4px">GW</span>' : '') + qrzLine + badgeLine + relayLine + nbLine + commentLine + telemLine
             + (s.text     ? '<br><span style="font-size:12px">' + esc(s.text) + '</span>' : '')
             + signalLine
             + (s.battery  != null ? '&nbsp;🔋 ' + s.battery + '%' : '')
@@ -366,7 +386,7 @@ window.meshcomMap = (function () {
                 var key   = s.callsign.toUpperCase();
                 var icon  = stationIcon(s.callsign, sigTier(s.rssi, s.snr), s.hopCount,
                                         s.temp != null || s.humidity != null || s.pressure != null,
-                                        s.isGateway);
+                                        s.isGateway, s.neighbourCount);
                 var popup = buildStationPopup(s);
 
                 seen[key] = true;

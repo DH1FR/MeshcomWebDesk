@@ -4,6 +4,19 @@
 
 ---
 
+## [1.15.1] – 2026-09-27
+
+### Features
+- **Map: neighbour count & beacon comment** – for stations heard over KISS/TCP the Live Map popup now shows the `/N` neighbour count (`👥 N`) and the operator's beacon comment (machine extensions like `/B= /A= /R=` stripped). A well-meshed station (`/N` ≥ 6) gets a slightly larger marker dot so hubs stand out; new legend entry.
+- **MeshcomLookup – new hardware IDs** – added `hw_id` 58 (HELTEC-E213 / Heltec Vision Master E213), 59 (ESP32-LORAPRS-E22) and 60 (ESP32-LORAPRS-RA01) from the current MeshCom-Firmware `dev` branch; also documented the previously-added `hw_id` 61 (T-WATCH-S3) in the README table.
+
+### Bugfixes
+- **Monitor layout on narrow windows / phones** – a KISS position row's APRS comment was wrapped character-by-character into a tall thin column, blowing up the row height and leaving large gaps around the other fields. Monitor rows now wrap cleanly onto a second/third line and the comment sits on its own line, truncated with an ellipsis (full text in the tooltip). Regression from v1.15.0.
+- **Absurd air pressure in the monitor / on the map for some weather stations** – a heard station's ext-udp telemetry (`type:"tele"`, `src_type:"lora"`) carries the APRS `/F=` field under the `qfe` key, which the firmware fills with the barometric *altitude in metres*, not the station pressure – so a node with a BME680 (e.g. `DM3KS-13`) showed values like `191 hPa`. WebDesk now ignores `qfe` for heard stations (the real `/P=` value is not forwarded in the tele JSON) and range-checks every pressure to a plausible 540–1080 hPa before displaying, storing or publishing it. The node's own telemetry (`src_type:"node"`), where `qfe` really is a pressure, is unaffected. Upstream firmware bug.
+- **Chat ACK/delivery tooltip not localized** – the tooltip explaining a message's delivery state (delivered via LoRa/gateway, waiting for ACK, no node echo, …) was hardcoded in German, so ES/FR/IT users always saw German text there. It now goes through the normal translation system, with ES/FR/IT strings added. The status bar for a KISS-primary node also now shows the **ext-udp** badge before **KISS** (previously the other way round).
+
+---
+
 ## [1.15.0] – 2026-09-03
 
 ### Features
