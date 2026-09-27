@@ -540,5 +540,14 @@ internal static class It
         ["Hub inactive."] = "Hub inattivo.",
         ["Target node"] = "Node di destinazione",
         ["no KISS node"] = "nessun node KISS",
+
+        // Chat – ACK / delivery status
+        ["Delivered via LoRa (direct) + gateway"] = "Consegnato via LoRa (diretto) + gateway",
+        ["Delivered via gateway"]                  = "Consegnato via gateway",
+        ["Delivered (LoRa ACK)"]                   = "Consegnato (ACK LoRa)",
+        ["No node echo – the UDP packet may not have reached the node!"] = "Nessun eco dal node – il pacchetto UDP potrebbe non essere arrivato al node!",
+        ["Sent – no ACK expected for group/broadcast"] = "Inviato – nessun ACK previsto per gruppo/broadcast",
+        ["Sent · waiting for confirmation (ACK)…"] = "Inviato · in attesa di conferma (ACK)…",
+        ["Waiting for node echo…"]                 = "In attesa dell'eco del node…",
     };
 }

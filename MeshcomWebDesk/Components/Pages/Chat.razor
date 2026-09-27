@@ -508,8 +508,8 @@
         <span class="status-item udp-diag-wrap" @ref="_udpDiagWrapRef">
             @if (PrimaryIsKiss)
             {
-                <span class="status-badge @KissStatusBadgeCss" title="@KissStatusTooltip">@KissStatusIcon KISS</span>
                 <span class="status-badge @ExtUdpAuxBadgeCss" title="@ExtUdpAuxTooltip">@ExtUdpAuxIcon ext-udp</span>
+                <span class="status-badge @KissStatusBadgeCss" title="@KissStatusTooltip">@KissStatusIcon KISS</span>
             }
             else
             {
@@ -2306,28 +2306,30 @@
         return "⏳";
     }
 
-    private static string AckTooltip(MeshcomMessage m)
+    private string AckTooltip(MeshcomMessage m)
     {
         var isGroupOrBcast = m.To == "*" || m.To.StartsWith('#');
-        var ackRtt = m.AckRoundTrip.HasValue ? $" · ACK nach {FormatPingRtt(m.AckRoundTrip.Value)}" : "";
+        var ackRtt = m.AckRoundTrip.HasValue
+            ? $" · {Loc.T($"ACK nach {FormatPingRtt(m.AckRoundTrip.Value)}", $"ACK after {FormatPingRtt(m.AckRoundTrip.Value)}")}"
+            : "";
 
         if (m.IsAcknowledged && m.IsLoraDelivered && m.IsGatewayDelivered)
-            return $"✓✓ ☁️✓ Zugestellt via LoRa (direkt) + Gateway{ackRtt}";
+            return $"✓✓ ☁️✓ {Loc.T("Zugestellt via LoRa (direkt) + Gateway", "Delivered via LoRa (direct) + gateway")}{ackRtt}";
         if (m.IsAcknowledged && m.IsGatewayDelivered)
-            return $"☁️✓ Über Gateway zugestellt{ackRtt}";
+            return $"☁️✓ {Loc.T("Über Gateway zugestellt", "Delivered via gateway")}{ackRtt}";
         if (m.IsAcknowledged)
-            return $"✓✓ Zugestellt (LoRa ACK){ackRtt}";
+            return $"✓✓ {Loc.T("Zugestellt (LoRa ACK)", "Delivered (LoRa ACK)")}{ackRtt}";
         if (m.NodeEchoReceived == false)
-            return "⚠️ Node-Echo ausgeblieben – UDP-Paket wurde möglicherweise nicht vom Node empfangen!";
+            return "⚠️ " + Loc.T("Node-Echo ausgeblieben – UDP-Paket wurde möglicherweise nicht vom Node empfangen!", "No node echo – the UDP packet may not have reached the node!");
         if (isGroupOrBcast && m.SequenceNumber != null)
-            return "☁️ Gesendet – kein ACK für Gruppe/Broadcast erwartet";
+            return "☁️ " + Loc.T("Gesendet – kein ACK für Gruppe/Broadcast erwartet", "Sent – no ACK expected for group/broadcast");
         if (m.SequenceNumber != null)
         {
             if (m.SequenceNumber != "TX")
-                return $"✓ Gesendet (Seq #{m.SequenceNumber}) · warte auf ACK…";
-            return "✓ Gesendet · warte auf Bestätigung (ACK)…";
+                return $"✓ {Loc.T($"Gesendet (Seq #{m.SequenceNumber}) · warte auf ACK…", $"Sent (seq #{m.SequenceNumber}) · waiting for ACK…")}";
+            return "✓ " + Loc.T("Gesendet · warte auf Bestätigung (ACK)…", "Sent · waiting for confirmation (ACK)…");
         }
-        return "⏳ Warte auf Node-Echo…";
+        return "⏳ " + Loc.T("Warte auf Node-Echo…", "Waiting for node echo…");
     }
 
     private static string BeaconTimeCss(DateTime nextSend) =>
