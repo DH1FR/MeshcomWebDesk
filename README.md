@@ -29,6 +29,13 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
+## 🆕 What's New in v1.15.2 (in development)
+
+### ✨ Features
+- **Web view** – new **🌐 Web** tab next to the map that embeds any number of web pages (e.g. the OE MeshMap `https://meshmap.oevsv.at/` or `https://meshcom.oevsv.at/`) in a sandboxed iframe. Manage them under **Settings → 🌐 Web** (name, URL, enabled; http/https only; "Insert examples" adds the two OE pages). The tab only appears once at least one enabled page exists. Sites that forbid embedding stay blank – use "Open in new tab" for those.
+
+---
+
 ## 🆕 What's New in v1.15.1
 
 ### ✨ Features

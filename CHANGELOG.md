@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Features
+- **Web view** – new **🌐 Web** tab right next to the map that embeds any number of web pages (e.g. `https://meshmap.oevsv.at/`, `https://meshcom.oevsv.at/`) in a sandboxed iframe, with a selector for the configured pages, an "Open in new tab" button and a remembered last selection. The pages are managed in the new **Settings → 🌐 Web** section (name, URL, enabled; http/https only, invalid URLs are rejected on save; "Insert examples" adds the two OE pages). The tab is shown only while at least one enabled page exists. Pages that forbid embedding (`X-Frame-Options` / CSP `frame-ancestors`) stay blank – use "Open in new tab" for those.
+
 ---
 
 ## [1.15.1] – 2026-09-27
