@@ -364,6 +364,12 @@ public class MeshcomSettings
     /// </summary>
     public List<GatewaySourceEntry> GatewaySources { get; set; } = [];
 
+    /// <summary>
+    /// User-defined web pages shown in the embedded "Web" view (nav tab next to Map).
+    /// The tab is only visible when at least one enabled entry exists.
+    /// </summary>
+    public List<WebLinkEntry> WebLinks { get; set; } = [];
+
     // ── Telnet / Console ─────────────────────────────────────────────────
 
     /// <summary>When true, a Console tab is shown.</summary>

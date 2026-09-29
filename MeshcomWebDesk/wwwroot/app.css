@@ -4000,3 +4000,27 @@ details[open] .cch-group-title::before { transform: rotate(90deg); }
     border-radius: 4px;
     padding: 3px 6px;
 }
+
+/* ── Web view (embedded pages) ─────────────────────────────────── */
+.web-page {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.web-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+}
+.web-hint { opacity: .6; margin-left: auto; }
+.web-frame {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    border: 0;
+    background: #fff;
+}
+.web-empty { padding: 2rem; opacity: .7; }

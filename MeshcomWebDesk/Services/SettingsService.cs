@@ -356,6 +356,12 @@ public class SettingsService
                     ["Url"]     = g.Url,
                     ["Enabled"] = g.Enabled
                 }).ToArray()),
+                ["WebLinks"] = new JsonArray(s.WebLinks.Select(w => (JsonNode?)new JsonObject
+                {
+                    ["Name"]    = w.Name,
+                    ["Url"]     = w.Url,
+                    ["Enabled"] = w.Enabled
+                }).ToArray()),
                 ["TelnetEnabled"]           = s.TelnetEnabled,
                 ["ConsoleMode"]             = s.ConsoleMode,
                 ["TelnetPort"]              = s.TelnetPort,

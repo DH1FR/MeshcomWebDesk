@@ -552,6 +552,45 @@
             </div>
             }
         </div>
+        <!-- Web -->
+        <div class="settings-section @(IsOpen("web") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("web")'>🌐 Web <span class="section-chevron">@(IsOpen("web") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("web")) {
+            <div class="settings-grid">
+                <label>
+                    @Loc.T("Web-Seiten", "Web Pages")<br />
+                    <small>@Loc.T("Beliebige Web-Seiten, die im Tab „Web“ (rechts neben der Karte) eingebettet angezeigt werden. Nur http/https. Manche Seiten verbieten das Einbetten – dort hilft „In neuem Tab öffnen“.", "Any web pages shown embedded in the “Web” tab (right of the map). http/https only. Some sites forbid embedding – use “Open in new tab” for those.")</small>
+                </label>
+                <div style="display:flex;flex-direction:column;gap:0.4rem">
+                    @foreach (var link in _model.WebLinks)
+                    {
+                        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                            <input type="checkbox" @bind="link.Enabled" title="@Loc.T("Aktiv", "Enabled")" />
+                            <input type="text" @bind="link.Name" placeholder="@Loc.T("Name (z. B. MeshMap)", "Name (e.g. MeshMap)")"
+                                   style="flex:0 0 180px" />
+                            <input type="text" @bind="link.Url" placeholder="https://…"
+                                   style="flex:1 1 260px" />
+                            @if (!string.IsNullOrWhiteSpace(link.Url) && !WebLinkEntry.IsValidUrl(link.Url))
+                            {
+                                <small style="color:#f85149">❌ @Loc.T("Ungültige URL (http/https)", "Invalid URL (http/https)")</small>
+                            }
+                            <button type="button" class="btn-remove" @onclick="() => _model.WebLinks.Remove(link)">✕</button>
+                        </div>
+                    }
+                    <div style="display:flex;gap:6px;flex-wrap:wrap">
+                        <button type="button" class="btn-add"
+                                @onclick="() => _model.WebLinks.Add(new WebLinkEntry())">
+                            + @Loc.T("Web-Seite hinzufügen", "Add Web Page")
+                        </button>
+                        <button type="button" class="btn-add" @onclick="AddWebLinkExamples">
+                            @Loc.T("Beispiele einfügen", "Insert examples")
+                        </button>
+                    </div>
+                </div>
+            </div>
+            }
+        </div>
+
 
         <!-- Datenspeicherung / Data Storage -->
         <div class="settings-section @(IsOpen("data") ? "" : "settings-section-collapsed")">
@@ -3416,6 +3455,9 @@
             GatewayServer           = s.GatewayServer,
             GatewaySources          = s.GatewaySources
                 .Select(g => new GatewaySourceEntry { Name = g.Name, Url = g.Url, Enabled = g.Enabled })
+            WebLinks                = s.WebLinks
+                .Select(w => new WebLinkEntry { Name = w.Name, Url = w.Url, Enabled = w.Enabled })
+                .ToList(),
                 .ToList(),
             TelnetEnabled           = s.TelnetEnabled,
             ConsoleMode             = s.ConsoleMode == "tls" ? "hmac" : s.ConsoleMode,
@@ -3487,6 +3529,18 @@
         MeshcomWebDesk.Services.Kiss.KissConnectionState.Error      => Loc.T("Fehler", "error") + (s.Detail is null ? "" : $": {s.Detail}"),
         _ => Loc.T("inaktiv", "inactive"),
     };
+
+    private void AddWebLinkExamples()
+    {
+        (string Name, string Url)[] examples =
+        [
+            ("MeshMap", "https://meshmap.oevsv.at/"),
+            ("MeshCom", "https://meshcom.oevsv.at/")
+        ];
+        foreach (var (name, url) in examples)
+            if (!_model.WebLinks.Any(w => string.Equals(w.Url?.Trim(), url, StringComparison.OrdinalIgnoreCase)))
+                _model.WebLinks.Add(new WebLinkEntry { Name = name, Url = url, Enabled = true });
+    }
 
     private async Task SaveAsync()
     {
@@ -4085,6 +4139,7 @@
             // Null-safety: ensure nested objects and collections exist
             imported.QuickTexts       ??= [];
             imported.GatewaySources   ??= [];
+            imported.WebLinks         ??= [];
             imported.GroupLabels      ??= [];
             imported.BotCommands      ??= [];
             imported.CalendarBeacons  ??= [];
@@ -4247,6 +4302,9 @@
                 GatewaySources          = s.GatewaySources
                     .Select(g => new GatewaySourceEntry { Name = g.Name, Url = g.Url, Enabled = g.Enabled })
                     .ToList(),
+                WebLinks                = s.WebLinks
+                    .Select(w => new WebLinkEntry { Name = w.Name, Url = w.Url, Enabled = w.Enabled })
+                    .ToList(),
                 TelnetEnabled           = s.TelnetEnabled,
                 ConsoleMode             = s.ConsoleMode == "tls" ? "hmac" : s.ConsoleMode,
                 TelnetPort              = s.TelnetPort,
@@ -4389,6 +4447,7 @@
         public string GatewayServer            { get; set; } = "oe";
         public List<GatewaySourceEntry> GatewaySources { get; set; } = [];
         public bool   TelnetEnabled            { get; set; } = false;
+        public List<WebLinkEntry> WebLinks { get; set; } = [];
         public string ConsoleMode             { get; set; } = "hmac";
         public int    TelnetPort              { get; set; } = 2323;
         public string TelnetPassword          { get; set; } = string.Empty;
@@ -4572,4 +4631,13 @@
             };
         }
     }
+            WebLinks                = WebLinks
+                .Where(w => WebLinkEntry.IsValidUrl(w.Url))
+                .Select(w => new WebLinkEntry
+                {
+                    Url     = w.Url.Trim(),
+                    Name    = string.IsNullOrWhiteSpace(w.Name) ? new Uri(w.Url.Trim()).Host : w.Name.Trim(),
+                    Enabled = w.Enabled
+                })
+                .ToList(),
 }
