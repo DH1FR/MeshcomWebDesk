@@ -552,6 +552,7 @@
             </div>
             }
         </div>
+
         <!-- Web -->
         <div class="settings-section @(IsOpen("web") ? "" : "settings-section-collapsed")">
             <h2 class="settings-section-title" @onclick='() => Toggle("web")'>🌐 Web <span class="section-chevron">@(IsOpen("web") ? "▲" : "▼")</span></h2>
@@ -590,7 +591,6 @@
             </div>
             }
         </div>
-
 
         <!-- Datenspeicherung / Data Storage -->
         <div class="settings-section @(IsOpen("data") ? "" : "settings-section-collapsed")">
@@ -3455,9 +3455,9 @@
             GatewayServer           = s.GatewayServer,
             GatewaySources          = s.GatewaySources
                 .Select(g => new GatewaySourceEntry { Name = g.Name, Url = g.Url, Enabled = g.Enabled })
+                .ToList(),
             WebLinks                = s.WebLinks
                 .Select(w => new WebLinkEntry { Name = w.Name, Url = w.Url, Enabled = w.Enabled })
-                .ToList(),
                 .ToList(),
             TelnetEnabled           = s.TelnetEnabled,
             ConsoleMode             = s.ConsoleMode == "tls" ? "hmac" : s.ConsoleMode,
@@ -4446,8 +4446,8 @@
         public bool   GatewayHighlightEnabled  { get; set; } = true;
         public string GatewayServer            { get; set; } = "oe";
         public List<GatewaySourceEntry> GatewaySources { get; set; } = [];
-        public bool   TelnetEnabled            { get; set; } = false;
         public List<WebLinkEntry> WebLinks { get; set; } = [];
+        public bool   TelnetEnabled            { get; set; } = false;
         public string ConsoleMode             { get; set; } = "hmac";
         public int    TelnetPort              { get; set; } = 2323;
         public string TelnetPassword          { get; set; } = string.Empty;
@@ -4616,6 +4616,15 @@
                 .Where(g => !string.IsNullOrWhiteSpace(g.Url))
                 .Select(g => new GatewaySourceEntry { Name = g.Name?.Trim() ?? "", Url = g.Url.Trim(), Enabled = g.Enabled })
                 .ToList(),
+            WebLinks                = WebLinks
+                .Where(w => WebLinkEntry.IsValidUrl(w.Url))
+                .Select(w => new WebLinkEntry
+                {
+                    Url     = w.Url.Trim(),
+                    Name    = string.IsNullOrWhiteSpace(w.Name) ? new Uri(w.Url.Trim()).Host : w.Name.Trim(),
+                    Enabled = w.Enabled
+                })
+                .ToList(),
             TelnetEnabled           = TelnetEnabled,
             ConsoleMode             = ConsoleMode,
             TelnetPort              = TelnetPort,
@@ -4631,13 +4640,4 @@
             };
         }
     }
-            WebLinks                = WebLinks
-                .Where(w => WebLinkEntry.IsValidUrl(w.Url))
-                .Select(w => new WebLinkEntry
-                {
-                    Url     = w.Url.Trim(),
-                    Name    = string.IsNullOrWhiteSpace(w.Name) ? new Uri(w.Url.Trim()).Host : w.Name.Trim(),
-                    Enabled = w.Enabled
-                })
-                .ToList(),
 }
