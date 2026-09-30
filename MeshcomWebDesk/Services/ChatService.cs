@@ -190,6 +190,9 @@ public class ChatService
     /// </summary>
     public event Action<string, MeshcomMessage>? OnWatchlistHit;
 
+    /// <summary>Raised when a text message arrives in a group listed in <see cref="MeshcomSettings.WatchGroups"/> (group, sender, message).</summary>
+    public event Action<string, string, MeshcomMessage>? OnWatchGroupHit;
+
     /// <summary>
     /// Raised when a group message is detected as a CQ call (own callsign excluded).
     /// Arguments: sender callsign, group number (e.g. "262"), the raw message text.
@@ -443,6 +446,7 @@ public class ChatService
             _ = _webhook.SendAsync(message, "message");
             _ = _mqtt?.PublishAsync(message, "message");
             CheckWatchlist(message);
+            CheckWatchGroups(message, tabKey, myCallsign);
             CheckCq(message, tabKey, myCallsign);
         }
 
@@ -1222,6 +1226,30 @@ public class ChatService
             {
                 _logger.LogInformation("Watchlist HIT: {From} ({Type})", message.From, typeLabel);
                 OnWatchlistHit?.Invoke(message.From, message);
+                return;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Fires <see cref="OnWatchGroupHit"/> for incoming text messages addressed to a group listed in
+    /// <see cref="MeshcomSettings.WatchGroups"/>. Own messages are ignored.
+    /// </summary>
+    private void CheckWatchGroups(MeshcomMessage message, string tabKey, string myCallsign)
+    {
+        if (!tabKey.StartsWith('#')) return;
+        if (message.IsAck || message.IsPositionBeacon || message.IsTelemetry) return;
+        if (string.IsNullOrWhiteSpace(message.Text) || string.IsNullOrEmpty(message.From)) return;
+        if (string.Equals(message.From, myCallsign, StringComparison.OrdinalIgnoreCase)) return;
+
+        var group = tabKey[1..];
+        foreach (var entry in _settings.WatchGroups)
+        {
+            if (string.IsNullOrWhiteSpace(entry)) continue;
+            if (string.Equals(entry.Trim().TrimStart('#'), group, StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogInformation("Watchlist GROUP HIT: {Group} from {From}", group, message.From);
+                OnWatchGroupHit?.Invoke(group, message.From, message);
                 return;
             }
         }

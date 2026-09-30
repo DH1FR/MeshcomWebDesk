@@ -522,7 +522,6 @@
                     <option value="oe">🇦🇹 OE – meshcom.oevsv.at</option>
                     <option value="dl">🇩🇪 DL – meshcom.hamnet.network</option>
                     <option value="it">🇮🇹 IT – meshcom.dig-italia.it</option>
-                    <option value="both">🇦🇹 + 🇩🇪 OE + DL</option>
                     <option value="none">@Loc.T("Keine (nur eigene Quellen)", "None (custom sources only)")</option>
                 </select>
 
@@ -1595,6 +1594,12 @@
                     <small>@Loc.T("(eine pro Zeile, z.\u00a0B. DH1FR oder DH1FR-1)", "(one per line, e.\u00a0g. DH1FR or DH1FR-1)")</small>
                 </label>
                 <textarea rows="4" @bind="_model.WatchCallsignsText"></textarea>
+
+                <label>
+                    @Loc.T("Gruppen-Liste", "Group List")<br />
+                    <small>@Loc.T("(eine pro Zeile, z. B. 26261) – Meldung, Signalton und Sprachansage bei jeder neuen Nachricht in dieser Gruppe", "(one per line, e. g. 26261) – alert, tone and voice announcement for every new message in that group")</small>
+                </label>
+                <textarea rows="3" @bind="_model.WatchGroupsText"></textarea>
 
                 <label>@Loc.T("Auslöser", "Triggers")</label>
                 <div style="display:flex;flex-direction:column;gap:4px">
@@ -3324,6 +3329,7 @@
             GroupFilterEnabled  = s.GroupFilterEnabled,
             GroupsText          = string.Join("\n", s.Groups),
             WatchCallsignsText  = string.Join("\n", s.WatchCallsigns),
+            WatchGroupsText     = string.Join("\n", s.WatchGroups),
             WatchOnMessage      = s.WatchOnMessage,
             WatchOnPosition     = s.WatchOnPosition,
             WatchOnTelemetry    = s.WatchOnTelemetry,
@@ -3482,6 +3488,7 @@
             },
             LicenseToken            = s.LicenseToken
         };
+        _model.MigrateLegacyGatewayServer();
     }
 
     private void OnTelnetChange()
@@ -4145,6 +4152,7 @@
             imported.CalendarBeacons  ??= [];
             imported.TelemetryMapping ??= [];
             imported.WatchCallsigns   ??= [];
+            imported.WatchGroups      ??= [];
             imported.Groups           ??= [];
             imported.Database         ??= new();
             imported.Webhook          ??= new();
@@ -4189,6 +4197,7 @@
                 GroupFilterEnabled  = s.GroupFilterEnabled,
                 GroupsText          = string.Join("\n", s.Groups),
                 WatchCallsignsText  = string.Join("\n", s.WatchCallsigns),
+                WatchGroupsText     = string.Join("\n", s.WatchGroups),
                 WatchOnMessage      = s.WatchOnMessage,
                 WatchOnPosition     = s.WatchOnPosition,
                 WatchOnTelemetry    = s.WatchOnTelemetry,
@@ -4314,6 +4323,7 @@
                 SerialBaudRate          = s.SerialBaudRate,
                 GroupLabels = s.GroupLabels.Select(g => new GroupLabelEntry { Group = g.Group, ShortLabel = g.ShortLabel, Label = g.Label }).ToList()
             };
+            _model.MigrateLegacyGatewayServer();
             await SettingsService.SaveMeshcomSettingsAsync(_model.ToSettings());
             // Reload page – file-watcher triggers config reload which drops the SignalR
             // connection; navigating first ensures a clean reconnect with success feedback.
@@ -4343,6 +4353,7 @@
         public bool   GroupFilterEnabled  { get; set; }
         public string GroupsText          { get; set; } = string.Empty;
         public string WatchCallsignsText  { get; set; } = string.Empty;
+        public string WatchGroupsText     { get; set; } = string.Empty;
         public bool   WatchOnMessage      { get; set; } = true;
         public bool   WatchOnPosition     { get; set; } = true;
         public bool   WatchOnTelemetry    { get; set; } = false;
@@ -4447,6 +4458,20 @@
         public string GatewayServer            { get; set; } = "oe";
         public List<GatewaySourceEntry> GatewaySources { get; set; } = [];
         public List<WebLinkEntry> WebLinks { get; set; } = [];
+
+        /// <summary>
+        /// The former "OE + DL" combination ("both") was removed from the dropdown:
+        /// keep OE as the preset and carry DL over as a custom source so nothing is lost.
+        /// </summary>
+        public void MigrateLegacyGatewayServer()
+        {
+            if (!string.Equals(GatewayServer?.Trim(), "both", StringComparison.OrdinalIgnoreCase))
+                return;
+            GatewayServer = "oe";
+            const string dlUrl = "http://meshcom.hamnet.network/meshcom/rakgw.html";
+            if (!GatewaySources.Any(g => string.Equals(g.Url?.Trim(), dlUrl, StringComparison.OrdinalIgnoreCase)))
+                GatewaySources.Add(new GatewaySourceEntry { Name = "DL", Url = dlUrl, Enabled = true });
+        }
         public bool   TelnetEnabled            { get; set; } = false;
         public string ConsoleMode             { get; set; } = "hmac";
         public int    TelnetPort              { get; set; } = 2323;
@@ -4516,6 +4541,11 @@
                 .ToList(),
             WatchCallsigns      = WatchCallsignsText
                 .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToList(),
+            WatchGroups         = WatchGroupsText
+                .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(g => g.TrimStart('#'))
+                .Where(g => g.Length > 0)
                 .ToList(),
             WatchOnMessage      = WatchOnMessage,
             WatchOnPosition     = WatchOnPosition,

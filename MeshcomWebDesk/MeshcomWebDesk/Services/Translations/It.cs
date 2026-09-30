@@ -318,6 +318,9 @@ internal static class It
         // Settings – Watchlist
         ["Watchlist"]               = "Lista controllo",
         ["Watchlist enabled"]       = "Lista controllo abilitata",
+        ["Group List"]              = "Elenco gruppi",
+        ["(one per line, e. g. 26261) – alert, tone and voice announcement for every new message in that group"] = "(uno per riga, es. 26261) – avviso, tono e annuncio vocale per ogni nuovo messaggio in quel gruppo",
+        ["New group message"]       = "Nuovo messaggio di gruppo",
         ["Add to watchlist"]        = "Aggiungi alla lista",
         ["CQ detection"]            = "Rilevamento CQ",
         ["CQ detection enabled"]    = "Rilevamento CQ abilitato",

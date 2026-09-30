@@ -319,6 +319,9 @@ internal static class Fr
         // Settings – Watchlist
         ["Watchlist"]               = "Liste de surveillance",
         ["Watchlist enabled"]       = "Liste de surveillance activée",
+        ["Group List"]              = "Liste de groupes",
+        ["(one per line, e. g. 26261) – alert, tone and voice announcement for every new message in that group"] = "(un par ligne, p. ex. 26261) – alerte, signal sonore et annonce vocale pour chaque nouveau message dans ce groupe",
+        ["New group message"]       = "Nouveau message de groupe",
         ["Add to watchlist"]        = "Ajouter à la liste",
         ["CQ detection"]            = "Détection CQ",
         ["CQ detection enabled"]    = "Détection CQ activée",
