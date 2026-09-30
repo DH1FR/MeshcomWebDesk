@@ -33,6 +33,7 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ### ✨ Features
 - **Web view** – new **🌐 Web** tab next to the map that embeds any number of web pages (e.g. the OE MeshMap `https://meshmap.oevsv.at/` or `https://meshcom.oevsv.at/`) in a sandboxed iframe. Manage them under **Settings → 🌐 Web** (name, URL, enabled; http/https only; "Insert examples" adds the two OE pages). The tab only appears once at least one enabled page exists. Sites that forbid embedding stay blank – use "Open in new tab" for those.
+- **Watchlist: groups** – the Watchlist can now also follow **groups** (e.g. `26261`, Hessen) – handy for quiet groups. Add them under **Settings → 📻 Watchlist → Group List**; every new text message there gives a toast (sender + group), the alert tone and, if enabled, a voice announcement (once per 5 min per group, otherwise tone only). Own messages are ignored; independent of the group filter and of open tabs.
 
 ---
 
@@ -554,6 +555,7 @@ Automatically announces recurring events (e.g. club meetings) to a configured gr
 - **Toast notification** in the top-right corner showing the callsign, packet type badge (`MSG` / `POS` / `TEL` / `ACK`) and relative age; **configurable auto-dismiss** (default 5 min, adjustable in Settings); multiple hits are stacked in the same toast; manual close button ✕
 - **Per-type filter** – independently enable/disable alerts for: chat messages (MSG), position beacons (POS), telemetry (TEL, default **off** to avoid noise from periodic data), and ACKs (ACK, default off)
 - Respects the global 🔕 mute toggle in the status bar – no sound when muted
+- **Watched groups** – a separate *Group List* (e.g. `26261`) raises a 👥 toast (sender + group), the alert tone and a voice announcement for every new text message in that group; own callsigns (any SSID) are ignored, the announcement is throttled to once per 5 min per group (otherwise tone only)
 - Configured in **Settings → 📻 Watchlist**; changes apply **live without restart**
 
 ### 📢 CQ Detection
@@ -789,7 +791,7 @@ Clicking it opens a modal dialog with **four tabs**:
   | **Multi-Node profiles** | All node profiles (`Name`, `Callsign`, `Device IP/Port`, `Listen IP/Port`, `Primary` flag, `Enabled` flag, TLS fingerprint, TLS password) |
   | **Connection** | Primary `ListenIp`, `ListenPort`, `DeviceIp`, `DevicePort`, `MyCallsign` |
   | **Console** | `TelnetEnabled`, `ConsoleMode`, `TelnetPort`, `TelnetPassword`, `TelnetCertThumbprint`, `SerialPortName`, `SerialBaudRate` |
-  | **Chat & Groups** | `Groups`, `WatchCallsigns`, watch options, `GroupLabels`, `OwnMessagesAlignLeft`, `TxCooldownSeconds`, `GatewayHighlightEnabled` |
+  | **Chat & Groups** | `Groups`, `WatchCallsigns`, `WatchGroups`, watch options, `GroupLabels`, `OwnMessagesAlignLeft`, `TxCooldownSeconds`, `GatewayHighlightEnabled` |
   | **Auto-Reply** | `AutoReplyEnabled`, `AutoReplyText` |
   | **Bot** | `BotEnabled`, `BotExternalCommandsPath`, all user-defined bot commands (incl. external process fields) |
   | **Quick Texts** | All quick-text entries |
@@ -958,6 +960,7 @@ All settings in `MeshcomWebDesk/appsettings.json`:
   "GroupFilterEnabled": true,            // only show whitelisted group tabs
   "Groups":             ["#20","#262"],  // whitelisted groups (GroupFilterEnabled=true)
   "WatchCallsigns":     ["DH1FR","OE1KBC-1"], // watched callsigns (without SSID = match all SSIDs)
+  "WatchGroups":        ["26261"],              // watched groups (alert on every new text message)
   "WatchOnMessage":     true,            // alert on chat messages from watched callsigns
   "WatchOnPosition":    true,            // alert on position beacons
   "WatchOnTelemetry":   false,           // alert on telemetry packets (periodic – off by default)
