@@ -1240,7 +1240,7 @@ public class ChatService
         if (!tabKey.StartsWith('#')) return;
         if (message.IsAck || message.IsPositionBeacon || message.IsTelemetry) return;
         if (string.IsNullOrWhiteSpace(message.Text) || string.IsNullOrEmpty(message.From)) return;
-        if (string.Equals(message.From, myCallsign, StringComparison.OrdinalIgnoreCase)) return;
+        if (IsOwnCallsign(message.From, myCallsign)) return;
 
         var group = tabKey[1..];
         foreach (var entry in _settings.WatchGroups)
@@ -1253,6 +1253,22 @@ public class ChatService
                 return;
             }
         }
+    }
+
+    /// <summary>
+    /// True when <paramref name="callsign"/> belongs to the operator themself: same base callsign
+    /// (any SSID) as <paramref name="myCallsign"/>, the configured MyCallsign, or any configured node.
+    /// </summary>
+    private bool IsOwnCallsign(string callsign, string myCallsign)
+    {
+        static string Base(string c) => c.Contains('-') ? c[..c.IndexOf('-')] : c;
+        var cs = Base(callsign);
+        if (!string.IsNullOrEmpty(myCallsign) && string.Equals(cs, Base(myCallsign), StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (!string.IsNullOrEmpty(_settings.MyCallsign) && string.Equals(cs, Base(_settings.MyCallsign), StringComparison.OrdinalIgnoreCase))
+            return true;
+        return _nodeManager is not null && _nodeManager.Nodes.Any(n =>
+            !string.IsNullOrEmpty(n.Callsign) && string.Equals(cs, Base(n.Callsign), StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>

@@ -2127,8 +2127,13 @@
                 _watchGroupAlerts.Insert(0, new WatchGroupAlert(group, callsign, DateTime.Now));
                 if (_soundEnabled)
                     _playWatchlistSound = true;
-                if (_voiceEnabled == true)
+                // Ansage pro Gruppe höchstens alle 5 Min.; bei dichter Folge nur der Ton
+                var ttsKey = "#" + group;
+                bool ttsAllowed = !_watchlistLastTts.TryGetValue(ttsKey, out var lastTts)
+                    || (DateTime.Now - lastTts).TotalMinutes >= 5;
+                if (_voiceEnabled == true && ttsAllowed)
                 {
+                    _watchlistLastTts[ttsKey] = DateTime.Now;
                     var phonetic = PhoneticAlphabetHelper.Spell(callsign, Loc.Current);
                     var groupSpelled = string.Join(" ", group.ToCharArray());
                     _pendingSpeech.Enqueue(Loc.TtsT(
