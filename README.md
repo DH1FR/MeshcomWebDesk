@@ -342,6 +342,13 @@ see the clamped `-15`.)
 - Full multilingual interface: **Deutsch 🇩🇪**, **English 🇬🇧**, **Français 🇫🇷**, **Italiano 🇮🇹**, **Español 🇪🇸**
 - Language is selected in **Settings → Language** and persisted in `appsettings.override.json`
 - Switching applies **instantly** across all pages without any page reload or restart
+- **Languages are plain JSON files** – German and English are built into the source, all others (`it`, `es`, `fr`) are files in [`MeshcomWebDesk/Languages/`](MeshcomWebDesk/Languages) keyed on the English text. You can **add a language or improve a translation without touching any code**:
+  - Put a file `xx.json` into `<DataPath>/languages/` (Docker: `./data/languages/`, the mounted data volume) – the exact folder is shown under **Settings → Language**, where **Reload language files** applies it without a restart.
+  - A file with the code of a built-in language (e.g. `fr`) **overrides single strings**; a new code (e.g. `nl`) **adds a new language** to the drop-down. Missing strings fall back to English.
+  - Format: `{ "code": "nl", "name": "Nederlands", "flag": "🇳🇱", "strings": { "Settings": "Instellingen" } }`. Texts with values use `{0}`, `{1}` placeholders (keep them, you may move them).
+  - `python scripts/check_translations.py` lists missing/unused texts per language, `--write xx` creates or completes a template file, `--strict` fails if anything is missing (release check).
+  - Full guide: [docs/translations.md](docs/translations.md). Improvements are welcome as pull requests to `MeshcomWebDesk/Languages/`.
+  - Not covered by the files: spoken announcements (TTS, de/en/fr/it/es only) and the longer guides in `docs/`.
 
 ### 🖥️ Console (TLS & Serial)
 
@@ -917,7 +924,7 @@ MeshcomWebDesk/              ← Blazor Server (ASP.NET Core host)
       ChatService.cs           ← Singleton: routing, tabs, MH list, monitor, deduplication, webhook trigger, OnBotCommand event
       DataPersistenceService.cs← BackgroundService: load/save state to JSON on disk
       SettingsService.cs       ← Writes appsettings.override.json in DataPath (Docker-safe); changes applied live via IOptionsMonitor
-      LanguageService.cs       ← Singleton: UI language switching (de/en); T(de,en) helper; OnChange event for instant re-render
+      LanguageService.cs       ← Singleton: UI language switching; T(de,en)/TF(de,en,args) helpers; loads Languages/*.json (embedded) + <DataPath>/languages/*.json; OnChange event for instant re-render
       WebhookService.cs        ← HTTP POST fire-and-forget on message / position / telemetry events
       QrzService.cs             ← QRZ.com XML API: session login, callsign lookup, in-memory cache
       QsoSummaryService.cs      ← AI-based QSO summary: reads messages from MySQL, calls AI API, stores result in qso_summaries table; token usage tracking; balance check
