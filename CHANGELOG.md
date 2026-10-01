@@ -1,5 +1,13 @@
 ﻿# Changelog
 
+## [1.15.3] – unreleased
+
+### Bugfixes
+- **ACK ticks missing / wrong message ticked** – MeshCom message sequence numbers only run 0–999 and are reused (also across restarts), so a new outgoing message could carry the same number as an older one. An incoming ACK was always applied to the *oldest* message with that number, which was usually already acknowledged, so the new message never got its ✓✓. The ACK is now applied to the newest still-unacknowledged message with that number – preferably the one addressed to the ACK sender.
+- **Sending impossible with KISS enabled and an SSID > 15** – with KISS/TCP active every message went out over KISS, and AX.25 cannot carry an SSID above 15 (e.g. `DH1FR-99`), so nothing was sent at all ("KISS TX: cannot encode AX.25 frame"). For such a callsign WebDesk now sends over ext-udp instead (which stays active alongside KISS), so the node's echo – including the via path when `--via on` is set – arrives again.
+
+---
+
 ## [1.15.2] – 2026-10-01
 
 ### Features

@@ -646,8 +646,17 @@ public class ChatService
         {
             lock (_lock)
             {
-                var msg = messages.FirstOrDefault(m =>
-                    m.IsOutgoing && m.SequenceNumber == sequenceNumber);
+                // Sequence numbers wrap at 999 and are reused (also across restarts), so several
+                // outgoing messages can carry the same number. Prefer the newest still-unacknowledged
+                // one addressed to the ACK sender, then the newest unacknowledged one, and only then
+                // the newest already-acknowledged one (repeat ACK, e.g. gateway after LoRa).
+                bool SeqMatch(MeshcomMessage m) => m.IsOutgoing && m.SequenceNumber == sequenceNumber;
+                bool ToSender(MeshcomMessage m) => ackSender != null &&
+                    string.Equals(m.To, ackSender, StringComparison.OrdinalIgnoreCase);
+                var msg = messages.LastOrDefault(m => SeqMatch(m) && ToSender(m) && !m.IsAcknowledged)
+                       ?? messages.LastOrDefault(m => SeqMatch(m) && !m.IsAcknowledged)
+                       ?? messages.LastOrDefault(m => SeqMatch(m) && ToSender(m))
+                       ?? messages.LastOrDefault(SeqMatch);
 
                 if (msg == null && ackSender != null)
                 {

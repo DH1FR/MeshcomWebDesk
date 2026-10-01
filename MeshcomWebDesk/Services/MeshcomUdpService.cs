@@ -1458,7 +1458,10 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             var devicePort     = sendingNode?.DevicePort ?? _settings.DevicePort;
 
             // Transport weiche: a KISS/TCP node is served by KissClientService, not the UDP socket.
-            if (sendingNode?.Transport == NodeTransport.Kiss && _kiss is not null)
+            // A callsign AX.25 cannot carry (SSID > 15) cannot be sent over KISS – fall back to
+            // ext-udp, which stays active alongside KISS.
+            if (sendingNode?.Transport == NodeTransport.Kiss && _kiss is not null &&
+                Services.Kiss.Ax25Ui.CanEncodeAddress(fromCallsign))
             {
                 var resolvedKissTabKey = tabKey ?? destination;
                 var kissOutgoing = new MeshcomMessage

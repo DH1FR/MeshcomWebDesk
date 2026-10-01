@@ -1,5 +1,13 @@
 ﻿# Changelog
 
+## [1.15.3] – unreleased
+
+### Bugfixes
+- **ACK ticks**: an ACK is now applied to the newest unacknowledged message with that sequence number (numbers wrap at 999 and are reused) instead of the oldest.
+- **KISS with SSID > 15**: messages are sent over ext-udp instead of failing on the AX.25 SSID limit.
+
+---
+
 ## [1.15.2] – released
 
 ### Features
