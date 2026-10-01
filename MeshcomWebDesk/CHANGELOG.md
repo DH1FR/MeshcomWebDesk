@@ -1,5 +1,16 @@
 ﻿# Changelog
 
+## [1.15.2] – released
+
+### Features
+- **Web view**: new **🌐 Web** tab next to the map embedding configurable web pages in a sandboxed iframe (Settings → 🌐 Web).
+- **Watchlist: groups**: the Watchlist can now follow groups (toast, alert tone, optional voice announcement); own messages are ignored and the voice announcement is throttled per group.
+
+### Bugfixes
+- **KISS without "Additional Nodes"**: KISS/TCP can be enabled directly under Settings → Connection (incl. node password); the primary node profile is created automatically.
+- **Node switcher for a single node**: the node bar in the chat and the NET Console node selector only appear when more than one node is enabled.
+- **MH list, map and chat tabs empty after adding the first node**: the carry-over from the legacy single-node state now always runs, merges without duplicates and recovers data of deleted/re-created node profiles.
+
 ## [1.15.1] – released
 
 ### Features
