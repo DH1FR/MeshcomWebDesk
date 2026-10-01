@@ -174,7 +174,7 @@ interface (TCP port 8001), provided the node runs a MeshCom firmware that
 includes KISS/TCP. It is an **add-on, not a replacement**: enabling KISS opens a
 second connection to the node; ext-udp keeps running alongside it.
 
-Enable it per node in **Settings → the node's card → *KISS/TCP*** (a checkbox).
+Enable it in **Settings → Connection → *KISS/TCP*** (for a single node – no further nodes needed; the node password for `--kiss auth on` is entered right below) or per node in **Settings → Additional Nodes → the node's card → *KISS/TCP***.
 
 📘 Full reference: [`docs/kiss-tcp-guide-en.md`](docs/kiss-tcp-guide-en.md)
 

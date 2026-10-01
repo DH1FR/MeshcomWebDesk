@@ -40,44 +40,73 @@ public class ChatService
     private NodeState GetPrimaryState()
     {
         var primaryId = _nodeManager?.PrimaryNode?.Id;
-        if (primaryId is null)
-            return GetState(null); // legacy mode → Guid.Empty
+        // Legacy mode (no node profile) → Guid.Empty bucket.
+        var key = primaryId ?? Guid.Empty;
+        var primaryState = GetState(key);
 
-        // Multi-node mode: check whether the primary bucket already has data.
-        // If not, but Guid.Empty has data (legacy → multi-node transition), migrate it once.
-        var primaryState = GetState(primaryId);
-        if (primaryState.Tabs.IsEmpty && primaryState.Messages.Count == 0
-            && _nodeState.TryGetValue(Guid.Empty, out var legacyState)
-            && (!legacyState.Tabs.IsEmpty || legacyState.Messages.Count > 0))
+        // Fold every other bucket into the primary one when it is no longer a live node:
+        //  • Guid.Empty once a primary profile exists (legacy → single/multi-node transition),
+        //  • buckets of deleted/re-created node profiles when at most one node is configured
+        //    (each re-created profile gets a new Id, which would otherwise strand its tabs/MH).
+        // This must not depend on the primary bucket being empty – a packet may already have
+        // created it – nor on tabs/messages existing, otherwise MH list and map would be lost.
+        var configuredIds = _settings.Nodes.Select(n => n.Id).ToHashSet();
+        bool adoptStrays = _settings.Nodes.Count <= 1;
+        List<Guid>? sources = null;
+        foreach (var (id, st) in _nodeState)
         {
-            lock (_lock)
+            if (id == key) continue;
+            bool isLegacy = id == Guid.Empty;
+            bool adopt    = isLegacy || (adoptStrays && !configuredIds.Contains(id));
+            if (!adopt || (st.Tabs.IsEmpty && st.Messages.Count == 0 && st.MhList.IsEmpty)) continue;
+            (sources ??= []).Add(id);
+        }
+        if (sources is null) return primaryState;
+
+        lock (_lock)
+        {
+            foreach (var id in sources)
             {
-                // Re-check inside lock to avoid double-migration under concurrent access.
-                if (primaryState.Tabs.IsEmpty && primaryState.Messages.Count == 0)
-                {
-                    foreach (var kv in legacyState.Tabs)
-                        primaryState.Tabs.TryAdd(kv.Key, kv.Value);
-                    primaryState.Messages.AddRange(legacyState.Messages);
-                    primaryState.TabOrder = legacyState.TabOrder.ToList();
-                    primaryState.ActiveTabKey = legacyState.ActiveTabKey;
-                    foreach (var kv in legacyState.MhList)
-                        primaryState.MhList.TryAdd(kv.Key, kv.Value);
-                    legacyState.Tabs.Clear();
-                    legacyState.Messages.Clear();
-                    legacyState.MhList.Clear();
-                    _logger.LogInformation(
-                        "Migrated legacy single-node state (Guid.Empty) into primary node {PrimaryId}",
-                        primaryId);
-                }
+                if (!_nodeState.TryGetValue(id, out var src)) continue;
+                MergeState(primaryState, src);
+                src.Tabs.Clear();
+                src.Messages.Clear();
+                src.MhList.Clear();
+                if (id != Guid.Empty) _nodeState.TryRemove(id, out _);
+                _logger.LogInformation("Merged node state {SourceId} into primary node {PrimaryId}", id, key);
             }
         }
         return primaryState;
     }
 
+    /// <summary>Merges <paramref name="src"/> into <paramref name="dst"/> (older data first, duplicates skipped).</summary>
+    private static void MergeState(NodeState dst, NodeState src)
+    {
+        static string MsgKey(MeshcomMessage m) => $"{m.Timestamp.Ticks}|{m.From}|{m.To}|{m.Text}";
+
+        foreach (var kv in src.Tabs)
+        {
+            if (!dst.Tabs.TryAdd(kv.Key, kv.Value) && dst.Tabs.TryGetValue(kv.Key, out var existing))
+            {
+                var have = existing.Messages.Select(MsgKey).ToHashSet();
+                existing.Messages.AddRange(kv.Value.Messages.Where(m => !have.Contains(MsgKey(m))));
+                existing.Messages.Sort((x, y) => x.Timestamp.CompareTo(y.Timestamp));
+                existing.MessageCount = existing.Messages.Count;
+            }
+        }
+        var haveMon = dst.Messages.Select(MsgKey).ToHashSet();
+        dst.Messages.AddRange(src.Messages.Where(m => !haveMon.Contains(MsgKey(m))));
+        dst.Messages.Sort((x, y) => x.Timestamp.CompareTo(y.Timestamp));
+
+        if (dst.TabOrder.Count == 0) dst.TabOrder = src.TabOrder.ToList();
+        if (string.IsNullOrEmpty(dst.ActiveTabKey)) dst.ActiveTabKey = src.ActiveTabKey;
+        foreach (var kv in src.MhList) dst.MhList.TryAdd(kv.Key, kv.Value);
+    }
+
     /// <summary>Resolves <paramref name="nodeId"/> to its state bucket:
     /// <c>null</c> → primary node; explicit Guid → that node's bucket.</summary>
     private NodeState ResolveState(Guid? nodeId) =>
-        nodeId is null ? GetPrimaryState() : GetState(nodeId);
+        nodeId is null || nodeId == _nodeManager?.PrimaryNode?.Id ? GetPrimaryState() : GetState(nodeId);
 
     /// <summary>Returns the bucket key that <see cref="ResolveState"/> maps <paramref name="nodeId"/> to:
     /// <c>null</c> collapses to the primary node's Id (or <see cref="Guid.Empty"/> in legacy mode),

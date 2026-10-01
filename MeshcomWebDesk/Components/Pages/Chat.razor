@@ -27,8 +27,8 @@
 <ErrorBoundary>
     <ChildContent>
 <div class="meshcom-container">
-    @* ===== NODE SWITCHER (only when multi-node is enabled) ===== *@
-    @if (NodeManager.MultiNodeEnabled) {
+    @* ===== NODE SWITCHER (only when more than one node is enabled) ===== *@
+    @if (NodeManager.HasMultipleNodes) {
     <div class="node-switcher-bar">
         @foreach (var node in NodeManager.Nodes) {
             var status   = NodeManager.GetNodeStatus(node.Id);

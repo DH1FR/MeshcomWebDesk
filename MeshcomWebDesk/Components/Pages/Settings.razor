@@ -78,6 +78,44 @@
 
                 <label>@Loc.T("Eigenes Rufzeichen", "Own Callsign")</label>
                 <input type="text" @bind="_model.MyCallsign" />
+
+                @* KISS/TCP for the primary node – works without configuring further nodes *@
+                <label>
+                    @Loc.T("KISS/TCP", "KISS/TCP")<br />
+                    <small>@Loc.T("Zusätzlich zur ext-udp-Basis", "On top of the ext-udp base")</small>
+                </label>
+                <div>
+                    <label class="settings-toggle" title="@Loc.T("KISS/TCP-Verbindung zu diesem Node zusätzlich aufbauen", "Additionally open a KISS/TCP connection to this node")">
+                        <input type="checkbox"
+                               @bind:get="PrimaryKissEnabled"
+                               @bind:set="SetPrimaryKiss" />
+                        <span>@(PrimaryKissEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
+                    </label>
+                    @if (PrimaryKissEnabled && _model.Nodes.FirstOrDefault(n => n.IsPrimary) is { } kissNode)
+                    {
+                        var pks = KissService.GetStatus(kissNode.Id);
+                        <span class="kiss-status kiss-status-@pks.State.ToString().ToLowerInvariant()">@KissStatusLabel(pks)</span>
+                        <br />
+                        <small style="color:#8b949e">@Loc.T(
+                            "Nur ESP32-Nodes. TX/RxMeta am Node mit --kiss tx on / --kiss meta on freischalten. ext-udp bleibt aktiv – am Node „--extudp on“ lassen.",
+                            "ESP32 nodes only. Enable TX / RxMeta on the node with --kiss tx on / --kiss meta on. ext-udp stays active – keep \"--extudp on\" on the node.")</small>
+                        @if (KissSsidTooHigh(_model.MyCallsign))
+                        {
+                            <br />
+                            <small style="color:#f85149">⚠️ @Loc.T(
+                                "Rufzeichen-SSID > 15: KISS-Empfang funktioniert, aber Senden nicht – AX.25 kennt nur SSID 0–15.",
+                                "Callsign SSID > 15: KISS receive works, but sending does not – AX.25 only has SSID 0–15.")</small>
+                        }
+                    }
+                </div>
+                @if (PrimaryKissEnabled && _model.Nodes.FirstOrDefault(n => n.IsPrimary) is { } pwNode)
+                {
+                    <label>
+                        @Loc.T("Node-Passwort", "Node password")<br />
+                        <small>@Loc.T("--passwd am Node · für KISS (bei --kiss auth on) und NET-Console (HMAC)", "--passwd on the node · for KISS (with --kiss auth on) and the NET console (HMAC)")</small>
+                    </label>
+                    <input type="password" @bind="pwNode.TelnetPassword" placeholder="••••••••" autocomplete="new-password" />
+                }
             </div>
             <a class="settings-help-banner"
                href="@($"https://github.com/DH1FR/MeshcomWebDesk/blob/master/docs/node-connection-{Loc.Current}.md")"
@@ -2664,6 +2702,23 @@
             ListenPort = isFirst ? _model.ListenPort : _model.ListenPort + _model.Nodes.Count,
             IsPrimary  = isFirst
         });
+    }
+
+    private bool PrimaryKissEnabled =>
+        _model.Nodes.FirstOrDefault(n => n.IsPrimary)?.Transport == NodeTransport.Kiss;
+
+    /// <summary>Toggles KISS for the primary node; creates the primary node profile on demand
+    /// so KISS works without configuring any further nodes.</summary>
+    private void SetPrimaryKiss(bool enabled)
+    {
+        var primary = _model.Nodes.FirstOrDefault(n => n.IsPrimary);
+        if (primary is null)
+        {
+            if (!enabled) return;
+            AddNode();
+            primary = _model.Nodes.First(n => n.IsPrimary);
+        }
+        primary.Transport = enabled ? NodeTransport.Kiss : NodeTransport.ExtUdp;
     }
 
     private void RemoveNode(NodeProfile node)

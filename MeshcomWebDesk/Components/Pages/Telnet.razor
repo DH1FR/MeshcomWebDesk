@@ -58,7 +58,7 @@
         </span>
         <div class="telnet-toolbar">
             @* ── Node Switcher (TLS only, multi-node mode) ── *@
-            @if (!_isSerial && NodeManager.MultiNodeEnabled && !Console.IsConnected)
+            @if (!_isSerial && NodeManager.HasMultipleNodes && !Console.IsConnected)
             {
                 <select class="node-switcher-select"
                         value="@_consoleNodeId"
