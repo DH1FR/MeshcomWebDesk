@@ -351,6 +351,16 @@ public class ChatService
             return;
         }
 
+        // Blacklisted sender: monitor only – no tab, notifications, bot, webhook or watchlist.
+        if (IsBlacklisted(message.From))
+        {
+            bool bhChanged = IsPrimaryNode(nodeId) && UpdateMhList(message, GetPrimaryState());
+            lock (_lock) { AppendToMonitor(message, state); }
+            if (bhChanged) OnMhChange?.Invoke();
+            NotifyChange();
+            return;
+        }
+
         // Resolve the own callsign for this node
         var myCallsign = _nodeManager?.GetCallsignForNode(nodeId) ?? _settings.MyCallsign;
 
@@ -1244,7 +1254,7 @@ public class ChatService
     {
         if (string.IsNullOrEmpty(message.From)) return;
         var list = _settings.WatchCallsigns;
-        if (list.Count == 0) return;
+        if (list.Count == 0 || IsBlacklisted(message.From)) return;
 
         var typeLabel = message.IsAck ? "ACK" : message.IsPositionBeacon ? "POS" : message.IsTelemetry ? "TEL" : "MSG";
         _logger.LogDebug("Watchlist check: From={From} Type={Type} List=[{List}]",
@@ -1319,6 +1329,23 @@ public class ChatService
             return string.Equals(callsign, entry, StringComparison.OrdinalIgnoreCase);
         var baseCs = callsign.Contains('-') ? callsign[..callsign.IndexOf('-')] : callsign;
         return string.Equals(baseCs, entry, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// True when <paramref name="callsign"/> matches a blacklist entry. "DH1FR" and "DH1FR-*" match
+    /// every SSID of that callsign; "DH1FR-55" matches only that exact callsign.
+    /// </summary>
+    private bool IsBlacklisted(string? callsign)
+    {
+        if (string.IsNullOrEmpty(callsign)) return false;
+        foreach (var entry in _settings.BlacklistCallsigns)
+        {
+            if (string.IsNullOrWhiteSpace(entry)) continue;
+            var e = entry.Trim();
+            if (e.EndsWith("-*", StringComparison.Ordinal)) e = e[..^2];
+            if (MatchesWatchEntry(callsign, e)) return true;
+        }
+        return false;
     }
 
     /// <summary>

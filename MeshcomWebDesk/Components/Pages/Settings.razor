@@ -1667,6 +1667,25 @@
             }
         </div>
 
+        <!-- Blacklist -->
+        <div class="settings-section @(IsOpen("blacklist") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("blacklist")'>🚫 @Loc.T("Blacklist", "Blacklist") <span class="section-chevron">@(IsOpen("blacklist") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("blacklist")) {
+            <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
+                ℹ️ @Loc.T(
+                    "Nachrichten von diesen Rufzeichen erscheinen nur im Monitor – nicht in Gruppen, Direktnachrichten oder Benachrichtigungen. Ohne SSID (z. B. DH1FR) oder mit -* (DH1FR-*) werden alle SSID erfasst, mit SSID (z. B. DH1FR-55) nur exakt dieses Rufzeichen.",
+                    "Messages from these callsigns are shown in the monitor only – not in groups, direct messages or notifications. Without SSID (e. g. DH1FR) or with -* (DH1FR-*) all SSIDs are matched, with SSID (e. g. DH1FR-55) only that exact callsign.")
+            </div>
+            <div class="settings-grid">
+                <label>
+                    @Loc.T("Rufzeichen-Liste", "Callsign List")<br />
+                    <small>@Loc.T("(eine pro Zeile, z. B. DH1FR-* oder DH1FR-55)", "(one per line, e. g. DH1FR-* or DH1FR-55)")</small>
+                </label>
+                <textarea rows="4" @bind="_model.BlacklistCallsignsText"></textarea>
+            </div>
+            }
+        </div>
+
         <!-- Lizenz / License -->
         <div class="settings-section @(IsOpen("license") ? "" : "settings-section-collapsed")">
             <h2 class="settings-section-title" @onclick='() => Toggle("license")'>🔑 @Loc.T("Lizenz", "License") <span class="section-chevron">@(IsOpen("license") ? "▲" : "▼")</span></h2>
@@ -3385,6 +3404,7 @@
             GroupsText          = string.Join("\n", s.Groups),
             WatchCallsignsText  = string.Join("\n", s.WatchCallsigns),
             WatchGroupsText     = string.Join("\n", s.WatchGroups),
+            BlacklistCallsignsText = string.Join("\n", s.BlacklistCallsigns),
             WatchOnMessage      = s.WatchOnMessage,
             WatchOnPosition     = s.WatchOnPosition,
             WatchOnTelemetry    = s.WatchOnTelemetry,
@@ -4208,6 +4228,7 @@
             imported.TelemetryMapping ??= [];
             imported.WatchCallsigns   ??= [];
             imported.WatchGroups      ??= [];
+            imported.BlacklistCallsigns ??= [];
             imported.Groups           ??= [];
             imported.Database         ??= new();
             imported.Webhook          ??= new();
@@ -4253,6 +4274,7 @@
                 GroupsText          = string.Join("\n", s.Groups),
                 WatchCallsignsText  = string.Join("\n", s.WatchCallsigns),
                 WatchGroupsText     = string.Join("\n", s.WatchGroups),
+            BlacklistCallsignsText = string.Join("\n", s.BlacklistCallsigns),
                 WatchOnMessage      = s.WatchOnMessage,
                 WatchOnPosition     = s.WatchOnPosition,
                 WatchOnTelemetry    = s.WatchOnTelemetry,
@@ -4409,6 +4431,7 @@
         public string GroupsText          { get; set; } = string.Empty;
         public string WatchCallsignsText  { get; set; } = string.Empty;
         public string WatchGroupsText     { get; set; } = string.Empty;
+        public string BlacklistCallsignsText { get; set; } = string.Empty;
         public bool   WatchOnMessage      { get; set; } = true;
         public bool   WatchOnPosition     { get; set; } = true;
         public bool   WatchOnTelemetry    { get; set; } = false;
@@ -4601,6 +4624,9 @@
                 .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .Select(g => g.TrimStart('#'))
                 .Where(g => g.Length > 0)
+                .ToList(),
+            BlacklistCallsigns  = BlacklistCallsignsText
+                .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .ToList(),
             WatchOnMessage      = WatchOnMessage,
             WatchOnPosition     = WatchOnPosition,
