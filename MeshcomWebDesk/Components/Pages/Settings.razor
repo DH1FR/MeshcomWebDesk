@@ -118,7 +118,7 @@
                 }
             </div>
             <a class="settings-help-banner"
-               href="@($"https://github.com/DH1FR/MeshcomWebDesk/blob/master/docs/node-connection-{Loc.Current}.md")"
+               href="@($"https://github.com/DH1FR/MeshcomWebDesk/blob/master/docs/node-connection-{Loc.DocsLanguage}.md")"
                target="_blank" rel="noopener">
                 ❓ @Loc.T(
                     "Wie konfiguriere ich meinen MeshCom-Node für WebDesk?",
@@ -1726,12 +1726,17 @@
             <div class="settings-grid">
                 <label>@Loc.T("Oberflächensprache", "UI Language")</label>
                 <select @bind="_model.Language">
-                    <option value="de">🇩🇪 Deutsch</option>
-                    <option value="en">🇬🇧 English</option>
-                    <option value="it">🇮🇹 Italiano</option>
-                    <option value="es">🇪🇸 Español</option>
-                    <option value="fr">🇫🇷 Français</option>
+                    @foreach (var l in Loc.AvailableLanguages)
+                    {
+                        <option value="@l.Code">@l.Label</option>
+                    }
                 </select>
+                <div style="grid-column:1 / -1"><small>
+                    @Loc.T("Weitere Sprachen oder eigene Übersetzungen: JSON-Dateien im Ordner", "More languages or your own translations: JSON files in the folder")
+                    <code>@Loc.ExternalDirectory</code>
+                    @Loc.T("ablegen. Siehe docs/translations.md.", "See docs/translations.md.")
+                    <button type="button" class="btn-small" @onclick="() => Loc.Reload()">🔄 @Loc.T("Sprachdateien neu laden", "Reload language files")</button>
+                </small></div>
             </div>
             }
         </div>

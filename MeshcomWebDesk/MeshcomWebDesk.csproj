@@ -45,6 +45,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Built-in UI languages (EN text → translation). Additional/overriding files are read from
+         <DataPath>/languages/*.json at runtime, see LanguageService. -->
+    <EmbeddedResource Include="Languages\*.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Folder Include="MeshcomWebDesk\Components\Pages\" />
   </ItemGroup>
 
