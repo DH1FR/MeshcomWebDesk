@@ -120,6 +120,10 @@ public sealed class NodeManager
     /// <summary>True when at least one enabled node profile is configured.</summary>
     public bool MultiNodeEnabled => Nodes.Count > 0;
 
+    /// <summary>True when more than one enabled node exists, i.e. when a node switcher is worth showing.
+    /// A single (primary) node – e.g. created just to enable KISS – behaves like the legacy single-node UI.</summary>
+    public bool HasMultipleNodes => Nodes.Count > 1;
+
     /// <summary>
     /// Returns the primary node, or <c>null</c> when running in legacy mode.
     /// In legacy mode callers should fall back to the top-level connection settings.

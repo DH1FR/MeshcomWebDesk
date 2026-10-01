@@ -78,6 +78,44 @@
 
                 <label>@Loc.T("Eigenes Rufzeichen", "Own Callsign")</label>
                 <input type="text" @bind="_model.MyCallsign" />
+
+                @* KISS/TCP for the primary node – works without configuring further nodes *@
+                <label>
+                    @Loc.T("KISS/TCP", "KISS/TCP")<br />
+                    <small>@Loc.T("Zusätzlich zur ext-udp-Basis", "On top of the ext-udp base")</small>
+                </label>
+                <div>
+                    <label class="settings-toggle" title="@Loc.T("KISS/TCP-Verbindung zu diesem Node zusätzlich aufbauen", "Additionally open a KISS/TCP connection to this node")">
+                        <input type="checkbox"
+                               @bind:get="PrimaryKissEnabled"
+                               @bind:set="SetPrimaryKiss" />
+                        <span>@(PrimaryKissEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
+                    </label>
+                    @if (PrimaryKissEnabled && _model.Nodes.FirstOrDefault(n => n.IsPrimary) is { } kissNode)
+                    {
+                        var pks = KissService.GetStatus(kissNode.Id);
+                        <span class="kiss-status kiss-status-@pks.State.ToString().ToLowerInvariant()">@KissStatusLabel(pks)</span>
+                        <br />
+                        <small style="color:#8b949e">@Loc.T(
+                            "Nur ESP32-Nodes. TX/RxMeta am Node mit --kiss tx on / --kiss meta on freischalten. ext-udp bleibt aktiv – am Node „--extudp on“ lassen.",
+                            "ESP32 nodes only. Enable TX / RxMeta on the node with --kiss tx on / --kiss meta on. ext-udp stays active – keep \"--extudp on\" on the node.")</small>
+                        @if (KissSsidTooHigh(_model.MyCallsign))
+                        {
+                            <br />
+                            <small style="color:#f85149">⚠️ @Loc.T(
+                                "Rufzeichen-SSID > 15: KISS-Empfang funktioniert, aber Senden nicht – AX.25 kennt nur SSID 0–15.",
+                                "Callsign SSID > 15: KISS receive works, but sending does not – AX.25 only has SSID 0–15.")</small>
+                        }
+                    }
+                </div>
+                @if (PrimaryKissEnabled && _model.Nodes.FirstOrDefault(n => n.IsPrimary) is { } pwNode)
+                {
+                    <label>
+                        @Loc.T("Node-Passwort", "Node password")<br />
+                        <small>@Loc.T("--passwd am Node · für KISS (bei --kiss auth on) und NET-Console (HMAC)", "--passwd on the node · for KISS (with --kiss auth on) and the NET console (HMAC)")</small>
+                    </label>
+                    <input type="password" @bind="pwNode.TelnetPassword" placeholder="••••••••" autocomplete="new-password" />
+                }
             </div>
             <a class="settings-help-banner"
                href="@($"https://github.com/DH1FR/MeshcomWebDesk/blob/master/docs/node-connection-{Loc.Current}.md")"
@@ -522,7 +560,6 @@
                     <option value="oe">🇦🇹 OE – meshcom.oevsv.at</option>
                     <option value="dl">🇩🇪 DL – meshcom.hamnet.network</option>
                     <option value="it">🇮🇹 IT – meshcom.dig-italia.it</option>
-                    <option value="both">🇦🇹 + 🇩🇪 OE + DL</option>
                     <option value="none">@Loc.T("Keine (nur eigene Quellen)", "None (custom sources only)")</option>
                 </select>
 
@@ -546,6 +583,45 @@
                         <button type="button" class="btn-add"
                                 @onclick="() => _model.GatewaySources.Add(new GatewaySourceEntry())">
                             + @Loc.T("Quelle hinzufügen", "Add Source")
+                        </button>
+                    </div>
+                </div>
+            </div>
+            }
+        </div>
+
+        <!-- Web -->
+        <div class="settings-section @(IsOpen("web") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("web")'>🌐 Web <span class="section-chevron">@(IsOpen("web") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("web")) {
+            <div class="settings-grid">
+                <label>
+                    @Loc.T("Web-Seiten", "Web Pages")<br />
+                    <small>@Loc.T("Beliebige Web-Seiten, die im Tab „Web“ (rechts neben der Karte) eingebettet angezeigt werden. Nur http/https. Manche Seiten verbieten das Einbetten – dort hilft „In neuem Tab öffnen“.", "Any web pages shown embedded in the “Web” tab (right of the map). http/https only. Some sites forbid embedding – use “Open in new tab” for those.")</small>
+                </label>
+                <div style="display:flex;flex-direction:column;gap:0.4rem">
+                    @foreach (var link in _model.WebLinks)
+                    {
+                        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                            <input type="checkbox" @bind="link.Enabled" title="@Loc.T("Aktiv", "Enabled")" />
+                            <input type="text" @bind="link.Name" placeholder="@Loc.T("Name (z. B. MeshMap)", "Name (e.g. MeshMap)")"
+                                   style="flex:0 0 180px" />
+                            <input type="text" @bind="link.Url" placeholder="https://…"
+                                   style="flex:1 1 260px" />
+                            @if (!string.IsNullOrWhiteSpace(link.Url) && !WebLinkEntry.IsValidUrl(link.Url))
+                            {
+                                <small style="color:#f85149">❌ @Loc.T("Ungültige URL (http/https)", "Invalid URL (http/https)")</small>
+                            }
+                            <button type="button" class="btn-remove" @onclick="() => _model.WebLinks.Remove(link)">✕</button>
+                        </div>
+                    }
+                    <div style="display:flex;gap:6px;flex-wrap:wrap">
+                        <button type="button" class="btn-add"
+                                @onclick="() => _model.WebLinks.Add(new WebLinkEntry())">
+                            + @Loc.T("Web-Seite hinzufügen", "Add Web Page")
+                        </button>
+                        <button type="button" class="btn-add" @onclick="AddWebLinkExamples">
+                            @Loc.T("Beispiele einfügen", "Insert examples")
                         </button>
                     </div>
                 </div>
@@ -1556,6 +1632,12 @@
                     <small>@Loc.T("(eine pro Zeile, z.\u00a0B. DH1FR oder DH1FR-1)", "(one per line, e.\u00a0g. DH1FR or DH1FR-1)")</small>
                 </label>
                 <textarea rows="4" @bind="_model.WatchCallsignsText"></textarea>
+
+                <label>
+                    @Loc.T("Gruppen-Liste", "Group List")<br />
+                    <small>@Loc.T("(eine pro Zeile, z. B. 26261) – Meldung, Signalton und Sprachansage bei jeder neuen Nachricht in dieser Gruppe", "(one per line, e. g. 26261) – alert, tone and voice announcement for every new message in that group")</small>
+                </label>
+                <textarea rows="3" @bind="_model.WatchGroupsText"></textarea>
 
                 <label>@Loc.T("Auslöser", "Triggers")</label>
                 <div style="display:flex;flex-direction:column;gap:4px">
@@ -2622,6 +2704,23 @@
         });
     }
 
+    private bool PrimaryKissEnabled =>
+        _model.Nodes.FirstOrDefault(n => n.IsPrimary)?.Transport == NodeTransport.Kiss;
+
+    /// <summary>Toggles KISS for the primary node; creates the primary node profile on demand
+    /// so KISS works without configuring any further nodes.</summary>
+    private void SetPrimaryKiss(bool enabled)
+    {
+        var primary = _model.Nodes.FirstOrDefault(n => n.IsPrimary);
+        if (primary is null)
+        {
+            if (!enabled) return;
+            AddNode();
+            primary = _model.Nodes.First(n => n.IsPrimary);
+        }
+        primary.Transport = enabled ? NodeTransport.Kiss : NodeTransport.ExtUdp;
+    }
+
     private void RemoveNode(NodeProfile node)
     {
         _model.Nodes.Remove(node);
@@ -3285,6 +3384,7 @@
             GroupFilterEnabled  = s.GroupFilterEnabled,
             GroupsText          = string.Join("\n", s.Groups),
             WatchCallsignsText  = string.Join("\n", s.WatchCallsigns),
+            WatchGroupsText     = string.Join("\n", s.WatchGroups),
             WatchOnMessage      = s.WatchOnMessage,
             WatchOnPosition     = s.WatchOnPosition,
             WatchOnTelemetry    = s.WatchOnTelemetry,
@@ -3417,6 +3517,9 @@
             GatewaySources          = s.GatewaySources
                 .Select(g => new GatewaySourceEntry { Name = g.Name, Url = g.Url, Enabled = g.Enabled })
                 .ToList(),
+            WebLinks                = s.WebLinks
+                .Select(w => new WebLinkEntry { Name = w.Name, Url = w.Url, Enabled = w.Enabled })
+                .ToList(),
             TelnetEnabled           = s.TelnetEnabled,
             ConsoleMode             = s.ConsoleMode == "tls" ? "hmac" : s.ConsoleMode,
             TelnetPort              = s.TelnetPort,
@@ -3440,6 +3543,7 @@
             },
             LicenseToken            = s.LicenseToken
         };
+        _model.MigrateLegacyGatewayServer();
     }
 
     private void OnTelnetChange()
@@ -3487,6 +3591,18 @@
         MeshcomWebDesk.Services.Kiss.KissConnectionState.Error      => Loc.T("Fehler", "error") + (s.Detail is null ? "" : $": {s.Detail}"),
         _ => Loc.T("inaktiv", "inactive"),
     };
+
+    private void AddWebLinkExamples()
+    {
+        (string Name, string Url)[] examples =
+        [
+            ("MeshMap", "https://meshmap.oevsv.at/"),
+            ("MeshCom", "https://meshcom.oevsv.at/")
+        ];
+        foreach (var (name, url) in examples)
+            if (!_model.WebLinks.Any(w => string.Equals(w.Url?.Trim(), url, StringComparison.OrdinalIgnoreCase)))
+                _model.WebLinks.Add(new WebLinkEntry { Name = name, Url = url, Enabled = true });
+    }
 
     private async Task SaveAsync()
     {
@@ -4085,11 +4201,13 @@
             // Null-safety: ensure nested objects and collections exist
             imported.QuickTexts       ??= [];
             imported.GatewaySources   ??= [];
+            imported.WebLinks         ??= [];
             imported.GroupLabels      ??= [];
             imported.BotCommands      ??= [];
             imported.CalendarBeacons  ??= [];
             imported.TelemetryMapping ??= [];
             imported.WatchCallsigns   ??= [];
+            imported.WatchGroups      ??= [];
             imported.Groups           ??= [];
             imported.Database         ??= new();
             imported.Webhook          ??= new();
@@ -4134,6 +4252,7 @@
                 GroupFilterEnabled  = s.GroupFilterEnabled,
                 GroupsText          = string.Join("\n", s.Groups),
                 WatchCallsignsText  = string.Join("\n", s.WatchCallsigns),
+                WatchGroupsText     = string.Join("\n", s.WatchGroups),
                 WatchOnMessage      = s.WatchOnMessage,
                 WatchOnPosition     = s.WatchOnPosition,
                 WatchOnTelemetry    = s.WatchOnTelemetry,
@@ -4247,6 +4366,9 @@
                 GatewaySources          = s.GatewaySources
                     .Select(g => new GatewaySourceEntry { Name = g.Name, Url = g.Url, Enabled = g.Enabled })
                     .ToList(),
+                WebLinks                = s.WebLinks
+                    .Select(w => new WebLinkEntry { Name = w.Name, Url = w.Url, Enabled = w.Enabled })
+                    .ToList(),
                 TelnetEnabled           = s.TelnetEnabled,
                 ConsoleMode             = s.ConsoleMode == "tls" ? "hmac" : s.ConsoleMode,
                 TelnetPort              = s.TelnetPort,
@@ -4256,6 +4378,7 @@
                 SerialBaudRate          = s.SerialBaudRate,
                 GroupLabels = s.GroupLabels.Select(g => new GroupLabelEntry { Group = g.Group, ShortLabel = g.ShortLabel, Label = g.Label }).ToList()
             };
+            _model.MigrateLegacyGatewayServer();
             await SettingsService.SaveMeshcomSettingsAsync(_model.ToSettings());
             // Reload page – file-watcher triggers config reload which drops the SignalR
             // connection; navigating first ensures a clean reconnect with success feedback.
@@ -4285,6 +4408,7 @@
         public bool   GroupFilterEnabled  { get; set; }
         public string GroupsText          { get; set; } = string.Empty;
         public string WatchCallsignsText  { get; set; } = string.Empty;
+        public string WatchGroupsText     { get; set; } = string.Empty;
         public bool   WatchOnMessage      { get; set; } = true;
         public bool   WatchOnPosition     { get; set; } = true;
         public bool   WatchOnTelemetry    { get; set; } = false;
@@ -4388,6 +4512,21 @@
         public bool   GatewayHighlightEnabled  { get; set; } = true;
         public string GatewayServer            { get; set; } = "oe";
         public List<GatewaySourceEntry> GatewaySources { get; set; } = [];
+        public List<WebLinkEntry> WebLinks { get; set; } = [];
+
+        /// <summary>
+        /// The former "OE + DL" combination ("both") was removed from the dropdown:
+        /// keep OE as the preset and carry DL over as a custom source so nothing is lost.
+        /// </summary>
+        public void MigrateLegacyGatewayServer()
+        {
+            if (!string.Equals(GatewayServer?.Trim(), "both", StringComparison.OrdinalIgnoreCase))
+                return;
+            GatewayServer = "oe";
+            const string dlUrl = "http://meshcom.hamnet.network/meshcom/rakgw.html";
+            if (!GatewaySources.Any(g => string.Equals(g.Url?.Trim(), dlUrl, StringComparison.OrdinalIgnoreCase)))
+                GatewaySources.Add(new GatewaySourceEntry { Name = "DL", Url = dlUrl, Enabled = true });
+        }
         public bool   TelnetEnabled            { get; set; } = false;
         public string ConsoleMode             { get; set; } = "hmac";
         public int    TelnetPort              { get; set; } = 2323;
@@ -4457,6 +4596,11 @@
                 .ToList(),
             WatchCallsigns      = WatchCallsignsText
                 .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToList(),
+            WatchGroups         = WatchGroupsText
+                .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(g => g.TrimStart('#'))
+                .Where(g => g.Length > 0)
                 .ToList(),
             WatchOnMessage      = WatchOnMessage,
             WatchOnPosition     = WatchOnPosition,
@@ -4556,6 +4700,15 @@
             GatewaySources          = GatewaySources
                 .Where(g => !string.IsNullOrWhiteSpace(g.Url))
                 .Select(g => new GatewaySourceEntry { Name = g.Name?.Trim() ?? "", Url = g.Url.Trim(), Enabled = g.Enabled })
+                .ToList(),
+            WebLinks                = WebLinks
+                .Where(w => WebLinkEntry.IsValidUrl(w.Url))
+                .Select(w => new WebLinkEntry
+                {
+                    Url     = w.Url.Trim(),
+                    Name    = string.IsNullOrWhiteSpace(w.Name) ? new Uri(w.Url.Trim()).Host : w.Name.Trim(),
+                    Enabled = w.Enabled
+                })
                 .ToList(),
             TelnetEnabled           = TelnetEnabled,
             ConsoleMode             = ConsoleMode,

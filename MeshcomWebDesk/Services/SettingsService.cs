@@ -190,6 +190,7 @@ public class SettingsService
                 ["GroupFilterEnabled"]  = s.GroupFilterEnabled,
                 ["Groups"]              = new JsonArray(s.Groups.Select(g => (JsonNode?)JsonValue.Create(g)).ToArray()),
                 ["WatchCallsigns"]      = new JsonArray(s.WatchCallsigns.Select(c => (JsonNode?)JsonValue.Create(c)).ToArray()),
+                ["WatchGroups"]         = new JsonArray(s.WatchGroups.Select(g => (JsonNode?)JsonValue.Create(g)).ToArray()),
                 ["WatchOnMessage"]      = s.WatchOnMessage,
                 ["WatchOnPosition"]     = s.WatchOnPosition,
                 ["WatchOnTelemetry"]    = s.WatchOnTelemetry,
@@ -355,6 +356,12 @@ public class SettingsService
                     ["Name"]    = g.Name,
                     ["Url"]     = g.Url,
                     ["Enabled"] = g.Enabled
+                }).ToArray()),
+                ["WebLinks"] = new JsonArray(s.WebLinks.Select(w => (JsonNode?)new JsonObject
+                {
+                    ["Name"]    = w.Name,
+                    ["Url"]     = w.Url,
+                    ["Enabled"] = w.Enabled
                 }).ToArray()),
                 ["TelnetEnabled"]           = s.TelnetEnabled,
                 ["ConsoleMode"]             = s.ConsoleMode,

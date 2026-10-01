@@ -1,6 +1,15 @@
 ﻿# Changelog
 
-## [Unreleased]
+## [1.15.2] – 2026-10-01
+
+### Features
+- **Web view** – new **🌐 Web** tab right next to the map that embeds any number of web pages (e.g. `https://meshmap.oevsv.at/`, `https://meshcom.oevsv.at/`) in a sandboxed iframe, with a selector for the configured pages, an "Open in new tab" button and a remembered last selection. The pages are managed in the new **Settings → 🌐 Web** section (name, URL, enabled; http/https only, invalid URLs are rejected on save; "Insert examples" adds the two OE pages). The tab is shown only while at least one enabled page exists. Pages that forbid embedding (`X-Frame-Options` / CSP `frame-ancestors`) stay blank – use "Open in new tab" for those.
+- **Watchlist: groups** – the Watchlist can now also follow **groups**, e.g. a quiet group like `26261` (Hessen) that you still want to keep an eye on. Add group numbers (one per line, with or without `#`) under **Settings → 📻 Watchlist → Group List**. Every new text message in such a group raises a toast (👥 sender + group, e.g. `DH1FR #26261`), the alert tone and – if voice is enabled – an announcement ("New message in group 2 6 2 6 1 from …", in all five languages). Works independently of the group filter and of whether the group tab is open. Own messages (any SSID of your own callsigns/nodes) are ignored; the voice announcement is throttled to once per 5 minutes per group (messages in quick succession only sound the tone); ACK/POS/TEL packets do not trigger group alerts.
+
+### Bugfixes
+- **KISS without "Additional Nodes"** – KISS/TCP can now be enabled directly under **Settings → Connection** (toggle, status, node password for `--kiss auth on`), so a single node no longer has to be configured as an "additional node" first. The primary node profile is created automatically; if its own password is empty, the global console password is used for KISS authentication.
+- **Node switcher shown for a single node** – the bar above the chat (and the node selector on the NET Console page) now only appears when **more than one** node is enabled.
+- **MH list, map and chat tabs empty after adding the first node** – adding a node profile moved the app from the legacy single-node state to a new per-node state, and the old data was only carried over if it contained tabs/messages and the new state was still untouched, so the MH list/map (and sometimes the tabs) appeared empty. The carry-over now always runs, merges without duplicates, and also recovers data of deleted/re-created node profiles when at most one node is configured. Deleting the node no longer "brings the data back" – it was never lost.
 
 ---
 

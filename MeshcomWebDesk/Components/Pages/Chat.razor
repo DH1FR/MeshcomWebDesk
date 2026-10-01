@@ -27,8 +27,8 @@
 <ErrorBoundary>
     <ChildContent>
 <div class="meshcom-container">
-    @* ===== NODE SWITCHER (only when multi-node is enabled) ===== *@
-    @if (NodeManager.MultiNodeEnabled) {
+    @* ===== NODE SWITCHER (only when more than one node is enabled) ===== *@
+    @if (NodeManager.HasMultipleNodes) {
     <div class="node-switcher-bar">
         @foreach (var node in NodeManager.Nodes) {
             var status   = NodeManager.GetNodeStatus(node.Id);
@@ -436,9 +436,26 @@
     </div>
 
     @* ===== ALERT TOASTS (Watchlist + CQ) ===== *@
-    @if (_watchlistAlerts.Count > 0 || _cqAlerts.Count > 0)
+    @if (_watchlistAlerts.Count > 0 || _watchGroupAlerts.Count > 0 || _cqAlerts.Count > 0)
     {
         <div class="alert-toast-stack">
+            @if (_watchGroupAlerts.Count > 0)
+            {
+                <div class="watchlist-toast">
+                    <div class="watchlist-toast-header">
+                        <span>👥 @Loc.T("Neue Gruppennachricht", "New group message")</span>
+                        <button class="watchlist-toast-close" @onclick="() => _watchGroupAlerts.Clear()">✕</button>
+                    </div>
+                    @foreach (var ga in _watchGroupAlerts)
+                    {
+                        <div class="watchlist-toast-row">
+                            <span class="watchlist-callsign">@ga.Callsign</span>
+                            <span class="watchlist-badge">#@ga.Group</span>
+                            <span class="watchlist-age">@FormatAlertAge(ga.Time)</span>
+                        </div>
+                    }
+                </div>
+            }
             @if (_watchlistAlerts.Count > 0)
             {
                 <div class="watchlist-toast">
@@ -1118,6 +1135,8 @@
     private record WatchlistAlert(string Callsign, string EventType, DateTime Time);
     private List<WatchlistAlert> _watchlistAlerts = [];
     private bool _playWatchlistSound;
+    private record WatchGroupAlert(string Group, string Callsign, DateTime Time);
+    private List<WatchGroupAlert> _watchGroupAlerts = [];
     private Dictionary<string, DateTime> _watchlistLastTts = new(StringComparer.OrdinalIgnoreCase);
 
     private record CqAlert(string Callsign, string Group, DateTime Time);
@@ -1155,6 +1174,7 @@
         UdpService.OnStatusChange += OnStatusChanged;
         KissService.OnStatusChange += OnStatusChanged;
         ChatService.OnWatchlistHit += HandleWatchlistHit;
+        ChatService.OnWatchGroupHit += HandleWatchGroupHit;
         ChatService.OnCqHeard += HandleCqHeard;
         ChatService.OnNewDirectTab += HandleNewDirectTab;
         ChatService.OnDirectMessage += HandleDirectMessage;
@@ -1726,6 +1746,7 @@
         UdpService.OnStatusChange -= OnStatusChanged;
         KissService.OnStatusChange -= OnStatusChanged;
         ChatService.OnWatchlistHit -= HandleWatchlistHit;
+        ChatService.OnWatchGroupHit -= HandleWatchGroupHit;
         ChatService.OnCqHeard -= HandleCqHeard;
         ChatService.OnNewDirectTab -= HandleNewDirectTab;
         ChatService.OnDirectMessage -= HandleDirectMessage;
@@ -2088,6 +2109,48 @@
                 {
                     var limit = Math.Max(1, SettingsOptions.CurrentValue.WatchAlertMinutes);
                     _watchlistAlerts.RemoveAll(a => (DateTime.Now - a.Time).TotalMinutes > limit);
+                    StateHasChanged();
+                });
+        }
+        catch (Exception) { }
+    }
+
+    private async void HandleWatchGroupHit(string group, string callsign, MeshcomMessage message)
+    {
+        if (_disposed) return;
+        try
+        {
+            await InvokeAsync(() =>
+            {
+                if (_disposed) return;
+                _watchGroupAlerts.RemoveAll(a => a.Group == group && string.Equals(a.Callsign, callsign, StringComparison.OrdinalIgnoreCase));
+                _watchGroupAlerts.Insert(0, new WatchGroupAlert(group, callsign, DateTime.Now));
+                if (_soundEnabled)
+                    _playWatchlistSound = true;
+                // Ansage pro Gruppe höchstens alle 5 Min.; bei dichter Folge nur der Ton
+                var ttsKey = "#" + group;
+                bool ttsAllowed = !_watchlistLastTts.TryGetValue(ttsKey, out var lastTts)
+                    || (DateTime.Now - lastTts).TotalMinutes >= 5;
+                if (_voiceEnabled == true && ttsAllowed)
+                {
+                    _watchlistLastTts[ttsKey] = DateTime.Now;
+                    var phonetic = PhoneticAlphabetHelper.Spell(callsign, Loc.Current);
+                    var groupSpelled = string.Join(" ", group.ToCharArray());
+                    _pendingSpeech.Enqueue(Loc.TtsT(
+                        $"Neue Nachricht in Gruppe {groupSpelled} von {phonetic}",
+                        $"New message in group {groupSpelled} from {phonetic}",
+                        $"Nouveau message dans le groupe {groupSpelled} de {phonetic}",
+                        $"Nuovo messaggio nel gruppo {groupSpelled} da {phonetic}",
+                        $"Nuevo mensaje en el grupo {groupSpelled} de {phonetic}"));
+                }
+                StateHasChanged();
+            });
+            await Task.Delay(TimeSpan.FromSeconds(Math.Max(1, SettingsOptions.CurrentValue.WatchAlertMinutes) * 60 + 2));
+            if (!_disposed)
+                await InvokeAsync(() =>
+                {
+                    var limit = Math.Max(1, SettingsOptions.CurrentValue.WatchAlertMinutes);
+                    _watchGroupAlerts.RemoveAll(a => (DateTime.Now - a.Time).TotalMinutes > limit);
                     StateHasChanged();
                 });
         }

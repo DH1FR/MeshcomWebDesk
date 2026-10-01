@@ -73,6 +73,13 @@ public class MeshcomSettings
     /// </summary>
     public List<string> WatchCallsigns { get; set; } = [];
 
+    /// <summary>
+    /// Watchlist groups (e.g. "26261" or "#26261"). Every incoming text message addressed to one of
+    /// these groups raises a watchlist alert (toast, sound, voice), independent of
+    /// <see cref="GroupFilterEnabled"/> and of whether the group tab is open.
+    /// </summary>
+    public List<string> WatchGroups { get; set; } = [];
+
     /// <summary>React to incoming chat messages from watchlist callsigns (default: true).</summary>
     public bool WatchOnMessage { get; set; } = true;
 
@@ -363,6 +370,12 @@ public class MeshcomSettings
     /// Each URL must point to the <c>rakgw.html</c> page of a MeshCom dashboard.
     /// </summary>
     public List<GatewaySourceEntry> GatewaySources { get; set; } = [];
+
+    /// <summary>
+    /// User-defined web pages shown in the embedded "Web" view (nav tab next to Map).
+    /// The tab is only visible when at least one enabled entry exists.
+    /// </summary>
+    public List<WebLinkEntry> WebLinks { get; set; } = [];
 
     // ── Telnet / Console ─────────────────────────────────────────────────
 

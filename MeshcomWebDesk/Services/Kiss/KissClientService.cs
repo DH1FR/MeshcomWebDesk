@@ -113,7 +113,7 @@ public sealed class KissClientService : BackgroundService
             bool endpointChanged = match is not null &&
                 (match.DeviceIp != worker.Node.DeviceIp || match.KissPort != worker.Node.KissPort ||
                  match.Callsign != worker.Node.Callsign ||
-                 (match.TelnetPassword ?? "") != (worker.Node.TelnetPassword ?? ""));
+                 EffectivePassword(match) != EffectivePassword(worker.Node));
             if (match is null || endpointChanged)
             {
                 worker.Cts.Cancel();
@@ -165,7 +165,7 @@ public sealed class KissClientService : BackgroundService
                 bool authOk, authUsed; byte? stashed;
                 try
                 {
-                    (authOk, authUsed, stashed) = await KissAuthAsync(stream, node.TelnetPassword ?? string.Empty, ct);
+                    (authOk, authUsed, stashed) = await KissAuthAsync(stream, EffectivePassword(node), ct);
                 }
                 catch (OperationCanceledException) when (!ct.IsCancellationRequested)
                 {
@@ -252,6 +252,14 @@ public sealed class KissClientService : BackgroundService
     /// Returns <c>(ok, authUsed, stashedByte)</c> — <c>stashedByte</c> is a KISS byte that was
     /// read during detection and must be fed to the deframer.
     /// </summary>
+    /// <summary>Node password for KISS auth: the node's own, or – for the primary node – the global
+    /// console password (single-node setups keep it in the Telnet/Console section).</summary>
+    private string EffectivePassword(NodeProfile node)
+    {
+        if (!string.IsNullOrEmpty(node.TelnetPassword)) return node.TelnetPassword;
+        return _nodes.PrimaryNode?.Id == node.Id ? _settings.CurrentValue.TelnetPassword ?? string.Empty : string.Empty;
+    }
+
     private async Task<(bool Ok, bool Used, byte? Stashed)> KissAuthAsync(
         NetworkStream stream, string password, CancellationToken ct)
     {

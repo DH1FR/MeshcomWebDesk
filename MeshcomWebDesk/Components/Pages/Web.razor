@@ -1,0 +1,77 @@
+@page "/web"
+@rendermode InteractiveServer
+@using MeshcomWebDesk.Models
+@using MeshcomWebDesk.Services
+@using Microsoft.Extensions.Options
+@inject LanguageService Loc
+@inject IOptionsMonitor<MeshcomSettings> SettingsMonitor
+@inject IJSRuntime JS
+
+<PageTitle>🌐 Web – MeshCom WebDesk</PageTitle>
+
+@{
+    var links = Links;
+    var current = links.FirstOrDefault(l => l.Url == _selectedUrl) ?? links.FirstOrDefault();
+}
+
+<div class="web-page">
+    @if (current is null)
+    {
+        <div class="web-empty">
+            @Loc.T("Keine Web-Seiten konfiguriert. Unter Einstellungen → Web-Seiten hinzufügen.",
+                   "No web pages configured. Add some under Settings → Web Pages.")
+        </div>
+    }
+    else
+    {
+        <div class="web-bar">
+            @foreach (var l in links)
+            {
+                var url = l.Url;
+                <button class="map-ctrl-btn @(url == current.Url ? "map-ctrl-active" : "")"
+                        title="@url" @onclick="() => SelectAsync(url)">@l.Name</button>
+            }
+            <span class="map-ctrl-sep"></span>
+            <a class="map-ctrl-btn" href="@current.Url" target="_blank" rel="noopener noreferrer"
+               title="@Loc.T("In neuem Tab öffnen", "Open in new tab")">↗ @Loc.T("In neuem Tab öffnen", "Open in new tab")</a>
+            <small class="web-hint">@Loc.T("Bleibt die Seite leer, verbietet sie das Einbetten.", "If the page stays blank, it forbids embedding.")</small>
+        </div>
+        <iframe @key="current.Url"
+                class="web-frame"
+                src="@current.Url"
+                title="@current.Name"
+                referrerpolicy="no-referrer"
+                sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe>
+    }
+</div>
+
+@code {
+    private const string StorageKey = "meshcom-web-selected";
+    private string? _selectedUrl;
+
+    private List<WebLinkEntry> Links => SettingsMonitor.CurrentValue.WebLinks
+        .Where(l => l.Enabled && WebLinkEntry.IsValidUrl(l.Url))
+        .ToList();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            var saved = await JS.InvokeAsync<string?>("localStorage.getItem", StorageKey);
+            if (!string.IsNullOrEmpty(saved) && saved != _selectedUrl)
+            {
+                _selectedUrl = saved;
+                StateHasChanged();
+            }
+        }
+        catch { /* storage unavailable – keep default */ }
+    }
+
+    private async Task SelectAsync(string url)
+    {
+        _selectedUrl = url;
+        try { await JS.InvokeVoidAsync("localStorage.setItem", StorageKey, url); }
+        catch { /* ignore */ }
+    }
+}
