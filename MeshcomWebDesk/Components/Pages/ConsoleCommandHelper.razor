@@ -33,7 +33,7 @@
                 📋 <span class="cch-btn-label">MH</span>
             </button>
             <button class="cch-btn" @onclick="ShowHelpAsync" disabled="@(!CmdHelper.IsConnected)">
-                ❓ <span class="cch-btn-label">Help</span>
+                ❓ <span class="cch-btn-label">@Loc.T("Hilfe", "Help")</span>
             </button>
             <a class="cch-btn" href="/telnet">
                 🖥️ <span class="cch-btn-label">Console</span>
@@ -67,7 +67,7 @@
                                 <code class="cch-cmd-name">--@cmd.Name</code>
                                 @if (curVal == "?")
                                 {
-                                    <span class="cch-value-badge cch-value-error" title="Befehl fehlgeschlagen">⚠</span>
+                                    <span class="cch-value-badge cch-value-error" title="@Loc.T("Befehl fehlgeschlagen", "Command failed")">⚠</span>
                                 }
                                 else if (curVal != null)
                                 {
@@ -123,7 +123,7 @@
                                             @if (extraKnown != null)
                                             {
                                                 <div class="cch-extra-current">
-                                                    <span class="cch-extra-current-label">Aktuell:</span>
+                                                    <span class="cch-extra-current-label">@Loc.T("Aktuell:", "Current:")</span>
                                                     <span class="cch-value-badge cch-value-known">@extraKnown</span>
                                                 </div>
                                             }
@@ -260,12 +260,12 @@
                                     <th>Call</th>
                                     <th>@Loc.T("Datum", "Date")</th>
                                     <th>@Loc.T("Zeit", "Time")</th>
-                                    <th>Typ</th>
+                                    <th>@Loc.T("Typ", "Type")</th>
                                     <th>Hardware</th>
                                     <th>Mod</th>
                                     <th>RSSI</th>
                                     <th>SNR</th>
-                                    <th>Dist</th>
+                                    <th>@Loc.T("Entf.", "Dist")</th>
                                     <th>PL</th>
                                     <th>M</th>
                                     <th>NC</th>

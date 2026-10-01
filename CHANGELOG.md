@@ -2,6 +2,14 @@
 
 ## [1.15.3] – unreleased
 
+### Features
+- **Blacklist** – new **Settings → 🚫 Blacklist** (callsign list, one per line). Messages from these stations appear **only in the monitor** – no chat or group tab, no direct-message/watchlist/CQ/bot handling, no webhook/MQTT. `DH1FR` or `DH1FR-*` blocks every SSID of that callsign, `DH1FR-55` only exactly that one. The MH list and the map are still updated.
+- **Translations as language files** – the UI languages Italian, Spanish and French are no longer compiled in but plain JSON files (`MeshcomWebDesk/Languages/*.json`, English text → translation). Anyone can **add a language or improve a translation** without touching code: drop a `xx.json` into `<DataPath>/languages/` (Docker: `./data/languages/`) – a file with the code of a built-in language overrides single strings, a new code adds a new language that appears in **Settings → Language** (a "Reload language files" button avoids a restart). Missing strings fall back to English. `python scripts/check_translations.py` reports missing/unused texts and `--write xx` creates a template; see `docs/translations.md`.
+
+### Improvements
+- **Translations completed** – the Italian and Spanish dictionaries were missing about 560 texts and French about 220 (mostly newer features such as KISS, Weather API, Web view, watchlist groups, Settings hints); all are translated now. Texts with values ("3 min ago", "Close tab "X"?", …) were not translatable at all and now use placeholders (`TF`), several hard-coded German/English labels (MH list, Command Helper, Reload) are localised too.
+- **Doc links** – the node-connection guide link now points to an existing language (de/en/es/it, everything else → en) instead of a 404 for French.
+
 ### Bugfixes
 - **ACK ticks missing / wrong message ticked** – MeshCom message sequence numbers only run 0–999 and are reused (also across restarts), so a new outgoing message could carry the same number as an older one. An incoming ACK was always applied to the *oldest* message with that number, which was usually already acknowledged, so the new message never got its ✓✓. The ACK is now applied to the newest still-unacknowledged message with that number – preferably the one addressed to the ACK sender.
 - **Sending impossible with KISS enabled and an SSID > 15** – with KISS/TCP active every message went out over KISS, and AX.25 cannot carry an SSID above 15 (e.g. `DH1FR-99`), so nothing was sent at all ("KISS TX: cannot encode AX.25 frame"). For such a callsign WebDesk now sends over ext-udp instead (which stays active alongside KISS), so the node's echo – including the via path when `--via on` is set – arrives again.

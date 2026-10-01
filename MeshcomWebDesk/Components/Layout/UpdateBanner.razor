@@ -6,9 +6,7 @@
 @if (!UpdateCheck.Dismissed && UpdateCheck.LatestVersion is not null)
 {
     <div class="update-banner">
-        <span>🚀 @Loc.T(
-            $"Neue Version verfügbar: {UpdateCheck.LatestVersion}",
-            $"New version available: {UpdateCheck.LatestVersion}")</span>
+        <span>🚀 @Loc.TF("Neue Version verfügbar: {0}", "New version available: {0}", UpdateCheck.LatestVersion)</span>
         <a href="@UpdateCheck.ReleasePageUrl" target="_blank" rel="noopener" class="update-banner-link">
             @Loc.T("Zum Release", "View Release") ↗
         </a>

@@ -2,6 +2,14 @@
 
 ## [1.15.3] – unreleased
 
+### Features
+- **Blacklist** – new **Settings → 🚫 Blacklist** (callsign list, one per line). Messages from these stations appear **only in the monitor** – no chat or group tab, no direct-message/watchlist/CQ/bot handling, no webhook/MQTT. `DH1FR` or `DH1FR-*` blocks every SSID of that callsign, `DH1FR-55` only exactly that one. The MH list and the map are still updated.
+- **Translations as language files** – the UI languages Italian, Spanish and French are no longer compiled in but plain JSON files (`MeshcomWebDesk/Languages/*.json`, English text → translation). Anyone can **add a language or improve a translation** without touching code: drop a `xx.json` into `<DataPath>/languages/` (Docker: `./data/languages/`) – a file with the code of a built-in language overrides single strings, a new code adds a new language that appears in **Settings → Language** (a "Reload language files" button avoids a restart). Missing strings fall back to English. `python scripts/check_translations.py` reports missing/unused texts and `--write xx` creates a template; see `docs/translations.md`.
+
+### Improvements
+- **Translations completed** – the Italian and Spanish dictionaries were missing about 560 texts and French about 220 (mostly newer features such as KISS, Weather API, Web view, watchlist groups, Settings hints); all are translated now. Texts with values ("3 min ago", "Close tab "X"?", …) were not translatable at all and now use placeholders (`TF`), several hard-coded German/English labels (MH list, Command Helper, Reload) are localised too.
+- **Doc links** – the node-connection guide link now points to an existing language (de/en/es/it, everything else → en) instead of a 404 for French.
+
 ### Bugfixes
 - **ACK ticks**: an ACK is now applied to the newest unacknowledged message with that sequence number (numbers wrap at 999 and are reused) instead of the oldest.
 - **KISS with SSID > 15**: messages are sent over ext-udp instead of failing on the AX.25 SSID limit.

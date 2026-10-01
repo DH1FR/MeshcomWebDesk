@@ -26,6 +26,7 @@ PROJECT = os.path.join(REPO, "MeshcomWebDesk")
 LANG_DIR = os.path.join(PROJECT, "Languages")
 
 ESC = {"n": "\n", "t": "\t", "r": "\r", "\\": "\\", '"': '"', "'": "'", "0": "\0"}
+GERMAN = {}  # English text -> German text of the first call site (context for translators)
 CALL = re.compile(r"(?<![A-Za-z0-9_])(?:[A-Za-z_]+\.)?(?:T|TF)\s*\(")
 
 
@@ -122,7 +123,9 @@ def scan_sources():
             if a[2] or b[2]:
                 dynamic.append((rel, line, "interpolated: " + b[0][:60]))
                 continue
-            used.setdefault(b[0], f"{rel}:{line}")
+            if b[0] not in used:
+                used[b[0]] = f"{rel}:{line}"
+                GERMAN[b[0]] = a[0]
     return used, dynamic
 
 

@@ -111,7 +111,7 @@
             <button class="btn-action btn-sm" @onclick="ShowHelpAsync"
                     disabled="@(!Console.IsConnected)"
                     title="@Loc.T("Hilfe anzeigen (--help)", "Show help (--help)")">
-                ❓ <span class="btn-label">Help</span>
+                ❓ <span class="btn-label">@Loc.T("Hilfe", "Help")</span>
             </button>
             <a class="btn-action btn-sm" href="/console-commands" title="@Loc.T("Befehl-Helper öffnen", "Open command helper")">
                 🎛️ <span class="btn-label">@Loc.T("Befehle", "Commands")</span>
@@ -196,12 +196,12 @@
                                     <th>Call</th>
                                     <th>@Loc.T("Datum", "Date")</th>
                                     <th>@Loc.T("Zeit", "Time")</th>
-                                    <th>Typ</th>
+                                    <th>@Loc.T("Typ", "Type")</th>
                                     <th>Hardware</th>
                                     <th>Mod</th>
                                     <th>RSSI</th>
                                     <th>SNR</th>
-                                    <th>Dist</th>
+                                    <th>@Loc.T("Entf.", "Dist")</th>
                                     <th>PL</th>
                                     <th>M</th>
                                     <th>NC</th>

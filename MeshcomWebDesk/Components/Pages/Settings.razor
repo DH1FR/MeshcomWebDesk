@@ -332,12 +332,12 @@
                 else
                 {
                     <span class="kiss-status @(hub.Listening ? "kiss-status-connected" : "kiss-status-connecting")">
-                        @(hub.Listening ? Loc.T($"hört auf {hub.Bind}:{hub.Port}", $"listening on {hub.Bind}:{hub.Port}") : Loc.T("startet…", "starting…"))
+                        @(hub.Listening ? Loc.TF("hört auf {0}:{1}", "listening on {0}:{1}", hub.Bind, hub.Port) : Loc.T("startet…", "starting…"))
                     </span>
                     <span>·</span>
                     <span title="@Loc.T("Ziel-Node", "Target node")">@(hub.TargetNodeName ?? Loc.T("kein KISS-Node", "no KISS node")) @(hub.TargetConnected ? "🟢" : "🔴")</span>
                     <span>·</span>
-                    <span>@Loc.T($"{hub.Clients.Count} Client(s)", $"{hub.Clients.Count} client(s)")@(hub.Clients.Count > 0 ? ": " + string.Join(", ", hub.Clients) : "")</span>
+                    <span>@Loc.TF("{0} Client(s)", "{0} client(s)", hub.Clients.Count)@(hub.Clients.Count > 0 ? ": " + string.Join(", ", hub.Clients) : "")</span>
                 }
             </div>
             }
@@ -2986,7 +2986,7 @@
         }
         if (!File.Exists(filePath))
         {
-            _telemetryPreviewError = Loc.T($"Datei nicht gefunden: {filePath}", $"File not found: {filePath}");
+            _telemetryPreviewError = Loc.TF("Datei nicht gefunden: {0}", "File not found: {0}", filePath);
             return;
         }
 
@@ -3109,7 +3109,7 @@
         }
         catch (Exception ex)
         {
-            _telemetryPreviewError = Loc.T($"Fehler: {ex.Message}", $"Error: {ex.Message}");
+            _telemetryPreviewError = Loc.TF("Fehler: {0}", "Error: {0}", ex.Message);
         }
     }
 
@@ -3143,9 +3143,7 @@
             if (info is not null)
                 _qrzTestResult = $"✅ {testCallsign}: {info.FirstName} / {info.Location}";
             else
-                _qrzTestResult = Loc.T(
-                    $"⚠️ Kein Eintrag für {testCallsign} gefunden (Login OK oder Rufzeichen unbekannt).",
-                    $"⚠️ No entry found for {testCallsign} (login OK or callsign unknown).");
+                _qrzTestResult = Loc.TF("⚠️ Kein Eintrag für {0} gefunden (Login OK oder Rufzeichen unbekannt).", "⚠️ No entry found for {0} (login OK or callsign unknown).", testCallsign);
         }
         catch (Exception ex)
         {
@@ -3189,10 +3187,8 @@
             var lastQso = await QsoSummaryService.GetLastQsoTimeAsync(csBase);
 
             var dbLine = lastQso.HasValue
-                ? Loc.T($"✅ DB: Letztes QSO mit {csBase}: {lastQso:dd.MM.yyyy HH:mm}",
-                         $"✅ DB: Last QSO with {csBase}: {lastQso:dd.MM.yyyy HH:mm}")
-                : Loc.T($"⚠️ DB: Keine Nachrichten für {csBase} gefunden.",
-                         $"⚠️ DB: No messages found for {csBase}.");
+                ? Loc.TF("✅ DB: Letztes QSO mit {0}: {1:dd.MM.yyyy HH:mm}", "✅ DB: Last QSO with {0}: {1:dd.MM.yyyy HH:mm}", csBase, lastQso)
+                : Loc.TF("⚠️ DB: Keine Nachrichten für {0} gefunden.", "⚠️ DB: No messages found for {0}.", csBase);
 
             var iconLine = hasData
                 ? Loc.T("✅ Icon: würde angezeigt werden.", "✅ Icon: would be shown.")
@@ -3701,9 +3697,7 @@
             var invalid = entries.Where(e => string.IsNullOrWhiteSpace(e.Name)).ToList();
             if (invalid.Count > 0)
             {
-                _importError = Loc.T(
-                    $"Import fehlgeschlagen: {invalid.Count} Einträge ohne Name gefunden.",
-                    $"Import failed: {invalid.Count} entries without a name.");
+                _importError = Loc.TF("Import fehlgeschlagen: {0} Einträge ohne Name gefunden.", "Import failed: {0} entries without a name.", invalid.Count);
                 return;
             }
 
@@ -3712,9 +3706,7 @@
         }
         catch (System.Text.Json.JsonException ex)
         {
-            _importError = Loc.T(
-                $"Import fehlgeschlagen: JSON-Fehler – {ex.Message}",
-                $"Import failed: JSON error – {ex.Message}");
+            _importError = Loc.TF("Import fehlgeschlagen: JSON-Fehler – {0}", "Import failed: JSON error – {0}", ex.Message);
         }
         catch (Exception ex) { _importError = $"Import: {ex.Message}"; }
     }
@@ -3757,9 +3749,7 @@
             var invalid = entries.Where(e => string.IsNullOrWhiteSpace(e.Group)).ToList();
             if (invalid.Count > 0)
             {
-                _importError = Loc.T(
-                    $"Import fehlgeschlagen: {invalid.Count} Einträge ohne Gruppen-Nummer gefunden.",
-                    $"Import failed: {invalid.Count} entries without a group number.");
+                _importError = Loc.TF("Import fehlgeschlagen: {0} Einträge ohne Gruppen-Nummer gefunden.", "Import failed: {0} entries without a group number.", invalid.Count);
                 return;
             }
 
@@ -3768,9 +3758,7 @@
         }
         catch (System.Text.Json.JsonException ex)
         {
-            _importError = Loc.T(
-                $"Import fehlgeschlagen: JSON-Fehler – {ex.Message}",
-                $"Import failed: JSON error – {ex.Message}");
+            _importError = Loc.TF("Import fehlgeschlagen: JSON-Fehler – {0}", "Import failed: JSON error – {0}", ex.Message);
         }
         catch (Exception ex) { _importError = $"Import: {ex.Message}"; }
     }
@@ -3813,9 +3801,7 @@
             var invalid = entries.Where(e => string.IsNullOrWhiteSpace(e.Text)).ToList();
             if (invalid.Count > 0)
             {
-                _importError = Loc.T(
-                    $"Import fehlgeschlagen: {invalid.Count} Einträge ohne Text gefunden.",
-                    $"Import failed: {invalid.Count} entries without text.");
+                _importError = Loc.TF("Import fehlgeschlagen: {0} Einträge ohne Text gefunden.", "Import failed: {0} entries without text.", invalid.Count);
                 return;
             }
 
@@ -3824,9 +3810,7 @@
         }
         catch (System.Text.Json.JsonException ex)
         {
-            _importError = Loc.T(
-                $"Import fehlgeschlagen: JSON-Fehler – {ex.Message}",
-                $"Import failed: JSON error – {ex.Message}");
+            _importError = Loc.TF("Import fehlgeschlagen: JSON-Fehler – {0}", "Import failed: JSON error – {0}", ex.Message);
         }
         catch (Exception ex) { _importError = $"Import: {ex.Message}"; }
     }
@@ -4032,8 +4016,7 @@
         }
         catch (System.Text.Json.JsonException ex)
         {
-            _themeError = Loc.T($"Import fehlgeschlagen: JSON-Fehler – {ex.Message}",
-                                $"Import failed: JSON error – {ex.Message}");
+            _themeError = Loc.TF("Import fehlgeschlagen: JSON-Fehler – {0}", "Import failed: JSON error – {0}", ex.Message);
         }
         catch (Exception ex) { _themeError = $"Import: {ex.Message}"; }
     }
@@ -4207,9 +4190,7 @@
             }
             catch (System.Text.Json.JsonException ex)
             {
-                _backupError = Loc.T(
-                    $"Import fehlgeschlagen: JSON-Fehler – {ex.Message}",
-                    $"Import failed: JSON error – {ex.Message}");
+                _backupError = Loc.TF("Import fehlgeschlagen: JSON-Fehler – {0}", "Import failed: JSON error – {0}", ex.Message);
                 StateHasChanged();
                 return;
             }
