@@ -29,6 +29,24 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
+## 🆕 What's New in v1.15.3 (dev, unreleased)
+
+### ✨ Features
+- **Blacklist** – new **Settings → 🚫 Blacklist** (callsign list, one per line). Messages from these stations appear **only in the monitor** – no chat or group tab, no direct-message/watchlist/CQ/bot handling, no webhook/MQTT. `DH1FR` or `DH1FR-*` blocks every SSID of that callsign, `DH1FR-55` only exactly that one. The MH list and the map are still updated.
+- **Translations as language files** – the UI languages Italian, Spanish and French are no longer compiled in but plain JSON files (`MeshcomWebDesk/Languages/*.json`, English text → translation). Anyone can **add a language or improve a translation** without touching code: drop a `xx.json` into `<DataPath>/languages/` (Docker: `./data/languages/`) – a file with the code of a built-in language overrides single strings, a new code adds a new language that appears in **Settings → Language** (a "Reload language files" button avoids a restart). Missing strings fall back to English. `python scripts/check_translations.py` reports missing/unused texts and `--write xx` creates a template; see `docs/translations.md`.
+- **Firmware 4.40a: `--mheard` window** – the node now answers `--mheard` with `[MH] key=value` lines instead of an ASCII table. The MHeard popup (Telnet console and Command Helper) understands the new format (the old table still works) and shows the new columns **Age**, **Role** (N = node, R = relay), **NB** (bidirectional neighbours) and **GW**.
+- **Mailbox custody notice (store-and-forward, firmware 4.40a)** – a `:stoNNN` text from a mailbox node is no longer shown as a chat message: it appears in the monitor as `STO` and the matching outgoing DM gets a **📬** tick ("held by mailbox node X – delivered once the station is reachable"). The real ACK still turns it into ✓✓.
+- **Map: role, neighbours, gateway (firmware 4.40a)** – after a `--mheard` answer (MHeard popup) the map popup of the listed stations shows **📡 Relay / Node**, the number of **bidirectional neighbours** and a **GW** badge for gateways. ext-udp does not carry this data, so it is refreshed whenever you open the MHeard popup.
+
+### 🐛 Bug fixes
+- **Message retries (firmware 4.35u+)** – the node re-sends an unacknowledged DM up to 3×, encoding the attempt in bits 10–11 of the `msg_id`. These copies are now recognised as the same message (the dedup key ignores those bits) instead of relying on the text fallback alone.
+- **ACK ticks missing / wrong message ticked** – MeshCom message sequence numbers only run 0–999 and are reused (also across restarts), so a new outgoing message could carry the same number as an older one. An incoming ACK was always applied to the *oldest* message with that number, which was usually already acknowledged, so the new message never got its ✓✓. The ACK is now applied to the newest still-unacknowledged message with that number – preferably the one addressed to the ACK sender.
+- **Sending impossible with KISS enabled and an SSID > 15** – with KISS/TCP active every message went out over KISS, and AX.25 cannot carry an SSID above 15 (e.g. `DH1FR-99`), so nothing was sent at all ("KISS TX: cannot encode AX.25 frame"). For such a callsign WebDesk now sends over ext-udp instead (which stays active alongside KISS), so the node's echo – including the via path when `--via on` is set – arrives again.
+
+---
+
+---
+
 ## 🆕 What's New in v1.15.2
 
 ### ✨ Features

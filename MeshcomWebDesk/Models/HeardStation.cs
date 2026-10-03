@@ -52,6 +52,18 @@ public class HeardStation
     public int? NeighbourCount { get; set; }
 
     /// <summary>
+    /// Node role from the node's own <c>--mheard</c> list (firmware 4.40a): "R" = relay, "N" = plain node.
+    /// Null until a <c>--mheard</c> answer containing this station was parsed.
+    /// </summary>
+    public string? NodeRole { get; set; }
+
+    /// <summary>Bidirectional neighbour count (firmware 4.40a neighbour matrix, <c>nb=</c> in <c>--mheard</c>), null when unknown.</summary>
+    public int? BidirNeighbours { get; set; }
+
+    /// <summary>True when the station's <c>--mheard</c> row flagged it as a gateway (<c>gw=Y</c>).</summary>
+    public bool MhGateway { get; set; }
+
+    /// <summary>
     /// Full APRS position comment of the last beacon (operator text plus the raw MeshCom
     /// extension set). Only populated when the station was heard over KISS/TCP – ext-udp
     /// discards the comment. Null when never received.

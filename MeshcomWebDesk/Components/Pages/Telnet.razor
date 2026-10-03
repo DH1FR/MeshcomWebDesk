@@ -7,6 +7,7 @@
 @inject SerialConsoleService SerialConsoleService
 @inject HmacConsoleService HmacConsoleService
 @inject NodeManager NodeManager
+@inject ChatService ChatSvc
 @inject SettingsService SettingsService
 @inject IOptionsMonitor<MeshcomSettings> SettingsMon
 @inject LanguageService Loc
@@ -205,6 +206,13 @@
                                     <th>PL</th>
                                     <th>M</th>
                                     <th>NC</th>
+                                    @if (_mhEntries.Any(x => x.Role != ""))
+                                    {
+                                        <th>@Loc.T("Alter", "Age")</th>
+                                        <th title="@Loc.T("Rolle: N=Node, R=Relay", "Role: N=node, R=relay")">@Loc.T("Rolle", "Role")</th>
+                                        <th title="@Loc.T("Bidirektionale Nachbarn", "Bidirectional neighbours")">NB</th>
+                                        <th title="Gateway">GW</th>
+                                    }
                                 </tr>
                             </thead>
                             <tbody>
@@ -223,6 +231,13 @@
                                         <td>@e.Pl</td>
                                         <td>@e.M</td>
                                         <td>@e.Nc</td>
+                                        @if (e.Role != "")
+                                        {
+                                            <td>@e.Age</td>
+                                            <td>@e.Role</td>
+                                            <td>@e.Nb</td>
+                                            <td>@e.Gw</td>
+                                        }
                                     </tr>
                                 }
                             </tbody>
@@ -631,12 +646,13 @@
             {
                 int mhFrom = _mhFromLine < snap.Count
                     ? _mhFromLine
-                    : FindLastTableStart(snap);
+                    : MhParser.FindLastStart(snap);
                 var entries = MhParser.Parse(snap, mhFrom);
                 if (entries.Count > 0)
                 {
                     _mhEntries = entries;
-                    _mhComplete = snap.Skip(mhFrom).Any(l => l.TrimStart().StartsWith("\\"));
+                    _mhComplete = MhParser.IsComplete(snap, mhFrom, entries.Count);
+                    if (_mhComplete) ChatSvc.ApplyMheardInfo(entries, _consoleNodeId == Guid.Empty ? null : _consoleNodeId);
                 }
             }
             if (_showHelp)
@@ -694,14 +710,6 @@
         _helpDisplayLines = [];
         _showHelp = true;
         await Console.SendLineAsync("--help");
-    }
-
-    private static int FindLastTableStart(List<string> snap)
-    {
-        for (int i = snap.Count - 1; i >= 0; i--)
-            if (snap[i].TrimStart().StartsWith("/---"))
-                return i;
-        return 0;
     }
 
     private static string RssiClass(string rssiStr) => MhParser.RssiClass(rssiStr);

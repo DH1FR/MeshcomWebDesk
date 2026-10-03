@@ -739,6 +739,49 @@ public class ChatService
         CheckWatchlist(message);
     }
 
+    /// <summary>
+    /// Processes a store-and-forward custody notice (":sto&lt;NNN&gt;"): the sending mailbox node holds our DM,
+    /// so the matching outgoing message is flagged <see cref="MeshcomMessage.HeldBy"/> (not acknowledged –
+    /// the real ACK follows once the target collects it) and the notice is appended to the monitor.
+    /// </summary>
+    public void AddHoldNotice(MeshcomMessage message) => AddHoldNotice(message, message.NodeId);
+
+    public void AddHoldNotice(MeshcomMessage message, Guid? nodeId)
+    {
+        var state = ResolveState(nodeId);
+        lock (_lock)
+        {
+            // Same newest-unacknowledged preference as for ACKs (sequence numbers wrap and get reused);
+            // the DM may live in another node's state than the one that heard the notice.
+            bool Held(MeshcomMessage m) => m.IsOutgoing && !m.IsAcknowledged && m.SequenceNumber == message.SequenceNumber;
+            var msg = state.Messages.LastOrDefault(Held)
+                   ?? _nodeState.Values.SelectMany(s => s.Messages).LastOrDefault(Held);
+            if (msg != null) msg.HeldBy = message.From;
+            AppendToMonitor(message, state);
+        }
+        NotifyChange();
+    }
+
+    /// <summary>
+    /// Copies role / bidirectional-neighbour / gateway data from a parsed <c>--mheard</c> answer
+    /// (firmware 4.40a, see <see cref="MhParser"/>) onto the matching MH-list stations of the node
+    /// whose console was queried. Stations not heard via ext-udp are skipped (nothing to attach to).
+    /// </summary>
+    public void ApplyMheardInfo(IEnumerable<MhEntry> entries, Guid? nodeId)
+    {
+        var state = ResolveState(nodeId);
+        bool changed = false;
+        foreach (var e in entries)
+        {
+            if (e.Role == "" || !state.MhList.TryGetValue(e.Call, out var s)) continue;
+            bool gw = e.Gw.Equals("Y", StringComparison.OrdinalIgnoreCase);
+            int? nb = int.TryParse(e.Nb, out var n) ? n : null;
+            if (s.NodeRole != e.Role || s.BidirNeighbours != nb || s.MhGateway != gw) changed = true;
+            s.NodeRole = e.Role; s.BidirNeighbours = nb; s.MhGateway = gw;
+        }
+        if (changed && IsPrimaryNode(nodeId)) OnMhChange?.Invoke();
+    }
+
     /// <summary>Remove all entries from the MH list (primary node only).</summary>
     public void ClearMhList()
     {
@@ -1009,12 +1052,23 @@ public class ChatService
     /// buckets – the caller uses it to fire global one-time side effects exactly once.
     /// </para>
     /// </summary>
+    /// <summary>
+    /// Firmware 4.35u+ re-sends an unacknowledged DM up to 3× and encodes the attempt in bits 10–11 of
+    /// the 32-bit msg_id (<c>00</c> first send … <c>11</c> third retry). Clearing those bits maps every
+    /// copy back to the original id so retries dedup like any other duplicate. Ids that are not
+    /// 8 hex digits are returned unchanged.
+    /// </summary>
+    internal static string RetryNormalisedMsgId(string msgId) =>
+        msgId.Length == 8 && uint.TryParse(msgId, System.Globalization.NumberStyles.HexNumber, null, out var id)
+            ? (id & 0xFFFFF3FF).ToString("X8")
+            : msgId;
+
     private bool IsDuplicate(MeshcomMessage message, Guid bucketId, out bool isFirstReceipt)
     {
         // msg_id, seq number, and text are sender-assigned and identify the message globally;
         // the bucket prefix scopes storage deduplication to one node's state.
         string key = !string.IsNullOrEmpty(message.MsgId)
-            ? $"mid:{message.MsgId}"
+            ? $"mid:{RetryNormalisedMsgId(message.MsgId)}"
             : !string.IsNullOrEmpty(message.SequenceNumber)
                 ? $"seq:{message.From}:{message.SequenceNumber}"
                 : $"txt:{message.From}:{message.To}:{message.Text}";
