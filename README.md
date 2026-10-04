@@ -29,7 +29,7 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
-## 🆕 What's New in v1.15.3 (dev, unreleased)
+## 🆕 What's New in v1.15.3
 
 ### ✨ Features
 - **Blacklist** – new **Settings → 🚫 Blacklist** (callsign list, one per line). Messages from these stations appear **only in the monitor** – no chat or group tab, no direct-message/watchlist/CQ/bot handling, no webhook/MQTT. `DH1FR` or `DH1FR-*` blocks every SSID of that callsign, `DH1FR-55` only exactly that one. The MH list and the map are still updated.
@@ -37,6 +37,10 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 - **Firmware 4.40a: `--mheard` window** – the node now answers `--mheard` with `[MH] key=value` lines instead of an ASCII table. The MHeard popup (Telnet console and Command Helper) understands the new format (the old table still works) and shows the new columns **Age**, **Role** (N = node, R = relay), **NB** (bidirectional neighbours) and **GW**.
 - **Mailbox custody notice (store-and-forward, firmware 4.40a)** – a `:stoNNN` text from a mailbox node is no longer shown as a chat message: it appears in the monitor as `STO` and the matching outgoing DM gets a **📬** tick ("held by mailbox node X – delivered once the station is reachable"). The real ACK still turns it into ✓✓.
 - **Map: role, neighbours, gateway (firmware 4.40a)** – after a `--mheard` answer (MHeard popup) the map popup of the listed stations shows **📡 Relay / Node**, the number of **bidirectional neighbours** and a **GW** badge for gateways. ext-udp does not carry this data, so it is refreshed whenever you open the MHeard popup.
+
+### 🔧 Improvements
+- **Translations completed** – Italian, Spanish and French now cover all texts (previously ~560 / ~220 missing); texts with values use placeholders.
+- **Monitor: long texts no longer cut off** – long messages wrap onto further lines instead of ending with an ellipsis.
 
 ### 🐛 Bug fixes
 - **Message retries (firmware 4.35u+)** – the node re-sends an unacknowledged DM up to 3×, encoding the attempt in bits 10–11 of the `msg_id`. These copies are now recognised as the same message (the dedup key ignores those bits) instead of relying on the text fallback alone.

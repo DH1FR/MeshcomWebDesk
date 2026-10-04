@@ -1,6 +1,6 @@
 ﻿# Changelog
 
-## [1.15.3] – unreleased
+## [1.15.3] – 2026-10-04
 
 ### Features
 - **Blacklist** – new **Settings → 🚫 Blacklist** (callsign list, one per line). Messages from these stations appear **only in the monitor** – no chat or group tab, no direct-message/watchlist/CQ/bot handling, no webhook/MQTT. `DH1FR` or `DH1FR-*` blocks every SSID of that callsign, `DH1FR-55` only exactly that one. The MH list and the map are still updated.
@@ -12,6 +12,7 @@
 ### Improvements
 - **Translations completed** – the Italian and Spanish dictionaries were missing about 560 texts and French about 220 (mostly newer features such as KISS, Weather API, Web view, watchlist groups, Settings hints); all are translated now. Texts with values ("3 min ago", "Close tab "X"?", …) were not translatable at all and now use placeholders (`TF`), several hard-coded German/English labels (MH list, Command Helper, Reload) are localised too.
 - **Doc links** – the node-connection guide link now points to an existing language (de/en/es/it, everything else → en) instead of a 404 for French.
+- **Monitor: long texts no longer cut off** – long messages in the monitor wrap onto further lines instead of ending with an ellipsis.
 
 ### Bugfixes
 - **Message retries (firmware 4.35u+)** – the node re-sends an unacknowledged DM up to 3×, encoding the attempt in bits 10–11 of the `msg_id`. These copies are now recognised as the same message (the dedup key ignores those bits) instead of relying on the text fallback alone.
