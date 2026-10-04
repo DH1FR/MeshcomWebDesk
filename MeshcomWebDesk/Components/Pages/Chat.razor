@@ -91,7 +91,7 @@
                         }
                         @if (tab.MessageCount > 0)
                         {
-                            <span class="tab-msg-count" title="@Loc.T($"{tab.MessageCount} Nachrichten", $"{tab.MessageCount} messages")">Msg.:&nbsp;@tab.MessageCount</span>
+                            <span class="tab-msg-count" title="@Loc.TF("{0} Nachrichten", "{0} messages", tab.MessageCount)">Msg.:&nbsp;@tab.MessageCount</span>
                         }
                     </span>
                     @if (tab.UnreadCount > 0)
@@ -566,7 +566,7 @@
                             </div>
                         }
                         <a class="udp-diag-link"
-                           href="@($"https://github.com/DH1FR/MeshcomWebDesk/blob/master/docs/node-connection-{Loc.Current}.md")"
+                           href="@($"https://github.com/DH1FR/MeshcomWebDesk/blob/master/docs/node-connection-{Loc.DocsLanguage}.md")"
                            target="_blank" rel="noopener">
                             @Loc.T("Ausführliche Anleitung öffnen", "Open detailed guide") →
                         </a>
@@ -600,14 +600,14 @@
         @if (!string.IsNullOrEmpty(MeshcomLookup.HwName(_status.NodeHwId)))
         {
             <span class="status-sep status-medium">|</span>
-            <span class="status-item status-medium" title="@Loc.T($"Node Hardware · Firmware: {_status.NodeFirmware}", $"Node hardware · Firmware: {_status.NodeFirmware}")">
+            <span class="status-item status-medium" title="@Loc.TF("Node Hardware · Firmware: {0}", "Node hardware · Firmware: {0}", _status.NodeFirmware)">
                 <span class="status-badge status-badge-info">⚙️ @MeshcomLookup.HwName(_status.NodeHwId)@if (!string.IsNullOrEmpty(_status.NodeFirmware)) {<text>&nbsp;·&nbsp;@_status.NodeFirmware</text>}</span>
             </span>
         }
         @if (_status.OwnBattery.HasValue)
         {
             <span class="status-sep status-medium">|</span>
-            <span class="status-item status-medium" title="@Loc.T($"Akkustand des Nodes: {_status.OwnBattery}%", $"Node battery level: {_status.OwnBattery}%")">
+            <span class="status-item status-medium" title="@Loc.TF("Akkustand des Nodes: {0}%", "Node battery level: {0}%", _status.OwnBattery)">
                 <span class="status-badge @BattStatusBadgeCss(_status.OwnBattery.Value)"><BatteryIcon Percent="_status.OwnBattery.Value" /> @_status.OwnBattery%</span>
             </span>
         }
@@ -625,7 +625,7 @@
         @if (_status.BeaconActive)
         {
             <span class="status-sep status-detail">|</span>
-            <span class="status-item status-detail" title="@Loc.T($"Bake aktiv · Gruppe {_settings.BeaconGroup} · alle {_settings.BeaconIntervalHours} h", $"Beacon active · Group {_settings.BeaconGroup} · every {_settings.BeaconIntervalHours} h")">
+            <span class="status-item status-detail" title="@Loc.TF("Bake aktiv · Gruppe {0} · alle {1} h", "Beacon active · Group {0} · every {1} h", _settings.BeaconGroup, _settings.BeaconIntervalHours)">
                 <span class="status-badge status-badge-warn">●&nbsp;@Loc.T("Bake", "Beacon")@if (_status.BeaconNextSend.HasValue) {<text>&nbsp;·&nbsp;@_status.BeaconNextSend.Value.ToString("HH:mm")</text>}</span>
             </span>
         }
@@ -942,9 +942,7 @@
                     {
                         <div class="qso-summary-hint" style="flex-direction:column;align-items:flex-start;gap:6px">
                             <span>
-                                ⚠️ @Loc.T(
-                                    $"Ältere Nachrichten (vor {_aiSearchTrimmedFrom.Value:dd.MM.yyyy}) wurden wegen des Token-Limits nicht durchsucht.",
-                                    $"Older messages (before {_aiSearchTrimmedFrom.Value:dd.MM.yyyy}) were excluded due to the token limit.")
+                                ⚠️ @Loc.TF("Ältere Nachrichten (vor {0:dd.MM.yyyy}) wurden wegen des Token-Limits nicht durchsucht.", "Older messages (before {0:dd.MM.yyyy}) were excluded due to the token limit.", _aiSearchTrimmedFrom.Value)
                             </span>
                             <button class="btn-action" style="font-size:11px;padding:3px 10px"
                                     @onclick="SearchPreviousPeriodAsync">
@@ -1556,9 +1554,7 @@
     {
         var tab = _tabs.FirstOrDefault(t => t.Key == key);
         var label = tab?.Title ?? key;
-        var msg = Loc.T(
-            $"Tab \"{label}\" wirklich schließen?",
-            $"Close tab \"{label}\"?");
+        var msg = Loc.TF("Tab \"{0}\" wirklich schließen?", "Close tab \"{0}\"?", label);
         var confirmed = await JS.InvokeAsync<bool>("confirm", msg);
         if (confirmed)
             CloseTab(key);
@@ -1665,9 +1661,7 @@
         if (isPing && (isBroadcast || isGroup))
         {
             var target   = isBroadcast ? "alle" : _activeTab.Key;
-            var prefix   = Loc.T(
-                $"Ping an \"{target}\" senden?",
-                $"Send ping to \"{target}\"?");
+            var prefix   = Loc.TF("Ping an \"{0}\" senden?", "Send ping to \"{0}\"?", target);
             var suffix   = Loc.T(
                 "Das gehört meistens in ein direktes Tab.",
                 "This usually belongs in a direct tab.");
@@ -1760,9 +1754,9 @@
     private string FormatLastSeen(DateTime utc)
     {
         var age = DateTime.UtcNow - utc;
-        if (age.TotalSeconds < 60)  return Loc.T($"vor {(int)age.TotalSeconds}s", $"{(int)age.TotalSeconds}s ago");
-        if (age.TotalMinutes < 60)  return Loc.T($"vor {(int)age.TotalMinutes}min", $"{(int)age.TotalMinutes}min ago");
-        return Loc.T($"vor {(int)age.TotalHours}h", $"{(int)age.TotalHours}h ago");
+        if (age.TotalSeconds < 60)  return Loc.TF("vor {0}s", "{0}s ago", (int)age.TotalSeconds);
+        if (age.TotalMinutes < 60)  return Loc.TF("vor {0}min", "{0}min ago", (int)age.TotalMinutes);
+        return Loc.TF("vor {0}h", "{0}h ago", (int)age.TotalHours);
     }
 
     private void OnNodeChanged()
@@ -2202,11 +2196,11 @@
         var local = LT(t);
         var diff  = DateTime.Now - local;
         if (diff.TotalMinutes < 60)
-            return Loc.T($"vor {(int)diff.TotalMinutes} min", $"{(int)diff.TotalMinutes} min ago");
+            return Loc.TF("vor {0} min", "{0} min ago", (int)diff.TotalMinutes);
         if (diff.TotalHours < 24)
-            return Loc.T($"vor {(int)diff.TotalHours} h", $"{(int)diff.TotalHours} h ago");
+            return Loc.TF("vor {0} h", "{0} h ago", (int)diff.TotalHours);
         if (diff.TotalDays < 7)
-            return Loc.T($"vor {(int)diff.TotalDays} d", $"{(int)diff.TotalDays} d ago");
+            return Loc.TF("vor {0} d", "{0} d ago", (int)diff.TotalDays);
         return local.ToString("dd.MM.yy");
     }
 
@@ -2214,8 +2208,8 @@
     {
         var s = (int)(DateTime.Now - t).TotalSeconds;
         return s < 60
-            ? Loc.T($"vor {s}\u00a0s", $"{s}\u00a0s ago")
-            : Loc.T($"vor {s / 60}\u00a0min", $"{s / 60}\u00a0min ago");
+            ? Loc.TF("vor {0}\u00a0s", "{0}\u00a0s ago", s)
+            : Loc.TF("vor {0}\u00a0min", "{0}\u00a0min ago", s / 60);
     }
 
     private static string SrcTypeCss(string src) => src.ToLowerInvariant() switch
@@ -2252,6 +2246,7 @@
         if (m.IsTelemetry)                 return "TEL";
         if (m.IsPositionBeacon)            return "POS";
         if (m.IsAck)                       return "ACK";
+        if (m.IsHoldNotice)                return "STO";
         if (m.IsOutgoing)                  return "MSG";
         if (!string.IsNullOrEmpty(m.From)) return "MSG";
         return "SYS";
@@ -2262,6 +2257,7 @@
         "TEL" => "badge-tel",
         "POS" => "badge-pos",
         "ACK" => "badge-ack",
+        "STO" => "badge-ack",
         "MSG" when m.IsOutgoing => "badge-tx",
         "MSG" => "badge-msg",
         _ => "badge-sys"
@@ -2293,6 +2289,7 @@
         m.IsTelemetry ? "mon-row-tele" :
         m.IsPositionBeacon ? "mon-row-pos" :
         m.IsAck ? "mon-row-ack" :
+        m.IsHoldNotice ? "mon-row-ack" :
         !string.IsNullOrEmpty(m.From) ? "mon-row-msg" :
         "mon-row-sys";
 
@@ -2364,6 +2361,7 @@
         if (m.IsAcknowledged && m.IsGatewayDelivered) return "☁️✓";
         if (m.IsAcknowledged)                         return "✓✓";
         if (m.NodeEchoReceived == false)              return "⚠️";
+        if (m.HeldBy != null)                         return "📬";
         if (isGroupOrBcast && m.SequenceNumber != null) return "☁️";
         if (m.SequenceNumber != null)                 return "✓";
         return "⏳";
@@ -2373,7 +2371,7 @@
     {
         var isGroupOrBcast = m.To == "*" || m.To.StartsWith('#');
         var ackRtt = m.AckRoundTrip.HasValue
-            ? $" · {Loc.T($"ACK nach {FormatPingRtt(m.AckRoundTrip.Value)}", $"ACK after {FormatPingRtt(m.AckRoundTrip.Value)}")}"
+            ? $" · {Loc.TF("ACK nach {0}", "ACK after {0}", FormatPingRtt(m.AckRoundTrip.Value))}"
             : "";
 
         if (m.IsAcknowledged && m.IsLoraDelivered && m.IsGatewayDelivered)
@@ -2384,12 +2382,14 @@
             return $"✓✓ {Loc.T("Zugestellt (LoRa ACK)", "Delivered (LoRa ACK)")}{ackRtt}";
         if (m.NodeEchoReceived == false)
             return "⚠️ " + Loc.T("Node-Echo ausgeblieben – UDP-Paket wurde möglicherweise nicht vom Node empfangen!", "No node echo – the UDP packet may not have reached the node!");
+        if (m.HeldBy != null)
+            return "📬 " + Loc.TF("Beim Mailbox-Knoten {0} abgelegt – wird zugestellt, sobald die Station erreichbar ist", "Held by mailbox node {0} – delivered once the station is reachable", m.HeldBy);
         if (isGroupOrBcast && m.SequenceNumber != null)
             return "☁️ " + Loc.T("Gesendet – kein ACK für Gruppe/Broadcast erwartet", "Sent – no ACK expected for group/broadcast");
         if (m.SequenceNumber != null)
         {
             if (m.SequenceNumber != "TX")
-                return $"✓ {Loc.T($"Gesendet (Seq #{m.SequenceNumber}) · warte auf ACK…", $"Sent (seq #{m.SequenceNumber}) · waiting for ACK…")}";
+                return $"✓ {Loc.TF("Gesendet (Seq #{0}) · warte auf ACK…", "Sent (seq #{0}) · waiting for ACK…", m.SequenceNumber)}";
             return "✓ " + Loc.T("Gesendet · warte auf Bestätigung (ACK)…", "Sent · waiting for confirmation (ACK)…");
         }
         return "⏳ " + Loc.T("Warte auf Node-Echo…", "Waiting for node echo…");

@@ -58,6 +58,16 @@ public class MeshcomMessage
     /// </summary>
     public bool IsAck { get; set; }
 
+    /// <summary>
+    /// True when this is a store-and-forward custody notice (text "&lt;call&gt; :sto&lt;id&gt; &lt;target&gt;", firmware 4.40a):
+    /// a mailbox node holds the DM for an unreachable station. Shown in the monitor only; marks the
+    /// outgoing message as <see cref="HeldBy"/> that mailbox instead of delivered.
+    /// </summary>
+    public bool IsHoldNotice { get; set; }
+
+    /// <summary>Callsign of the mailbox node that took custody of this outgoing DM (null = none reported).</summary>
+    public string? HeldBy { get; set; }
+
     /// <summary>True if the message is a broadcast (destination "*" or "CQCQCQ").</summary>
     public bool IsBroadcast =>
         string.Equals(To, "*", StringComparison.OrdinalIgnoreCase) ||

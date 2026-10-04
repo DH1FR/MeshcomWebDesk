@@ -80,6 +80,13 @@ public class MeshcomSettings
     /// </summary>
     public List<string> WatchGroups { get; set; } = [];
 
+    /// <summary>
+    /// Blacklisted callsigns. Messages from these stations appear only in the monitor – no chat tab,
+    /// no direct-message/watchlist/CQ/bot handling. "DH1FR" or "DH1FR-*" matches every SSID of that base callsign,
+    /// an entry with SSID (e.g. "DH1FR-55") matches exactly that callsign.
+    /// </summary>
+    public List<string> BlacklistCallsigns { get; set; } = [];
+
     /// <summary>React to incoming chat messages from watchlist callsigns (default: true).</summary>
     public bool WatchOnMessage { get; set; } = true;
 

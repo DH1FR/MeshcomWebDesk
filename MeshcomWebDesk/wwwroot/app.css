@@ -1007,7 +1007,9 @@ h1:focus {
 .mon-bcast { color: #f0883e; }
 
 /* Content */
-.mon-content { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Long texts wrap onto further lines instead of being cut off with an ellipsis; flex-basis lets
+   the text drop below the header parts (call, path, …) when the row is too narrow for it. */
+.mon-content { flex: 1 1 240px; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
 .mon-text    { color: var(--mon-text); }
 .mon-text::before { content: ''; }
 .mon-pos     { color: #56d4db; }

@@ -19,8 +19,7 @@ public class PingCommand(LanguageService lang) : IBotCommand
     public Task<string> ExecuteAsync(string[] args, string senderCallsign, MeshcomMessage? context)
     {
         var sb = new StringBuilder();
-        sb.Append(lang.T($"Pong! 👋 {senderCallsign}",
-                         $"Pong! 👋 {senderCallsign}"));
+        sb.Append(lang.TF("Pong! 👋 {0}", "Pong! 👋 {0}", senderCallsign));
 
         if (context != null)
         {

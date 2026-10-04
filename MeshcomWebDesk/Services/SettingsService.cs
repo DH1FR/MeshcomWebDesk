@@ -190,6 +190,7 @@ public class SettingsService
                 ["GroupFilterEnabled"]  = s.GroupFilterEnabled,
                 ["Groups"]              = new JsonArray(s.Groups.Select(g => (JsonNode?)JsonValue.Create(g)).ToArray()),
                 ["WatchCallsigns"]      = new JsonArray(s.WatchCallsigns.Select(c => (JsonNode?)JsonValue.Create(c)).ToArray()),
+                ["BlacklistCallsigns"]  = new JsonArray(s.BlacklistCallsigns.Select(c => (JsonNode?)JsonValue.Create(c)).ToArray()),
                 ["WatchGroups"]         = new JsonArray(s.WatchGroups.Select(g => (JsonNode?)JsonValue.Create(g)).ToArray()),
                 ["WatchOnMessage"]      = s.WatchOnMessage,
                 ["WatchOnPosition"]     = s.WatchOnPosition,

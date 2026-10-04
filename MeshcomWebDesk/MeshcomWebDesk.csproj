@@ -7,9 +7,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
-    <AssemblyVersion>1.15.2.0</AssemblyVersion>
-    <FileVersion>1.15.2.0</FileVersion>
-    <InformationalVersion>1.15.2</InformationalVersion>
+    <AssemblyVersion>1.15.3.0</AssemblyVersion>
+    <FileVersion>1.15.3.0</FileVersion>
+    <InformationalVersion>1.15.3</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -42,6 +42,12 @@
     <None Update="bot-scripts\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Built-in UI languages (EN text → translation). Additional/overriding files are read from
+         <DataPath>/languages/*.json at runtime, see LanguageService. -->
+    <EmbeddedResource Include="Languages\*.json" />
   </ItemGroup>
 
   <ItemGroup>

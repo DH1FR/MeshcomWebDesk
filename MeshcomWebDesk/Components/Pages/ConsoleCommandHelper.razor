@@ -5,6 +5,7 @@
 @using Microsoft.Extensions.Options
 @rendermode InteractiveServer
 @inject ConsoleCommandHelperService CmdHelper
+@inject ChatService ChatSvc
 @inject IOptionsMonitor<MeshcomSettings> SettingsMon
 @inject LanguageService Loc
 @implements IDisposable
@@ -33,7 +34,7 @@
                 📋 <span class="cch-btn-label">MH</span>
             </button>
             <button class="cch-btn" @onclick="ShowHelpAsync" disabled="@(!CmdHelper.IsConnected)">
-                ❓ <span class="cch-btn-label">Help</span>
+                ❓ <span class="cch-btn-label">@Loc.T("Hilfe", "Help")</span>
             </button>
             <a class="cch-btn" href="/telnet">
                 🖥️ <span class="cch-btn-label">Console</span>
@@ -67,7 +68,7 @@
                                 <code class="cch-cmd-name">--@cmd.Name</code>
                                 @if (curVal == "?")
                                 {
-                                    <span class="cch-value-badge cch-value-error" title="Befehl fehlgeschlagen">⚠</span>
+                                    <span class="cch-value-badge cch-value-error" title="@Loc.T("Befehl fehlgeschlagen", "Command failed")">⚠</span>
                                 }
                                 else if (curVal != null)
                                 {
@@ -123,7 +124,7 @@
                                             @if (extraKnown != null)
                                             {
                                                 <div class="cch-extra-current">
-                                                    <span class="cch-extra-current-label">Aktuell:</span>
+                                                    <span class="cch-extra-current-label">@Loc.T("Aktuell:", "Current:")</span>
                                                     <span class="cch-value-badge cch-value-known">@extraKnown</span>
                                                 </div>
                                             }
@@ -260,15 +261,22 @@
                                     <th>Call</th>
                                     <th>@Loc.T("Datum", "Date")</th>
                                     <th>@Loc.T("Zeit", "Time")</th>
-                                    <th>Typ</th>
+                                    <th>@Loc.T("Typ", "Type")</th>
                                     <th>Hardware</th>
                                     <th>Mod</th>
                                     <th>RSSI</th>
                                     <th>SNR</th>
-                                    <th>Dist</th>
+                                    <th>@Loc.T("Entf.", "Dist")</th>
                                     <th>PL</th>
                                     <th>M</th>
                                     <th>NC</th>
+                                    @if (_mhEntries.Any(x => x.Role != ""))
+                                    {
+                                        <th>@Loc.T("Alter", "Age")</th>
+                                        <th title="@Loc.T("Rolle: N=Node, R=Relay", "Role: N=node, R=relay")">@Loc.T("Rolle", "Role")</th>
+                                        <th title="@Loc.T("Bidirektionale Nachbarn", "Bidirectional neighbours")">NB</th>
+                                        <th title="Gateway">GW</th>
+                                    }
                                 </tr>
                             </thead>
                             <tbody>
@@ -287,6 +295,13 @@
                                         <td>@e.Pl</td>
                                         <td>@e.M</td>
                                         <td>@e.Nc</td>
+                                        @if (e.Role != "")
+                                        {
+                                            <td>@e.Age</td>
+                                            <td>@e.Role</td>
+                                            <td>@e.Nb</td>
+                                            <td>@e.Gw</td>
+                                        }
                                     </tr>
                                 }
                             </tbody>
@@ -448,12 +463,13 @@
                 // table start so the response is still found.
                 int mhFrom = _mhFromLine < snap.Count
                     ? _mhFromLine
-                    : FindLastTableStart(snap);
+                    : MhParser.FindLastStart(snap);
                 var entries = MhParser.Parse(snap, mhFrom);
                 if (entries.Count > 0)
                 {
                     _mhEntries = entries;
-                    _mhComplete = snap.Skip(mhFrom).Any(l => l.TrimStart().StartsWith("\\"));
+                    _mhComplete = MhParser.IsComplete(snap, mhFrom, entries.Count);
+                    if (_mhComplete) ChatSvc.ApplyMheardInfo(entries, null);
                 }
             }
             if (_showHelp)
@@ -494,14 +510,6 @@
     // Searches backwards for the last MH table opening line (/---).
     // Used when the Lines ring-buffer is cycling at its cap so the stored
     // absolute index (_mhFromLine) equals snap.Count and Skip returns nothing.
-    private static int FindLastTableStart(List<string> snap)
-    {
-        for (int i = snap.Count - 1; i >= 0; i--)
-            if (snap[i].TrimStart().StartsWith("/---"))
-                return i;
-        return 0;
-    }
-
     private static string GroupIcon(ConsoleCommandGroup g) => g switch
     {
         ConsoleCommandGroup.LoRa       => "📡",

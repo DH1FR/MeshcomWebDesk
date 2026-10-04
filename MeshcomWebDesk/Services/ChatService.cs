@@ -351,6 +351,16 @@ public class ChatService
             return;
         }
 
+        // Blacklisted sender: monitor only – no tab, notifications, bot, webhook or watchlist.
+        if (IsBlacklisted(message.From))
+        {
+            bool bhChanged = IsPrimaryNode(nodeId) && UpdateMhList(message, GetPrimaryState());
+            lock (_lock) { AppendToMonitor(message, state); }
+            if (bhChanged) OnMhChange?.Invoke();
+            NotifyChange();
+            return;
+        }
+
         // Resolve the own callsign for this node
         var myCallsign = _nodeManager?.GetCallsignForNode(nodeId) ?? _settings.MyCallsign;
 
@@ -646,8 +656,17 @@ public class ChatService
         {
             lock (_lock)
             {
-                var msg = messages.FirstOrDefault(m =>
-                    m.IsOutgoing && m.SequenceNumber == sequenceNumber);
+                // Sequence numbers wrap at 999 and are reused (also across restarts), so several
+                // outgoing messages can carry the same number. Prefer the newest still-unacknowledged
+                // one addressed to the ACK sender, then the newest unacknowledged one, and only then
+                // the newest already-acknowledged one (repeat ACK, e.g. gateway after LoRa).
+                bool SeqMatch(MeshcomMessage m) => m.IsOutgoing && m.SequenceNumber == sequenceNumber;
+                bool ToSender(MeshcomMessage m) => ackSender != null &&
+                    string.Equals(m.To, ackSender, StringComparison.OrdinalIgnoreCase);
+                var msg = messages.LastOrDefault(m => SeqMatch(m) && ToSender(m) && !m.IsAcknowledged)
+                       ?? messages.LastOrDefault(m => SeqMatch(m) && !m.IsAcknowledged)
+                       ?? messages.LastOrDefault(m => SeqMatch(m) && ToSender(m))
+                       ?? messages.LastOrDefault(SeqMatch);
 
                 if (msg == null && ackSender != null)
                 {
@@ -718,6 +737,49 @@ public class ChatService
         if (ackMhChanged) OnMhChange?.Invoke();
         NotifyChange();
         CheckWatchlist(message);
+    }
+
+    /// <summary>
+    /// Processes a store-and-forward custody notice (":sto&lt;NNN&gt;"): the sending mailbox node holds our DM,
+    /// so the matching outgoing message is flagged <see cref="MeshcomMessage.HeldBy"/> (not acknowledged –
+    /// the real ACK follows once the target collects it) and the notice is appended to the monitor.
+    /// </summary>
+    public void AddHoldNotice(MeshcomMessage message) => AddHoldNotice(message, message.NodeId);
+
+    public void AddHoldNotice(MeshcomMessage message, Guid? nodeId)
+    {
+        var state = ResolveState(nodeId);
+        lock (_lock)
+        {
+            // Same newest-unacknowledged preference as for ACKs (sequence numbers wrap and get reused);
+            // the DM may live in another node's state than the one that heard the notice.
+            bool Held(MeshcomMessage m) => m.IsOutgoing && !m.IsAcknowledged && m.SequenceNumber == message.SequenceNumber;
+            var msg = state.Messages.LastOrDefault(Held)
+                   ?? _nodeState.Values.SelectMany(s => s.Messages).LastOrDefault(Held);
+            if (msg != null) msg.HeldBy = message.From;
+            AppendToMonitor(message, state);
+        }
+        NotifyChange();
+    }
+
+    /// <summary>
+    /// Copies role / bidirectional-neighbour / gateway data from a parsed <c>--mheard</c> answer
+    /// (firmware 4.40a, see <see cref="MhParser"/>) onto the matching MH-list stations of the node
+    /// whose console was queried. Stations not heard via ext-udp are skipped (nothing to attach to).
+    /// </summary>
+    public void ApplyMheardInfo(IEnumerable<MhEntry> entries, Guid? nodeId)
+    {
+        var state = ResolveState(nodeId);
+        bool changed = false;
+        foreach (var e in entries)
+        {
+            if (e.Role == "" || !state.MhList.TryGetValue(e.Call, out var s)) continue;
+            bool gw = e.Gw.Equals("Y", StringComparison.OrdinalIgnoreCase);
+            int? nb = int.TryParse(e.Nb, out var n) ? n : null;
+            if (s.NodeRole != e.Role || s.BidirNeighbours != nb || s.MhGateway != gw) changed = true;
+            s.NodeRole = e.Role; s.BidirNeighbours = nb; s.MhGateway = gw;
+        }
+        if (changed && IsPrimaryNode(nodeId)) OnMhChange?.Invoke();
     }
 
     /// <summary>Remove all entries from the MH list (primary node only).</summary>
@@ -990,12 +1052,23 @@ public class ChatService
     /// buckets – the caller uses it to fire global one-time side effects exactly once.
     /// </para>
     /// </summary>
+    /// <summary>
+    /// Firmware 4.35u+ re-sends an unacknowledged DM up to 3× and encodes the attempt in bits 10–11 of
+    /// the 32-bit msg_id (<c>00</c> first send … <c>11</c> third retry). Clearing those bits maps every
+    /// copy back to the original id so retries dedup like any other duplicate. Ids that are not
+    /// 8 hex digits are returned unchanged.
+    /// </summary>
+    internal static string RetryNormalisedMsgId(string msgId) =>
+        msgId.Length == 8 && uint.TryParse(msgId, System.Globalization.NumberStyles.HexNumber, null, out var id)
+            ? (id & 0xFFFFF3FF).ToString("X8")
+            : msgId;
+
     private bool IsDuplicate(MeshcomMessage message, Guid bucketId, out bool isFirstReceipt)
     {
         // msg_id, seq number, and text are sender-assigned and identify the message globally;
         // the bucket prefix scopes storage deduplication to one node's state.
         string key = !string.IsNullOrEmpty(message.MsgId)
-            ? $"mid:{message.MsgId}"
+            ? $"mid:{RetryNormalisedMsgId(message.MsgId)}"
             : !string.IsNullOrEmpty(message.SequenceNumber)
                 ? $"seq:{message.From}:{message.SequenceNumber}"
                 : $"txt:{message.From}:{message.To}:{message.Text}";
@@ -1235,7 +1308,7 @@ public class ChatService
     {
         if (string.IsNullOrEmpty(message.From)) return;
         var list = _settings.WatchCallsigns;
-        if (list.Count == 0) return;
+        if (list.Count == 0 || IsBlacklisted(message.From)) return;
 
         var typeLabel = message.IsAck ? "ACK" : message.IsPositionBeacon ? "POS" : message.IsTelemetry ? "TEL" : "MSG";
         _logger.LogDebug("Watchlist check: From={From} Type={Type} List=[{List}]",
@@ -1310,6 +1383,23 @@ public class ChatService
             return string.Equals(callsign, entry, StringComparison.OrdinalIgnoreCase);
         var baseCs = callsign.Contains('-') ? callsign[..callsign.IndexOf('-')] : callsign;
         return string.Equals(baseCs, entry, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// True when <paramref name="callsign"/> matches a blacklist entry. "DH1FR" and "DH1FR-*" match
+    /// every SSID of that callsign; "DH1FR-55" matches only that exact callsign.
+    /// </summary>
+    private bool IsBlacklisted(string? callsign)
+    {
+        if (string.IsNullOrEmpty(callsign)) return false;
+        foreach (var entry in _settings.BlacklistCallsigns)
+        {
+            if (string.IsNullOrWhiteSpace(entry)) continue;
+            var e = entry.Trim();
+            if (e.EndsWith("-*", StringComparison.Ordinal)) e = e[..^2];
+            if (MatchesWatchEntry(callsign, e)) return true;
+        }
+        return false;
     }
 
     /// <summary>

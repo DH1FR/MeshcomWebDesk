@@ -139,6 +139,10 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     [GeneratedRegex(@"^(\S+?)\s*:(?:ack|rej)\d+$", RegexOptions.IgnoreCase)]
     private static partial Regex AckTargetPattern();
 
+    /// <summary>Store-and-forward custody notice (firmware 4.40a): "DL1ABC-1 :sto123 DB0XYZ" → seq "123", target "DB0XYZ".</summary>
+    [GeneratedRegex(@"^(\S+)\s*:sto(\d{1,3})(?:\s+(\S+))?$", RegexOptions.IgnoreCase)]
+    private static partial Regex StoPattern();
+
     /// <summary>Detects MeshCom network time-sync broadcasts, e.g. "{CET}2026-04-07 18:11:58".</summary>
     [GeneratedRegex(@"^\{[A-Z]{2,5}\}\d{4}-\d{2}-\d{2}")]
     private static partial Regex TimeSyncPattern();
@@ -298,7 +302,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                         // EXCEPTION: ACKs must never be skipped – the firmware may deliver an ACK only
                         // as src_type:"node" (no second lora copy), so skipping it loses the delivery tick.
                         if (message.IsNodePacket &&
-                            !message.IsAck &&
+                            !message.IsAck && !message.IsHoldNotice &&
                             !string.Equals(message.From, myCallsign, StringComparison.OrdinalIgnoreCase))
                         {
                             _logger.LogDebug("Skipping node relay echo from foreign station {From} (src_type=node)", message.From);
@@ -379,6 +383,15 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                             Status.LastRxFrom = message.From;
                             NotifyStatusChange();
                             _chatService.AddRawMessage(message);
+                        }
+                        else if (message.IsHoldNotice)
+                        {
+                            // Mailbox custody notice – mark the outgoing DM as held, monitor only
+                            Status.RxCount++;
+                            Status.LastRxTime = message.Timestamp;
+                            Status.LastRxFrom = message.From;
+                            NotifyStatusChange();
+                            _chatService.AddHoldNotice(message);
                         }
                         else if (message.IsAck)
                         {
@@ -1458,7 +1471,10 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             var devicePort     = sendingNode?.DevicePort ?? _settings.DevicePort;
 
             // Transport weiche: a KISS/TCP node is served by KissClientService, not the UDP socket.
-            if (sendingNode?.Transport == NodeTransport.Kiss && _kiss is not null)
+            // A callsign AX.25 cannot carry (SSID > 15) cannot be sent over KISS – fall back to
+            // ext-udp, which stays active alongside KISS.
+            if (sendingNode?.Transport == NodeTransport.Kiss && _kiss is not null &&
+                Services.Kiss.Ax25Ui.CanEncodeAddress(fromCallsign))
             {
                 var resolvedKissTabKey = tabKey ?? destination;
                 var kissOutgoing = new MeshcomMessage
@@ -1675,6 +1691,15 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                     dst = ackTargetMatch.Groups[1].Value;
             }
 
+            // Detect mailbox custody notices ("DL1ABC :sto123 DB0XYZ"). From = the holding mailbox node.
+            var isHold = !isAck && !isPositionBeacon && StoPattern().IsMatch(msg.Trim());
+            if (isHold)
+            {
+                var stoMatch = StoPattern().Match(msg.Trim());
+                seqNum = stoMatch.Groups[2].Value;
+                dst    = stoMatch.Groups[1].Value;
+            }
+
             // Detect MeshCom time-sync broadcasts: "{CET}2026-04-07 18:11:58"
             var isTimeSync = !isAck && !isPositionBeacon && !isTelemetry && TimeSyncPattern().IsMatch(msg);
 
@@ -1789,6 +1814,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                 IsPositionBeacon = isPositionBeacon,
                 IsTelemetry      = isTelemetry,
                 IsAck            = isAck,
+                IsHoldNotice     = isHold,
                 IsTimeSync       = isTimeSync,
                 MsgId            = msgId,
                 SequenceNumber   = seqNum,

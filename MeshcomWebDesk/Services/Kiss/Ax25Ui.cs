@@ -111,6 +111,9 @@ public static class Ax25Ui
         return frame;
     }
 
+    /// <summary>True when <paramref name="callWithSsid"/> fits an AX.25 address (base ≤ 6 chars, SSID 0–15).</summary>
+    public static bool CanEncodeAddress(string callWithSsid) => EncodeAddress(callWithSsid, cBit: false, last: false) is not null;
+
     private static byte[]? EncodeAddress(string callWithSsid, bool cBit, bool last)
     {
         var dash = callWithSsid.IndexOf('-');

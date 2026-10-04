@@ -151,6 +151,13 @@ window.meshcomMap = (function () {
         if (s.neighbourCount != null) {
             nbLine = '<br><span style="font-size:11px;color:#8b949e">👥 ' + s.neighbourCount + ' ' + _i18n.neighbours + '</span>';
         }
+        var roleLine = '';
+        if (s.nodeRole || s.bidirNb != null) {
+            roleLine = '<br><span style="font-size:11px;color:#8b949e">'
+                + (s.nodeRole === 'R' ? '📡 Relay' : s.nodeRole ? 'Node' : '')
+                + (s.bidirNb != null ? (s.nodeRole ? ' · ' : '') + '↔ ' + s.bidirNb + ' ' + _i18n.bidirNeighbours : '')
+                + '</span>';
+        }
         var commentLine = '';
         var cc = cleanComment(s.aprsComment);
         if (cc) {
@@ -179,7 +186,7 @@ window.meshcomMap = (function () {
             + 'id="ai-btn-' + esc(s.callsign.replace(/[^a-zA-Z0-9]/g,'-')) + '" '
             + 'style="margin-top:5px;font-size:11px;background:#1a3a5c;color:#79c0ff;border:1px solid #3a6a8a;border-radius:4px;padding:2px 8px;cursor:pointer">' + _i18n.aiInfo + '</button>'
             + '<div id="ai-result-' + esc(s.callsign.replace(/[^a-zA-Z0-9]/g,'-')) + '" style="font-size:11px;margin-top:4px;color:#c9d1d9;max-width:260px;white-space:pre-wrap"></div>';
-        return '<b>' + esc(s.callsign) + '</b>' + (s.isGateway ? ' <span style="font-size:10px;font-weight:700;background:#0d2b1a;color:#3fb950;border-radius:3px;padding:1px 5px;margin-left:4px">GW</span>' : '') + qrzLine + badgeLine + relayLine + nbLine + commentLine + telemLine
+        return '<b>' + esc(s.callsign) + '</b>' + ((s.isGateway || s.mhGateway) ? ' <span style="font-size:10px;font-weight:700;background:#0d2b1a;color:#3fb950;border-radius:3px;padding:1px 5px;margin-left:4px">GW</span>' : '') + qrzLine + badgeLine + relayLine + nbLine + roleLine + commentLine + telemLine
             + (s.text     ? '<br><span style="font-size:12px">' + esc(s.text) + '</span>' : '')
             + signalLine
             + (s.battery  != null ? '&nbsp;🔋 ' + s.battery + '%' : '')
