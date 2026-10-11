@@ -436,11 +436,12 @@ public class ChatService
             || !_settings.GroupFilterEnabled
             || _settings.Groups.Contains(tabKey, StringComparer.OrdinalIgnoreCase);
 
-        // A direct message addressed to a sibling node's callsign (e.g. To=DH1FR-2 heard on RF
-        // by DH1FR-99) falls into the group branch above and would open a pseudo-group tab
-        // "#DH1FR-2" here. Suppress the tab – the message still appears in this node's monitor.
-        if (isGroup && looksLikeCallsign && _nodeManager is not null &&
-            _nodeManager.Nodes.Any(n => string.Equals(n.Callsign, message.To, StringComparison.OrdinalIgnoreCase)))
+        // A direct message addressed to someone else (a sibling node's callsign or any third
+        // station heard on the mesh/RF, e.g. To=DL6WAB) falls into the group branch above and
+        // would open a pseudo-group tab "#DL6WAB" here. Group numbers are purely numeric, so a
+        // callsign-like destination is never a group. Suppress the tab – the message still
+        // appears in this node's monitor.
+        if (isGroup && looksLikeCallsign)
             tabAllowed = false;
 
         // MH-Liste und Karte werden ausschließlich vom Primary-Node befüllt.
@@ -1412,6 +1413,7 @@ public class ChatService
     private void CheckCq(MeshcomMessage message, string tabKey, string myCallsign)
     {
         if (!tabKey.StartsWith('#')) return;
+        if (tabKey.Any(char.IsLetter)) return;   // "#DL6WAB" = direct message to a third station, not a group
         if (string.IsNullOrWhiteSpace(message.Text)) return;
         if (string.IsNullOrWhiteSpace(message.From)) return;
         if (string.Equals(message.From, myCallsign, StringComparison.OrdinalIgnoreCase))

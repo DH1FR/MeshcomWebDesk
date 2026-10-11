@@ -160,6 +160,15 @@ builder.Host.UseSerilog((context, config) => config
 
 // Bind MeshCom settings from configuration
 builder.Services.Configure<MeshcomSettings>(meshcomSection);
+// Fresh install (no override file written yet): pre-fill the official MeshCom group labels.
+// Done here instead of in the property initializer – the configuration binder appends to
+// list defaults, which duplicated the entries on every start. Once the user has saved
+// settings the override file exists and an intentionally emptied list stays empty.
+builder.Services.PostConfigure<MeshcomSettings>(o =>
+{
+    if (o.GroupLabels.Count == 0 && !File.Exists(overrideFile))
+        o.GroupLabels = GroupLabelEntry.Defaults;
+});
 // Register the resolved log path so services (e.g. ConsoleLogService) can use it
 // independent of whether appsettings.override.json has overwritten LogPath with "".
 builder.Services.AddSingleton(new ResolvedLogPath(logPath));
