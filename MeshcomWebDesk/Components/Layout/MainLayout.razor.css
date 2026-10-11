@@ -57,6 +57,13 @@
 .app-license-badge--licensed {
     color: var(--ok);
     opacity: 0.85;
+    /* Own box: when the line is full, the callsign wraps below "Lizenziert für"
+       inside the badge instead of falling back to the start of the title line. */
+    display: inline-block;
+}
+
+.app-license-call {
+    white-space: nowrap;
 }
 
 .app-license-badge--unlicensed {
