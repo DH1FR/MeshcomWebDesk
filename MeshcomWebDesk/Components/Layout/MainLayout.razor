@@ -11,7 +11,7 @@
             <span class="app-title @(LicenseService.IsLicensed ? "app-title--licensed" : "")">MeshCom WebDesk <span class="app-version">v@_version</span>
                 @if (LicenseService.IsLicensed)
                 {
-                    <span class="app-license-badge app-license-badge--licensed"><span class="app-license-text">✅ @Loc.T("Lizenziert für", "Licensed for") @LicenseService.LicensedCallsign</span></span>
+                    <span class="app-license-badge app-license-badge--licensed"><span class="app-license-text">✅ @Loc.T("Lizenziert für", "Licensed for") <span class="app-license-call">@LicenseService.LicensedCallsign</span></span></span>
                 }
                 else
                 {

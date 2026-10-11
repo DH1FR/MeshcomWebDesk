@@ -33,7 +33,7 @@ Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=admin
-UninstallDisplayIcon={app}\{#AppExeName}
+UninstallDisplayIcon={app}\app.ico
 UninstallDisplayName={#AppName}
 ArchitecturesInstallIn64BitMode=x64compatible
 VersionInfoVersion={#AppVersion}
@@ -58,6 +58,8 @@ Source: "publish\win-x64\*"; \
 ; Static web assets – Bootstrap, Leaflet, Blazor framework JS, icons, CSS, …
 Source: "publish\win-x64\wwwroot\*"; \
   DestDir: "{app}\wwwroot"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Application icon for shortcuts (also embedded in the exe via ApplicationIcon)
+Source: "..\MeshcomWebDesk\app.ico"; DestDir: "{app}"; Flags: ignoreversion
 ; appsettings.json: only install if not already present (preserve user config on upgrade)
 Source: "publish\win-x64\appsettings.json"; \
   DestDir: "{app}"; Flags: ignoreversion onlyifdoesntexist
@@ -69,12 +71,12 @@ Name: "{app}\data"; Permissions: everyone-modify
 Name: "{app}\keys"; Permissions: everyone-modify
 
 [Icons]
-Name: "{group}\{#AppName} im Browser öffnen";  Filename: "{win}\explorer.exe"; Parameters: "http://localhost:5162"; IconFilename: "{app}\{#AppExeName}"
+Name: "{group}\{#AppName} im Browser öffnen";  Filename: "{win}\explorer.exe"; Parameters: "http://localhost:5162"; IconFilename: "{app}\app.ico"
 Name: "{group}\{#AppName} deinstallieren";        Filename: "{uninstallexe}"
 ; Desktop shortcut (only when task is selected)
-Name: "{commondesktop}\{#AppName}";             Filename: "{win}\explorer.exe"; Parameters: "http://localhost:5162"; IconFilename: "{app}\{#AppExeName}"; Tasks: desktopicon
+Name: "{commondesktop}\{#AppName}";             Filename: "{win}\explorer.exe"; Parameters: "http://localhost:5162"; IconFilename: "{app}\app.ico"; Tasks: desktopicon
 ; Autostart shortcut: opens browser at login (only when task is selected)
-Name: "{userstartup}\{#AppName}";               Filename: "{win}\explorer.exe"; Parameters: "http://localhost:5162"; IconFilename: "{app}\{#AppExeName}"; Tasks: autostart
+Name: "{userstartup}\{#AppName}";               Filename: "{win}\explorer.exe"; Parameters: "http://localhost:5162"; IconFilename: "{app}\app.ico"; Tasks: autostart
 
 [Run]
 ; Install Windows Service
