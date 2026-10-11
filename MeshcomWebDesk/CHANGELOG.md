@@ -1,5 +1,15 @@
 ﻿# Changelog
 
+## [1.15.4] – 2026-10-11
+
+### Bugfixes
+- **Direct messages to other stations opened a fake group tab** – a message addressed to a callsign that is not yours (e.g. a station heard on the mesh/RF, `To=DL6WAB`) was taken for a group and opened a tab `#DL6WAB` whenever the group filter was off (the default). Group numbers are purely numeric, so a callsign-like destination is never a group any more: such messages appear **only in the monitor** (no tab, no CQ alert). Before, this only worked for the callsigns of your own configured nodes.
+- **Group labels missing on a fresh installation** – the group tabs did not show their short names (DACH, EU, …) because the label list started empty and the official MeshCom list was only available via the "restore defaults" button. A fresh installation (no saved settings yet) is now pre-filled with the official list again; once you have saved settings, an emptied list stays empty.
+- **Windows installer: generic icon** – the executable had no icon, so the desktop/start-menu/autostart shortcuts and the entry in "Apps & features" showed the Windows default. The WebDesk icon is now embedded in the exe and used by the installer shortcuts.
+- **Header: licensed callsign wrapped awkwardly** – when the header line was full, "Licensed for" stayed on the first line and the callsign jumped to the start of the title line. The license badge is now its own block, the callsign stays together and wraps below the badge text.
+
+---
+
 ## [1.15.3] – 2026-10-04
 
 ### Features
