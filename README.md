@@ -787,6 +787,15 @@ Clicking it opens a modal dialog with **four tabs**:
   | Direct message | `{prefix}/dm/{callsign}` e.g. `meshcom/dm/DH1FR-1` |
   | Position beacon | `{prefix}/position/{callsign}` |
   | Telemetry | `{prefix}/telemetry/{callsign}` |
+  | Unread alert | `{prefix}/unread/{callsign}` – a direct message nobody looked at in time |
+  | Read | `{prefix}/read/{callsign}` – that conversation has been looked at afterwards |
+
+- **Unread alert** – meant as the trigger for a phone notification (e.g. Home Assistant) that only fires when you did *not* see a direct message yourself:
+  - Starts when a direct message arrives (bot commands are ignored). If nobody has looked at that conversation within **Wait time** (default 60 s), `{prefix}/unread/{callsign}` is published with the number of unseen messages and the latest text. Several messages arriving meanwhile are reported together.
+  - "Looking" means: the chat page is open in a **visible** browser tab, the conversation is the active tab, and there was **mouse/keyboard/touch activity** within the **Activity window** (default 30 s). An open but idle or hidden browser does not count.
+  - Once such a conversation is looked at afterwards, `{prefix}/read/{callsign}` is published so the notification can be dismissed again.
+  - In multi-node setups the node switcher shows a badge with the number of unread **direct** messages per node (groups are not counted).
+  - Payload example: `{"event":"unread","from":"DL2BBB-2","to":"DH1FR-2","count":2,"text":"…","rssi":-95,"snr":6.5,…}`
 
 - **Subscriber** *(optional)* – subscribes to send-topics and forwards them as outgoing UDP messages to the MeshCom node:
 
@@ -1055,6 +1064,9 @@ All settings in `MeshcomWebDesk/appsettings.json`:
     "PublishMessage":   true,          // publish incoming chat messages
     "PublishPosition":  false,         // publish incoming position beacons
     "PublishTelemetry": false,         // publish incoming telemetry packets
+    "UnreadAlertEnabled": true,        // publish {prefix}/unread/... and {prefix}/read/... for unseen direct messages
+    "UnreadAlertSeconds": 60,          // seconds a direct message may stay unseen before the alert (5–3600)
+    "UnreadActiveSeconds": 30,         // browser activity window that counts as "looking" (5–3600)
     "SubscribeEnabled": false          // subscribe to send-topics and forward to mesh
   },
   "Qrz": {

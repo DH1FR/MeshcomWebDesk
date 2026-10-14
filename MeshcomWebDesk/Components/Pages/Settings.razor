@@ -2077,6 +2077,30 @@
                 </div>
 
                 <label>
+                    @Loc.T("Ungelesen-Hinweis", "Unread alert")<br />
+                    <small>@Loc.T("Sendet {Präfix}/unread/{Rufzeichen}, wenn eine Direktnachricht nicht rechtzeitig angesehen wurde, und {Präfix}/read/{Rufzeichen}, sobald sie gelesen wurde.", "Publishes {prefix}/unread/{callsign} when a direct message has not been looked at in time, and {prefix}/read/{callsign} once it has been read.")</small>
+                </label>
+                <label class="settings-toggle">
+                    <input type="checkbox" @bind="_model.MqttUnreadAlertEnabled" />
+                    <span>@(_model.MqttUnreadAlertEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
+                </label>
+
+                @if (_model.MqttUnreadAlertEnabled)
+                {
+                    <label>
+                        @Loc.T("Wartezeit (Sekunden)", "Wait time (seconds)")<br />
+                        <small>@Loc.T("So lange darf eine Direktnachricht ungesehen bleiben, bevor der Hinweis gesendet wird.", "How long a direct message may stay unseen before the alert is sent.")</small>
+                    </label>
+                    <input type="number" min="5" max="3600" @bind="_model.MqttUnreadAlertSeconds" />
+
+                    <label>
+                        @Loc.T("Aktivitätsfenster (Sekunden)", "Activity window (seconds)")<br />
+                        <small>@Loc.T("Als „sieht hin“ zählt ein sichtbarer Browser-Tab mit Maus-, Tastatur- oder Touch-Aktivität innerhalb dieser Zeit.", "A visible browser tab with mouse, keyboard or touch activity within this time counts as “looking”.")</small>
+                    </label>
+                    <input type="number" min="5" max="3600" @bind="_model.MqttUnreadActiveSeconds" />
+                }
+
+                <label>
                     @Loc.T("Subscriber aktiv", "Subscriber Active")<br />
                     <small>@Loc.T("Empfängt Sende-Befehle vom Broker und leitet sie ans Mesh weiter.", "Receives send commands from the broker and forwards them to the mesh.")</small>
                 </label>
@@ -3505,6 +3529,9 @@
             MqttPublishMessage      = s.Mqtt.PublishMessage,
             MqttPublishPosition     = s.Mqtt.PublishPosition,
             MqttPublishTelemetry    = s.Mqtt.PublishTelemetry,
+            MqttUnreadAlertEnabled  = s.Mqtt.UnreadAlertEnabled,
+            MqttUnreadAlertSeconds  = s.Mqtt.UnreadAlertSeconds,
+            MqttUnreadActiveSeconds = s.Mqtt.UnreadActiveSeconds,
             MqttSubscribeEnabled    = s.Mqtt.SubscribeEnabled,
             MqttLogRequests         = s.Mqtt.LogRequests,
             QrzEnabled              = s.Qrz.Enabled,
@@ -4341,6 +4368,9 @@
                 MqttPublishMessage      = s.Mqtt.PublishMessage,
                 MqttPublishPosition     = s.Mqtt.PublishPosition,
                 MqttPublishTelemetry    = s.Mqtt.PublishTelemetry,
+                MqttUnreadAlertEnabled  = s.Mqtt.UnreadAlertEnabled,
+                MqttUnreadAlertSeconds  = s.Mqtt.UnreadAlertSeconds,
+                MqttUnreadActiveSeconds = s.Mqtt.UnreadActiveSeconds,
                 MqttSubscribeEnabled    = s.Mqtt.SubscribeEnabled,
                 MqttLogRequests         = s.Mqtt.LogRequests,
                 QrzEnabled         = s.Qrz.Enabled,
@@ -4484,6 +4514,9 @@
         public bool   MqttPublishMessage   { get; set; } = true;
         public bool   MqttPublishPosition  { get; set; }
         public bool   MqttPublishTelemetry { get; set; }
+        public bool   MqttUnreadAlertEnabled  { get; set; } = true;
+        public int    MqttUnreadAlertSeconds  { get; set; } = 60;
+        public int    MqttUnreadActiveSeconds { get; set; } = 30;
         public bool   MqttSubscribeEnabled { get; set; }
         public bool   MqttLogRequests       { get; set; }
 
@@ -4672,6 +4705,9 @@
                 PublishMessage   = MqttPublishMessage,
                 PublishPosition  = MqttPublishPosition,
                 PublishTelemetry = MqttPublishTelemetry,
+                UnreadAlertEnabled  = MqttUnreadAlertEnabled,
+                UnreadAlertSeconds  = Math.Clamp(MqttUnreadAlertSeconds, 5, 3600),
+                UnreadActiveSeconds = Math.Clamp(MqttUnreadActiveSeconds, 5, 3600),
                 SubscribeEnabled = MqttSubscribeEnabled,
                 LogRequests      = MqttLogRequests
             },

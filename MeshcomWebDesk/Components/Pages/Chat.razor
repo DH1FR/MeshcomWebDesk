@@ -41,10 +41,12 @@
             var lastSeen = NodeManager.GetLastSeen(node.Id);
             var battery  = NodeManager.GetNodeBattery(node.Id);
             var hwIcon   = MeshcomLookup.HwIcon(NodeManager.GetNodeHwId(node.Id));
+            var unreadDm = ChatService.GetUnreadDirectCount(node.Id);
             var tooltip  = lastSeen.HasValue
                 ? $"{node.Callsign}  |  {node.DeviceIp}:{node.DevicePort}  |  {Loc.T("Zuletzt", "Last seen")}: {FormatLastSeen(lastSeen.Value)}"
                 : $"{node.Callsign}  |  {node.DeviceIp}:{node.DevicePort}  |  {Loc.T("Noch kein Paket", "No packet yet")}";
             if (battery.HasValue) tooltip += $"  |  {Loc.T("Akku", "Battery")}: {battery}%";
+            if (unreadDm > 0) tooltip += $"  |  {Loc.TF("{0} ungelesene Direktnachrichten", "{0} unread direct messages", unreadDm)}";
             <button class="node-switcher-btn @(NodeManager.SelectedNode?.Id == node.Id ? "active" : "")"
                     @onclick="() => SelectNode(node.Id)"
                     title="@tooltip">
@@ -54,6 +56,7 @@
                 @node.Name
                 <small style="opacity:.7;font-size:.75em">@node.Callsign</small>
                 @if (battery.HasValue) { <span style="color:@BattColor(battery.Value)"><BatteryIcon Percent="battery.Value" /></span> }
+                @if (unreadDm > 0) { <span class="node-unread">@(unreadDm > 99 ? "99+" : unreadDm.ToString())</span> }
             </button>
         }
     </div>
@@ -1159,6 +1162,15 @@
     [Inject] private IOptionsMonitor<MeshcomSettings> SettingsOptions { get; set; } = default!;
     [Inject] private IJSRuntime JS { get; set; } = default!;
     [Inject] private AppLicenseService AppLicense { get; set; } = default!;
+    [Inject] private AttentionService Attention { get; set; } = default!;
+
+    /// <summary>Identifies this circuit towards <see cref="AttentionService"/>.</summary>
+    private readonly Guid _viewerId = Guid.NewGuid();
+
+    /// <summary>Called by chat.js: browser-tab visibility and ms since the last user activity.</summary>
+    [JSInvokable]
+    public void ReportAttention(bool visible, double idleMs) =>
+        Attention.Report(_viewerId, visible, idleMs);
 
     protected override void OnInitialized()
     {
@@ -1240,7 +1252,7 @@
                         _activeTab             = ChatService.GetTab(savedKey, _activeNodeId);
                         _activeTabMessages     = ChatService.GetTabMessages(savedKey, _activeNodeId);
                         ChatService.SetActiveTabKey(_activeNodeId, savedKey);
-                        ChatService.ClearUnread(savedKey, _activeNodeId);
+                        Attention.SetView(_viewerId, _activeNodeId, savedKey);
                         needsRender = true;
                     }
                 }
@@ -1268,6 +1280,10 @@
             // Initialize tab drag-and-drop
             _dotNetRef ??= DotNetObjectReference.Create(this);
             try { await JS.InvokeVoidAsync("meshcomChat.initTabDrag", _dotNetRef); }
+            catch (JSException) { }
+
+            // From here on the server knows whether anybody is really looking at this page.
+            try { await JS.InvokeVoidAsync("meshcomChat.attentionStart", _dotNetRef); }
             catch (JSException) { }
 
             if (await LoadQrzDataAsync())
@@ -1426,8 +1442,12 @@
             ? ChatService.GetTabMessages(_activeTabKey!, _activeNodeId)
             : [];
 
-        if (!string.IsNullOrEmpty(_activeTabKey))
-            ChatService.ClearUnread(_activeTabKey, _activeNodeId);
+        // The active tab only counts as read while somebody is really looking at it (browser tab
+        // visible + recent activity). Otherwise the unread state stays – it drives the node badge
+        // and the MQTT unread alert.
+        Attention.SetView(_viewerId, _activeNodeId, string.IsNullOrEmpty(_activeTabKey) ? null : _activeTabKey);
+        if (!string.IsNullOrEmpty(_activeTabKey) && Attention.IsAttending(_viewerId))
+            ChatService.MarkAttended(_activeNodeId, _activeTabKey, notify: false);
         _scrollMessages = true;
 
         // Sound notification: play beep when a new direct chat message to own callsign arrives.
@@ -1540,8 +1560,10 @@
         if (unread > 0 && _activeTabMessages.Count > 0)
             _newMessagesFromIndex = Math.Max(0, _activeTabMessages.Count - unread);
 
-        ChatService.ClearUnread(key, _activeNodeId);
+        // Clicking a tab is proof that somebody is looking at it.
+        ChatService.MarkAttended(_activeNodeId, key, notify: false);
         ChatService.SetActiveTabKey(_activeNodeId, key);
+        Attention.SetView(_viewerId, _activeNodeId, key);
         _scrollMessages = true;
         _ = JS.InvokeVoidAsync("meshcomChat.setActiveTab", key).AsTask();
 
@@ -1733,6 +1755,9 @@
     {
         _disposed = true;
         _udpStaleTimer?.Dispose();
+        Attention.Remove(_viewerId);
+        try { _ = JS.InvokeVoidAsync("meshcomChat.attentionStop").AsTask().ContinueWith(_ => { }); }
+        catch { /* circuit already gone */ }
         _dotNetRef?.Dispose();
         Loc.OnChange -= OnLocChange;
         ChatService.OnChange -= OnChatChanged;

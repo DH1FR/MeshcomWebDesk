@@ -215,10 +215,87 @@ window.meshcomChat = (function () {
         });
     }
 
+    // ── Attention tracking ────────────────────────────────────────────────
+    // Tells the server whether anyone is really looking at this page: the browser tab must be
+    // visible and there must have been mouse/keyboard/touch activity recently. The server
+    // extrapolates the idle time between reports, so only changes and activity are sent.
+    var attention = null;
+
+    function attentionStart(dotNetRef) {
+        attentionStop();
+        var lastActivity = performance.now();
+        var lastSent     = 0;
+        var timer        = null;
+
+        function send(force) {
+            var now = performance.now();
+            if (!force && now - lastSent < 4000) return;
+            lastSent = now;
+            // "Looking" needs a visible browser tab AND a focused window: a window in the
+            // background (another application in front) is not being looked at.
+            var looking = document.visibilityState === 'visible' && document.hasFocus();
+            dotNetRef.invokeMethodAsync('ReportAttention', looking, now - lastActivity)
+                .catch(function () { });
+        }
+        function onActivity(e) {
+            // Script-dispatched events are not the user.
+            if (e && e.isTrusted === false) return;
+            lastActivity = performance.now();
+            send(false);
+        }
+        // Browsers synthesise mousemove events when content moves under a resting cursor
+        // (e.g. the chat auto-scrolling on a new message). Only a real change of the screen
+        // position counts. Plain 'scroll' events are not used at all for the same reason –
+        // genuine scrolling always comes with wheel, touch, key or mouse input.
+        var lastX = null, lastY = null;
+        function onMouseMove(e) {
+            if (e.screenX === lastX && e.screenY === lastY) return;
+            lastX = e.screenX; lastY = e.screenY;
+            onActivity(e);
+        }
+        function onFocusChange() { send(true); }
+        function onVisibility() {
+            if (document.visibilityState === 'visible') lastActivity = performance.now();
+            send(true);
+        }
+
+        var activityEvents = ['mousedown', 'keydown', 'touchstart', 'wheel'];
+        activityEvents.forEach(function (n) {
+            window.addEventListener(n, onActivity, { passive: true, capture: true });
+        });
+        window.addEventListener('mousemove', onMouseMove, { passive: true, capture: true });
+        document.addEventListener('visibilitychange', onVisibility);
+        window.addEventListener('focus', onActivity);
+        window.addEventListener('blur', onFocusChange);
+
+        // Safety net: a slow heartbeat while visible, so the server never relies on an old report.
+        timer = setInterval(function () { send(true); }, 20000);
+
+        attention = {
+            stop: function () {
+                activityEvents.forEach(function (n) {
+                    window.removeEventListener(n, onActivity, { capture: true });
+                });
+                window.removeEventListener('mousemove', onMouseMove, { capture: true });
+                document.removeEventListener('visibilitychange', onVisibility);
+                window.removeEventListener('focus', onActivity);
+                window.removeEventListener('blur', onFocusChange);
+                clearInterval(timer);
+            }
+        };
+        send(true);
+    }
+
+    function attentionStop() {
+        if (attention) { attention.stop(); attention = null; }
+    }
+
     return {
         initResizer,
         initTabDrag,
         initQuickTextDrag,
+        attentionStart,
+        attentionStop,
         getActiveTab:      () => localStorage.getItem('meshcom-active-tab') || '',
         setActiveTab:      (key) => {
             if (key) localStorage.setItem('meshcom-active-tab', key);

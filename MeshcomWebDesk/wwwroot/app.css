@@ -3296,6 +3296,7 @@ h1:focus {
 .node-switcher-btn.active{background:#1f6feb;border-color:#1f6feb;color:var(--text-on-accent);font-weight:600}
 .node-switcher-btn span{margin-right:3px;color:#f0c040}
 .node-switcher-btn .node-hw-icon{margin-right:0;color:inherit}
+.node-switcher-btn .node-unread{margin-right:0;background:var(--warn);color:var(--bg-deep);font-size:10px;font-weight:700;border-radius:10px;padding:0 6px;min-width:18px;text-align:center;line-height:1.6}
 /* Online status dot */
 .node-status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .node-status-dot.online{background:var(--ok)}

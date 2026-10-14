@@ -18,6 +18,8 @@ namespace MeshcomWebDesk.Services;
 ///               {prefix}/dm/{callsign}       – direct messages      (e.g. meshcom/dm/DH1FR-1)
 ///               {prefix}/position/{callsign} – position beacons
 ///               {prefix}/telemetry/{callsign}– telemetry packets
+///               {prefix}/unread/{callsign}   – direct messages nobody looked at in time (UnreadAlertSeconds)
+///               {prefix}/read/{callsign}     – such a conversation has been looked at afterwards
 ///
 ///   Subscribed: {prefix}/send/broadcast      – send a broadcast message
 ///               {prefix}/send/group/{group}  – send a group message
@@ -141,6 +143,72 @@ public sealed class MqttService : IHostedService, IAsyncDisposable
             var message = new MqttApplicationMessageBuilder()
                 .WithTopic(topic)
                 .WithPayload(json)
+                .WithRetainFlag(false)
+                .Build();
+
+            await _client.PublishAsync(message);
+            if (cfg.LogRequests)
+                _logger.LogInformation("MQTT [{Event}] → {Topic}", eventType, topic);
+            else
+                _logger.LogDebug("MQTT [{Event}] → {Topic}", eventType, topic);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "MQTT publish failed for topic {Topic}", topic);
+        }
+    }
+
+    /// <summary>
+    /// Publishes <c>{prefix}/unread/{callsign}</c>: direct messages from <paramref name="from"/> have not
+    /// been looked at for the configured time. Intended as the trigger for a phone notification.
+    /// </summary>
+    public Task PublishUnreadAsync(string ownCallsign, string from, int count, MeshcomMessage? last)
+    {
+        var cfg = _settings.CurrentValue.Mqtt;
+        if (!cfg.UnreadAlertEnabled) return Task.CompletedTask;
+        return PublishJsonAsync($"{cfg.TopicPrefix}/unread/{from}", "unread", new
+        {
+            @event            = "unread",
+            timestamp         = DateTime.Now,
+            from,
+            to                = ownCallsign,
+            count,
+            text              = string.IsNullOrEmpty(last?.Text) ? null : last.Text,
+            message_timestamp = last?.Timestamp,
+            rssi              = last?.Rssi,
+            snr               = last?.Snr,
+            relay_path        = last?.RelayPath,
+            src_type          = last?.SrcType
+        });
+    }
+
+    /// <summary>
+    /// Publishes <c>{prefix}/read/{callsign}</c> after an unread alert was sent and the conversation
+    /// has then been looked at, so the notification can be dismissed again.
+    /// </summary>
+    public Task PublishReadAsync(string ownCallsign, string from)
+    {
+        var cfg = _settings.CurrentValue.Mqtt;
+        if (!cfg.UnreadAlertEnabled) return Task.CompletedTask;
+        return PublishJsonAsync($"{cfg.TopicPrefix}/read/{from}", "read", new
+        {
+            @event    = "read",
+            timestamp = DateTime.Now,
+            from,
+            to        = ownCallsign
+        });
+    }
+
+    private async Task PublishJsonAsync(string topic, string eventType, object payload)
+    {
+        var cfg = _settings.CurrentValue.Mqtt;
+        if (!cfg.Enabled || _client is not { IsConnected: true }) return;
+
+        try
+        {
+            var message = new MqttApplicationMessageBuilder()
+                .WithTopic(topic)
+                .WithPayload(JsonSerializer.Serialize(payload, _jsonOpts))
                 .WithRetainFlag(false)
                 .Build();
 

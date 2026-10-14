@@ -31,6 +31,21 @@ public class ChatTab
     public int UnreadCount { get; set; }
 
     /// <summary>
+    /// Direct messages received since a viewer last actually looked at this tab
+    /// (see <see cref="MeshcomWebDesk.Services.AttentionService"/>). Drives the MQTT unread alert. Not persisted.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public int AlertUnread { get; set; }
+
+    /// <summary>Most recent unseen direct message, reported in the unread alert. Not persisted.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public MeshcomMessage? AlertLastMessage { get; set; }
+
+    /// <summary>True once an unread alert was published and the matching "read" has not been sent yet. Not persisted.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool AlertPublished { get; set; }
+
+    /// <summary>
     /// When true, a QSO summary is available for the remote callsign (direct tabs only). Not persisted.
     /// </summary>
     [System.Text.Json.Serialization.JsonIgnore]
