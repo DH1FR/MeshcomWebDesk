@@ -13,7 +13,8 @@
       "console": "integratedTerminal",
       "serverReadyAction": {
         "action": "openExternally",
-        "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+        "pattern": "\\bNow listening on:\\s+http://\\S+?:(\\d+)",
+        "uriFormat": "http://localhost:%s"
       },
       "env": {
         "ASPNETCORE_ENVIRONMENT": "Development",
@@ -32,7 +33,8 @@
       "console": "integratedTerminal",
       "serverReadyAction": {
         "action": "openExternally",
-        "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+        "pattern": "\\bNow listening on:\\s+https://\\S+?:(\\d+)",
+        "uriFormat": "https://localhost:%s"
       },
       "env": {
         "ASPNETCORE_ENVIRONMENT": "Development",
