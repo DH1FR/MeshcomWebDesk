@@ -29,6 +29,19 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
+## 🆕 What's New in v1.16.0
+
+### ✨ Features
+- **MQTT unread alert (e.g. for Home Assistant)** – a direct message **to your own callsign** that nobody has looked at within the **wait time** (default 60 s) is published to `{prefix}/unread/{callsign}` (sender, count, latest text, RSSI/SNR, …); as soon as the conversation is looked at, `{prefix}/read/{callsign}` follows so the notification can be dismissed. Your phone only buzzes for messages you did *not* see yourself. New settings under **Settings → MQTT → Unread alert** (`UnreadAlertEnabled`, `UnreadAlertSeconds`, `UnreadActiveSeconds`). Ready-to-use automation: 📖 **[Home Assistant unread-alert guide](docs/homeassistant-unread-alert.md)**.
+- **"Really looking" detection** – a conversation only counts as read while the chat page is in a **visible** browser tab, that conversation is the active tab and there was mouse/keyboard/touch activity within the **activity window** (default 30 s). An open but idle or hidden browser no longer marks messages as read (before, the active tab was cleared on every UI refresh). Bot commands never raise an alert.
+- **Unread badge per node** – in multi-node setups the node switcher shows the number of unread **direct** messages per node (groups and broadcast are not counted).
+- **Calendar beacon: several weekdays** – a **weekly** calendar beacon can now be set to any combination of weekdays (e.g. Mon, Wed, Fri) with checkboxes in **Settings → Calendar Beacon** instead of one entry per day. Lead times ("3d, 24h, 2h") apply to every selected day; existing entries keep their weekday.
+
+### 🔧 Improvements
+- **Translations completed** – the new texts and the few that were still missing (MHeard age/role/neighbours, mailbox notice) are translated into Italian, Spanish and French.
+
+---
+
 ## 🆕 What's New in v1.15.4
 
 ### 🐛 Bug fixes
@@ -796,6 +809,7 @@ Clicking it opens a modal dialog with **four tabs**:
   - Once such a conversation is looked at afterwards, `{prefix}/read/{callsign}` is published so the notification can be dismissed again.
   - In multi-node setups the node switcher shows a badge with the number of unread **direct** messages per node (groups are not counted).
   - Payload example: `{"event":"unread","from":"DL2BBB-2","to":"DH1FR-2","count":2,"text":"…","rssi":-95,"snr":6.5,…}`
+  - 📖 **[Home Assistant unread-alert guide](docs/homeassistant-unread-alert.md)** – why it exists, payloads and a ready-to-use notification automation
 
 - **Subscriber** *(optional)* – subscribes to send-topics and forwards them as outgoing UDP messages to the MeshCom node:
 

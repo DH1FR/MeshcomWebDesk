@@ -1,5 +1,16 @@
 ﻿# Changelog
 
+## [1.16.0] – released
+
+### Features
+- **MQTT unread alert**: unseen direct messages to your own callsign are published to `{prefix}/unread/{callsign}`, `{prefix}/read/{callsign}` follows once seen (e.g. Home Assistant notification). New settings `UnreadAlertEnabled` / `UnreadAlertSeconds` / `UnreadActiveSeconds`.
+- A conversation counts as read only while somebody is really looking (visible tab + recent activity).
+- Unread badge per node in the node switcher.
+- Calendar beacon: weekly entries accept several weekdays.
+
+### Improvements
+- IT/ES/FR translations completed.
+
 ## [1.15.4] – 2026-10-11
 
 ### Bugfixes
