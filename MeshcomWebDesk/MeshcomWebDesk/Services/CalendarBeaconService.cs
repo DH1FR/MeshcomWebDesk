@@ -234,7 +234,7 @@ public sealed class CalendarBeaconService : BackgroundService
         return e.RecurrenceType switch
         {
             CalendarRecurrence.Once        => e.ReferenceDateParsed ?? DateOnly.MaxValue,
-            CalendarRecurrence.Weekly      => NextWeekly(from, e.EventDayOfWeek),
+            CalendarRecurrence.Weekly      => NextWeekly(from, e.EventDaysOfWeekParsed),
             CalendarRecurrence.BiWeekly    => NextBiWeekly(from, e.EventDayOfWeek, e.ReferenceDateParsed),
             CalendarRecurrence.Monthly     => NextMonthly(from, e.EventDayOfMonth),
             CalendarRecurrence.NthWeekday  => NextNthWeekday(from, e.EventDayOfWeek, e.WeekdayOrdinal),
@@ -288,6 +288,20 @@ public sealed class CalendarBeaconService : BackgroundService
     {
         int diff = ((int)dow - (int)from.DayOfWeek + 7) % 7;
         return from.AddDays(diff);
+    }
+
+    /// <summary>Nächster Termin an einem der gewählten Wochentage; <see cref="DateOnly.MaxValue"/> bei leerer Auswahl.</summary>
+    private static DateOnly NextWeekly(DateOnly from, HashSet<DayOfWeek> days)
+    {
+        if (days.Count == 0) return DateOnly.MaxValue;
+
+        var best = DateOnly.MaxValue;
+        foreach (var d in days)
+        {
+            var c = NextWeekly(from, d);
+            if (c < best) best = c;
+        }
+        return best;
     }
 
     // ── BiWeekly ─────────────────────────────────────────────────────────

@@ -1164,8 +1164,29 @@
                             <option value="@MeshcomWebDesk.Models.CalendarRecurrence.LastWeekday">@Loc.T("Letzter Wochentag","Last Weekday")</option>
                         </select>
 
-                        @if (e.RecurrenceType is MeshcomWebDesk.Models.CalendarRecurrence.Weekly
-                                             or MeshcomWebDesk.Models.CalendarRecurrence.BiWeekly
+                        @if (e.RecurrenceType == MeshcomWebDesk.Models.CalendarRecurrence.Weekly)
+                        {
+                            <label>@Loc.T("Wochentage","Days of Week")</label>
+                            <div class="settings-input-hint">
+                                <div style="display:flex;flex-wrap:wrap;gap:.25rem .75rem">
+                                    @foreach (var (day, de, en) in _calWeekdays)
+                                    {
+                                        var d = day;
+                                        <label class="settings-toggle" style="margin:0">
+                                            <input type="checkbox" checked="@e.HasEventDay(d)"
+                                                   @onchange="ev => e.SetEventDay(d, (bool)ev.Value!)" />
+                                            <span>@Loc.T(de, en)</span>
+                                        </label>
+                                    }
+                                </div>
+                                @if (e.EventDaysOfWeekParsed.Count == 0)
+                                {
+                                    <span class="settings-hint char-warn">⚠ @Loc.T("Ohne Wochentag wird dieser Eintrag nicht gesendet!","Without a day of week this entry will not be sent!")</span>
+                                }
+                            </div>
+                        }
+
+                        @if (e.RecurrenceType is MeshcomWebDesk.Models.CalendarRecurrence.BiWeekly
                                              or MeshcomWebDesk.Models.CalendarRecurrence.NthWeekday
                                              or MeshcomWebDesk.Models.CalendarRecurrence.LastWeekday)
                         {
@@ -2668,6 +2689,17 @@
 </div>
 
 @code {
+    private static readonly (DayOfWeek Day, string De, string En)[] _calWeekdays =
+    [
+        (DayOfWeek.Monday,    "Montag",     "Monday"),
+        (DayOfWeek.Tuesday,   "Dienstag",   "Tuesday"),
+        (DayOfWeek.Wednesday, "Mittwoch",   "Wednesday"),
+        (DayOfWeek.Thursday,  "Donnerstag", "Thursday"),
+        (DayOfWeek.Friday,    "Freitag",    "Friday"),
+        (DayOfWeek.Saturday,  "Samstag",    "Saturday"),
+        (DayOfWeek.Sunday,    "Sonntag",    "Sunday"),
+    ];
+
     private FormModel _model = new();
     private bool _saved;
     private bool _restored;
@@ -3459,6 +3491,7 @@
                     Text              = e.Text,
                     RecurrenceType    = e.RecurrenceType,
                     EventDayOfWeek    = e.EventDayOfWeek,
+                    EventDaysOfWeek   = e.EventDaysOfWeek,
                     EventDayOfMonth   = e.EventDayOfMonth,
                     WeekdayOrdinal    = e.WeekdayOrdinal,
                     EventTime         = e.EventTime,
@@ -4317,6 +4350,7 @@
                         Text              = e.Text,
                         RecurrenceType    = e.RecurrenceType,
                         EventDayOfWeek    = e.EventDayOfWeek,
+                        EventDaysOfWeek   = e.EventDaysOfWeek,
                         EventDayOfMonth   = e.EventDayOfMonth,
                         WeekdayOrdinal    = e.WeekdayOrdinal,
                         EventTime         = e.EventTime,

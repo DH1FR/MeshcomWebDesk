@@ -226,6 +226,7 @@ public class SettingsService
                     ["Text"]              = e.Text,
                     ["RecurrenceType"]    = e.RecurrenceType.ToString(),
                     ["EventDayOfWeek"]    = e.EventDayOfWeek.ToString(),
+                    ["EventDaysOfWeek"]   = e.EventDaysOfWeek,
                     ["EventDayOfMonth"]   = e.EventDayOfMonth,
                     ["WeekdayOrdinal"]    = e.WeekdayOrdinal,
                     ["EventTime"]         = e.EventTime,
