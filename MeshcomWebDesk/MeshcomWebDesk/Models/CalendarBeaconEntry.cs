@@ -54,9 +54,59 @@ public class CalendarBeaconEntry
 
     /// <summary>
     /// Wochentag des Ereignisses.
-    /// Relevant für: Weekly, BiWeekly, NthWeekday, LastWeekday.
+    /// Relevant für: BiWeekly, NthWeekday, LastWeekday (Weekly nutzt <see cref="EventDaysOfWeek"/>).
     /// </summary>
     public DayOfWeek EventDayOfWeek { get; set; } = DayOfWeek.Friday;
+
+    private string? _eventDaysOfWeek;
+
+    /// <summary>
+    /// Wochentage für <see cref="CalendarRecurrence.Weekly"/> als kommagetrennte Liste, z.&#160;B. "Monday,Wednesday,Friday".
+    /// Leer = kein Wochentag gewählt (es wird nichts gesendet). Solange der Wert noch nie gespeichert wurde (null),
+    /// gilt der alte Einzelwert <see cref="EventDayOfWeek"/>.
+    /// </summary>
+    public string EventDaysOfWeek
+    {
+        get => _eventDaysOfWeek ?? EventDayOfWeek.ToString();
+        set => _eventDaysOfWeek = value;
+    }
+
+    /// <summary>Geparste Wochentage von <see cref="EventDaysOfWeek"/> (ungültige Angaben und Duplikate entfallen).</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public HashSet<DayOfWeek> EventDaysOfWeekParsed => ParseDays(EventDaysOfWeek);
+
+    /// <summary>Parst eine kommagetrennte Wochentagsliste wie "Monday,Friday".</summary>
+    public static HashSet<DayOfWeek> ParseDays(string? raw)
+    {
+        var result = new HashSet<DayOfWeek>();
+        if (string.IsNullOrWhiteSpace(raw)) return result;
+
+        foreach (var token in raw.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            if (Enum.TryParse<DayOfWeek>(token, ignoreCase: true, out var d) && Enum.IsDefined(d))
+                result.Add(d);
+
+        return result;
+    }
+
+    /// <summary>Ist <paramref name="day"/> in <see cref="EventDaysOfWeek"/> gewählt?</summary>
+    public bool HasEventDay(DayOfWeek day) => EventDaysOfWeekParsed.Contains(day);
+
+    /// <summary>
+    /// Wählt <paramref name="day"/> in <see cref="EventDaysOfWeek"/> ab oder an (Reihenfolge Mo–So) und hält
+    /// <see cref="EventDayOfWeek"/> auf dem ersten gewählten Tag, damit ein Wechsel auf BiWeekly/NthWeekday/LastWeekday
+    /// einen sinnvollen Wochentag vorfindet.
+    /// </summary>
+    public void SetEventDay(DayOfWeek day, bool selected)
+    {
+        var set = EventDaysOfWeekParsed;
+        if (selected) set.Add(day); else set.Remove(day);
+
+        var ordered = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday,
+                              DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday }
+                      .Where(set.Contains).ToList();
+        EventDaysOfWeek = string.Join(",", ordered);
+        if (ordered.Count > 0) EventDayOfWeek = ordered[0];
+    }
 
     /// <summary>
     /// Tag des Monats (1–31).

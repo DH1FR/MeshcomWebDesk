@@ -1,5 +1,18 @@
 ﻿# Changelog
 
+## [1.16.0] – 2026-10-19
+
+### Features
+- **MQTT unread alert** – a direct message to your own callsign that nobody has looked at within `UnreadAlertSeconds` (default 60 s) is published to `{prefix}/unread/{callsign}` (sender, count, latest text, RSSI/SNR, relay path); once the conversation is looked at, `{prefix}/read/{callsign}` follows. Meant as the trigger for a phone notification (e.g. Home Assistant) that only fires for messages you did *not* see yourself. New settings `Mqtt.UnreadAlertEnabled`, `UnreadAlertSeconds`, `UnreadActiveSeconds` (Settings → MQTT). See `docs/homeassistant-unread-alert.md` for payloads and an automation example.
+- **"Really looking" detection** – a conversation counts as read only while the chat page is in a visible browser tab, that conversation is the active tab and there was mouse/keyboard/touch activity within `UnreadActiveSeconds` (default 30 s). Before, the active tab was cleared on every UI refresh. Bot commands never raise an alert.
+- **Unread badge per node** – the node switcher shows the unread direct messages per node (groups and broadcast are not counted).
+- **Calendar beacon: several weekdays** – a weekly entry accepts any combination of weekdays (checkboxes in Settings → Calendar Beacon); lead times apply to each selected day. Existing entries keep their weekday (new field `EventDaysOfWeek`, falls back to `EventDayOfWeek`).
+
+### Improvements
+- Italian, Spanish and French translations completed for the new texts and the MHeard age/role/neighbour and mailbox-notice texts that were still missing.
+
+---
+
 ## [1.15.4] – 2026-10-11
 
 ### Bugfixes

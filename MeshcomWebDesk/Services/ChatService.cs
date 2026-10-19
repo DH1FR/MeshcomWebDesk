@@ -133,6 +133,7 @@ public class ChatService
     private readonly IMonitorDataSink _sink;
     private readonly WebhookService   _webhook;
     private readonly QsoSummaryService _qsoSummary;
+    private readonly AttentionService  _attention;
     private MqttService?      _mqtt;
     private NodeManager?      _nodeManager;
 
@@ -264,14 +265,16 @@ public class ChatService
     public string GetActiveTabKey(Guid? nodeId) => ResolveState(nodeId).ActiveTabKey;
     public void   SetActiveTabKey(Guid? nodeId, string key) => ResolveState(nodeId).ActiveTabKey = key;
 
-    public ChatService(IOptionsMonitor<MeshcomSettings> settings, ILogger<ChatService> logger, IMonitorDataSink sink, WebhookService webhook, QsoSummaryService qsoSummary)
+    public ChatService(IOptionsMonitor<MeshcomSettings> settings, ILogger<ChatService> logger, IMonitorDataSink sink, WebhookService webhook, QsoSummaryService qsoSummary, AttentionService attention)
     {
         _settings   = settings.CurrentValue;
         _logger     = logger;
         _sink       = sink;
         _webhook    = webhook;
         _qsoSummary = qsoSummary;
+        _attention  = attention;
         settings.OnChange(s => _settings = s);
+        _attention.OnAttended += (nodeId, key) => MarkAttended(nodeId, key);
     }
 
     /// <summary>Injects MqttService after construction to break the circular dependency.</summary>
@@ -468,6 +471,12 @@ public class ChatService
         bool isDirectToUs = !message.IsBroadcast &&
             !message.IsAck && !message.IsPositionBeacon && !message.IsTelemetry &&
             (string.Equals(message.To, myCallsign, StringComparison.OrdinalIgnoreCase) || isDirectToNode);
+        // Unread alert bookkeeping must happen before NotifyChange(): a viewer that is really looking
+        // clears it again while handling that change, so only unseen messages survive to the timer.
+        if (isDirectToUs && tab != null && tabKey != "*" && !tabKey.StartsWith('#')
+            && !MeshcomWebDesk.Services.Bot.BotCommandService.IsCommand(message.Text))
+            RegisterUnreadDirect(tab, message, nodeId);
+
         if (isDirectToUs && !wasNewDirect)
             OnDirectMessage?.Invoke(message.From, message);
 
@@ -589,6 +598,115 @@ public class ChatService
     {
         if (ResolveState(nodeId).Tabs.TryGetValue(key, out var tab))
             lock (_lock) { tab.UnreadCount = 0; }
+    }
+
+    // ── Unread tracking / MQTT unread alert ───────────────────────────────
+
+    /// <summary>
+    /// Pending unread-alert timers, keyed "{bucketId}:{tabKey}". One timer per conversation:
+    /// several messages arriving while it runs are reported together as a single alert.
+    /// </summary>
+    private readonly ConcurrentDictionary<string, byte> _alertTimers = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Total unread messages in the direct (1:1) tabs of a node – group and broadcast tabs are not counted.
+    /// Shown as a badge on the node switcher.
+    /// </summary>
+    public int GetUnreadDirectCount(Guid? nodeId)
+    {
+        lock (_lock)
+        {
+            return ResolveState(nodeId).Tabs.Values
+                .Where(t => t.Key != "*" && !t.Key.StartsWith('#'))
+                .Sum(t => t.UnreadCount);
+        }
+    }
+
+    /// <summary>
+    /// Marks a tab as actually seen by a person: resets the unread counter and the alert state.
+    /// If an unread alert had already been published, a matching "read" message is published.
+    /// </summary>
+    /// <param name="notify">False when called from a UI refresh handler (avoids refresh loops).</param>
+    public void MarkAttended(Guid? nodeId, string key, bool notify = true)
+    {
+        if (!ResolveState(nodeId).Tabs.TryGetValue(key, out var tab)) return;
+
+        bool changed, sendRead;
+        lock (_lock)
+        {
+            changed  = tab.UnreadCount != 0 || tab.AlertUnread != 0 || tab.AlertPublished;
+            sendRead = tab.AlertPublished;
+            tab.UnreadCount      = 0;
+            tab.AlertUnread      = 0;
+            tab.AlertLastMessage = null;
+            tab.AlertPublished   = false;
+        }
+
+        if (sendRead)
+            _ = _mqtt?.PublishReadAsync(OwnCallsign(nodeId), key);
+        if (changed && notify)
+            NotifyChange();
+    }
+
+    private string OwnCallsign(Guid? nodeId) => _nodeManager?.GetCallsignForNode(nodeId) ?? _settings.MyCallsign;
+
+    private void RegisterUnreadDirect(ChatTab tab, MeshcomMessage message, Guid? nodeId)
+    {
+        lock (_lock)
+        {
+            tab.AlertUnread++;
+            tab.AlertLastMessage = message;
+        }
+
+        var cfg = _settings.Mqtt;
+        if (!cfg.Enabled || !cfg.UnreadAlertEnabled || _mqtt is null) return;
+
+        var timerKey = $"{ResolveBucketId(nodeId)}:{tab.Key}";
+        if (!_alertTimers.TryAdd(timerKey, 0)) return;
+
+        var delay = TimeSpan.FromSeconds(Math.Clamp(cfg.UnreadAlertSeconds, 5, 3600));
+        var key   = tab.Key;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(delay);
+                // Release the slot first so a message arriving while we publish starts a new cycle.
+                _alertTimers.TryRemove(timerKey, out _);
+                FireUnreadAlert(nodeId, key);
+            }
+            catch (Exception ex)
+            {
+                _alertTimers.TryRemove(timerKey, out _);
+                _logger.LogError(ex, "Unread alert failed for {Tab}", key);
+            }
+        });
+    }
+
+    private void FireUnreadAlert(Guid? nodeId, string key)
+    {
+        if (!ResolveState(nodeId).Tabs.TryGetValue(key, out var tab)) return;
+
+        // Last resort: somebody is looking at this very tab right now.
+        var bucket = ResolveBucketId(nodeId);
+        if (_attention.IsAnyoneAttending((n, k) =>
+                ResolveBucketId(n) == bucket && string.Equals(k, key, StringComparison.OrdinalIgnoreCase)))
+        {
+            MarkAttended(nodeId, key);
+            return;
+        }
+
+        int count;
+        MeshcomMessage? last;
+        lock (_lock)
+        {
+            if (tab.AlertUnread <= 0) return;
+            count = tab.AlertUnread;
+            last  = tab.AlertLastMessage;
+            tab.AlertPublished = true;
+        }
+
+        _ = _mqtt?.PublishUnreadAsync(OwnCallsign(nodeId), key, count, last);
     }
 
     /// <summary>

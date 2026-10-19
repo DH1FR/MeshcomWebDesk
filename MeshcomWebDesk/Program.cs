@@ -194,6 +194,7 @@ builder.Services.AddSingleton<ISettingsProtector>(sp =>
 
 // Register services
 builder.Services.AddSingleton<QsoSummaryService>();
+builder.Services.AddSingleton<AttentionService>();
 builder.Services.AddSingleton<ChatService>();
 builder.Services.AddSingleton<IBotCommand, VersionCommand>();
 builder.Services.AddSingleton<IBotCommand, TimeCommand>();

@@ -226,6 +226,7 @@ public class SettingsService
                     ["Text"]              = e.Text,
                     ["RecurrenceType"]    = e.RecurrenceType.ToString(),
                     ["EventDayOfWeek"]    = e.EventDayOfWeek.ToString(),
+                    ["EventDaysOfWeek"]   = e.EventDaysOfWeek,
                     ["EventDayOfMonth"]   = e.EventDayOfMonth,
                     ["WeekdayOrdinal"]    = e.WeekdayOrdinal,
                     ["EventTime"]         = e.EventTime,
@@ -296,6 +297,9 @@ public class SettingsService
                     ["PublishMessage"]   = s.Mqtt.PublishMessage,
                     ["PublishPosition"]  = s.Mqtt.PublishPosition,
                     ["PublishTelemetry"] = s.Mqtt.PublishTelemetry,
+                    ["UnreadAlertEnabled"] = s.Mqtt.UnreadAlertEnabled,
+                    ["UnreadAlertSeconds"] = s.Mqtt.UnreadAlertSeconds,
+                    ["UnreadActiveSeconds"] = s.Mqtt.UnreadActiveSeconds,
                     ["SubscribeEnabled"] = s.Mqtt.SubscribeEnabled,
                     ["LogRequests"]      = s.Mqtt.LogRequests
                 },

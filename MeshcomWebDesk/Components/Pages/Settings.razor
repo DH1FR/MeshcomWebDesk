@@ -1164,8 +1164,29 @@
                             <option value="@MeshcomWebDesk.Models.CalendarRecurrence.LastWeekday">@Loc.T("Letzter Wochentag","Last Weekday")</option>
                         </select>
 
-                        @if (e.RecurrenceType is MeshcomWebDesk.Models.CalendarRecurrence.Weekly
-                                             or MeshcomWebDesk.Models.CalendarRecurrence.BiWeekly
+                        @if (e.RecurrenceType == MeshcomWebDesk.Models.CalendarRecurrence.Weekly)
+                        {
+                            <label>@Loc.T("Wochentage","Days of Week")</label>
+                            <div class="settings-input-hint">
+                                <div style="display:flex;flex-wrap:wrap;gap:.25rem .75rem">
+                                    @foreach (var (day, de, en) in _calWeekdays)
+                                    {
+                                        var d = day;
+                                        <label class="settings-toggle" style="margin:0">
+                                            <input type="checkbox" checked="@e.HasEventDay(d)"
+                                                   @onchange="ev => e.SetEventDay(d, (bool)ev.Value!)" />
+                                            <span>@Loc.T(de, en)</span>
+                                        </label>
+                                    }
+                                </div>
+                                @if (e.EventDaysOfWeekParsed.Count == 0)
+                                {
+                                    <span class="settings-hint char-warn">⚠ @Loc.T("Ohne Wochentag wird dieser Eintrag nicht gesendet!","Without a day of week this entry will not be sent!")</span>
+                                }
+                            </div>
+                        }
+
+                        @if (e.RecurrenceType is MeshcomWebDesk.Models.CalendarRecurrence.BiWeekly
                                              or MeshcomWebDesk.Models.CalendarRecurrence.NthWeekday
                                              or MeshcomWebDesk.Models.CalendarRecurrence.LastWeekday)
                         {
@@ -2077,6 +2098,30 @@
                 </div>
 
                 <label>
+                    @Loc.T("Ungelesen-Hinweis", "Unread alert")<br />
+                    <small>@Loc.T("Sendet {Präfix}/unread/{Rufzeichen}, wenn eine Direktnachricht nicht rechtzeitig angesehen wurde, und {Präfix}/read/{Rufzeichen}, sobald sie gelesen wurde.", "Publishes {prefix}/unread/{callsign} when a direct message has not been looked at in time, and {prefix}/read/{callsign} once it has been read.")</small>
+                </label>
+                <label class="settings-toggle">
+                    <input type="checkbox" @bind="_model.MqttUnreadAlertEnabled" />
+                    <span>@(_model.MqttUnreadAlertEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
+                </label>
+
+                @if (_model.MqttUnreadAlertEnabled)
+                {
+                    <label>
+                        @Loc.T("Wartezeit (Sekunden)", "Wait time (seconds)")<br />
+                        <small>@Loc.T("So lange darf eine Direktnachricht ungesehen bleiben, bevor der Hinweis gesendet wird.", "How long a direct message may stay unseen before the alert is sent.")</small>
+                    </label>
+                    <input type="number" min="5" max="3600" @bind="_model.MqttUnreadAlertSeconds" />
+
+                    <label>
+                        @Loc.T("Aktivitätsfenster (Sekunden)", "Activity window (seconds)")<br />
+                        <small>@Loc.T("Als „sieht hin“ zählt ein sichtbarer Browser-Tab mit Maus-, Tastatur- oder Touch-Aktivität innerhalb dieser Zeit.", "A visible browser tab with mouse, keyboard or touch activity within this time counts as “looking”.")</small>
+                    </label>
+                    <input type="number" min="5" max="3600" @bind="_model.MqttUnreadActiveSeconds" />
+                }
+
+                <label>
                     @Loc.T("Subscriber aktiv", "Subscriber Active")<br />
                     <small>@Loc.T("Empfängt Sende-Befehle vom Broker und leitet sie ans Mesh weiter.", "Receives send commands from the broker and forwards them to the mesh.")</small>
                 </label>
@@ -2644,6 +2689,17 @@
 </div>
 
 @code {
+    private static readonly (DayOfWeek Day, string De, string En)[] _calWeekdays =
+    [
+        (DayOfWeek.Monday,    "Montag",     "Monday"),
+        (DayOfWeek.Tuesday,   "Dienstag",   "Tuesday"),
+        (DayOfWeek.Wednesday, "Mittwoch",   "Wednesday"),
+        (DayOfWeek.Thursday,  "Donnerstag", "Thursday"),
+        (DayOfWeek.Friday,    "Freitag",    "Friday"),
+        (DayOfWeek.Saturday,  "Samstag",    "Saturday"),
+        (DayOfWeek.Sunday,    "Sonntag",    "Sunday"),
+    ];
+
     private FormModel _model = new();
     private bool _saved;
     private bool _restored;
@@ -3435,6 +3491,7 @@
                     Text              = e.Text,
                     RecurrenceType    = e.RecurrenceType,
                     EventDayOfWeek    = e.EventDayOfWeek,
+                    EventDaysOfWeek   = e.EventDaysOfWeek,
                     EventDayOfMonth   = e.EventDayOfMonth,
                     WeekdayOrdinal    = e.WeekdayOrdinal,
                     EventTime         = e.EventTime,
@@ -3505,6 +3562,9 @@
             MqttPublishMessage      = s.Mqtt.PublishMessage,
             MqttPublishPosition     = s.Mqtt.PublishPosition,
             MqttPublishTelemetry    = s.Mqtt.PublishTelemetry,
+            MqttUnreadAlertEnabled  = s.Mqtt.UnreadAlertEnabled,
+            MqttUnreadAlertSeconds  = s.Mqtt.UnreadAlertSeconds,
+            MqttUnreadActiveSeconds = s.Mqtt.UnreadActiveSeconds,
             MqttSubscribeEnabled    = s.Mqtt.SubscribeEnabled,
             MqttLogRequests         = s.Mqtt.LogRequests,
             QrzEnabled              = s.Qrz.Enabled,
@@ -4290,6 +4350,7 @@
                         Text              = e.Text,
                         RecurrenceType    = e.RecurrenceType,
                         EventDayOfWeek    = e.EventDayOfWeek,
+                        EventDaysOfWeek   = e.EventDaysOfWeek,
                         EventDayOfMonth   = e.EventDayOfMonth,
                         WeekdayOrdinal    = e.WeekdayOrdinal,
                         EventTime         = e.EventTime,
@@ -4341,6 +4402,9 @@
                 MqttPublishMessage      = s.Mqtt.PublishMessage,
                 MqttPublishPosition     = s.Mqtt.PublishPosition,
                 MqttPublishTelemetry    = s.Mqtt.PublishTelemetry,
+                MqttUnreadAlertEnabled  = s.Mqtt.UnreadAlertEnabled,
+                MqttUnreadAlertSeconds  = s.Mqtt.UnreadAlertSeconds,
+                MqttUnreadActiveSeconds = s.Mqtt.UnreadActiveSeconds,
                 MqttSubscribeEnabled    = s.Mqtt.SubscribeEnabled,
                 MqttLogRequests         = s.Mqtt.LogRequests,
                 QrzEnabled         = s.Qrz.Enabled,
@@ -4484,6 +4548,9 @@
         public bool   MqttPublishMessage   { get; set; } = true;
         public bool   MqttPublishPosition  { get; set; }
         public bool   MqttPublishTelemetry { get; set; }
+        public bool   MqttUnreadAlertEnabled  { get; set; } = true;
+        public int    MqttUnreadAlertSeconds  { get; set; } = 60;
+        public int    MqttUnreadActiveSeconds { get; set; } = 30;
         public bool   MqttSubscribeEnabled { get; set; }
         public bool   MqttLogRequests       { get; set; }
 
@@ -4672,6 +4739,9 @@
                 PublishMessage   = MqttPublishMessage,
                 PublishPosition  = MqttPublishPosition,
                 PublishTelemetry = MqttPublishTelemetry,
+                UnreadAlertEnabled  = MqttUnreadAlertEnabled,
+                UnreadAlertSeconds  = Math.Clamp(MqttUnreadAlertSeconds, 5, 3600),
+                UnreadActiveSeconds = Math.Clamp(MqttUnreadActiveSeconds, 5, 3600),
                 SubscribeEnabled = MqttSubscribeEnabled,
                 LogRequests      = MqttLogRequests
             },
