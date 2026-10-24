@@ -354,6 +354,9 @@ public class SettingsService
                 ["SystemMarginDb"]          = s.SystemMarginDb,
                 ["OwnMessagesAlignLeft"]    = s.OwnMessagesAlignLeft,
                 ["TxCooldownSeconds"]       = s.TxCooldownSeconds,
+                ["PresenceEnabled"]         = s.PresenceEnabled,
+                ["PresenceFreshMinutes"]    = s.PresenceFreshMinutes,
+                ["PresenceStaleMinutes"]    = s.PresenceStaleMinutes,
                 ["GatewayHighlightEnabled"] = s.GatewayHighlightEnabled,
                 ["GatewayServer"]           = s.GatewayServer,
                 ["GatewaySources"] = new JsonArray(s.GatewaySources.Select(g => (JsonNode?)new JsonObject
