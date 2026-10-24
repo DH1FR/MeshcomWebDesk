@@ -785,9 +785,16 @@ window.meshcomMap = (function () {
     document.addEventListener('mouseover', function (e) {
         var a = locatorLink(e);
         if (!a || a === _current) return;
+        // Blazor re-renders replace the link element under a resting pointer; the browser then
+        // fires mouseover again. The same locator at the same spot is the same hover: keep the
+        // pending timer / visible preview instead of restarting.
+        if (_current && !_current.isConnected && _current.textContent === a.textContent) {
+            _current = a;
+            return;
+        }
         hide();
         _current = a;
-        _timer = setTimeout(function () { show(a); }, DELAY_MS);
+        _timer = setTimeout(function () { if (_current) show(_current); }, DELAY_MS);
     });
     document.addEventListener('mouseout', function (e) {
         var a = locatorLink(e);
