@@ -740,7 +740,10 @@ window.meshcomMap = (function () {
     }
 
     function ensureBox() {
-        if (_box) return;
+        // Blazor's enhanced navigation can drop nodes it does not own from <body>; rebuild then.
+        if (_box && _box.isConnected) return;
+        if (_map) { try { _map.remove(); } catch (e) { } }
+        _map = null; _rect = null;
         _box = document.createElement('div');
         _box.className = 'locator-preview';
         _box.style.display = 'none';
