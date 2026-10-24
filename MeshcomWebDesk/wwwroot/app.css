@@ -4037,3 +4037,28 @@ details[open] .cch-group-title::before { transform: rotate(90deg); }
     background: #fff;
 }
 .web-empty { padding: 2rem; opacity: .7; }
+
+/* Hover preview map for Maidenhead locator links */
+.locator-preview {
+    position: fixed;
+    z-index: 3000;
+    width: 320px;
+    height: 220px;
+    border: 2px solid var(--border, #30363d);
+    border-radius: 6px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+    pointer-events: none;
+}
+
+/* Locator text at the top-left corner of the highlighted square */
+.locator-label-wrap { background: none; border: none; }
+.locator-label {
+    display: inline-block;
+    margin: 2px 0 0 2px;
+    padding: 0 4px;
+    font: 600 12px "Cascadia Code", "Fira Code", monospace;
+    color: #f0883e;
+    background: rgba(13, 17, 23, 0.7);
+    border-radius: 3px;
+    white-space: nowrap;
+}

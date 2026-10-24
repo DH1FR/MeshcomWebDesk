@@ -13,6 +13,7 @@ window.meshcomMap = (function () {
     var _ownMarker       = null;
     var _ownKey          = null;
     var _locatorRect     = null;  // highlighted Maidenhead square
+    var _locatorLabel    = null;  // locator text at its top-left corner
     var _segEntries     = [];   // drawn relay segments (for focus mode)
     var _focusCall       = null; // uppercase callsign whose links are highlighted
     var _initialFitDone  = false;
@@ -267,6 +268,7 @@ window.meshcomMap = (function () {
             _ownMarker      = null;
             _ownKey         = null;
             _locatorRect    = null;
+            _locatorLabel   = null;
             if (sigThresholds) _sig = sigThresholds;
             if (i18n) Object.assign(_i18n, i18n);
 
@@ -523,23 +525,31 @@ window.meshcomMap = (function () {
         showLocator: function (label, south, west, north, east) {
             if (!_map) return;
             if (_locatorRect) { _map.removeLayer(_locatorRect); _locatorRect = null; }
+            if (_locatorLabel) { _map.removeLayer(_locatorLabel); _locatorLabel = null; }
             var bounds = [[south, west], [north, east]];
             _locatorRect = L.rectangle(bounds, {
                 color: '#f0883e', weight: 2, fillColor: '#f0883e', fillOpacity: 0.2
             }).addTo(_map);
-            var c = _locatorRect.getBounds().getCenter();
-            _locatorRect.bindPopup('<b>' + esc(label) + '</b><br>' +
-                c.lat.toFixed(4) + '°, ' + c.lng.toFixed(4) + '°');
+            _locatorLabel = L.marker([north, west], {
+                interactive: false,
+                icon: L.divIcon({
+                    className: 'locator-label-wrap',
+                    html: '<span class="locator-label">' + esc(label) + '</span>',
+                    iconSize: null,
+                    iconAnchor: [0, 0]
+                })
+            }).addTo(_map);
             // Prevent the initial auto-fit from overriding this view
             _initialFitDone = true;
             _readyToSave    = true;
             _map.fitBounds(bounds, { padding: [60, 60], maxZoom: 13 });
-            _locatorRect.openPopup();
         },
 
         clearLocator: function () {
             if (_map && _locatorRect) _map.removeLayer(_locatorRect);
+            if (_map && _locatorLabel) _map.removeLayer(_locatorLabel);
             _locatorRect = null;
+            _locatorLabel = null;
         },
 
         invalidateSize: function () { if (_map) _map.invalidateSize(); },
@@ -702,4 +712,88 @@ window.meshcomMap = (function () {
         var dx = a[0]-b[0], dy = a[1]-b[1];
         return dx*dx + dy*dy;
     }
+})();
+
+// ── Locator hover preview ───────────────────────────────────────────
+// Hovering a .msg-locator link (chat/monitor) for a moment shows a small map
+// with the Maidenhead square. One Leaflet instance is reused for all previews.
+(function () {
+    var DELAY_MS = 500;
+    var _box = null, _map = null, _rect = null, _timer = null, _current = null;
+
+    // Mirrors GeoHelper.TryParseMaidenhead (6 or 8 characters)
+    function parse(loc) {
+        var m = /^([A-R]{2})(\d{2})([A-X]{2})(\d{2})?$/i.exec(loc || '');
+        if (!m) return null;
+        var f = m[1].toUpperCase(), s = m[3].toUpperCase();
+        var lon = (f.charCodeAt(0) - 65) * 20 - 180 + parseInt(m[2][0], 10) * 2;
+        var lat = (f.charCodeAt(1) - 65) * 10 - 90  + parseInt(m[2][1], 10);
+        var lonSize = 2 / 24, latSize = 1 / 24;
+        lon += (s.charCodeAt(0) - 65) * lonSize;
+        lat += (s.charCodeAt(1) - 65) * latSize;
+        if (m[4]) {
+            lonSize /= 10; latSize /= 10;
+            lon += parseInt(m[4][0], 10) * lonSize;
+            lat += parseInt(m[4][1], 10) * latSize;
+        }
+        return [[lat, lon], [lat + latSize, lon + lonSize]];
+    }
+
+    function ensureBox() {
+        if (_box) return;
+        _box = document.createElement('div');
+        _box.className = 'locator-preview';
+        _box.style.display = 'none';
+        document.body.appendChild(_box);
+        _map = L.map(_box, {
+            zoomControl: false, attributionControl: false, dragging: false,
+            scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false,
+            keyboard: false, touchZoom: false
+        });
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(_map);
+    }
+
+    function show(a) {
+        var bounds = parse(a.textContent.trim());
+        if (!bounds || typeof L === 'undefined') return;
+        ensureBox();
+        var r = a.getBoundingClientRect();
+        var w = 320, h = 220;
+        var left = Math.min(Math.max(8, r.left), window.innerWidth - w - 8);
+        var top  = r.bottom + 6;
+        if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 6);
+        _box.style.left = left + 'px';
+        _box.style.top  = top + 'px';
+        _box.style.display = 'block';
+        _map.invalidateSize();
+        if (_rect) _map.removeLayer(_rect);
+        _rect = L.rectangle(bounds, { color: '#f0883e', weight: 2, fillColor: '#f0883e', fillOpacity: 0.2 }).addTo(_map);
+        _map.fitBounds(bounds, { padding: [30, 30], maxZoom: 13, animate: false });
+    }
+
+    function hide() {
+        clearTimeout(_timer);
+        _timer = null;
+        _current = null;
+        if (_box) _box.style.display = 'none';
+    }
+
+    function locatorLink(e) {
+        return e.target && e.target.closest ? e.target.closest('a.msg-locator') : null;
+    }
+
+    document.addEventListener('mouseover', function (e) {
+        var a = locatorLink(e);
+        if (!a || a === _current) return;
+        hide();
+        _current = a;
+        _timer = setTimeout(function () { show(a); }, DELAY_MS);
+    });
+    document.addEventListener('mouseout', function (e) {
+        var a = locatorLink(e);
+        if (a && a === _current && !(e.relatedTarget && a.contains(e.relatedTarget))) hide();
+    });
+    // Clicking navigates to the map page; Blazor re-renders can also detach the link.
+    document.addEventListener('click', function (e) { if (locatorLink(e)) hide(); });
+    document.addEventListener('scroll', hide, true);
 })();
