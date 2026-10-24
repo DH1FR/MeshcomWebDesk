@@ -544,6 +544,30 @@
                 </div>
 
                 <label>
+                    @Loc.T("Online-Anzeige im Chat", "Online indicator in chat")<br />
+                    <small>@Loc.T("Farbiger Punkt an Direkt-Tabs: wahrscheinlich erreichbar, laut Server-Dashboard (nodes.html) und lokaler MH-Liste. 📡 = direkt per Funk gehört.", "Coloured dot on direct tabs: probably reachable, based on the server dashboard (nodes.html) and the local MH list. 📡 = heard directly by radio.")</small>
+                </label>
+                <label>
+                    <input type="checkbox" @bind="_model.PresenceEnabled" />
+                    <span>@(_model.PresenceEnabled ? Loc.T("Aktiviert", "Enabled") : Loc.T("Deaktiviert", "Disabled"))</span>
+                </label>
+
+                @if (_model.PresenceEnabled)
+                {
+                    <label>
+                        @Loc.T("Online-Schwellen", "Online thresholds")<br />
+                        <small>@Loc.T("Grün: zuletzt aktiv vor weniger als … Minuten. Gelb: bis … Minuten. Danach grau. Standard-Beacon-Intervall der Nodes: 30 Minuten.", "Green: last active less than … minutes ago. Yellow: up to … minutes. Grey after that. Default node beacon interval: 30 minutes.")</small>
+                    </label>
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                        <span>🟢 &lt;</span>
+                        <input type="number" min="5" max="1440" style="width:80px" @bind="_model.PresenceFreshMinutes" />
+                        <span>min &nbsp; 🟡 &lt;</span>
+                        <input type="number" min="5" max="2880" style="width:80px" @bind="_model.PresenceStaleMinutes" />
+                        <span>min</span>
+                    </div>
+                }
+
+                <label>
                     @Loc.T("Gateway-Hervorhebung", "Gateway Highlight")<br />
                     <small>@Loc.T("Gateway-Stationen mit 🌐-Symbol und Farbe hervorheben.", "Highlight gateway stations with a 🌐 symbol and colour.")</small>
                 </label>
@@ -3593,6 +3617,9 @@
             SystemMarginDb          = s.SystemMarginDb,
             OwnMessagesAlignLeft    = s.OwnMessagesAlignLeft,
             TxCooldownSeconds       = s.TxCooldownSeconds,
+            PresenceEnabled         = s.PresenceEnabled,
+            PresenceFreshMinutes    = s.PresenceFreshMinutes,
+            PresenceStaleMinutes    = s.PresenceStaleMinutes,
             GatewayHighlightEnabled = s.GatewayHighlightEnabled,
             GatewayServer           = s.GatewayServer,
             GatewaySources          = s.GatewaySources
@@ -4433,6 +4460,9 @@
                 AntennaHeightM          = s.AntennaHeightM,
                 OwnMessagesAlignLeft    = s.OwnMessagesAlignLeft,
                 TxCooldownSeconds       = s.TxCooldownSeconds,
+                PresenceEnabled         = s.PresenceEnabled,
+                PresenceFreshMinutes    = s.PresenceFreshMinutes,
+                PresenceStaleMinutes    = s.PresenceStaleMinutes,
                 GatewayHighlightEnabled = s.GatewayHighlightEnabled,
                 GatewayServer           = s.GatewayServer,
                 GatewaySources          = s.GatewaySources
@@ -4585,6 +4615,9 @@
         public double SystemMarginDb          { get; set; } = 30.0;
         public bool   OwnMessagesAlignLeft    { get; set; } = false;
         public int    TxCooldownSeconds         { get; set; } = 5;
+        public bool   PresenceEnabled          { get; set; } = true;
+        public int    PresenceFreshMinutes     { get; set; } = 45;
+        public int    PresenceStaleMinutes     { get; set; } = 120;
         public bool   GatewayHighlightEnabled  { get; set; } = true;
         public string GatewayServer            { get; set; } = "oe";
         public List<GatewaySourceEntry> GatewaySources { get; set; } = [];
@@ -4777,6 +4810,9 @@
             SystemMarginDb          = SystemMarginDb,
             OwnMessagesAlignLeft    = OwnMessagesAlignLeft,
             TxCooldownSeconds       = TxCooldownSeconds,
+            PresenceEnabled         = PresenceEnabled,
+            PresenceFreshMinutes    = Math.Clamp(PresenceFreshMinutes, 5, 1440),
+            PresenceStaleMinutes    = Math.Clamp(Math.Max(PresenceStaleMinutes, PresenceFreshMinutes), 5, 2880),
             GatewayHighlightEnabled = GatewayHighlightEnabled,
             GatewayServer           = GatewayServer,
             GatewaySources          = GatewaySources

@@ -295,6 +295,50 @@ public class ChatService
         }
     }
 
+    /// <summary>Callsign-SSIDs of all open direct tabs across all nodes (no broadcast or group tabs).</summary>
+    public IReadOnlyCollection<string> GetOpenDirectCalls()
+    {
+        var calls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var st in _nodeState.Values)
+            foreach (var key in st.Tabs.Keys)
+                if (key != "*" && !key.StartsWith('#'))
+                    calls.Add(key);
+        return calls;
+    }
+
+    /// <summary>
+    /// Stations seen only as a relay hop in a packet path (not as its originator) are not in the
+    /// MH list. Their last sighting is kept here so the online indicator can still use it.
+    /// Direct = last hop of the path, i.e. the station our node actually received from.
+    /// </summary>
+    private readonly ConcurrentDictionary<string, (DateTime Time, bool Direct)> _relaySeen =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private void RecordRelaySightings(MeshcomMessage message)
+    {
+        if (string.IsNullOrEmpty(message.RelayPath)) return;
+        var hops = message.RelayPath.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        var own  = _nodeManager?.GetPrimaryCallsign() ?? _settings.MyCallsign;
+        for (var i = 1; i < hops.Length; i++)   // index 0 = originator, handled by the MH list
+        {
+            if (string.Equals(hops[i], own, StringComparison.OrdinalIgnoreCase)) continue;
+            var direct = i == hops.Length - 1;
+            _relaySeen.AddOrUpdate(hops[i],
+                (message.Timestamp, direct),
+                (_, old) => message.Timestamp >= old.Time
+                    ? (message.Timestamp, direct || (message.Timestamp == old.Time && old.Direct))
+                    : old);
+        }
+    }
+
+    /// <summary>Last time the callsign-SSID was seen as a relay hop (null if never).</summary>
+    public (DateTime Time, bool Direct)? GetRelaySeen(string callsign) =>
+        _relaySeen.TryGetValue(callsign, out var v) ? v : null;
+
+    /// <summary>MH-list entry of a node for the given callsign-SSID, or null.</summary>
+    public HeardStation? GetHeardStation(Guid? nodeId, string callsign) =>
+        ResolveState(nodeId).MhList.TryGetValue(callsign, out var s) ? s : null;
+
     /// <summary>Returns the persisted tab order for a node. Empty list = no saved order.</summary>
     public IReadOnlyList<string> GetTabOrder(Guid? nodeId)
     {
@@ -1242,6 +1286,7 @@ public class ChatService
     private bool UpdateMhList(MeshcomMessage message, NodeState state)
     {
         if (string.IsNullOrEmpty(message.From)) return false;
+        RecordRelaySightings(message);
         bool mhChanged = false;
         state.MhList.AddOrUpdate(
             message.From,

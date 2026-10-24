@@ -1029,6 +1029,17 @@
     "❌ API: Request failed. Please check log.": "❌ API: richiesta non riuscita. Controlla il log.",
     "❌ Please enter a callsign.": "❌ Inserisci un nominativo.",
     "📡 Measured range": "📡 Portata misurata",
-    "🤖 AI Info": "🤖 Info IA"
+    "🤖 AI Info": "🤖 Info IA",
+    "Online indicator in chat": "Indicatore online nella chat",
+    "Coloured dot on direct tabs: probably reachable, based on the server dashboard (nodes.html) and the local MH list. 📡 = heard directly by radio.": "Punto colorato sulle schede dirette: probabilmente raggiungibile, in base alla dashboard del server (nodes.html) e alla lista MH locale. 📡 = sentita direttamente via radio.",
+    "Online thresholds": "Soglie online",
+    "Green: last active less than … minutes ago. Yellow: up to … minutes. Grey after that. Default node beacon interval: 30 minutes.": "Verde: attiva da meno di … minuti. Giallo: fino a … minuti. Poi grigio. Intervallo beacon predefinito dei nodi: 30 minuti.",
+    "Probably reachable": "Probabilmente raggiungibile",
+    "Reachability uncertain": "Raggiungibilità incerta",
+    "Probably not reachable": "Probabilmente non raggiungibile",
+    "Server: {0} ago": "Server: {0} fa",
+    "via {0}": "tramite {0}",
+    "Server: not listed": "Server: non presente",
+    "heard directly {0} ago": "sentita direttamente {0} fa"
   }
 }

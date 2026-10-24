@@ -93,7 +93,7 @@ public sealed class GatewayService : IHostedService, IAsyncDisposable
     /// Resolves the effective list of dashboard URLs to scrape from the current settings:
     /// the selected preset(s) plus every enabled user-defined source.
     /// </summary>
-    private static IReadOnlyList<string> ResolveUrls(MeshcomSettings settings)
+    internal static IReadOnlyList<string> ResolveUrls(MeshcomSettings settings)
     {
         var urls = new List<string>();
 

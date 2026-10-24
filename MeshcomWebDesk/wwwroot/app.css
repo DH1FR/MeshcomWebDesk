@@ -4062,3 +4062,9 @@ details[open] .cch-group-title::before { transform: rotate(90deg); }
     border-radius: 3px;
     white-space: nowrap;
 }
+
+/* Online indicator on direct chat tabs */
+.presence-dot { font-size: 14px; line-height: 1; margin-right: 4px; cursor: help; }
+.presence-online    { color: #3fb950; }
+.presence-uncertain { color: #d29922; }
+.presence-offline   { color: #6e7681; }

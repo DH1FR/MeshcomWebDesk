@@ -19,6 +19,7 @@
 @inject SerialConsoleService SerialConsoleService
 @inject HmacConsoleService HmacConsoleService
 @inject NodeManager NodeManager
+@inject NodePresenceService Presence
 @inject MeshcomWebDesk.Services.Kiss.KissClientService KissService
 @implements IDisposable
 
@@ -83,7 +84,14 @@
                         @onclick="() => SelectTab(tab.Key)"
                         title="@(tab.Key != "*" && !tab.Key.StartsWith('#') ? tab.Title + QrzSuffix(tab.Key) : tab.Key.StartsWith('#') ? ChatService.GetGroupLabel(tab.Key)?.Label : null)">
                     <span class="tab-label-wrap">
-                        <span>@(tab.Key == "*" ? Loc.T("Alle", "All") : tab.Title)</span>
+                        <span>
+                            @if (Presence.Enabled && tab.Key != "*" && !tab.Key.StartsWith('#'))
+                            {
+                                var pr = Presence.Evaluate(tab.Key, ChatService.GetHeardStation(_activeNodeId, tab.Key), ChatService.GetRelaySeen(tab.Key));
+                                <span class="presence-dot presence-@pr.Level.ToString().ToLowerInvariant()" title="@PresenceTitle(pr)">●@(pr.DirectLastHeard.HasValue ? "📡" : "")</span>
+                            }
+                            @(tab.Key == "*" ? Loc.T("Alle", "All") : tab.Title)
+                        </span>
                         @if (tab.Key != "*" && !tab.Key.StartsWith('#') && QrzFirstName(tab.Key) is { } tabFn)
                         {
                             <span class="tab-qrz-name">@tabFn</span>
@@ -1191,6 +1199,7 @@
         TelnetService.OnChange += OnTelnetChanged;
         SerialConsoleService.OnChange += OnTelnetChanged;
         NodeManager.OnSelectedNodeChanged += OnNodeChanged;
+        Presence.Changed += OnPresenceChanged;
         // Periodically re-render so the UDP badge falls back from green to yellow once
         // UdpStaleAfter has elapsed without a new packet (no other event would trigger that).
         _udpStaleTimer = new System.Threading.Timer(_ => OnUdpStaleTick(), null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
@@ -1417,9 +1426,52 @@
         InvokeAsync(StateHasChanged);
     }
 
+    private void OnPresenceChanged()
+    {
+        if (_disposed) return;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private string PresenceTitle(PresenceInfo p)
+    {
+        var parts = new List<string>
+        {
+            p.Level switch
+            {
+                PresenceLevel.Online    => Loc.T("Wahrscheinlich erreichbar", "Probably reachable"),
+                PresenceLevel.Uncertain => Loc.T("Erreichbarkeit unsicher", "Reachability uncertain"),
+                _                       => Loc.T("Wahrscheinlich nicht erreichbar", "Probably not reachable"),
+            }
+        };
+        if (p.ServerLastSeen is { } sv)
+        {
+            var via = string.IsNullOrEmpty(p.ViaGateway) ? "" : " " + Loc.TF("über {0}", "via {0}", p.ViaGateway);
+            parts.Add(Loc.TF("Server: vor {0}", "Server: {0} ago", PresenceAge(sv)) + via);
+        }
+        else
+        {
+            parts.Add(Loc.T("Server: nicht gelistet", "Server: not listed"));
+        }
+        if (p.DirectLastHeard is { } d)
+            parts.Add("📡 " + Loc.TF("direkt gehört vor {0}", "heard directly {0} ago", PresenceAge(d))
+                      + (p.DirectRssi is { } r ? $", {r} dBm" : ""));
+        return string.Join(" · ", parts);
+    }
+
+    private static string PresenceAge(DateTime utc)
+    {
+        var age = DateTime.UtcNow - utc;
+        if (age < TimeSpan.Zero) age = TimeSpan.Zero;
+        return age.TotalMinutes < 1 ? "<1 min"
+             : age.TotalHours   < 1 ? $"{(int)age.TotalMinutes} min"
+             : age.TotalDays    < 1 ? $"{(int)age.TotalHours} h {age.Minutes} min"
+             : $"{(int)age.TotalDays} d";
+    }
+
     private void RefreshData()
     {
         _tabs = ChatService.GetTabs(_activeNodeId).ToList();
+        Presence.NotifyTabs(_tabs.Where(t => t.Key != "*" && !t.Key.StartsWith('#')).Select(t => t.Key));
         ApplyTabOrder();
         _allMessages = ChatService.GetAllMessages(_activeNodeId);
         RebuildFilterCache();
@@ -1772,6 +1824,7 @@
         TelnetService.OnChange -= OnTelnetChanged;
         SerialConsoleService.OnChange -= OnTelnetChanged;
         NodeManager.OnSelectedNodeChanged -= OnNodeChanged;
+        Presence.Changed -= OnPresenceChanged;
     }
 
     private void SelectNode(Guid nodeId) => NodeManager.SelectNode(nodeId);
