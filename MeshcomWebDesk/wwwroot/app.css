@@ -609,6 +609,16 @@ h1:focus {
     text-decoration: none;
 }
 
+.msg-locator {
+    color: var(--link);
+    text-decoration: underline dotted;
+    cursor: pointer;
+}
+.msg-locator:hover {
+    color: var(--link-soft);
+    text-decoration: none;
+}
+
 /* ACK delivery indicator on outgoing messages */
 .msg-ack {
     font-size: 11px;

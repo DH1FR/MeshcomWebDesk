@@ -2318,15 +2318,18 @@
         !string.IsNullOrEmpty(m.From) ? "mon-row-msg" :
         "mon-row-sys";
 
+    // URLs/mailto first so a locator-like string inside a URL is consumed by the URL match.
+    // Locators: 6 or 8 characters only (4-char squares such as "JO40" give too many false hits).
     private static readonly Regex UrlRegex = new(
-        @"(?:https?://[^\s<>""'\]\)\[]{1,2000}|mailto:[^\s<>""'\]\)\[]+)",
+        @"(?:https?://[^\s<>""'\]\)\[]{1,2000}|mailto:[^\s<>""'\]\)\[]+)"
+        + @"|(?<![A-Za-z0-9])(?<loc>[A-Ra-r]{2}\d{2}[A-Xa-x]{2}(?:\d{2})?)(?![A-Za-z0-9])",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     private MarkupString FormatMessageWithLinks(string text)
     {
-        bool hasUrl    = text.Contains("://");
-        bool hasMailto = text.Contains("mailto:", StringComparison.OrdinalIgnoreCase);
-        if (string.IsNullOrEmpty(text) || (!hasUrl && !hasMailto))
+        if (string.IsNullOrEmpty(text))
+            return new MarkupString(string.Empty);
+        if (!UrlRegex.IsMatch(text))
             return new MarkupString(System.Net.WebUtility.HtmlEncode(text));
 
         var confirmMsg = System.Net.WebUtility.HtmlEncode(Loc.T(
@@ -2338,7 +2341,15 @@
         foreach (Match match in UrlRegex.Matches(text))
         {
             sb.Append(System.Net.WebUtility.HtmlEncode(text[lastIndex..match.Index]));
-            var href    = System.Net.WebUtility.HtmlEncode(match.Value);
+            if (match.Groups["loc"].Success)
+            {
+                var loc = match.Value;
+                var tip = System.Net.WebUtility.HtmlEncode(Loc.T("Auf der Karte anzeigen", "Show on map"));
+                sb.Append($"<a class=\"msg-locator\" href=\"map?locator={loc}\" title=\"{tip}\">{loc}</a>");
+                lastIndex = match.Index + match.Length;
+                continue;
+            }
+            var href   = System.Net.WebUtility.HtmlEncode(match.Value);
             var display = System.Net.WebUtility.HtmlEncode(
                 match.Value.Length > 55 ? match.Value[..55] + "\u2026" : match.Value);
             bool isMailto = match.Value.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase);

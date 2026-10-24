@@ -12,7 +12,8 @@ window.meshcomMap = (function () {
     var _stationMarkers  = {};   // remote stations, keyed by uppercase callsign
     var _ownMarker       = null;
     var _ownKey          = null;
-    var _segEntries      = [];   // drawn relay segments (for focus mode)
+    var _locatorRect     = null;  // highlighted Maidenhead square
+    var _segEntries     = [];   // drawn relay segments (for focus mode)
     var _focusCall       = null; // uppercase callsign whose links are highlighted
     var _initialFitDone  = false;
     var _readyToSave     = false;
@@ -265,6 +266,7 @@ window.meshcomMap = (function () {
             _focusCall      = null;
             _ownMarker      = null;
             _ownKey         = null;
+            _locatorRect    = null;
             if (sigThresholds) _sig = sigThresholds;
             if (i18n) Object.assign(_i18n, i18n);
 
@@ -515,6 +517,29 @@ window.meshcomMap = (function () {
             _map.setView(marker.getLatLng(), Math.max(_map.getZoom(), 13));
             marker.openPopup();
             return true;
+        },
+
+        // Highlights a Maidenhead grid square and zooms to it.
+        showLocator: function (label, south, west, north, east) {
+            if (!_map) return;
+            if (_locatorRect) { _map.removeLayer(_locatorRect); _locatorRect = null; }
+            var bounds = [[south, west], [north, east]];
+            _locatorRect = L.rectangle(bounds, {
+                color: '#f0883e', weight: 2, fillColor: '#f0883e', fillOpacity: 0.2
+            }).addTo(_map);
+            var c = _locatorRect.getBounds().getCenter();
+            _locatorRect.bindPopup('<b>' + esc(label) + '</b><br>' +
+                c.lat.toFixed(4) + '°, ' + c.lng.toFixed(4) + '°');
+            // Prevent the initial auto-fit from overriding this view
+            _initialFitDone = true;
+            _readyToSave    = true;
+            _map.fitBounds(bounds, { padding: [60, 60], maxZoom: 13 });
+            _locatorRect.openPopup();
+        },
+
+        clearLocator: function () {
+            if (_map && _locatorRect) _map.removeLayer(_locatorRect);
+            _locatorRect = null;
         },
 
         invalidateSize: function () { if (_map) _map.invalidateSize(); },
