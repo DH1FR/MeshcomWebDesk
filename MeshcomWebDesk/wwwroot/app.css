@@ -632,6 +632,7 @@ h1:focus {
 .ack-cloud     { color: var(--link-soft); }
 .ack-cloud-ok  { color: var(--ok); font-weight: 700; }
 .ack-no-echo   { color: var(--error); font-weight: 700; }
+.ack-failed    { color: var(--error); font-weight: 700; }
 
 /* ===== Send Bar Wrapper (Quick Texts) ===== */
 .send-bar-wrap {
@@ -2801,6 +2802,7 @@ h1:focus {
 .aprs-dot.aprs-own-gateway { border: 2px solid var(--ok); box-shadow: 0 0 0 3px rgba(63,185,80,0.55), 0 0 8px 3px rgba(63,185,80,0.35); }
 .aprs-label-gateway { color: var(--ok) !important; }
 .aprs-gw-icon { margin-right: 2px; font-size: .85em; }
+.aprs-sym-icon { margin-right: 2px; font-size: .95em; }
 
 /* "No positions" overlay */
 .map-no-data {

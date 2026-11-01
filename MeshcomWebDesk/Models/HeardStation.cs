@@ -73,6 +73,18 @@ public class HeardStation
     /// <summary>Hardware ID (from "hw_id" field).</summary>
     public int? HwId { get; set; }
 
+    /// <summary>LoRa modulation ID of the station's node (from "lora_mod"), null when never reported.</summary>
+    public int? LoraMod { get; set; }
+
+    /// <summary>Remaining hop budget of the last frame heard from this station (from "max_hop").</summary>
+    public int? MaxHop { get; set; }
+
+    /// <summary>APRS symbol character of the last beacon (from "aprs_symbol").</summary>
+    public string? AprsSymbol { get; set; }
+
+    /// <summary>APRS symbol table character of the last beacon ("/" primary, "\\" alternate).</summary>
+    public string? AprsSymbolGroup { get; set; }
+
     /// <summary>Firmware version string (e.g. "4.35p").</summary>
     public string? Firmware { get; set; }
 

@@ -29,6 +29,19 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
+## 🆕 What's New (unreleased – `dev`)
+
+### ✨ Features
+- **Node delivery status (firmware 4.40a)** – the node now reports the fate of every message you send as a JSON `{"type":"ack","msg_id":…,"status":…}` datagram on the ext-udp port; WebDesk matches it to your outgoing message via the `msg_id` of the node echo. A gateway or destination ACK sets the delivery ticks (`☁️✓` / `✓✓`) with the round-trip time, **`❌` shows that the node gave up** after its retransmit ladder, and `📬` names the store node that holds the message. Unknown `msg_id`s (messages sent from another client) are ignored.
+- **APRS symbols on the map** – stations that send an APRS symbol (`aprs_symbol` / `aprs_symbol_group`) get a glyph in front of the callsign on the map (🚗 car, 🏠 home, 📡 digipeater, 🚲 bike, ⛵ yacht, 🌦️ weather, …) and an `APRS` badge with the symbol code in the popup. The dot keeps its signal colour, relay ring and gateway marker; stations without a symbol look as before.
+- **Station card: modulation, hop budget, symbol** – the MHeard station card shows the LoRa modulation ID (`MOD`), the remaining hop budget of the last packet heard (`Hops`) and the APRS symbol.
+- **Gateway presets HB and SP** – **Settings → Gateway Source** now offers 🇨🇭 HB (`meshcom.emcomm.ch`) and 🇵🇱 SP (`sp.meshcom.pl`) next to OE, DL and IT.
+
+### 🐛 Bug fixes
+- **DL gateway dashboard returned 404** – the DL preset pointed to `/meshcom/rakgw.html`, but the page lives at `http://meshcom.hamnet.network/rakgw.html`, so no DL gateways were highlighted. Fixed; custom sources saved with the old URL are repaired automatically.
+
+---
+
 ## 🆕 What's New in v1.16.0
 
 ### ✨ Features
@@ -148,6 +161,8 @@ The application runs on **Windows** or **Linux** and makes a full web client for
   - `✓✓` green – recipient confirmed delivery (LoRa ACK received)
   - `☁️` – sent to group or broadcast (no ACK expected)
   - `☁️✓` – delivered via gateway (Gateway ACK received)
+  - `❌` red – delivery failed, the node gave up after several retransmits (firmware 4.40a)
+  - `📬` – held by a store/mailbox node until the recipient is reachable
 - **Clickable callsigns in the monitor** – click any sender or recipient to open a chat tab instantly; hover over a callsign to reveal a small **`@`** button – clicking it inserts `@CALLSIGN` at the current cursor position in the message input field (useful for addressing someone in a group or broadcast message without switching tabs)
 - **`@`-Mention in chat messages** – the same `@` button appears next to every incoming callsign in the group/broadcast message list; clicking it inserts `@CALLSIGN` at the cursor position in the send bar
 - **QRZ.com tooltips** – when enabled, hovering over any callsign (tab buttons, chat messages, monitor From/To) shows the operator's first name and home QTH (e.g. `Chat mit DH1FR-2 öffnen · Max, Berlin`); concurrent lookups for the same callsign share a single HTTP request (in-flight deduplication)
@@ -1175,6 +1190,7 @@ This client communicates with the MeshCom node using the **EXTUDP JSON protocol*
 5. Gateway ACK received (src_type `udp`) → `☁️✓`
 6. Both LoRa ACK **and** Gateway ACK received → `✓✓ ☁️✓` (direct LoRa + Gateway confirmed)
 7. Node echo missing after 5 seconds → `⚠️` (UDP packet possibly not received by node)
+8. Firmware 4.40a: node JSON status `{"type":"ack","msg_id":…,"status":…}` – status 1 (gateway) / 2 (recipient) → delivered, status 3 → `❌` failed, status 4 → `📬` held by a store node, status 0 (heard by a neighbour) only confirms transmission
 
 | Icon | Meaning |
 |------|--------|
@@ -1185,6 +1201,8 @@ This client communicates with the MeshCom node using the **EXTUDP JSON protocol*
 | `☁️✓` | Delivered – Gateway ACK only |
 | `✓✓ ☁️✓` | Delivered – LoRa ACK **and** Gateway ACK |
 | `⚠️` | Node echo missing – UDP packet possibly not received by node |
+| `❌` | Delivery failed – the node gave up after several retransmits (firmware 4.40a) |
+| `📬` | Held by a store/mailbox node – delivered once the recipient is reachable |
 
 ### Hardware IDs (`hw_id`)
 

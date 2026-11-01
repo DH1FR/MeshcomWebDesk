@@ -1040,6 +1040,10 @@
     "Server: {0} ago": "Server: {0} fa",
     "via {0}": "tramite {0}",
     "Server: not listed": "Server: non presente",
-    "heard directly {0} ago": "sentita direttamente {0} fa"
+    "heard directly {0} ago": "sentita direttamente {0} fa",
+    "Delivery failed – the node gave up after several retransmits": "Consegna non riuscita: il nodo ha rinunciato dopo diverse ritrasmissioni",
+    "LoRa modulation ID of the node": "ID di modulazione LoRa del nodo",
+    "Remaining hop budget of the last packet heard": "Budget di hop residuo dell'ultimo pacchetto ascoltato",
+    "APRS symbol": "Simbolo APRS"
   }
 }

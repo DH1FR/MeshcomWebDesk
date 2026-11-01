@@ -1,5 +1,17 @@
 ﻿# Changelog
 
+## [Unreleased]
+
+### Features
+- **Node delivery status (firmware 4.40a)** – the node's JSON `{"type":"ack","msg_id":…,"status":…}` datagram is now evaluated. It is matched to your outgoing message by the `msg_id` of the node echo: status 1/2 (gateway / destination ACK) sets the delivery ticks, status 3 shows ❌ "delivery failed" once the node's retransmit ladder gave up, status 4 shows the 📬 mailbox marker with the holding node. Status 0 (heard by a neighbour) only confirms transmission. Unknown `msg_id`s (sent from another client) are ignored.
+- **Station card: modulation, hop budget, APRS symbol** – the MHeard station card shows the LoRa modulation ID (`lora_mod`), the remaining hop budget (`max_hop`) and the APRS symbol (`aprs_symbol`/`aprs_symbol_group`, with a glyph for common symbols).
+- **Gateway presets HB and SP** – Settings → Gateway Source now offers 🇨🇭 HB (meshcom.emcomm.ch) and 🇵🇱 SP (sp.meshcom.pl).
+
+### Bugfixes
+- **DL gateway dashboard returned 404** – the DL preset pointed to `/meshcom/rakgw.html`; the page is at `http://meshcom.hamnet.network/rakgw.html`. Stored custom sources with the old URL are repaired automatically.
+
+---
+
 ## [1.16.0] – 2026-10-19
 
 ### Features

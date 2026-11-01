@@ -2436,6 +2436,7 @@
         if (m.IsAcknowledged && m.IsLoraDelivered && m.IsGatewayDelivered) return "msg-ack ack-cloud-ok ack-ok";
         if (m.IsAcknowledged && m.IsGatewayDelivered) return "msg-ack ack-cloud-ok";
         if (m.IsAcknowledged)                         return "msg-ack ack-ok";
+        if (m.DeliveryFailed)                         return "msg-ack ack-failed";
         if (m.NodeEchoReceived == false)              return "msg-ack ack-no-echo";
         if (m.SequenceNumber != null)                 return "msg-ack ack-sent";
         return "msg-ack ack-pending";
@@ -2449,6 +2450,7 @@
         if (m.IsAcknowledged && m.IsLoraDelivered && m.IsGatewayDelivered) return "✓✓ ☁️✓";
         if (m.IsAcknowledged && m.IsGatewayDelivered) return "☁️✓";
         if (m.IsAcknowledged)                         return "✓✓";
+        if (m.DeliveryFailed)                         return "❌";
         if (m.NodeEchoReceived == false)              return "⚠️";
         if (m.HeldBy != null)                         return "📬";
         if (isGroupOrBcast && m.SequenceNumber != null) return "☁️";
@@ -2469,6 +2471,8 @@
             return $"☁️✓ {Loc.T("Über Gateway zugestellt", "Delivered via gateway")}{ackRtt}";
         if (m.IsAcknowledged)
             return $"✓✓ {Loc.T("Zugestellt (LoRa ACK)", "Delivered (LoRa ACK)")}{ackRtt}";
+        if (m.DeliveryFailed)
+            return "❌ " + Loc.T("Zustellung fehlgeschlagen – der Node hat nach mehreren Wiederholungen aufgegeben", "Delivery failed – the node gave up after several retransmits");
         if (m.NodeEchoReceived == false)
             return "⚠️ " + Loc.T("Node-Echo ausgeblieben – UDP-Paket wurde möglicherweise nicht vom Node empfangen!", "No node echo – the UDP packet may not have reached the node!");
         if (m.HeldBy != null)

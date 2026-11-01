@@ -301,7 +301,13 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                         // cause the real lora packet to be dropped as a duplicate.
                         // EXCEPTION: ACKs must never be skipped – the firmware may deliver an ACK only
                         // as src_type:"node" (no second lora copy), so skipping it loses the delivery tick.
-                        if (message.IsNodePacket &&
+                        if (message.IsJsonAck)
+                        {
+                            // Node delivery-status datagram: update the matching outgoing message only.
+                            // Not counted as RX traffic – it is not a heard packet.
+                            _chatService.AddNodeAck(message, message.NodeId);
+                        }
+                        else if (message.IsNodePacket &&
                             !message.IsAck && !message.IsHoldNotice &&
                             !string.Equals(message.From, myCallsign, StringComparison.OrdinalIgnoreCase))
                         {
@@ -320,7 +326,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                             // message.To is already the final destination (via-nodes are stripped
                             // into ViaPath during parsing); forward ViaPath so the original TX row
                             // in the monitor can be updated with the routing the node chose.
-                            _chatService.AssignOutgoingSequence(message.To, message.SequenceNumber, message.NodeId, message.ViaPath);
+                            _chatService.AssignOutgoingSequence(message.To, message.SequenceNumber, message.NodeId, message.ViaPath, message.MsgId);
                             // Capture node firmware + hardware from src_type:"node" packets
                             bool metaChanged = false;
                             if (!string.IsNullOrEmpty(message.Firmware) && Status.NodeFirmware != message.Firmware)
@@ -1606,6 +1612,37 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         return lenMarker > jsonStart ? raw[jsonStart..lenMarker] : raw[jsonStart..];
     }
 
+    /// <summary>
+    /// Parses the node's JSON delivery-status datagram
+    /// <c>{"type":"ack","msg_id":"69C84664","status":2,"from":"DL1ABC-1","via":"udp"}</c>.
+    /// Returns null when msg_id or status is missing/invalid.
+    /// </summary>
+    private static MeshcomMessage? ParseJsonAck(JsonElement root, string raw)
+    {
+        if (!root.TryGetProperty("msg_id", out var idProp) || idProp.ValueKind != JsonValueKind.String)
+            return null;
+        if (!root.TryGetProperty("status", out var statusProp) || statusProp.ValueKind != JsonValueKind.Number)
+            return null;
+
+        var msgId = idProp.GetString();
+        if (string.IsNullOrEmpty(msgId)) return null;
+
+        var from = root.TryGetProperty("from", out var fromProp) ? fromProp.GetString() ?? string.Empty : string.Empty;
+        var via  = root.TryGetProperty("via",  out var viaProp)  ? viaProp.GetString() : null;
+
+        return new MeshcomMessage
+        {
+            From      = from,
+            To        = string.Empty,
+            Text      = string.Empty,
+            RawData   = raw,
+            MsgId     = msgId,
+            IsJsonAck = true,
+            AckStatus = statusProp.GetInt32(),
+            SrcType   = via ?? "udp",
+        };
+    }
+
     private MeshcomMessage? ParseMessage(string raw)
     {
         raw = UnwrapExtMessage(raw);
@@ -1617,6 +1654,10 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         {
             using var doc = JsonDocument.Parse(raw);
             var root = doc.RootElement;
+
+            // Delivery-status datagram (firmware 4.40a): no "src", only msg_id + status [+ from/via].
+            if (root.TryGetProperty("type", out var ackTypeProp) && ackTypeProp.GetString() == "ack")
+                return ParseJsonAck(root, raw);
 
             if (!root.TryGetProperty("type", out var typeProp) ||
                 !root.TryGetProperty("src",  out var srcProp))
@@ -1775,6 +1816,16 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             // 0°N 0°E (null island) = no GPS fix
             if (lat is 0.0 && lon is 0.0) { lat = null; lon = null; alt = null; }
 
+            // ── Originator radio info (firmware 4.40a) ───────────────────────
+            int? loraMod = root.TryGetProperty("lora_mod", out var modProp) && modProp.ValueKind == JsonValueKind.Number
+                ? modProp.GetInt32() & 0x0F : null;
+            int? maxHop  = root.TryGetProperty("max_hop", out var hopProp) && hopProp.ValueKind == JsonValueKind.Number
+                ? hopProp.GetInt32() : null;
+            string? aprsSymbol = root.TryGetProperty("aprs_symbol", out var symProp) && symProp.ValueKind == JsonValueKind.String
+                ? symProp.GetString() : null;
+            string? aprsSymbolGroup = root.TryGetProperty("aprs_symbol_group", out var symGrpProp) && symGrpProp.ValueKind == JsonValueKind.String
+                ? symGrpProp.GetString() : null;
+
             // ── Telemetry fields ─────────────────────────────────────────────
             double? temp1    = null;
             double? temp2    = null;
@@ -1824,6 +1875,10 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                 HwId             = hwId,
                 Battery          = battery,
                 Firmware         = firmware,
+                LoraMod          = loraMod,
+                MaxHop           = maxHop,
+                AprsSymbol       = string.IsNullOrEmpty(aprsSymbol) ? null : aprsSymbol,
+                AprsSymbolGroup  = string.IsNullOrEmpty(aprsSymbolGroup) ? null : aprsSymbolGroup,
                 Temp1            = temp1,
                 Temp2            = temp2,
                 Humidity         = humidity,

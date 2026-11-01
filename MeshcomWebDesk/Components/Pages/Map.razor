@@ -353,6 +353,8 @@
                     battery   = s.Battery,
                     hwName    = MeshcomLookup.HwName(s.HwId),
                     firmware  = s.Firmware,
+                    symIcon   = MeshcomLookup.AprsSymbolIcon(s.AprsSymbol, s.AprsSymbolGroup),
+                    symCode   = string.IsNullOrEmpty(s.AprsSymbol) ? string.Empty : (s.AprsSymbolGroup + s.AprsSymbol),
                     qrzName   = qrz?.FirstName,
                     qrzLoc    = qrz?.Location,
                     hopCount  = s.HopCount,

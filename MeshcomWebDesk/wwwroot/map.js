@@ -91,7 +91,7 @@ window.meshcomMap = (function () {
 
     // APRS-style marker: filled circle (signal colour) + optional relay ring + callsign label.
     // nbCount = "/N" neighbour count (KISS only): a well-meshed hub gets a slightly larger dot.
-    function stationIcon(callsign, tier, hopCount, hasTelem, isGateway, nbCount) {
+    function stationIcon(callsign, tier, hopCount, hasTelem, isGateway, nbCount, symIcon) {
         var sigClass   = tierClass(tier);
         var relayClass = hopCount > 1 ? ' aprs-relay-2'
                        : hopCount > 0 ? ' aprs-relay-1'
@@ -101,9 +101,11 @@ window.meshcomMap = (function () {
         var anchor    = hubClass ? 8 : 6;
         var gwIcon    = isGateway ? '<span class="aprs-gw-icon">🌐</span>' : '';
         var telemIcon = hasTelem ? '<span class="aprs-telem-icon">🌡️</span>' : '';
+        // APRS symbol (firmware 4.40a "aprs_symbol"): glyph in front of the callsign; the dot keeps the signal colour.
+        var symHtml   = symIcon ? '<span class="aprs-sym-icon">' + esc(symIcon) + '</span>' : '';
         var html = '<div class="aprs-wrap">'
                  + '<div class="aprs-dot ' + sigClass + relayClass + gwClass + hubClass + '"></div>'
-                 + '<div class="aprs-label' + (isGateway ? ' aprs-label-gateway' : '') + '">' + gwIcon + esc(callsign) + telemIcon + '</div>'
+                 + '<div class="aprs-label' + (isGateway ? ' aprs-label-gateway' : '') + '">' + symHtml + gwIcon + esc(callsign) + telemIcon + '</div>'
                  + '</div>';
         return L.divIcon({ className: '', html: html, iconAnchor: [anchor, anchor] });
     }
@@ -138,8 +140,9 @@ window.meshcomMap = (function () {
             qrzLine += '</span>';
         }
         var badgeLine = '';
-        if (s.hwName || s.firmware) {
+        if (s.hwName || s.firmware || s.symCode) {
             badgeLine = '<br>';
+            if (s.symCode)  badgeLine += '<span title="APRS" style="display:inline-block;font-size:10px;font-weight:600;background:#2d2a1a;color:#e3b341;border-radius:3px;padding:1px 4px;margin-right:3px">' + esc((s.symIcon ? s.symIcon + ' ' : '') + s.symCode) + '</span>';
             if (s.hwName)   badgeLine += '<span style="display:inline-block;font-size:10px;font-weight:600;background:#0f3460;color:#79c0ff;border-radius:3px;padding:1px 4px;margin-right:3px">' + esc(s.hwName) + '</span>';
             if (s.firmware) badgeLine += '<span style="display:inline-block;font-size:10px;font-weight:600;background:#1a2d1a;color:#7ee787;border-radius:3px;padding:1px 4px">' + esc(s.firmware) + '</span>';
         }
@@ -397,7 +400,7 @@ window.meshcomMap = (function () {
                 var key   = s.callsign.toUpperCase();
                 var icon  = stationIcon(s.callsign, sigTier(s.rssi, s.snr), s.hopCount,
                                         s.temp != null || s.humidity != null || s.pressure != null,
-                                        s.isGateway, s.neighbourCount);
+                                        s.isGateway, s.neighbourCount, s.symIcon);
                 var popup = buildStationPopup(s);
 
                 seen[key] = true;

@@ -763,7 +763,7 @@ public class ChatService
     public void AssignOutgoingSequence(string destination, string? sequenceNumber, Guid? nodeId) =>
         AssignOutgoingSequence(destination, sequenceNumber, nodeId, null);
 
-    public void AssignOutgoingSequence(string destination, string? sequenceNumber, Guid? nodeId, string? viaPath)
+    public void AssignOutgoingSequence(string destination, string? sequenceNumber, Guid? nodeId, string? viaPath, string? msgId = null)
     {
         bool Found(IEnumerable<MeshcomMessage> messages)
         {
@@ -778,6 +778,9 @@ public class ChatService
                 if (sequenceNumber != null)
                     msg.SequenceNumber = sequenceNumber;
                 msg.NodeEchoReceived = true;
+                // The echo's msg_id is the key the node's JSON ack datagrams refer to (see AddNodeAck).
+                if (!string.IsNullOrEmpty(msgId))
+                    msg.MsgId = msgId;
                 // The node echo is the first point where the actual via-routing becomes known
                 if (viaPath != null)
                     msg.ViaPath = viaPath;
@@ -900,6 +903,60 @@ public class ChatService
         if (ackMhChanged) OnMhChange?.Invoke();
         NotifyChange();
         CheckWatchlist(message);
+    }
+
+    /// <summary>
+    /// Applies the node's JSON delivery-status datagram (<c>{"type":"ack","msg_id":…,"status":…}</c>) to the
+    /// outgoing message whose echo carried the same <c>msg_id</c>. Status: 0 = heard by a neighbour node
+    /// (only confirms the node transmitted), 1 = gateway/server ACK, 2 = destination (peer) ACK,
+    /// 3 = failed (retransmit ladder gave up), 4 = held by the store node named in <c>from</c>.
+    /// Unknown msg_ids (e.g. a message sent from another client) are ignored.
+    /// </summary>
+    public void AddNodeAck(MeshcomMessage ack, Guid? nodeId)
+    {
+        if (string.IsNullOrEmpty(ack.MsgId) || ack.AckStatus is null) return;
+
+        bool Apply(IEnumerable<MeshcomMessage> messages)
+        {
+            lock (_lock)
+            {
+                var msg = messages.LastOrDefault(m => m.IsOutgoing && !string.IsNullOrEmpty(m.MsgId) &&
+                    string.Equals(m.MsgId, ack.MsgId, StringComparison.OrdinalIgnoreCase));
+                if (msg == null) return false;
+
+                msg.NodeEchoReceived = true;
+                switch (ack.AckStatus)
+                {
+                    case 0: // heard by a neighbour – transmission confirmed, not yet delivered
+                        break;
+                    case 1:
+                    case 2:
+                        msg.IsAcknowledged = true;
+                        msg.DeliveryFailed = false;
+                        if (ack.AckStatus == 1) msg.IsGatewayDelivered = true;
+                        else                    msg.IsLoraDelivered    = true;
+                        var rtt = ack.Timestamp - msg.Timestamp;
+                        if (rtt >= TimeSpan.Zero) msg.AckRoundTrip ??= rtt;
+                        break;
+                    case 3:
+                        if (!msg.IsAcknowledged) msg.DeliveryFailed = true;
+                        break;
+                    case 4:
+                        if (!msg.IsAcknowledged && !string.IsNullOrEmpty(ack.From)) msg.HeldBy = ack.From;
+                        break;
+                }
+                return true;
+            }
+        }
+
+        bool matched = Apply(ResolveState(nodeId).Messages);
+        if (!matched)
+            foreach (var state in _nodeState.Values)
+                if (Apply(state.Messages)) { matched = true; break; }
+
+        _logger.LogDebug("AddNodeAck: msg_id={MsgId} status={Status} from={From} → {Result}",
+            ack.MsgId, ack.AckStatus, ack.From, matched ? "matched" : "no match");
+        if (matched) NotifyChange();
     }
 
     /// <summary>
@@ -1312,6 +1369,10 @@ public class ChatService
                     AprsComment      = message.AprsComment,
                     HwId             = message.HwId,
                     Firmware         = message.Firmware,
+                    LoraMod          = message.LoraMod,
+                    MaxHop           = message.MaxHop,
+                    AprsSymbol       = message.AprsSymbol,
+                    AprsSymbolGroup  = message.AprsSymbolGroup,
                     LastRelayPath        = message.RelayPath,
                     HopCount             = message.RelayPath?.Split(',').Length - 1 ?? 0,
                     RelayPathCount       = message.RelayPath != null ? 1 : 0,
@@ -1343,6 +1404,13 @@ public class ChatService
                 if (!string.IsNullOrWhiteSpace(message.AprsComment)) { s.AprsComment = message.AprsComment; mhChanged = true; }
                 if (message.HwId.HasValue)    s.HwId     = message.HwId;
                 if (!string.IsNullOrEmpty(message.Firmware)) s.Firmware = message.Firmware;
+                if (message.LoraMod.HasValue) s.LoraMod  = message.LoraMod;
+                if (message.MaxHop.HasValue)  s.MaxHop   = message.MaxHop;
+                if (!string.IsNullOrEmpty(message.AprsSymbol))
+                {
+                    s.AprsSymbol      = message.AprsSymbol;
+                    s.AprsSymbolGroup = message.AprsSymbolGroup;
+                }
                 if (!string.IsNullOrEmpty(message.SrcType))  s.LastSrcType = message.SrcType;
                 if ((message.IsAck || (!message.IsPositionBeacon && !message.IsTelemetry))
                     && message.RelayPath == null)
