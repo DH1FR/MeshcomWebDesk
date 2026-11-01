@@ -4174,7 +4174,16 @@ html[data-display="compact"] .lower-pane-collapsed .mon-list {
     display: none;
 }
 html[data-display="compact"] .lower-pane-collapsed {
-    flex: 0 !important;
+    /* keep the title bar (with the ▲ toggle) visible, otherwise the monitor cannot be reopened */
+    flex: 0 0 auto !important;
+}
+html[data-display="compact"] .lower-pane-collapsed .mon-filter-wrap {
+    display: none;
+}
+html[data-display="compact"] .mon-toggle-btn {
+    min-width: 40px;
+    min-height: 28px;
+    justify-content: center;
 }
 html[data-display="compact"] .mon-toggle-btn {
     display: inline-flex;
