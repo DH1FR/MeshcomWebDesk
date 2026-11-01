@@ -4176,6 +4176,7 @@ html[data-display="compact"] .lower-pane-collapsed .mon-list {
 html[data-display="compact"] .lower-pane-collapsed {
     /* keep the title bar (with the ▲ toggle) visible, otherwise the monitor cannot be reopened */
     flex: 0 0 auto !important;
+    height: auto !important;   /* ignore the pane height saved on a big screen (inline style) */
 }
 html[data-display="compact"] .lower-pane-collapsed .mon-filter-wrap {
     display: none;
