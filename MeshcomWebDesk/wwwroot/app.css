@@ -4217,3 +4217,22 @@ html[data-display="compact"] .lower-pane:not(.lower-pane-collapsed) {
 html[data-display="compact"] .tab-bar {
     flex-shrink: 0;
 }
+
+/* Compact: slim multi-node switcher (name only) and update banner */
+html[data-display="compact"] .node-switcher-bar {
+    padding: 1px 4px;
+    gap: 3px;
+}
+html[data-display="compact"] .node-switcher-btn {
+    font-size: 12px;
+    padding: 1px 8px;
+    gap: 3px;
+}
+html[data-display="compact"] .node-switcher-btn small {
+    display: none;
+}
+html[data-display="compact"] .update-banner {
+    padding: 1px 8px;
+    font-size: 11px;
+    min-height: 0;
+}
