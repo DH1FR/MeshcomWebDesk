@@ -4070,3 +4070,137 @@ details[open] .cch-group-title::before { transform: rotate(90deg); }
 .presence-online    { color: #3fb950; }
 .presence-uncertain { color: #d29922; }
 .presence-offline   { color: #6e7681; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Compact display mode  (html[data-display="compact"])
+   Target: tiny touch screens, e.g. 480x320 Raspberry Pi displays.
+   The attribute is set by the inline script in App.razor (auto / ?display=).
+   Goal: give the message list as much height as possible, finger-sized targets.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Header: icons only, one slim row */
+html[data-display="compact"] .app-header {
+    height: 34px;
+    padding: 0 6px;
+}
+html[data-display="compact"] .app-title,
+html[data-display="compact"] .app-version,
+html[data-display="compact"] .app-license-badge,
+html[data-display="compact"] .nav-label {
+    display: none;
+}
+html[data-display="compact"] .app-header-brand {
+    font-size: 14px;
+}
+html[data-display="compact"] .app-nav {
+    gap: 2px;
+}
+html[data-display="compact"] .app-nav-link {
+    padding: 4px 9px;
+    font-size: 15px;
+    min-height: 28px;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Node switcher: one scrollable row */
+html[data-display="compact"] .node-switcher-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 2px 6px;
+}
+html[data-display="compact"] .node-switcher-btn {
+    white-space: nowrap;
+    padding: 2px 8px;
+    flex-shrink: 0;
+}
+html[data-display="compact"] .node-hw-icon {
+    display: none;
+}
+
+/* Tabs: single swipeable row, no wrapping, bigger touch targets */
+html[data-display="compact"] .tab-bar {
+    flex-wrap: nowrap;
+    padding: 2px 4px 0;
+    scrollbar-width: none;
+}
+html[data-display="compact"] .tab-bar::-webkit-scrollbar {
+    display: none;
+}
+html[data-display="compact"] .tab-button {
+    padding: 5px 12px;
+    font-size: 13px;
+    min-height: 30px;
+    flex-shrink: 0;
+}
+html[data-display="compact"] .tab-msg-count {
+    display: none;
+}
+
+/* Conversation: tighter rows */
+html[data-display="compact"] .message-list {
+    padding: 4px 6px;
+    gap: 2px;
+}
+html[data-display="compact"] .message {
+    max-width: 98%;
+}
+
+/* Send bar: slim, finger-sized buttons, no iOS-zoom workaround needed here */
+html[data-display="compact"] .send-bar {
+    padding: 4px 6px;
+    gap: 4px;
+}
+html[data-display="compact"] .send-bar textarea,
+html[data-display="compact"] .send-bar input {
+    padding: 4px 8px;
+    min-height: 34px;
+    font-size: 14px;
+    min-width: 0;
+}
+html[data-display="compact"] .btn-send,
+html[data-display="compact"] .btn-quicktext {
+    min-width: 40px;
+    min-height: 34px;
+    padding: 4px 10px;
+}
+html[data-display="compact"] .char-counter {
+    min-width: 2.4rem;
+    font-size: 10px;
+}
+
+/* Monitor: collapsed to its header by default, expandable via toggle */
+html[data-display="compact"] .lower-pane-collapsed .mon-list {
+    display: none;
+}
+html[data-display="compact"] .lower-pane-collapsed {
+    flex: 0 !important;
+}
+html[data-display="compact"] .mon-toggle-btn {
+    display: inline-flex;
+}
+
+/* Status bar: slim, essentials only */
+html[data-display="compact"] .status-bar {
+    font-size: 11px;
+    gap: 3px;
+    padding: 2px 6px;
+    min-height: 22px;
+}
+html[data-display="compact"] .status-label,
+html[data-display="compact"] .status-detail {
+    display: none !important;
+}
+
+/* Keyboard open (focus in the send bar): reclaim height for the conversation */
+html[data-display="compact"] .app-layout:has(.send-bar :focus) .app-header,
+html[data-display="compact"] .app-layout:has(.send-bar :focus) .node-switcher-bar,
+html[data-display="compact"] .app-layout:has(.send-bar :focus) .status-bar {
+    display: none;
+}
+
+html[data-display="compact"] .message {
+    padding: 3px 8px;
+    font-size: 13px;
+    line-height: 1.3;
+}

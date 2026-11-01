@@ -303,6 +303,8 @@ window.meshcomChat = (function () {
         },
         getMonitorVisible: () => {
             var v = localStorage.getItem('meshcom-monitor-visible');
+            // First visit on a compact (tiny) display: start with the monitor hidden
+            if (v === null && document.documentElement.getAttribute('data-display') === 'compact') return false;
             return v === null ? null : v === '1';
         },
         setMonitorVisible: (visible) =>
