@@ -378,7 +378,7 @@ public class MeshcomSettings
     /// <summary>
     /// Built-in gateway dashboard preset(s) for the highlight list.
     /// Allowed values: "oe" (meshcom.oevsv.at, default), "dl" (meshcom.hamnet.network),
-    /// "it" (meshcom.dig-italia.it), the legacy "both" alias (= oe + dl), "none",
+    /// "it" (meshcom.dig-italia.it), "hb" (meshcom.emcomm.ch), "sp" (sp.meshcom.pl), the legacy "both" alias (= oe + dl), "none",
     /// or a space-separated combination (e.g. "oe it").
     /// User-defined sources in <see cref="GatewaySources"/> are always merged on top.
     /// </summary>

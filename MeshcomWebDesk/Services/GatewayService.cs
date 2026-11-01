@@ -31,8 +31,10 @@ public sealed class GatewayService : IHostedService, IAsyncDisposable
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["oe"] = "https://meshcom.oevsv.at/rakgw.html",
-            ["dl"] = "http://meshcom.hamnet.network/meshcom/rakgw.html",
+            ["dl"] = "http://meshcom.hamnet.network/rakgw.html",
             ["it"] = "https://meshcom.dig-italia.it/rakgw.html",
+            ["hb"] = "https://meshcom.emcomm.ch/rakgw.html",
+            ["sp"] = "https://sp.meshcom.pl/rakgw.html",
         };
 
     private readonly IHttpClientFactory  _httpClientFactory;
@@ -125,11 +127,17 @@ public sealed class GatewayService : IHostedService, IAsyncDisposable
         foreach (var src in settings.GatewaySources)
         {
             if (src.Enabled && !string.IsNullOrWhiteSpace(src.Url))
-                urls.Add(src.Url.Trim());
+                urls.Add(NormalizeLegacyUrl(src.Url.Trim()));
         }
 
         return urls.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
     }
+
+    // Earlier versions stored the DL dashboard under /meshcom/rakgw.html, which answers 404 –
+    // the page lives at the server root. Repair such stored entries instead of fetching a 404.
+    private static string NormalizeLegacyUrl(string url) =>
+        url.Replace("meshcom.hamnet.network/meshcom/rakgw.html", "meshcom.hamnet.network/rakgw.html",
+                    StringComparison.OrdinalIgnoreCase);
 
     private async Task RefreshAsync()
     {

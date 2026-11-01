@@ -584,6 +584,8 @@
                     <option value="oe">🇦🇹 OE – meshcom.oevsv.at</option>
                     <option value="dl">🇩🇪 DL – meshcom.hamnet.network</option>
                     <option value="it">🇮🇹 IT – meshcom.dig-italia.it</option>
+                    <option value="hb">🇨🇭 HB – meshcom.emcomm.ch</option>
+                    <option value="sp">🇵🇱 SP – sp.meshcom.pl</option>
                     <option value="none">@Loc.T("Keine (nur eigene Quellen)", "None (custom sources only)")</option>
                 </select>
 
@@ -4632,7 +4634,7 @@
             if (!string.Equals(GatewayServer?.Trim(), "both", StringComparison.OrdinalIgnoreCase))
                 return;
             GatewayServer = "oe";
-            const string dlUrl = "http://meshcom.hamnet.network/meshcom/rakgw.html";
+            const string dlUrl = "http://meshcom.hamnet.network/rakgw.html";
             if (!GatewaySources.Any(g => string.Equals(g.Url?.Trim(), dlUrl, StringComparison.OrdinalIgnoreCase)))
                 GatewaySources.Add(new GatewaySourceEntry { Name = "DL", Url = dlUrl, Enabled = true });
         }
