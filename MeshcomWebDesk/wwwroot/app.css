@@ -4236,3 +4236,32 @@ html[data-display="compact"] .update-banner {
     font-size: 11px;
     min-height: 0;
 }
+
+/* Compact: single-line tabs (name and QRZ/group label side by side) */
+html[data-display="compact"] .tab-label-wrap {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 4px;
+    line-height: 1.2;
+}
+html[data-display="compact"] .tab-qrz-name {
+    max-width: 64px;
+}
+html[data-display="compact"] .tab-button {
+    display: inline-flex;
+    align-items: center;
+}
+html[data-display="compact"] .tab-new-wrap {
+    align-self: auto;
+}
+
+/* Compact: status badges must not wrap (console "🖥️✗" used to break onto two lines) */
+html[data-display="compact"] .status-badge {
+    white-space: nowrap;
+    padding: 0 6px;
+    line-height: 1.5;
+}
+html[data-display="compact"] .status-mute-btn {
+    display: inline-flex;
+    align-items: center;
+}
