@@ -4204,3 +4204,16 @@ html[data-display="compact"] .message {
     font-size: 13px;
     line-height: 1.3;
 }
+
+/* Open monitor: ignore the pane height saved on a big screen (inline style from chat.js);
+   always leave the conversation, tabs and send bar the larger share. */
+html[data-display="compact"] .upper-pane {
+    flex: 3 1 0 !important;
+}
+html[data-display="compact"] .lower-pane:not(.lower-pane-collapsed) {
+    flex: 2 1 0 !important;
+    height: auto !important;
+}
+html[data-display="compact"] .tab-bar {
+    flex-shrink: 0;
+}
