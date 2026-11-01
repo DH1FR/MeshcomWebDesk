@@ -4274,3 +4274,8 @@ html[data-display="compact"] .status-mute-btn {
     display: inline-flex;
     align-items: center;
 }
+
+/* Compact: no room for the multi-node switcher (switch nodes in normal mode: ?display=normal) */
+html[data-display="compact"] .node-switcher-bar {
+    display: none !important;
+}
