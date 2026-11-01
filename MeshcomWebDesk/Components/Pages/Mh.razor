@@ -90,15 +90,15 @@
                             <th class="mh-th-sort" @onclick='() => SortBy("QrzName")'>@Loc.T("Name / Ort", "Name / Location")@SortIcon("QrzName")</th>
                         }
                         <th class="mh-th-sort" @onclick='() => SortBy("LastHeard")'>@Loc.T("Zuletzt gehört", "Last Heard")@SortIcon("LastHeard")</th>
-                        <th class="col-center mh-th-sort" @onclick='() => SortBy("MessageCount")'>@Loc.T("Anz.", "Cnt.")@SortIcon("MessageCount")</th>
-                        <th>@Loc.T("Letzte Nachricht", "Last Message")</th>
-                        <th>@Loc.T("GPS-Position", "GPS Position")</th>
-                        <th class="col-center mh-th-sort" @onclick='() => SortBy("Altitude")'>@Loc.T("Höhe", "Alt.")@SortIcon("Altitude")</th>
+                        <th class="col-center mh-th-sort mh-hide-compact" @onclick='() => SortBy("MessageCount")'>@Loc.T("Anz.", "Cnt.")@SortIcon("MessageCount")</th>
+                        <th class="mh-hide-compact">@Loc.T("Letzte Nachricht", "Last Message")</th>
+                        <th class="mh-hide-compact">@Loc.T("GPS-Position", "GPS Position")</th>
+                        <th class="col-center mh-th-sort mh-hide-compact" @onclick='() => SortBy("Altitude")'>@Loc.T("Höhe", "Alt.")@SortIcon("Altitude")</th>
                         <th class="col-center mh-th-sort" @onclick='() => SortBy("Distance")'>@Loc.T("Entfernung", "Distance")@SortIcon("Distance")</th>
-                        <th class="col-center mh-th-sort" @onclick='() => SortBy("Battery")'>🔋@SortIcon("Battery")</th>
+                        <th class="col-center mh-th-sort mh-hide-compact" @onclick='() => SortBy("Battery")'>🔋@SortIcon("Battery")</th>
                         <th class="col-center mh-th-sort" @onclick='() => SortBy("Rssi")'>RSSI@(SortIcon("Rssi"))</th>
                         <th class="col-center mh-th-sort" @onclick='() => SortBy("Snr")'>SNR@(SortIcon("Snr"))</th>
-                        <th class="col-center mh-th-sort" title="@Loc.T("Hops (0 = direkt)", "Hops (0 = direct)")" @onclick='() => SortBy("HopCount")'>🔁@SortIcon("HopCount")</th>
+                        <th class="col-center mh-th-sort mh-hide-compact" title="@Loc.T("Hops (0 = direkt)", "Hops (0 = direct)")" @onclick='() => SortBy("HopCount")'>🔁@SortIcon("HopCount")</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -249,9 +249,9 @@
                                 <span class="mh-date">@LT(s.LastHeard).ToString("dd.MM.yy")</span>
                                 <span class="mh-hour">@LT(s.LastHeard).ToString("HH:mm:ss")</span>
                             </td>
-                            <td class="col-center mh-count-cell">@s.MessageCount</td>
-                            <td class="mh-msg">@Truncate(s.LastMessage, 35)</td>
-                            <td class="mh-pos">
+                            <td class="col-center mh-count-cell mh-hide-compact">@s.MessageCount</td>
+                            <td class="mh-msg mh-hide-compact">@Truncate(s.LastMessage, 35)</td>
+                            <td class="mh-pos mh-hide-compact">
                                 @if (s.Latitude.HasValue && s.Longitude.HasValue)
                                 {
                                     <a class="mh-coord-link"
@@ -269,13 +269,13 @@
                                     <span class="mh-no-pos">–</span>
                                 }
                             </td>
-                            <td class="col-center mh-alt">
+                            <td class="col-center mh-alt mh-hide-compact">
                                 @(s.Altitude.HasValue ? $"{s.Altitude} m" : "–")
                             </td>
                             <td class="col-center mh-dist @(dist.HasValue ? "dist-known" : "")">
                                 @(dist.HasValue ? GeoHelper.FormatDistance(dist.Value) : "–")
                             </td>
-                            <td class="col-center mh-batt">
+                            <td class="col-center mh-batt mh-hide-compact">
                                 @if (s.Battery.HasValue)
                                 {
                                     <span class="@BattClass(s.Battery.Value)" title="@Loc.TF("Akku {0}%", "Battery {0}%", s.Battery)"><BatteryIcon Percent="s.Battery.Value" /> @s.Battery%</span>
@@ -291,7 +291,7 @@
                             <td class="col-center @RssiClass(s.LastRssi)">
                                 @(s.LastSnr.HasValue ? $"{s.LastSnr:F1} dB" : "–")
                             </td>
-                            <td class="col-center">
+                            <td class="col-center mh-hide-compact">
                                 @if (s.HopCount == 0 && s.LastSrcType == "lora")
                                 {
                                     <span class="mh-hop-direct" title="@Loc.T("Direkt per LoRa", "Direct LoRa")">📡</span>

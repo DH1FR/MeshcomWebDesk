@@ -36,6 +36,11 @@
             }
             apply();
             if (mq.addEventListener) mq.addEventListener('change', apply);
+            // Blazor enhanced navigation re-syncs <html> attributes and drops ours: put it back.
+            new MutationObserver(function () {
+                var want = document.documentElement.getAttribute('data-display');
+                if (!want) apply();
+            }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-display'] });
         })();
     </script>
     <link rel="stylesheet" href="lib/leaflet/leaflet.css" />

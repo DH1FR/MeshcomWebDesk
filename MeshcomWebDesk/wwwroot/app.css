@@ -4280,3 +4280,55 @@ html[data-display="compact"] .status-mute-btn {
 html[data-display="compact"] .node-switcher-bar {
     display: none !important;
 }
+
+/* Compact: MH list - keep callsign, name, last heard, distance, RSSI, SNR */
+html[data-display="compact"] .mh-hide-compact,
+html[data-display="compact"] .mh-ownpos,
+html[data-display="compact"] .mh-hw-badge,
+html[data-display="compact"] .mh-fw-badge {
+    display: none !important;
+}
+html[data-display="compact"] .mh-page {
+    padding: 4px 6px;
+    gap: 4px;
+}
+html[data-display="compact"] .mh-header {
+    gap: 4px;
+    flex-wrap: nowrap;
+    align-items: center;
+}
+html[data-display="compact"] .mh-title-row {
+    flex-shrink: 0;
+}
+html[data-display="compact"] .mh-title {
+    font-size: 0.9rem;
+}
+html[data-display="compact"] .mh-subtitle {
+    display: none;
+}
+html[data-display="compact"] .mh-search-wrap {
+    flex: 1;
+    min-width: 0;
+}
+html[data-display="compact"] .mh-search {
+    min-height: 30px;
+    padding: 2px 8px;
+    font-size: 13px;
+    width: 100%;
+}
+html[data-display="compact"] .mh-clear-btn {
+    padding: 2px 8px;
+    min-height: 30px;
+    flex-shrink: 0;
+    font-size: 0;           /* icon only */
+}
+html[data-display="compact"] .mh-clear-btn::first-letter {
+    font-size: 14px;
+}
+html[data-display="compact"] .mh-table {
+    font-size: 11px;
+}
+html[data-display="compact"] .mh-table thead th,
+html[data-display="compact"] .mh-table td {
+    padding: 4px 6px;
+}
