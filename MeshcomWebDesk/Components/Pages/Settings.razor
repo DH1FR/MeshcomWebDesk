@@ -1792,6 +1792,14 @@
         <div class="settings-section @(IsOpen("appearance") ? "" : "settings-section-collapsed")">
             <h2 class="settings-section-title" @onclick='() => Toggle("appearance")'>🎨 @Loc.T("Erscheinungsbild", "Appearance") <span class="section-chevron">@(IsOpen("appearance") ? "▲" : "▼")</span></h2>
             @if (IsOpen("appearance")) {
+            <div class="settings-grid" style="margin-bottom:.9rem">
+                <label>@Loc.T("Anzeigemodus (nur dieser Browser)", "Display mode (this browser only)")</label>
+                <select value="@_displayMode" @onchange="OnDisplayModeChangedAsync">
+                    <option value="auto">@Loc.T("Automatisch (kleine Displays erkennen)", "Automatic (detect small displays)")</option>
+                    <option value="normal">@Loc.T("Normal", "Normal")</option>
+                    <option value="compact">@Loc.T("Kompakt (z. B. 480×320 Touch-Display)", "Compact (e.g. 480×320 touch display)")</option>
+                </select>
+            </div>
             <p class="theme-hint">
                 @Loc.T("Die Auswahl wird sofort als Vorschau angewendet – dauerhaft übernommen wird sie erst mit „Speichern“.",
                        "Your selection is applied immediately as a preview – it becomes permanent only after “Save”.")
@@ -2856,9 +2864,24 @@
     }
     // ──────────────────────────────────────────────────────────────────────
 
+    private string _displayMode = "auto";
+
+    private async Task OnDisplayModeChangedAsync(ChangeEventArgs e)
+    {
+        _displayMode = e.Value?.ToString() ?? "auto";
+        try { await JS.InvokeVoidAsync("meshcomDisplay.set", _displayMode); }
+        catch (JSException) { }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
+        try
+        {
+            _displayMode = await JS.InvokeAsync<string>("meshcomDisplay.get");
+            StateHasChanged();
+        }
+        catch (JSException) { }
         try
         {
             var saved = await JS.InvokeAsync<string?>("meshcomChat.getSettingsSections");
