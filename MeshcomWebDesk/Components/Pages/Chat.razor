@@ -19,6 +19,7 @@
 @inject SerialConsoleService SerialConsoleService
 @inject HmacConsoleService HmacConsoleService
 @inject NodeManager NodeManager
+@inject NodePresenceService Presence
 @inject MeshcomWebDesk.Services.Kiss.KissClientService KissService
 @implements IDisposable
 
@@ -83,7 +84,14 @@
                         @onclick="() => SelectTab(tab.Key)"
                         title="@(tab.Key != "*" && !tab.Key.StartsWith('#') ? tab.Title + QrzSuffix(tab.Key) : tab.Key.StartsWith('#') ? ChatService.GetGroupLabel(tab.Key)?.Label : null)">
                     <span class="tab-label-wrap">
-                        <span>@(tab.Key == "*" ? Loc.T("Alle", "All") : tab.Title)</span>
+                        <span>
+                            @if (Presence.Enabled && tab.Key != "*" && !tab.Key.StartsWith('#'))
+                            {
+                                var pr = Presence.Evaluate(tab.Key, ChatService.GetHeardStation(_activeNodeId, tab.Key), ChatService.GetRelaySeen(tab.Key));
+                                <span class="presence-dot presence-@pr.Level.ToString().ToLowerInvariant()" title="@PresenceTitle(pr)">●@(pr.DirectLastHeard.HasValue ? "📡" : "")</span>
+                            }
+                            @(tab.Key == "*" ? Loc.T("Alle", "All") : tab.Title)
+                        </span>
                         @if (tab.Key != "*" && !tab.Key.StartsWith('#') && QrzFirstName(tab.Key) is { } tabFn)
                         {
                             <span class="tab-qrz-name">@tabFn</span>
@@ -1191,6 +1199,7 @@
         TelnetService.OnChange += OnTelnetChanged;
         SerialConsoleService.OnChange += OnTelnetChanged;
         NodeManager.OnSelectedNodeChanged += OnNodeChanged;
+        Presence.Changed += OnPresenceChanged;
         // Periodically re-render so the UDP badge falls back from green to yellow once
         // UdpStaleAfter has elapsed without a new packet (no other event would trigger that).
         _udpStaleTimer = new System.Threading.Timer(_ => OnUdpStaleTick(), null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
@@ -1417,9 +1426,52 @@
         InvokeAsync(StateHasChanged);
     }
 
+    private void OnPresenceChanged()
+    {
+        if (_disposed) return;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private string PresenceTitle(PresenceInfo p)
+    {
+        var parts = new List<string>
+        {
+            p.Level switch
+            {
+                PresenceLevel.Online    => Loc.T("Wahrscheinlich erreichbar", "Probably reachable"),
+                PresenceLevel.Uncertain => Loc.T("Erreichbarkeit unsicher", "Reachability uncertain"),
+                _                       => Loc.T("Wahrscheinlich nicht erreichbar", "Probably not reachable"),
+            }
+        };
+        if (p.ServerLastSeen is { } sv)
+        {
+            var via = string.IsNullOrEmpty(p.ViaGateway) ? "" : " " + Loc.TF("über {0}", "via {0}", p.ViaGateway);
+            parts.Add(Loc.TF("Server: vor {0}", "Server: {0} ago", PresenceAge(sv)) + via);
+        }
+        else
+        {
+            parts.Add(Loc.T("Server: nicht gelistet", "Server: not listed"));
+        }
+        if (p.DirectLastHeard is { } d)
+            parts.Add("📡 " + Loc.TF("direkt gehört vor {0}", "heard directly {0} ago", PresenceAge(d))
+                      + (p.DirectRssi is { } r ? $", {r} dBm" : ""));
+        return string.Join(" · ", parts);
+    }
+
+    private static string PresenceAge(DateTime utc)
+    {
+        var age = DateTime.UtcNow - utc;
+        if (age < TimeSpan.Zero) age = TimeSpan.Zero;
+        return age.TotalMinutes < 1 ? "<1 min"
+             : age.TotalHours   < 1 ? $"{(int)age.TotalMinutes} min"
+             : age.TotalDays    < 1 ? $"{(int)age.TotalHours} h {age.Minutes} min"
+             : $"{(int)age.TotalDays} d";
+    }
+
     private void RefreshData()
     {
         _tabs = ChatService.GetTabs(_activeNodeId).ToList();
+        Presence.NotifyTabs(_tabs.Where(t => t.Key != "*" && !t.Key.StartsWith('#')).Select(t => t.Key));
         ApplyTabOrder();
         _allMessages = ChatService.GetAllMessages(_activeNodeId);
         RebuildFilterCache();
@@ -1772,6 +1824,7 @@
         TelnetService.OnChange -= OnTelnetChanged;
         SerialConsoleService.OnChange -= OnTelnetChanged;
         NodeManager.OnSelectedNodeChanged -= OnNodeChanged;
+        Presence.Changed -= OnPresenceChanged;
     }
 
     private void SelectNode(Guid nodeId) => NodeManager.SelectNode(nodeId);
@@ -2318,15 +2371,18 @@
         !string.IsNullOrEmpty(m.From) ? "mon-row-msg" :
         "mon-row-sys";
 
+    // URLs/mailto first so a locator-like string inside a URL is consumed by the URL match.
+    // Locators: 6 or 8 characters only (4-char squares such as "JO40" give too many false hits).
     private static readonly Regex UrlRegex = new(
-        @"(?:https?://[^\s<>""'\]\)\[]{1,2000}|mailto:[^\s<>""'\]\)\[]+)",
+        @"(?:https?://[^\s<>""'\]\)\[]{1,2000}|mailto:[^\s<>""'\]\)\[]+)"
+        + @"|(?<![A-Za-z0-9])(?<loc>[A-Ra-r]{2}\d{2}[A-Xa-x]{2}(?:\d{2})?)(?![A-Za-z0-9])",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     private MarkupString FormatMessageWithLinks(string text)
     {
-        bool hasUrl    = text.Contains("://");
-        bool hasMailto = text.Contains("mailto:", StringComparison.OrdinalIgnoreCase);
-        if (string.IsNullOrEmpty(text) || (!hasUrl && !hasMailto))
+        if (string.IsNullOrEmpty(text))
+            return new MarkupString(string.Empty);
+        if (!UrlRegex.IsMatch(text))
             return new MarkupString(System.Net.WebUtility.HtmlEncode(text));
 
         var confirmMsg = System.Net.WebUtility.HtmlEncode(Loc.T(
@@ -2338,7 +2394,15 @@
         foreach (Match match in UrlRegex.Matches(text))
         {
             sb.Append(System.Net.WebUtility.HtmlEncode(text[lastIndex..match.Index]));
-            var href    = System.Net.WebUtility.HtmlEncode(match.Value);
+            if (match.Groups["loc"].Success)
+            {
+                var loc = match.Value;
+                var tip = System.Net.WebUtility.HtmlEncode(Loc.T("Auf der Karte anzeigen", "Show on map"));
+                sb.Append($"<a class=\"msg-locator\" href=\"map?locator={loc}\" title=\"{tip}\">{loc}</a>");
+                lastIndex = match.Index + match.Length;
+                continue;
+            }
+            var href   = System.Net.WebUtility.HtmlEncode(match.Value);
             var display = System.Net.WebUtility.HtmlEncode(
                 match.Value.Length > 55 ? match.Value[..55] + "\u2026" : match.Value);
             bool isMailto = match.Value.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase);
@@ -2372,6 +2436,7 @@
         if (m.IsAcknowledged && m.IsLoraDelivered && m.IsGatewayDelivered) return "msg-ack ack-cloud-ok ack-ok";
         if (m.IsAcknowledged && m.IsGatewayDelivered) return "msg-ack ack-cloud-ok";
         if (m.IsAcknowledged)                         return "msg-ack ack-ok";
+        if (m.DeliveryFailed)                         return "msg-ack ack-failed";
         if (m.NodeEchoReceived == false)              return "msg-ack ack-no-echo";
         if (m.SequenceNumber != null)                 return "msg-ack ack-sent";
         return "msg-ack ack-pending";
@@ -2385,6 +2450,7 @@
         if (m.IsAcknowledged && m.IsLoraDelivered && m.IsGatewayDelivered) return "✓✓ ☁️✓";
         if (m.IsAcknowledged && m.IsGatewayDelivered) return "☁️✓";
         if (m.IsAcknowledged)                         return "✓✓";
+        if (m.DeliveryFailed)                         return "❌";
         if (m.NodeEchoReceived == false)              return "⚠️";
         if (m.HeldBy != null)                         return "📬";
         if (isGroupOrBcast && m.SequenceNumber != null) return "☁️";
@@ -2405,6 +2471,8 @@
             return $"☁️✓ {Loc.T("Über Gateway zugestellt", "Delivered via gateway")}{ackRtt}";
         if (m.IsAcknowledged)
             return $"✓✓ {Loc.T("Zugestellt (LoRa ACK)", "Delivered (LoRa ACK)")}{ackRtt}";
+        if (m.DeliveryFailed)
+            return "❌ " + Loc.T("Zustellung fehlgeschlagen – der Node hat nach mehreren Wiederholungen aufgegeben", "Delivery failed – the node gave up after several retransmits");
         if (m.NodeEchoReceived == false)
             return "⚠️ " + Loc.T("Node-Echo ausgeblieben – UDP-Paket wurde möglicherweise nicht vom Node empfangen!", "No node echo – the UDP packet may not have reached the node!");
         if (m.HeldBy != null)

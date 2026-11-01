@@ -224,7 +224,12 @@ builder.Services.AddSingleton<HmacConsoleService>();
 builder.Services.AddSingleton<ConsoleLogService>();
 builder.Services.AddSingleton<ConsoleCommandHelperService>();
 builder.Services.AddHttpClient("MeshcomGateway").ConfigurePrimaryHttpMessageHandler(
-    () => new HttpClientHandler { AllowAutoRedirect = true });
+    () => new HttpClientHandler
+    {
+        AllowAutoRedirect = true,
+        // nodes.html is ~560 KB plain, ~70 KB gzipped
+        AutomaticDecompression = System.Net.DecompressionMethods.All
+    });
 builder.Services.AddHttpClient("WeatherApi", c => c.Timeout = TimeSpan.FromSeconds(30))
     .ConfigurePrimaryHttpMessageHandler(
         () => new HttpClientHandler { AllowAutoRedirect = true });
@@ -234,10 +239,12 @@ builder.Services.AddSingleton<MeshcomWebDesk.Services.Weather.SimulationProvider
 builder.Services.AddSingleton<MeshcomWebDesk.Services.AppLicenseService>();
 builder.Services.AddSingleton<MeshcomWebDesk.Services.WeatherApiPollingService>();
 builder.Services.AddSingleton<GatewayService>();
+builder.Services.AddSingleton<NodePresenceService>();
 builder.Services.AddSingleton<NodeManager>();
 builder.Services.AddSingleton<CalendarBeaconService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<UpdateCheckService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<GatewayService>());
+builder.Services.AddHostedService(sp => sp.GetRequiredService<NodePresenceService>());
 builder.Services.AddSingleton<IMeshcomSender>(sp => sp.GetRequiredService<MeshcomUdpService>());
 builder.Services.AddSingleton<IMeshcomVariableExpander>(sp => sp.GetRequiredService<MeshcomUdpService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<MeshcomUdpService>());

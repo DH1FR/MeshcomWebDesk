@@ -609,6 +609,16 @@ h1:focus {
     text-decoration: none;
 }
 
+.msg-locator {
+    color: var(--link);
+    text-decoration: underline dotted;
+    cursor: pointer;
+}
+.msg-locator:hover {
+    color: var(--link-soft);
+    text-decoration: none;
+}
+
 /* ACK delivery indicator on outgoing messages */
 .msg-ack {
     font-size: 11px;
@@ -622,6 +632,7 @@ h1:focus {
 .ack-cloud     { color: var(--link-soft); }
 .ack-cloud-ok  { color: var(--ok); font-weight: 700; }
 .ack-no-echo   { color: var(--error); font-weight: 700; }
+.ack-failed    { color: var(--error); font-weight: 700; }
 
 /* ===== Send Bar Wrapper (Quick Texts) ===== */
 .send-bar-wrap {
@@ -2791,6 +2802,7 @@ h1:focus {
 .aprs-dot.aprs-own-gateway { border: 2px solid var(--ok); box-shadow: 0 0 0 3px rgba(63,185,80,0.55), 0 0 8px 3px rgba(63,185,80,0.35); }
 .aprs-label-gateway { color: var(--ok) !important; }
 .aprs-gw-icon { margin-right: 2px; font-size: .85em; }
+.aprs-sym-icon { margin-right: 2px; font-size: .95em; }
 
 /* "No positions" overlay */
 .map-no-data {
@@ -4027,3 +4039,34 @@ details[open] .cch-group-title::before { transform: rotate(90deg); }
     background: #fff;
 }
 .web-empty { padding: 2rem; opacity: .7; }
+
+/* Hover preview map for Maidenhead locator links */
+.locator-preview {
+    position: fixed;
+    z-index: 3000;
+    width: 320px;
+    height: 220px;
+    border: 2px solid var(--border, #30363d);
+    border-radius: 6px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+    pointer-events: none;
+}
+
+/* Locator text at the top-left corner of the highlighted square */
+.locator-label-wrap { background: none; border: none; }
+.locator-label {
+    display: inline-block;
+    margin: 2px 0 0 2px;
+    padding: 0 4px;
+    font: 600 12px "Cascadia Code", "Fira Code", monospace;
+    color: #f0883e;
+    background: rgba(13, 17, 23, 0.7);
+    border-radius: 3px;
+    white-space: nowrap;
+}
+
+/* Online indicator on direct chat tabs */
+.presence-dot { font-size: 14px; line-height: 1; margin-right: 4px; cursor: help; }
+.presence-online    { color: #3fb950; }
+.presence-uncertain { color: #d29922; }
+.presence-offline   { color: #6e7681; }

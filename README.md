@@ -18,7 +18,7 @@
 A **Blazor Server** web application for communicating with a [MeshCom 4.0](https://icssw.org/meshcom/) node via UDP (EXTUDP JSON protocol).  
 Built with **.NET 10** and **Blazor Interactive Server**.
 
-> **MeshCom Firmware:** Compatible with [icssw-org/MeshCom-Firmware](https://github.com/icssw-org/MeshCom-Firmware) v4.35+  
+> **MeshCom Firmware:** Compatible with [icssw-org/MeshCom-Firmware](https://github.com/icssw-org/MeshCom-Firmware) v4.35+ (incl. 4.40a)  
 > Hardware IDs 1–61 supported (`TLORA`, `T-BEAM`, `T-ECHO`, `T-DECK`, `T-DECK-PLUS`, `T-DECK-PRO`, `T-ETH-ELITE`, `HELTEC-V1`–`V4`, `HELTEC-T114`, `HELTEC-E213`, `HELTEC-WPAPER`, `RAK4631`, `EBYTE-E22`, `T5-EPAPER`, `T3-S3`, `T-CONNECT-PRO`, `ESP32-LORAPRS`, `T-WATCH-S3`, …)
 
 > 💾 **Ready-to-run binaries** (Windows & Linux) – no build required:  
@@ -26,6 +26,22 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 > 🧪 **Development branch (`dev`):** Contains the latest features and fixes – may be unstable.  
 > To try it: `git clone -b dev https://github.com/DH1FR/MeshcomWebDesk.git`
+
+---
+
+## 🆕 What's New in v1.17.0
+
+### ✨ Features
+- **Online indicator on direct chat tabs** – a coloured dot on every direct tab shows whether the station is probably reachable: 🟢 recently active, 🟡 uncertain, ⚪ offline; `📡` means it was heard **directly by radio**. It combines the dashboard's `nodes.html` (server last-seen, refreshed every 5 minutes) with the local MH list. Configure in **Settings → Chat & Monitor** (on/off, thresholds – default 45 / 120 minutes).
+- **Clickable Maidenhead locators** – a locator in chat or monitor (e.g. `JO41sb`) links to the map and highlights its square; hovering it shows a small **preview map** with a corner label. The map legend is now collapsed by default.
+- **Node delivery status (firmware 4.40a)** – the node now reports the fate of every message you send as a JSON `{"type":"ack","msg_id":…,"status":…}` datagram on the ext-udp port; WebDesk matches it to your outgoing message via the `msg_id` of the node echo. A gateway or destination ACK sets the delivery ticks (`☁️✓` / `✓✓`) with the round-trip time, **`❌` shows that the node gave up** after its retransmit ladder, and `📬` names the store node that holds the message. Unknown `msg_id`s (messages sent from another client) are ignored.
+- **APRS symbols on the map** – stations that send an APRS symbol (`aprs_symbol` / `aprs_symbol_group`) get a glyph in front of the callsign on the map (🚗 car, 🏠 home, 📡 digipeater, 🚲 bike, ⛵ yacht, 🌦️ weather, …) and an `APRS` badge with the symbol code in the popup. The dot keeps its signal colour, relay ring and gateway marker; stations without a symbol look as before.
+- **Station card: modulation, hop budget, symbol** – the MHeard station card shows the LoRa modulation ID (`MOD`), the remaining hop budget of the last packet heard (`Hops`) and the APRS symbol.
+- **Gateway presets HB and SP** – **Settings → Gateway Source** now offers 🇨🇭 HB (`meshcom.emcomm.ch`) and 🇵🇱 SP (`sp.meshcom.pl`) next to OE, DL and IT.
+
+### 🐛 Bug fixes
+- **Online-indicator settings / locator preview** – the online-indicator settings were not persisted in the appsettings override, and the locator hover preview was lost when Blazor re-rendered the link or navigated away. Fixed.
+- **DL gateway dashboard returned 404** – the DL preset pointed to `/meshcom/rakgw.html`, but the page lives at `http://meshcom.hamnet.network/rakgw.html`, so no DL gateways were highlighted. Fixed; custom sources saved with the old URL are repaired automatically.
 
 ---
 
@@ -148,6 +164,8 @@ The application runs on **Windows** or **Linux** and makes a full web client for
   - `✓✓` green – recipient confirmed delivery (LoRa ACK received)
   - `☁️` – sent to group or broadcast (no ACK expected)
   - `☁️✓` – delivered via gateway (Gateway ACK received)
+  - `❌` red – delivery failed, the node gave up after several retransmits (firmware 4.40a)
+  - `📬` – held by a store/mailbox node until the recipient is reachable
 - **Clickable callsigns in the monitor** – click any sender or recipient to open a chat tab instantly; hover over a callsign to reveal a small **`@`** button – clicking it inserts `@CALLSIGN` at the current cursor position in the message input field (useful for addressing someone in a group or broadcast message without switching tabs)
 - **`@`-Mention in chat messages** – the same `@` button appears next to every incoming callsign in the group/broadcast message list; clicking it inserts `@CALLSIGN` at the cursor position in the send bar
 - **QRZ.com tooltips** – when enabled, hovering over any callsign (tab buttons, chat messages, monitor From/To) shows the operator's first name and home QTH (e.g. `Chat mit DH1FR-2 öffnen · Max, Berlin`); concurrent lookups for the same callsign share a single HTTP request (in-flight deduplication)
@@ -1175,6 +1193,7 @@ This client communicates with the MeshCom node using the **EXTUDP JSON protocol*
 5. Gateway ACK received (src_type `udp`) → `☁️✓`
 6. Both LoRa ACK **and** Gateway ACK received → `✓✓ ☁️✓` (direct LoRa + Gateway confirmed)
 7. Node echo missing after 5 seconds → `⚠️` (UDP packet possibly not received by node)
+8. Firmware 4.40a: node JSON status `{"type":"ack","msg_id":…,"status":…}` – status 1 (gateway) / 2 (recipient) → delivered, status 3 → `❌` failed, status 4 → `📬` held by a store node, status 0 (heard by a neighbour) only confirms transmission
 
 | Icon | Meaning |
 |------|--------|
@@ -1185,6 +1204,8 @@ This client communicates with the MeshCom node using the **EXTUDP JSON protocol*
 | `☁️✓` | Delivered – Gateway ACK only |
 | `✓✓ ☁️✓` | Delivered – LoRa ACK **and** Gateway ACK |
 | `⚠️` | Node echo missing – UDP packet possibly not received by node |
+| `❌` | Delivery failed – the node gave up after several retransmits (firmware 4.40a) |
+| `📬` | Held by a store/mailbox node – delivered once the recipient is reachable |
 
 ### Hardware IDs (`hw_id`)
 

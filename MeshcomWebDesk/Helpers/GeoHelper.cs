@@ -77,5 +77,45 @@ public static class GeoHelper
         return $"{f1}{f2}{d1}{d2}{char.ToLower(s1)}{char.ToLower(s2)}";
     }
 
+    /// <summary>
+    /// Parses a 4-, 6- or 8-character Maidenhead locator into the bounding box of its grid square.
+    /// </summary>
+    public static bool TryParseMaidenhead(string? locator,
+        out double south, out double west, out double north, out double east)
+    {
+        south = west = north = east = 0;
+        if (locator is null) return false;
+        var l = locator.Trim().ToUpperInvariant();
+        if (l.Length is not (4 or 6 or 8)) return false;
+
+        bool Field(char c) => c is >= 'A' and <= 'R';
+        bool Digit(char c) => c is >= '0' and <= '9';
+        bool Sub(char c)   => c is >= 'A' and <= 'X';
+        if (!Field(l[0]) || !Field(l[1]) || !Digit(l[2]) || !Digit(l[3])) return false;
+        if (l.Length >= 6 && (!Sub(l[4]) || !Sub(l[5]))) return false;
+        if (l.Length == 8 && (!Digit(l[6]) || !Digit(l[7]))) return false;
+
+        var lon = (l[0] - 'A') * 20.0 - 180.0 + (l[2] - '0') * 2.0;
+        var lat = (l[1] - 'A') * 10.0 - 90.0  + (l[3] - '0');
+        var lonSize = 2.0;
+        var latSize = 1.0;
+
+        if (l.Length >= 6)
+        {
+            lonSize = 2.0 / 24; latSize = 1.0 / 24;
+            lon += (l[4] - 'A') * lonSize;
+            lat += (l[5] - 'A') * latSize;
+        }
+        if (l.Length == 8)
+        {
+            lonSize /= 10; latSize /= 10;
+            lon += (l[6] - '0') * lonSize;
+            lat += (l[7] - '0') * latSize;
+        }
+
+        south = lat; west = lon; north = lat + latSize; east = lon + lonSize;
+        return true;
+    }
+
     private static double ToRad(double deg) => deg * Math.PI / 180.0;
 }

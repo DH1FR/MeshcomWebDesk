@@ -182,6 +182,21 @@
                                                 <span class="mh-sc-lbl">FW</span>
                                                 <span>@s.Firmware</span>
                                             }
+                                            @if (s.LoraMod.HasValue)
+                                            {
+                                                <span class="mh-sc-lbl">MOD</span>
+                                                <span title="@Loc.T("LoRa-Modulations-ID des Nodes", "LoRa modulation ID of the node")">@s.LoraMod</span>
+                                            }
+                                            @if (s.MaxHop.HasValue)
+                                            {
+                                                <span class="mh-sc-lbl">Hops</span>
+                                                <span title="@Loc.T("Verbleibendes Hop-Budget des zuletzt gehörten Pakets", "Remaining hop budget of the last packet heard")">@s.MaxHop</span>
+                                            }
+                                            @if (!string.IsNullOrEmpty(s.AprsSymbol))
+                                            {
+                                                <span class="mh-sc-lbl">APRS</span>
+                                                <span title="@Loc.T("APRS-Symbol", "APRS symbol")">@MeshcomLookup.AprsSymbolIcon(s.AprsSymbol, s.AprsSymbolGroup) <span style="font-family:monospace">@(s.AprsSymbolGroup + s.AprsSymbol)</span></span>
+                                            }
                                         </div>
                                         @if (!string.IsNullOrEmpty(s.LastMessage))
                                         {

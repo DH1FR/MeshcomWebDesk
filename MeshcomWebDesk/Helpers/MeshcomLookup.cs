@@ -67,6 +67,23 @@ public static class MeshcomLookup
     };
 
     /// <summary>
+    /// Maps an APRS symbol (table + code, from the ext-udp "aprs_symbol"/"aprs_symbol_group" fields) to a
+    /// glyph for the handful of common primary-table symbols. Returns empty string for anything else,
+    /// so callers can fall back to showing the raw symbol code.
+    /// </summary>
+    public static string AprsSymbolIcon(string? symbol, string? group)
+    {
+        if (string.IsNullOrEmpty(symbol) || group != "/") return string.Empty;
+        return symbol[0] switch
+        {
+            '>' => "🚗", '<' => "🏍️", 'k' => "🚚", 'b' => "🚲", '[' => "🏃", 'Y' => "⛵", 'O' => "🎈",
+            '-' => "🏠", '#' => "📡", 'r' => "📡", '_' => "🌦️", 'a' => "🚑", 'U' => "🚌", 'f' => "🚒",
+            'j' => "🚙", 'u' => "🚛", 's' => "🚤", '\'' => "✈️", '^' => "✈️", 'X' => "🚁", '=' => "🚂",
+            _   => string.Empty
+        };
+    }
+
+    /// <summary>
     /// Builds a display firmware string from the raw firmware value and sub-version character.
     /// Handles both integer (35) and string ("4.35") firmware values.
     /// Returns empty string when firmware is 0 or missing.

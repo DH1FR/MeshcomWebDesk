@@ -364,9 +364,21 @@ public class MeshcomSettings
     public bool GatewayHighlightEnabled { get; set; } = true;
 
     /// <summary>
+    /// When true, direct chat tabs show an online dot derived from the dashboard's
+    /// <c>nodes.html</c> (server last-seen) and the local MH list.
+    /// </summary>
+    public bool PresenceEnabled { get; set; } = true;
+
+    /// <summary>Last activity younger than this (minutes) = online (green).</summary>
+    public int PresenceFreshMinutes { get; set; } = 45;
+
+    /// <summary>Last activity younger than this (minutes) = uncertain (yellow); older = offline.</summary>
+    public int PresenceStaleMinutes { get; set; } = 120;
+
+    /// <summary>
     /// Built-in gateway dashboard preset(s) for the highlight list.
     /// Allowed values: "oe" (meshcom.oevsv.at, default), "dl" (meshcom.hamnet.network),
-    /// "it" (meshcom.dig-italia.it), the legacy "both" alias (= oe + dl), "none",
+    /// "it" (meshcom.dig-italia.it), "hb" (meshcom.emcomm.ch), "sp" (sp.meshcom.pl), the legacy "both" alias (= oe + dl), "none",
     /// or a space-separated combination (e.g. "oe it").
     /// User-defined sources in <see cref="GatewaySources"/> are always merged on top.
     /// </summary>

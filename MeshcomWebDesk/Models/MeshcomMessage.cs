@@ -68,6 +68,34 @@ public class MeshcomMessage
     /// <summary>Callsign of the mailbox node that took custody of this outgoing DM (null = none reported).</summary>
     public string? HeldBy { get; set; }
 
+    /// <summary>
+    /// True when this is the node's JSON delivery-status datagram (<c>{"type":"ack","msg_id":…,"status":…}</c>,
+    /// firmware 4.40a). Carries no text; <see cref="MsgId"/> names the outgoing message and
+    /// <see cref="AckStatus"/> says what happened to it.
+    /// </summary>
+    public bool IsJsonAck { get; set; }
+
+    /// <summary>
+    /// Status of a <see cref="IsJsonAck"/> datagram: 0 = heard by a neighbour node, 1 = gateway/server,
+    /// 2 = peer (destination) ACK, 3 = failed (retransmit ladder gave up), 4 = held by a store node.
+    /// </summary>
+    public int? AckStatus { get; set; }
+
+    /// <summary>True when the node reported that it gave up delivering this outgoing DM (JSON ack status 3).</summary>
+    public bool DeliveryFailed { get; set; }
+
+    /// <summary>LoRa modulation ID of the originating node (low nibble of <c>lora_mod</c>), null when not sent.</summary>
+    public int? LoraMod { get; set; }
+
+    /// <summary>Remaining hop budget carried by this copy of the frame (<c>max_hop</c>), null when not sent.</summary>
+    public int? MaxHop { get; set; }
+
+    /// <summary>APRS symbol character (<c>aprs_symbol</c>) of a position beacon, null when not sent.</summary>
+    public string? AprsSymbol { get; set; }
+
+    /// <summary>APRS symbol table/group character (<c>aprs_symbol_group</c>, "/" or "\\"), null when not sent.</summary>
+    public string? AprsSymbolGroup { get; set; }
+
     /// <summary>True if the message is a broadcast (destination "*" or "CQCQCQ").</summary>
     public bool IsBroadcast =>
         string.Equals(To, "*", StringComparison.OrdinalIgnoreCase) ||
