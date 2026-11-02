@@ -4202,8 +4202,8 @@ html[data-display="compact"] .status-detail {
     display: none !important;
 }
 
-/* Keyboard open (focus in the send bar): reclaim height for the conversation */
-html[data-display="compact"] .app-layout:has(.send-bar :focus) .app-header,
+/* Keyboard open (focus in the send bar): reclaim height for the conversation.
+   The header stays: focus remains in the send bar after sending, and navigation must stay reachable. */
 html[data-display="compact"] .app-layout:has(.send-bar :focus) .node-switcher-bar,
 html[data-display="compact"] .app-layout:has(.send-bar :focus) .status-bar {
     display: none;
