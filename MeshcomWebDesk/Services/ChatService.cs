@@ -246,8 +246,9 @@ public class ChatService
 
     // Compiled regex: matches messages that contain "CQ" as a standalone word/abbreviation.
     // Examples matched: "CQ de OE6TZD", "cq cq de DF7AX", "IY6GM CQ 144300", "cQ DO7PAW".
+    // Not matched: "CQ/DL" or "CQ-DL" (the magazine) - CQ glued to '/' or '-' is not a call.
     private static readonly Regex CqRegex = new(
-        @"(?<![A-Z0-9])CQ(?![A-Z0-9])",
+        @"(?<![A-Z0-9/\-])CQ(?![A-Z0-9/\-])",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     /// <summary>
@@ -1638,7 +1639,9 @@ public class ChatService
     /// Detects CQ calls in group messages and fires <see cref="OnCqHeard"/>.
     /// Rules:
     ///  - Only group messages (tabKey starts with '#') that pass the group filter.
-    ///  - Message text must contain "CQ" as a standalone token (case-insensitive).
+    ///  - Message text must contain "CQ" as a standalone token (case-insensitive),
+    ///    not glued to '/' or '-' (e.g. magazine "CQ/DL").
+    ///  - Messages addressed to a station ("@CALL ...") are ignored.
     ///  - Own callsign is suppressed.
     /// </summary>
     private void CheckCq(MeshcomMessage message, string tabKey, string myCallsign)
@@ -1654,6 +1657,9 @@ public class ChatService
         bool groupAllowed = !_settings.GroupFilterEnabled
             || _settings.Groups.Contains(tabKey, StringComparer.OrdinalIgnoreCase);
         if (!groupAllowed) return;
+
+        // "@DH1FR ..." is addressed to one specific station - a conversation, not a general CQ call
+        if (message.Text.TrimStart().StartsWith('@')) return;
 
         if (!CqRegex.IsMatch(message.Text)) return;
 

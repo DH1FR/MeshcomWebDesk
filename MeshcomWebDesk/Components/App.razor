@@ -17,6 +17,44 @@
     <title>MeshCom WebDesk</title>
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="apple-touch-icon" href="icons/icon.svg" />
+    @* Display mode (compact layout for tiny screens, e.g. 480x320 Raspberry Pi touch displays).
+       Runs before first paint. ?display=compact|normal|auto only applies to this browser tab
+       (sessionStorage, so a test URL never leaks into other windows or the installed app);
+       the choice in Settings -> Appearance is kept permanently (localStorage).
+       "auto" picks compact for very small viewports. CSS keys off html[data-display="compact"]. *@
+    <script>
+        (function () {
+            var KEY = 'meshcom.display';
+            var mode = 'auto';
+            try {
+                var q = new URLSearchParams(location.search).get('display');
+                if (q === 'compact' || q === 'normal' || q === 'auto') sessionStorage.setItem(KEY, q);
+                mode = sessionStorage.getItem(KEY) || localStorage.getItem(KEY) || 'auto';
+            } catch (e) { /* storage blocked: stay on auto */ }
+            var mq = window.matchMedia('(max-height: 340px) and (orientation: landscape), (max-width: 340px) and (orientation: portrait)');
+            function apply() {
+                var compact = mode === 'compact' || (mode !== 'normal' && mq.matches);
+                document.documentElement.setAttribute('data-display', compact ? 'compact' : 'normal');
+            }
+            apply();
+            if (mq.addEventListener) mq.addEventListener('change', apply);
+            // Used by Settings -> Appearance (auto | normal | compact), stored per browser
+            window.meshcomDisplay = {
+                get: function () { return mode; },
+                set: function (m) {
+                    if (m !== 'compact' && m !== 'normal') m = 'auto';
+                    mode = m;
+                    try { localStorage.setItem(KEY, m); sessionStorage.removeItem(KEY); } catch (e) { }
+                    apply();
+                }
+            };
+            // Blazor enhanced navigation re-syncs <html> attributes and drops ours: put it back.
+            new MutationObserver(function () {
+                var want = document.documentElement.getAttribute('data-display');
+                if (!want) apply();
+            }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-display'] });
+        })();
+    </script>
     <link rel="stylesheet" href="lib/leaflet/leaflet.css" />
     <base href="/" />
     <ResourcePreloader />

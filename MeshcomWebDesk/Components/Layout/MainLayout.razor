@@ -2,6 +2,7 @@
 @inject MeshcomWebDesk.Services.LanguageService Loc
 @inject Microsoft.Extensions.Options.IOptionsMonitor<MeshcomWebDesk.Models.MeshcomSettings> SettingsMon
 @inject MeshcomWebDesk.Services.AppLicenseService LicenseService
+@inject MeshcomWebDesk.Services.NodeManager NodeManager
 @implements IDisposable
 
 <div class="app-layout">
@@ -19,6 +20,16 @@
                 }
             </span>
         </div>
+        @if (NodeManager.HasMultipleNodes)
+        {
+            @* Only shown in compact display mode (the node button bar is hidden there) *@
+            <select class="app-node-select" @onchange="OnNodeSelected" title="@Loc.T("Node wechseln", "Switch node")">
+                @foreach (var node in NodeManager.Nodes)
+                {
+                    <option value="@node.Id" selected="@(NodeManager.SelectedNode?.Id == node.Id)">@node.Name</option>
+                }
+            </select>
+        }
         <nav class="app-nav">
             <NavLink class="app-nav-link" href="/" Match="NavLinkMatch.All">💬 <span class="nav-label">@Loc.T("Chat", "Chat")</span></NavLink>
             <NavLink class="app-nav-link" href="/mh">📻 <span class="nav-label">MH</span></NavLink>
@@ -59,11 +70,18 @@
 
     private void OnLocChange() => _ = InvokeAsync(StateHasChanged);
     private void OnLicenseChange() => _ = InvokeAsync(StateHasChanged);
+    private void OnNodeChange() => _ = InvokeAsync(StateHasChanged);
+
+    private void OnNodeSelected(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var id)) NodeManager.SelectNode(id);
+    }
 
     protected override void OnInitialized()
     {
         Loc.OnChange     += OnLocChange;
         LicenseService.OnLicenseChanged += OnLicenseChange;
+        NodeManager.OnSelectedNodeChanged += OnNodeChange;
         SettingsMon.OnChange((settings, name) => InvokeAsync(StateHasChanged));
     }
 
@@ -71,5 +89,6 @@
     {
         Loc.OnChange -= OnLocChange;
         LicenseService.OnLicenseChanged -= OnLicenseChange;
+        NodeManager.OnSelectedNodeChanged -= OnNodeChange;
     }
 }
