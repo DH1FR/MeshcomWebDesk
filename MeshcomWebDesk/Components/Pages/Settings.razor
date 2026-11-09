@@ -63,18 +63,18 @@
 
                 <label>
                     Listen Port<br />
-                    <small>@Loc.T("Fest: 1799 (gerätefixiert)", "Fixed: 1799 (device-fixed)")</small>
+                    <small>@Loc.T("Standard: 1799 (z. B. 1798 bei Bluetooth-UDP-Hub)", "Default: 1799 (e.g. 1798 for a Bluetooth UDP hub)")</small>
                 </label>
-                <input type="number" value="@_model.ListenPort" readonly style="opacity:0.6;cursor:not-allowed;" />
+                <input type="number" min="1" max="65535" @bind="_model.ListenPort" />
 
                 <label>Device IP</label>
                 <input type="text" @bind="_model.DeviceIp" />
 
                 <label>
                     Device Port<br />
-                    <small>@Loc.T("Fest: 1799 (gerätefixiert)", "Fixed: 1799 (device-fixed)")</small>
+                    <small>@Loc.T("Standard: 1799 (z. B. 1798 bei Bluetooth-UDP-Hub)", "Default: 1799 (e.g. 1798 for a Bluetooth UDP hub)")</small>
                 </label>
-                <input type="number" value="@_model.DevicePort" readonly style="opacity:0.6;cursor:not-allowed;" />
+                <input type="number" min="1" max="65535" @bind="_model.DevicePort" />
 
                 <label>@Loc.T("Eigenes Rufzeichen", "Own Callsign")</label>
                 <input type="text" @bind="_model.MyCallsign" />
@@ -208,16 +208,16 @@
                         <input type="text" @bind="node.DeviceIp" />
                         <label>
                             Device Port<br />
-                            <small>@Loc.T("Fest: 1799 (gerätefixiert)", "Fixed: 1799 (device-fixed)")</small>
+                            <small>@Loc.T("Standard: 1799 (z. B. 1798 bei Bluetooth-UDP-Hub)", "Default: 1799 (e.g. 1798 for a Bluetooth UDP hub)")</small>
                         </label>
-                        <input type="number" value="@node.DevicePort" readonly style="opacity:0.6;cursor:not-allowed;" />
+                        <input type="number" min="1" max="65535" @bind="node.DevicePort" />
                         <label>Listen IP</label>
                         <input type="text" @bind="node.ListenIp" />
                         <label>
                             Listen Port<br />
-                            <small>@Loc.T("Fest: 1799 (gerätefixiert)", "Fixed: 1799 (device-fixed)")</small>
+                            <small>@Loc.T("Standard: 1799 (z. B. 1798 bei Bluetooth-UDP-Hub)", "Default: 1799 (e.g. 1798 for a Bluetooth UDP hub)")</small>
                         </label>
-                        <input type="number" value="@node.ListenPort" readonly style="opacity:0.6;cursor:not-allowed;" />
+                        <input type="number" min="1" max="65535" @bind="node.ListenPort" />
                         }
                         @* ── KISS/TCP (add-on to the ext-udp base) ── *@
                         <label>

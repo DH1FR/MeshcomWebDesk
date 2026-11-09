@@ -213,13 +213,15 @@ Each node profile contains:
 | **Name** | Display name shown in the node switcher (e.g. `Balkon`, `Auto`) |
 | **Callsign** | Own callsign used for outgoing messages on this node (e.g. `OE1ABC-2`). For the primary node this is read-only and mirrors **Settings → Connection** (see below). |
 | **Device IP** | IP address of the MeshCom node. For the primary node this is read-only and mirrors **Settings → Connection**. |
-| **Device Port** | UDP port on the node (default `1799`) |
+| **Device Port** | UDP port on the node (default `1799`; adjustable, e.g. for a UDP hub) |
 | **Listen IP** | Local bind address (`0.0.0.0` = all interfaces). For the primary node this is read-only and mirrors **Settings → Connection**. |
-| **Listen Port** | Local UDP port to receive packets from this node (default `1799`) |
+| **Listen Port** | Local UDP port to receive packets from this node (default `1799`; adjustable, e.g. for a UDP hub) |
 | **Primary** | Exactly one node must be marked primary – only the primary node drives MH list, Live Map, beacons, telemetry, bot and OTA/reboot |
 | **KISS/TCP** | Checkbox – additionally connect to this node over KISS/TCP, on top of the always-on ext-udp base (see [KISS/TCP Transport](#-kisstcp-transport)) |
 | **KISS Port** | TCP port of the node's KISS interface (fixed at `8001` by the node), shown only when KISS/TCP is enabled |
 | **Node Password** | `--passwd` on the node – used for the NET Console (HMAC) and, with `--kiss auth on`, for KISS authentication. Encrypted at rest (DPAPI / AES). |
+
+> 🔵 **Bluetooth UDP hub:** the UDP ports are adjustable (Settings → Connection / per node) so WebDesk can talk to a hub that runs on a different port than `1799` – e.g. **[MeshComUDPBluetoothHub](https://github.com/DH1FR/MeshComUDPBluetoothHub)**, which connects a MeshCom node over Bluetooth and exposes it as a UDP endpoint.
 
 > 💡 When multiple nodes share the same UDP port (`1799`), incoming packets are routed to the correct node by the **sender's IP address** – no port forwarding required.
 
