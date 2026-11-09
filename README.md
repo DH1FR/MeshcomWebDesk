@@ -29,6 +29,13 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
+## 🆕 What's New in v1.17.2
+
+### ✨ Features
+- **Adjustable UDP ports** – **Listen Port** and **Device Port** (Settings → Connection and per additional node) are now editable (default `1799`), so WebDesk can talk to a UDP hub running on another port, e.g. the **[MeshComUDPBluetoothHub](https://github.com/DH1FR/MeshComUDPBluetoothHub)**. Before they were read-only.
+
+---
+
 ## 🆕 What's New in v1.17.1
 
 ### ✨ Features

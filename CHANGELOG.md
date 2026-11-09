@@ -1,6 +1,6 @@
 ﻿# Changelog
 
-## [Unreleased]
+## [1.17.2] – 2026-11-09
 
 ### Features
 - **Adjustable UDP ports** – Listen Port and Device Port (Settings → Connection and per additional node) are editable now (default 1799), so WebDesk can talk to a UDP hub on another port, e.g. [MeshComUDPBluetoothHub](https://github.com/DH1FR/MeshComUDPBluetoothHub). Before they were read-only.
