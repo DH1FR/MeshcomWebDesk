@@ -10,7 +10,7 @@
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
     <AssemblyVersion>1.17.1.0</AssemblyVersion>
     <FileVersion>1.17.1.0</FileVersion>
-    <InformationalVersion>1.17.1-dev</InformationalVersion>
+    <InformationalVersion>1.17.1</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>

@@ -29,6 +29,20 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
+## 🆕 What's New in v1.17.1
+
+### ✨ Features
+- **Compact display mode for tiny screens (e.g. 480×320 touch displays)** – slim icon-only header, single-row tabs, finger-sized send bar, a **node dropdown** in the header instead of the node button bar, a **compact MH list** (callsign, name, last heard, distance, RSSI, SNR), a one-row map control bar and a single-column Settings page. The monitor is hidden on first visit. Auto-detected for very small viewports or chosen in **Settings → Appearance → display mode** (auto / normal / compact, per browser); `?display=compact|normal|auto` forces it for the current browser tab only.
+
+### 🐛 Bug fixes
+- **CQ detection: false positives** – a message addressed to one station (`@DH1FR …`) and "CQ" glued to `/` or `-` (e.g. the magazine "CQ/DL") no longer count as a CQ call.
+- **Compact mode polish** – monitor toggle stays reachable, tabs/send bar stay visible with an open monitor, header stays visible while typing, compact mode survives page navigation.
+
+### 🔒 Security
+- **MySqlConnector 2.6.1** – fixes GHSA-473q-m89c-ghf8 (clear-text DB password before certificate check with `SslMode=VerifyCA/VerifyFull` and no `SslCa`). The default mode and local connections were not affected.
+
+---
+
 ## 🆕 What's New in v1.17.0
 
 ### ✨ Features

@@ -1,5 +1,19 @@
 ﻿# Changelog
 
+## [1.17.1] – 2026-11-09
+
+### Features
+- **Compact display mode for tiny screens (e.g. 480×320 touch displays)** – slim icon-only header, single-row tabs, non-wrapping status badges, finger-sized send bar, slimmer node switcher and update banner. The monitor is hidden on first visit, and the header/status stay out of the way while typing. A compact MH list shows only callsign, name, last heard, distance, RSSI and SNR; the multi-node button bar is replaced by a header node dropdown; map controls form one scrollable row with larger zoom buttons; Settings uses a single column with finger-sized inputs. Compact mode is auto-detected for very small viewports or chosen in Settings → Appearance → display mode (auto / normal / compact, stored per browser). `?display=compact|normal|auto` forces it for the current browser tab only. Compact mode now survives Blazor page navigation.
+
+### Bugfixes
+- **CQ detection: false positives** – a message addressed to one station (`@DH1FR …`) is no longer treated as a CQ call, and neither is "CQ" glued to `/` or `-` (e.g. the magazine "CQ/DL"). Normal calls such as `CQ de OE6TZD` or `IY6GM CQ 144300` are still detected.
+- **Compact mode** – the monitor toggle stays reachable when collapsed, tabs and send bar stay visible with an open monitor, the saved monitor height is ignored when collapsed, and the header stays visible while the send bar has focus.
+
+### Security
+- **MySqlConnector 2.5.0 → 2.6.1** (GHSA-473q-m89c-ghf8): with `SslMode=VerifyCA`/`VerifyFull` and no `SslCa`, the DB password could be sent in clear text to a man-in-the-middle before the certificate was verified. The default `Preferred` mode and local connections were not affected.
+
+---
+
 ## [1.17.0] – 2026-11-01
 
 ### Features
