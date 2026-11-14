@@ -36,6 +36,12 @@ public sealed class MqttService : IHostedService, IAsyncDisposable
     private IMqttClient?      _client;
     private CancellationTokenSource? _cts;
 
+    // Prefix under which the send-topics are currently subscribed (null = not subscribed).
+    // Guarded by _subLock so settings changes and (re)connects cannot interleave.
+    private string?                  _subscribedPrefix;
+    private readonly SemaphoreSlim   _subLock = new(1, 1);
+    private IDisposable?             _settingsChangeSub;
+
     // -------------------------------------------------------------------------
     // Status (readable by UI)
     // -------------------------------------------------------------------------
@@ -80,11 +86,15 @@ public sealed class MqttService : IHostedService, IAsyncDisposable
         _client.DisconnectedAsync += OnDisconnectedAsync;
         _client.ApplicationMessageReceivedAsync += OnMessageReceivedAsync;
 
+        // Apply SubscribeEnabled / TopicPrefix changes live – no restart needed.
+        _settingsChangeSub = _settings.OnChange(newCfg => { _ = SyncSubscriptionsAsync(); });
+
         await ConnectAsync(_cts.Token);
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
+        _settingsChangeSub?.Dispose();
         if (_client is { IsConnected: true })
         {
             await _client.DisconnectAsync(
@@ -258,28 +268,64 @@ public sealed class MqttService : IHostedService, IAsyncDisposable
     {
         _logger.LogInformation("MQTT connected.");
 
-        var cfg = _settings.CurrentValue.Mqtt;
-        if (!cfg.SubscribeEnabled)
+        // Clean session: the broker holds no subscriptions after (re)connect.
+        await _subLock.WaitAsync();
+        try { _subscribedPrefix = null; }
+        finally { _subLock.Release(); }
+
+        await SyncSubscriptionsAsync();
+    }
+
+    /// <summary>
+    /// Brings the broker subscriptions in line with the current settings
+    /// (SubscribeEnabled, TopicPrefix). Called on connect and on every settings change.
+    /// </summary>
+    private async Task SyncSubscriptionsAsync()
+    {
+        await _subLock.WaitAsync();
+        try
         {
-            _logger.LogInformation("MQTT Subscriber deaktiviert – keine Send-Topics abonniert.");
-            return;
+            if (_client is not { IsConnected: true }) return;
+
+            var cfg     = _settings.CurrentValue.Mqtt;
+            var desired = cfg.SubscribeEnabled ? cfg.TopicPrefix : null;
+            if (desired == _subscribedPrefix) return;
+
+            if (_subscribedPrefix is not null)
+            {
+                var old = _subscribedPrefix;
+                await _client.UnsubscribeAsync(new MqttClientUnsubscribeOptionsBuilder()
+                    .WithTopicFilter($"{old}/send/broadcast")
+                    .WithTopicFilter($"{old}/send/group/#")
+                    .WithTopicFilter($"{old}/send/dm/#")
+                    .Build());
+                _subscribedPrefix = null;
+                _logger.LogInformation("MQTT unsubscribed from send-topics under {Prefix}/send/#", old);
+            }
+
+            if (desired is null)
+            {
+                _logger.LogInformation("MQTT Subscriber deaktiviert – keine Send-Topics abonniert.");
+                return;
+            }
+
+            await _client.SubscribeAsync(new MqttClientSubscribeOptionsBuilder()
+                .WithTopicFilter(new MqttTopicFilterBuilder().WithTopic($"{desired}/send/broadcast").Build())
+                .WithTopicFilter(new MqttTopicFilterBuilder().WithTopic($"{desired}/send/group/#").Build())
+                .WithTopicFilter(new MqttTopicFilterBuilder().WithTopic($"{desired}/send/dm/#").Build())
+                .Build());
+            _subscribedPrefix = desired;
+
+            _logger.LogInformation("MQTT subscribed to send-topics under {Prefix}/send/#", desired);
         }
-
-        var prefix = cfg.TopicPrefix;
-        var filters = new[]
+        catch (Exception ex)
         {
-            new MqttTopicFilterBuilder().WithTopic($"{prefix}/send/broadcast").Build(),
-            new MqttTopicFilterBuilder().WithTopic($"{prefix}/send/group/#").Build(),
-            new MqttTopicFilterBuilder().WithTopic($"{prefix}/send/dm/#").Build()
-        };
-
-        await _client!.SubscribeAsync(new MqttClientSubscribeOptionsBuilder()
-            .WithTopicFilter(filters[0])
-            .WithTopicFilter(filters[1])
-            .WithTopicFilter(filters[2])
-            .Build());
-
-        _logger.LogInformation("MQTT subscribed to send-topics under {Prefix}/send/#", prefix);
+            _logger.LogWarning("MQTT subscription sync failed ({Message}).", ex.Message);
+        }
+        finally
+        {
+            _subLock.Release();
+        }
     }
 
     private async Task OnDisconnectedAsync(MqttClientDisconnectedEventArgs args)
