@@ -1093,6 +1093,14 @@
     "Docker installations are updated by pulling a new image.": "Le installazioni Docker si aggiornano scaricando una nuova immagine.",
     "Development run (not an installed release).": "Esecuzione di sviluppo (non una release installata).",
     "Self-contained builds are only updated on Windows.": "Le build self-contained vengono aggiornate solo su Windows.",
-    "The program directory is not writable ({0}).": "La cartella del programma non è scrivibile ({0})."
+    "The program directory is not writable ({0}).": "La cartella del programma non è scrivibile ({0}).",
+    "Switch node": "Cambia nodo",
+    "Remove locator highlight": "Rimuovi l'evidenziazione del locator",
+    "Default: 1799. Must differ from the hub's port when it runs on the same PC.": "Predefinito: 1799. Deve essere diverso dalla porta dell'hub se questo gira sullo stesso PC.",
+    "Default: 1799. With a Bluetooth UDP hub on the same PC: 1798.": "Predefinito: 1799. Con un hub UDP Bluetooth sullo stesso PC: 1798.",
+    "Display mode (this browser only)": "Modalità di visualizzazione (solo questo browser)",
+    "Automatic (detect small displays)": "Automatica (rileva display piccoli)",
+    "Normal": "Normale",
+    "Compact (e.g. 480×320 touch display)": "Compatto (ad es. display touch 480×320)"
   }
 }
