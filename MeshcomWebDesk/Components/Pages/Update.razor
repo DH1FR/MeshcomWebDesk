@@ -51,7 +51,7 @@
         @if (!Updater.Install.Supported)
         {
             <p>ℹ️ @Loc.T("Für diese Installation ist kein Selbst-Update möglich:", "Self-update is not available for this installation:")
-               @Updater.Install.UnsupportedReason</p>
+               @Updater.UnsupportedText</p>
         }
         else if (_local == false)
         {

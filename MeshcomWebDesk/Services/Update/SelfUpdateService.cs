@@ -21,6 +21,7 @@ public sealed class SelfUpdateService
     private readonly ILogger<SelfUpdateService> _logger;
     private readonly IOptionsMonitor<MeshcomSettings> _settings;
     private readonly IConfiguration _config;
+    private readonly LanguageService _loc;
     private readonly SemaphoreSlim _gate = new(1, 1);
 
     public UpdateStatus Status { get; } = new();
@@ -29,8 +30,9 @@ public sealed class SelfUpdateService
     /// <summary>Raised on every progress change (UI refresh).</summary>
     public event Action? OnChange;
 
-    public SelfUpdateService(ILogger<SelfUpdateService> logger, IOptionsMonitor<MeshcomSettings> settings, IConfiguration config)
+    public SelfUpdateService(ILogger<SelfUpdateService> logger, IOptionsMonitor<MeshcomSettings> settings, IConfiguration config, LanguageService loc)
     {
+        _loc = loc;
         _logger = logger;
         _settings = settings;
         _config = config;
@@ -56,9 +58,9 @@ public sealed class SelfUpdateService
     public async Task<(bool Ok, string Message)> StartUpdateAsync(CancellationToken ct = default)
     {
         if (!Install.Supported)
-            return (false, Install.UnsupportedReason ?? "Updates are not supported for this installation.");
+            return (false, UnsupportedText ?? L("Updates sind für diese Installation nicht möglich.", "Updates are not supported for this installation."));
         if (!await _gate.WaitAsync(0, ct))
-            return (false, "An update is already running.");
+            return (false, L("Ein Update läuft bereits.", "An update is already running."));
 
         string? stage = null;
         try
@@ -71,27 +73,27 @@ public sealed class SelfUpdateService
 
             var release = await http.GetFromJsonAsync<GitHubRelease>(releaseUrl, ct);
             if (release is null || string.IsNullOrEmpty(release.TagName))
-                return Fail("Could not read the latest release.");
+                return Fail("Das neueste Release konnte nicht gelesen werden.", "Could not read the latest release.");
 
             if (!Version.TryParse(release.TagName.TrimStart('v'), out var latest))
-                return Fail($"Unexpected release tag '{release.TagName}'.");
+                return Fail("Unerwarteter Release-Tag '{0}'.", "Unexpected release tag '{0}'.", release.TagName);
             var current = Version.Parse(UpdateRecovery.CurrentVersion);
             if (latest <= current)
-                return Fail("Already up to date.");
+                return Fail("Bereits auf dem neuesten Stand.", "Already up to date.");
 
             Status.TargetVersion = latest.ToString(3);
 
             var assetName = AssetName(release.TagName);
             var asset = release.Assets.FirstOrDefault(a => a.Name == assetName);
             var shaAsset = release.Assets.FirstOrDefault(a => a.Name == assetName + ".sha256");
-            if (asset is null)  return Fail($"No release asset for this platform ({assetName}).");
-            if (shaAsset is null) return Fail("The release has no SHA-256 checksum for this platform – update refused.");
-            if (asset.Size > MaxDownloadBytes) return Fail("Release asset is unreasonably large – update refused.");
+            if (asset is null)  return Fail("Kein Release-Paket für diese Plattform ({0}).", "No release asset for this platform ({0}).", assetName);
+            if (shaAsset is null) return Fail("Das Release enthält keine SHA-256-Prüfsumme für diese Plattform – Update abgelehnt.", "The release has no SHA-256 checksum for this platform – update refused.");
+            if (asset.Size > MaxDownloadBytes) return Fail("Das Release-Paket ist unplausibel groß – Update abgelehnt.", "Release asset is unreasonably large – update refused.");
 
             if (!testOverride &&
                 (!asset.Url.StartsWith(AllowedDownloadPrefix, StringComparison.Ordinal) ||
                  !shaAsset.Url.StartsWith(AllowedDownloadPrefix, StringComparison.Ordinal)))
-                return Fail("Unexpected download location – update refused.");
+                return Fail("Unerwarteter Download-Ort – Update abgelehnt.", "Unexpected download location – update refused.");
 
             stage = Path.Combine(DataPath, "update", "staging");
             if (Directory.Exists(stage)) Directory.Delete(stage, recursive: true);
@@ -109,7 +111,7 @@ public sealed class SelfUpdateService
             await using (var fs = File.OpenRead(archive))
                 actual = Convert.ToHexString(await SHA256.HashDataAsync(fs, ct)).ToLowerInvariant();
             if (expected.Length != 64 || actual != expected)
-                return Fail("SHA-256 checksum mismatch – the download was discarded.");
+                return Fail("SHA-256-Prüfsumme stimmt nicht überein – der Download wurde verworfen.", "SHA-256 checksum mismatch – the download was discarded.");
 
             // ── Extract ──
             Set(UpdatePhase.Extracting);
@@ -126,7 +128,7 @@ public sealed class SelfUpdateService
 
             var exeName = OperatingSystem.IsWindows() ? "MeshcomWebDesk.exe" : "MeshcomWebDesk";
             if (!File.Exists(Path.Combine(root, exeName)))
-                return Fail("The downloaded package does not contain the application – update refused.");
+                return Fail("Das heruntergeladene Paket enthält die Anwendung nicht – Update abgelehnt.", "The downloaded package does not contain the application – update refused.");
 
             // ── Backup ──
             Set(UpdatePhase.BackingUp);
@@ -154,7 +156,7 @@ public sealed class SelfUpdateService
                 try { FileSwap.RestoreBackup(Install.AppDir, DataPath, backup); }
                 catch (Exception rex) { _logger.LogError(rex, "Update: restore after failed apply failed too"); }
                 UpdateRecovery.ClearState(DataPath);
-                return Fail("Applying the update failed, the previous version was restored: " + ex.Message);
+                return Fail("Das Anwenden des Updates ist fehlgeschlagen, die vorherige Version wurde wiederhergestellt: {0}", "Applying the update failed, the previous version was restored: {0}", ex.Message);
             }
 
             try { Directory.Delete(stage, recursive: true); } catch { /* ignore */ }
@@ -168,16 +170,16 @@ public sealed class SelfUpdateService
                 await Task.Delay(1500);   // let the UI show "restarting"
                 UpdateRestart.RestartNow(Install);
             });
-            return (true, "Update installed, restarting …");
+            return (true, L("Update installiert, Neustart …", "Update installed, restarting …"));
         }
         catch (OperationCanceledException)
         {
-            return Fail("Update cancelled.");
+            return Fail("Update abgebrochen.", "Update cancelled.");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Update failed");
-            return Fail(ex.Message);
+            return Fail("{0}", "{0}", ex.Message);
         }
         finally
         {
@@ -195,14 +197,14 @@ public sealed class SelfUpdateService
     public async Task<(bool Ok, string Message)> RollbackAsync(string backupName)
     {
         if (!Install.Supported)
-            return (false, Install.UnsupportedReason ?? "Not supported for this installation.");
+            return (false, UnsupportedText ?? L("Für diese Installation nicht möglich.", "Not supported for this installation."));
         if (!await _gate.WaitAsync(0))
-            return (false, "An update is already running.");
+            return (false, L("Ein Update läuft bereits.", "An update is already running."));
 
         try
         {
             var backup = Backups.FirstOrDefault(b => b.Name == backupName);
-            if (backup is null) return (false, "Backup not found.");
+            if (backup is null) return (false, L("Sicherung nicht gefunden.", "Backup not found."));
 
             Set(UpdatePhase.BackingUp);
             // Keep the current state as a backup too so the rollback itself can be undone.
@@ -235,7 +237,7 @@ public sealed class SelfUpdateService
                 await Task.Delay(1500);
                 UpdateRestart.RestartNow(Install);
             });
-            return (true, "Rollback done, restarting …");
+            return (true, L("Zurücksetzen abgeschlossen, Neustart …", "Rollback done, restarting …"));
         }
         catch (Exception ex)
         {
@@ -248,11 +250,25 @@ public sealed class SelfUpdateService
 
     // ── Helpers ──────────────────────────────────────────────────────────────────────────
 
-    private (bool, string) Fail(string message)
+    private string L(string de, string en) => _loc.T(de, en);
+
+    /// <summary>Localised reason why self-update is not possible here (null when it is).</summary>
+    public string? UnsupportedText => Install.UnsupportedReason switch
     {
-        _logger.LogWarning("Update: {Message}", message);
-        Set(UpdatePhase.Failed, 0, message);
-        return (false, message);
+        null => null,
+        var r when r.StartsWith("Docker") => L("Docker-Installationen werden durch Laden eines neuen Images aktualisiert.", "Docker installations are updated by pulling a new image."),
+        var r when r.StartsWith("Development") => L("Entwicklungslauf (keine installierte Version).", "Development run (not an installed release)."),
+        var r when r.StartsWith("Self-contained") => L("Self-contained-Builds werden nur unter Windows aktualisiert.", "Self-contained builds are only updated on Windows."),
+        _ => _loc.TF("Das Programmverzeichnis ist nicht beschreibbar ({0}).", "The program directory is not writable ({0}).", Install.AppDir)
+    };
+
+    /// <summary>Logs the English text, shows the localised one.</summary>
+    private (bool, string) Fail(string de, string en, params object?[] args)
+    {
+        _logger.LogWarning("Update: {Message}", string.Format(en, args));
+        var shown = _loc.TF(de, en, args);
+        Set(UpdatePhase.Failed, 0, shown);
+        return (false, shown);
     }
 
     private string AssetName(string tag)
