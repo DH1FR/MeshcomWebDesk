@@ -10,6 +10,7 @@
         <a href="@UpdateCheck.ReleasePageUrl" target="_blank" rel="noopener" class="update-banner-link">
             @Loc.T("Zum Release", "View Release") ↗
         </a>
+        <a href="/update" class="update-banner-link">@Loc.T("Jetzt aktualisieren", "Update now") →</a>
         <button class="update-banner-dismiss" @onclick="Dismiss" @onclick:stopPropagation="true"
                 title="@Loc.T("Schließen", "Dismiss")">✕</button>
     </div>

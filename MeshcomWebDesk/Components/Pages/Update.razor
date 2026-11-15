@@ -1,0 +1,183 @@
+@page "/update"
+@rendermode InteractiveServer
+@using MeshcomWebDesk.Services.Update
+@inject MeshcomWebDesk.Services.LanguageService Loc
+@inject MeshcomWebDesk.Services.UpdateCheckService UpdateCheck
+@inject SelfUpdateService Updater
+@inject IJSRuntime JS
+@implements IDisposable
+
+<PageTitle>@Loc.T("Aktualisieren", "Update") – MeshCom WebDesk</PageTitle>
+
+<div class="about-page">
+    <div class="about-card" style="max-width:720px;text-align:left">
+        <h1 class="about-title" style="text-align:center">🚀 @Loc.T("Aktualisieren", "Update")</h1>
+
+        <p>
+            @Loc.T("Installierte Version", "Installed version"): <strong>v@_current</strong><br />
+            @if (UpdateCheck.LatestVersion is not null)
+            {
+                <span>@Loc.T("Verfügbar", "Available"): <strong>@UpdateCheck.LatestVersion</strong>
+                    (<a href="@UpdateCheck.ReleasePageUrl" target="_blank" rel="noopener">@Loc.T("Release-Hinweise", "Release notes") ↗</a>)</span>
+            }
+            else
+            {
+                <span>@Loc.T("Keine neuere Version bekannt.", "No newer version known.")</span>
+            }
+        </p>
+        <p style="opacity:.75;font-size:.9em">
+            @Loc.T("Installationsart", "Install type"): @ModeText(Updater.Install.Mode)
+            · @Updater.Install.Rid@(Updater.Install.SelfContained ? " (self-contained)" : "")
+        </p>
+
+        @if (Updater.LastResult is { } last)
+        {
+            <p style="font-size:.9em">
+                @if (last.Kind == "ok")
+                {
+                    <span>✅ @Loc.TF("Update auf v{0} erfolgreich ({1:g} UTC).", "Updated to v{0} successfully ({1:g} UTC).", last.To, last.WhenUtc)</span>
+                }
+                else if (last.Kind == "rolledback")
+                {
+                    <span>⚠️ @Loc.TF("Update auf v{0} ist fehlgeschlagen – automatisch auf v{1} zurückgesetzt ({2:g} UTC).", "Update to v{0} failed – automatically rolled back to v{1} ({2:g} UTC).", last.To, last.From, last.WhenUtc)</span>
+                }
+                else
+                {
+                    <span>↩️ @Loc.TF("Auf v{0} zurückgesetzt ({1:g} UTC).", "Rolled back to v{0} ({1:g} UTC).", last.To, last.WhenUtc)</span>
+                }
+            </p>
+        }
+
+        @if (!Updater.Install.Supported)
+        {
+            <p>ℹ️ @Loc.T("Für diese Installation ist kein Selbst-Update möglich:", "Self-update is not available for this installation:")
+               @Updater.Install.UnsupportedReason</p>
+        }
+        else if (_local == false)
+        {
+            <p>🔒 @Loc.T("Aus Sicherheitsgründen kann ein Update nur direkt am Rechner (localhost) gestartet werden.",
+                         "For security reasons an update can only be started on the machine itself (localhost).")</p>
+        }
+
+        @if (Updater.Status.Phase != UpdatePhase.Idle)
+        {
+            <p>
+                @PhaseText(Updater.Status)
+                @if (Updater.Status.Phase == UpdatePhase.Downloading)
+                {
+                    <progress value="@Updater.Status.Percent" max="100" style="width:100%"></progress>
+                }
+                @if (Updater.Status.Error is not null)
+                {
+                    <br /><span class="text-danger">@Updater.Status.Error</span>
+                }
+            </p>
+        }
+
+        <p>
+            <button class="btn btn-primary" disabled="@(!CanAct || UpdateCheck.LatestVersion is null)" @onclick="StartUpdate">
+                ⬆️ @Loc.T("Jetzt aktualisieren", "Update now")
+            </button>
+        </p>
+        <p style="font-size:.85em;opacity:.75">
+            @Loc.T("Vor dem Update wird die aktuelle Version samt Daten gesichert. Startet die neue Version nicht, wird automatisch zurückgesetzt.",
+                   "Before updating, the current version and its data are backed up. If the new version fails to start, it is rolled back automatically.")
+        </p>
+
+        <h3>@Loc.T("Sicherungen", "Backups")</h3>
+        @if (Updater.Backups.Count == 0)
+        {
+            <p style="opacity:.75">@Loc.T("Noch keine Sicherung vorhanden.", "No backups yet.")</p>
+        }
+        else
+        {
+            <table style="width:100%">
+                @foreach (var b in Updater.Backups)
+                {
+                    <tr>
+                        <td>v@b.Version</td>
+                        <td>@b.CreatedUtc.ToLocalTime().ToString("g")</td>
+                        <td style="text-align:right">
+                            <button class="btn btn-secondary btn-sm" disabled="@(!CanAct)" @onclick="() => Rollback(b)">
+                                ↩️ @Loc.T("Zurücksetzen", "Roll back")
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </table>
+            <p style="font-size:.85em;opacity:.75">
+                @Loc.T("Beim Zurücksetzen werden auch die gesicherten Daten (Einstellungen, Chat-Verlauf) wiederhergestellt.",
+                       "Rolling back also restores the backed-up data (settings, chat history).")
+            </p>
+        }
+    </div>
+</div>
+
+@code {
+    private static readonly string _current = UpdateRecovery.CurrentVersion;
+    private bool? _local;
+
+    private bool CanAct => Updater.Install.Supported && _local == true && !Updater.Status.Busy;
+
+    protected override void OnInitialized()
+    {
+        Updater.OnChange += OnUpdaterChange;
+        UpdateCheck.OnUpdateAvailable += OnUpdaterChange;
+        Loc.OnChange += OnUpdaterChange;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        _local = await JS.InvokeAsync<bool>("meshcomUpdate.isLocal");
+        StateHasChanged();
+    }
+
+    private void OnUpdaterChange() => _ = InvokeAsync(StateHasChanged);
+
+    private async Task StartUpdate()
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", Loc.TF(
+            "Auf {0} aktualisieren? WebDesk wird dabei neu gestartet.",
+            "Update to {0}? WebDesk will restart.", UpdateCheck.LatestVersion));
+        if (!confirmed) return;
+        await JS.InvokeVoidAsync("meshcomUpdate.post", "/api/update/start");
+    }
+
+    private async Task Rollback(BackupInfo backup)
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", Loc.TF(
+            "Auf v{0} zurücksetzen? Daten und Einstellungen werden auf den Stand der Sicherung gesetzt, WebDesk startet neu.",
+            "Roll back to v{0}? Data and settings are reset to the backup state and WebDesk restarts.", backup.Version));
+        if (!confirmed) return;
+        await JS.InvokeVoidAsync("meshcomUpdate.post", "/api/update/rollback?name=" + Uri.EscapeDataString(backup.Name));
+    }
+
+    private string ModeText(InstallMode m) => m switch
+    {
+        InstallMode.WindowsService => Loc.T("Windows-Dienst", "Windows service"),
+        InstallMode.Systemd        => "systemd",
+        InstallMode.Manual         => Loc.T("Manuell gestartet", "Started manually"),
+        InstallMode.Docker         => "Docker",
+        _                          => Loc.T("Entwicklung", "Development")
+    };
+
+    private string PhaseText(UpdateStatus s) => s.Phase switch
+    {
+        UpdatePhase.Checking    => Loc.T("Suche Release …", "Checking release …"),
+        UpdatePhase.Downloading => Loc.TF("Lade v{0} herunter … {1} %", "Downloading v{0} … {1} %", s.TargetVersion, s.Percent),
+        UpdatePhase.Verifying   => Loc.T("Prüfe SHA-256 …", "Verifying SHA-256 …"),
+        UpdatePhase.Extracting  => Loc.T("Entpacke …", "Extracting …"),
+        UpdatePhase.BackingUp   => Loc.T("Sichere aktuelle Version …", "Backing up current version …"),
+        UpdatePhase.Applying    => Loc.T("Installiere …", "Installing …"),
+        UpdatePhase.Restarting  => Loc.T("Neustart … die Seite lädt sich danach neu.", "Restarting … the page reloads afterwards."),
+        _                       => ""
+    };
+
+    public void Dispose()
+    {
+        Updater.OnChange -= OnUpdaterChange;
+        UpdateCheck.OnUpdateAvailable -= OnUpdaterChange;
+        Loc.OnChange -= OnUpdaterChange;
+    }
+}
