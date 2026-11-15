@@ -8,9 +8,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
-    <AssemblyVersion>1.17.2.0</AssemblyVersion>
-    <FileVersion>1.17.2.0</FileVersion>
-    <InformationalVersion>1.17.2</InformationalVersion>
+    <AssemblyVersion>1.17.3.0</AssemblyVersion>
+    <FileVersion>1.17.3.0</FileVersion>
+    <InformationalVersion>1.17.3</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,6 +27,11 @@
     <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
       <_Parameter1>BuildDate</_Parameter1>
       <_Parameter2>$([System.DateTime]::UtcNow.ToString("yyyy-MM-dd HH:mm")) UTC</_Parameter2>
+    </AssemblyAttribute>
+    <!-- Lets the self-updater pick the matching release asset (self-contained vs. framework-dependent). -->
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>SelfContained</_Parameter1>
+      <_Parameter2>$(SelfContained)</_Parameter2>
     </AssemblyAttribute>
   </ItemGroup>
 

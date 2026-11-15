@@ -1729,18 +1729,16 @@
         var isBroadcast = _activeTab.Key == "*" || _activeTab.Key.TrimStart('#').Equals("alle", StringComparison.OrdinalIgnoreCase);
         var isGroup     = _activeTab.Key.StartsWith('#');
 
-        // Confirm before sending ping to a group or broadcast tab.
+        // Firmware 4.40a.10+ accepts ping targets that are plain callsigns only; a ping to a
+        // group or broadcast is refused by the node (BP_SEND_INVALID), so do not send it.
         var isPing = text.Trim().Equals("ping", StringComparison.OrdinalIgnoreCase)
                   || text.Trim().Equals("--ping", StringComparison.OrdinalIgnoreCase);
         if (isPing && (isBroadcast || isGroup))
         {
-            var target   = isBroadcast ? "alle" : _activeTab.Key;
-            var prefix   = Loc.TF("Ping an \"{0}\" senden?", "Send ping to \"{0}\"?", target);
-            var suffix   = Loc.T(
-                "Das gehört meistens in ein direktes Tab.",
-                "This usually belongs in a direct tab.");
-            var confirmed = await JS.InvokeAsync<bool>("confirm", $"{prefix} {suffix}");
-            if (!confirmed) return;
+            await JS.InvokeVoidAsync("alert", Loc.T(
+                "Ping ist nur an ein einzelnes Rufzeichen möglich (Gruppen und Broadcast werden von der Node-Firmware abgelehnt). Bitte in einem direkten Tab senden.",
+                "Ping is only possible to a single callsign (the node firmware rejects groups and broadcast). Please send it from a direct tab."));
+            return;
         }
 
         var destination = isBroadcast ? "*" : _activeTab.Key.TrimStart('#');

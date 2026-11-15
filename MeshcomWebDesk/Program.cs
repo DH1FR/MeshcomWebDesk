@@ -129,6 +129,9 @@ var retainDays = meshcomSection.GetValue<int?>("LogRetainDays") ?? 30;
 // It is layered on top of appsettings.json so a Docker read-only mount still works.
 var dataPath = meshcomSection.GetValue<string>("DataPath") ?? @"C:\Temp\MeshcomData";
 TryCreateDirectory(dataPath, "DataPath");
+// Self-update: may roll back a new version that keeps failing to start (does not return in that case).
+MeshcomWebDesk.Services.Update.FileSwap.ConfigureExcludes(dataPath, logPath);
+MeshcomWebDesk.Services.Update.UpdateRecovery.OnStartup(dataPath);
 var overrideFile = Path.Combine(dataPath, "appsettings.override.json");
 builder.Configuration.AddJsonFile(overrideFile, optional: true, reloadOnChange: true);
 
@@ -217,6 +220,8 @@ builder.Services.AddSingleton<WebhookService>();
 builder.Services.AddSingleton<QrzService>();
 builder.Services.AddSingleton<MqttService>();
 builder.Services.AddSingleton<UpdateCheckService>();
+builder.Services.AddSingleton<MeshcomWebDesk.Services.Update.SelfUpdateService>();
+builder.Services.AddHostedService<MeshcomWebDesk.Services.Update.UpdateHealthService>();
 builder.Services.AddSingleton<ElevationService>();
 builder.Services.AddSingleton<TelnetService>();
 builder.Services.AddSingleton<SerialConsoleService>();
@@ -298,6 +303,7 @@ app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages:
 app.UseAntiforgery();
 
 app.MapStaticAssets();
+MeshcomWebDesk.Services.Update.UpdateEndpoints.MapUpdateEndpoints(app);
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

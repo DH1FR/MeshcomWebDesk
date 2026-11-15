@@ -33,6 +33,8 @@ WebDesk se comunica mediante el **protocolo EXTUDP JSON**. Esto debe habilitarse
 
 > 💡 **Consejo:** Encuentra la IP del PC WebDesk con `ipconfig` (Windows) o `ip a` / `ifconfig` (Linux/macOS).
 
+> ⚠️ **Firmware 4.40a.10 o posterior:** la IP de destino UDP **ya no puede ser una dirección broadcast/multicast** (`255.255.255.255`, el broadcast de la propia subred, `224.x.x.x`, `0.0.0.0`, la IP del propio nodo). El nodo registra `[EXT] target … refused` y no envía nada. Introduce siempre la **IP concreta del PC de WebDesk** (`--extudpip 192.168.1.100`).
+
 ---
 
 ## Paso 2 – Configuración de WebDesk (`/settings` → 🔌 Conexión)

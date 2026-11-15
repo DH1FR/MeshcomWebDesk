@@ -1,5 +1,20 @@
 ﻿# Changelog
 
+## [1.17.3] – 2026-11-15
+
+### Features
+- **One-click update** – the new page **/update** (linked from the update banner and from About) downloads the matching release, verifies its SHA-256 checksum, backs up the program files **and your data**, swaps the files and restarts WebDesk. If the new version does not become healthy (3 starts without a stable minute), it is **rolled back automatically**; any backup can also be restored manually. Supports the Windows service, systemd and manually started installations (Windows, Linux, Raspberry Pi, macOS); Docker and development runs are detected and not updated. Starting an update is only possible from the machine itself (localhost). The release now ships `.sha256` files and a self-contained Windows ZIP for installer-based installations. *The first version with this feature has to be installed manually once.*
+- **MQTT: live subscriber/prefix changes** – enabling the send-topic subscriber or changing the topic prefix now takes effect immediately, no restart needed.
+
+### Bugfixes
+- **Ping on group/broadcast tabs** – the node firmware (4.40a.10+) only accepts a callsign as ping target. A ping on a group or broadcast tab is now blocked with a hint instead of being sent (and never answered).
+
+### Docs
+- **Firmware 4.40a.10+: ext-udp target** – the node refuses broadcast/multicast/own-IP as UDP target (`--extudpip`). The node-connection guides (de/en/es/it) now say to enter the specific IP of the WebDesk PC.
+- **Translations** – all new texts plus a few previously missing ones are available in Spanish, French and Italian.
+
+---
+
 ## [1.17.2] – 2026-11-09
 
 ### Features

@@ -111,6 +111,12 @@ jobs:
             --transform='s|^\./|MeshcomWebDesk/|' \
             -C publish/linux-arm64 .
 
+      - name: Create SHA-256 checksums (used by the in-app updater)
+        run: |
+          for f in MeshcomWebDesk-${{ github.ref_name }}-*.zip MeshcomWebDesk-${{ github.ref_name }}-*.tar.gz; do
+            sha256sum "$f" > "$f.sha256"
+          done
+
       - name: Set release notes path
         id: notes
         run: |
@@ -130,6 +136,11 @@ jobs:
             MeshcomWebDesk-${{ github.ref_name }}-linux-arm64.tar.gz
             MeshcomWebDesk-${{ github.ref_name }}-osx-x64.tar.gz
             MeshcomWebDesk-${{ github.ref_name }}-osx-arm64.tar.gz
+            MeshcomWebDesk-${{ github.ref_name }}-win-x64.zip.sha256
+            MeshcomWebDesk-${{ github.ref_name }}-linux-x64.tar.gz.sha256
+            MeshcomWebDesk-${{ github.ref_name }}-linux-arm64.tar.gz.sha256
+            MeshcomWebDesk-${{ github.ref_name }}-osx-x64.tar.gz.sha256
+            MeshcomWebDesk-${{ github.ref_name }}-osx-arm64.tar.gz.sha256
           body_path: ${{ steps.notes.outputs.path != '' && steps.notes.outputs.path || '' }}
           generate_release_notes: ${{ steps.notes.outputs.path == '' }}
 
@@ -167,6 +178,14 @@ jobs:
             -p:FileVersion=${{ steps.version.outputs.VERSION }}.0 `
             --output installer/publish/win-x64
 
+      - name: Package self-contained Windows ZIP (in-app updater for installer installations)
+        shell: pwsh
+        run: |
+          $zip = "MeshcomWebDesk-${{ github.ref_name }}-win-x64-selfcontained.zip"
+          Compress-Archive -Path installer/publish/win-x64/* -DestinationPath $zip
+          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+          "$hash  $zip" | Out-File -Encoding ascii "$zip.sha256"
+
       - name: Install Inno Setup
         shell: pwsh
         run: choco install innosetup --no-progress -y
@@ -181,7 +200,10 @@ jobs:
       - name: Upload installer to release
         uses: softprops/action-gh-release@v2
         with:
-          files: installer/output/MeshcomWebDesk-Setup-${{ steps.version.outputs.VERSION }}-win-x64.exe
+          files: |
+            installer/output/MeshcomWebDesk-Setup-${{ steps.version.outputs.VERSION }}-win-x64.exe
+            MeshcomWebDesk-${{ github.ref_name }}-win-x64-selfcontained.zip
+            MeshcomWebDesk-${{ github.ref_name }}-win-x64-selfcontained.zip.sha256
 
   docker:
     name: Docker Image (ghcr.io)
