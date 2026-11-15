@@ -29,6 +29,17 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
+## 🆕 What's New in v1.17.4
+
+### ✨ Features
+- **Donate via Wero or bank transfer** – the coffee dialog, the About page and the README now point out that a donation also works via Wero or SEPA bank transfer: a short e-mail with a prefilled subject is enough, the bank details are sent back (or the amount is requested via Wero). Texts in German, English, Spanish, French and Italian.
+- **Windows setup in five languages** – all setup texts (tasks, shortcuts, status messages, service description) are now translated; Spanish, French and Italian are added as wizard languages next to German and English. The setup script also got a UTF-8 BOM so umlauts and accents are shown correctly.
+
+### 📚 Docs
+- **Italian translation improved** – thanks to giovanni69 (pull request #30).
+
+---
+
 ## 🆕 What's New in v1.17.3
 
 ### ✨ Features
