@@ -63,7 +63,7 @@
 
                 <label>
                     Listen Port<br />
-                    <small>@Loc.T("Standard: 1799 (z. B. 1798 bei Bluetooth-UDP-Hub)", "Default: 1799 (e.g. 1798 for a Bluetooth UDP hub)")</small>
+                    <small>@Loc.T("Standard: 1799. Muss ein anderer Port sein als der des Hubs auf demselben PC.", "Default: 1799. Must differ from the hub's port when it runs on the same PC.")</small>
                 </label>
                 <input type="number" min="1" max="65535" @bind="_model.ListenPort" />
 
@@ -72,7 +72,7 @@
 
                 <label>
                     Device Port<br />
-                    <small>@Loc.T("Standard: 1799 (z. B. 1798 bei Bluetooth-UDP-Hub)", "Default: 1799 (e.g. 1798 for a Bluetooth UDP hub)")</small>
+                    <small>@Loc.T("Standard: 1799. Bei Bluetooth-UDP-Hub auf demselben PC: 1798.", "Default: 1799. With a Bluetooth UDP hub on the same PC: 1798.")</small>
                 </label>
                 <input type="number" min="1" max="65535" @bind="_model.DevicePort" />
 
@@ -208,14 +208,14 @@
                         <input type="text" @bind="node.DeviceIp" />
                         <label>
                             Device Port<br />
-                            <small>@Loc.T("Standard: 1799 (z. B. 1798 bei Bluetooth-UDP-Hub)", "Default: 1799 (e.g. 1798 for a Bluetooth UDP hub)")</small>
+                            <small>@Loc.T("Standard: 1799. Bei Bluetooth-UDP-Hub auf demselben PC: 1798.", "Default: 1799. With a Bluetooth UDP hub on the same PC: 1798.")</small>
                         </label>
                         <input type="number" min="1" max="65535" @bind="node.DevicePort" />
                         <label>Listen IP</label>
                         <input type="text" @bind="node.ListenIp" />
                         <label>
                             Listen Port<br />
-                            <small>@Loc.T("Standard: 1799 (z. B. 1798 bei Bluetooth-UDP-Hub)", "Default: 1799 (e.g. 1798 for a Bluetooth UDP hub)")</small>
+                            <small>@Loc.T("Standard: 1799. Muss ein anderer Port sein als der des Hubs auf demselben PC.", "Default: 1799. Must differ from the hub's port when it runs on the same PC.")</small>
                         </label>
                         <input type="number" min="1" max="65535" @bind="node.ListenPort" />
                         }
