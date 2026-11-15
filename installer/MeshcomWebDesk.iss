@@ -1,4 +1,4 @@
-; MeshcomWebDesk – Inno Setup Installer Script
+﻿; MeshcomWebDesk – Inno Setup Installer Script
 ; https://jrsoftware.org/isinfo.php
 ;
 ; Prerequisites:
@@ -40,14 +40,103 @@ VersionInfoVersion={#AppVersion}
 VersionInfoDescription={#AppName} Setup
 VersionInfoCopyright=2024 {#AppPublisher}
 
+; Additional wizard languages are only added when this Inno Setup installation ships them,
+; so a missing file never breaks the build (the custom texts below fall back to English).
+#if FileExists(CompilerPath + "Languages\Spanish.isl")
+  #define HaveSpanish
+#endif
+#if FileExists(CompilerPath + "Languages\French.isl")
+  #define HaveFrench
+#endif
+#if FileExists(CompilerPath + "Languages\Italian.isl")
+  #define HaveItalian
+#endif
+
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "german";  MessagesFile: "compiler:Languages\German.isl"
+#ifdef HaveSpanish
+Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
+#endif
+#ifdef HaveFrench
+Name: "french";  MessagesFile: "compiler:Languages\French.isl"
+#endif
+#ifdef HaveItalian
+Name: "italian"; MessagesFile: "compiler:Languages\Italian.isl"
+#endif
+
+[CustomMessages]
+; Default (English) – used by every language that has no own entry
+TaskStartService=Start the service after installation
+GroupService=Windows service:
+TaskDesktopIcon=Create a desktop shortcut
+GroupIcons=Icons:
+TaskAutostart=Open the browser automatically at Windows startup
+GroupAutostart=Autostart:
+IconOpenBrowser=Open %1 in browser
+IconUninstall=Uninstall %1
+StatusInstallService=Installing Windows service...
+StatusStartService=Starting service...
+ServiceDescription=MeshCom WebDesk – Mesh network monitor and web interface
+
+german.TaskStartService=Dienst nach der Installation starten
+german.GroupService=Windows-Dienst:
+german.TaskDesktopIcon=Desktop-Verknüpfung erstellen
+german.GroupIcons=Symbole:
+german.TaskAutostart=Browser beim Windows-Start automatisch öffnen
+german.GroupAutostart=Autostart:
+german.IconOpenBrowser=%1 im Browser öffnen
+german.IconUninstall=%1 deinstallieren
+german.StatusInstallService=Windows-Dienst wird installiert...
+german.StatusStartService=Dienst wird gestartet...
+german.ServiceDescription=MeshCom WebDesk – Mesh Network Monitor und Web-Interface
+
+#ifdef HaveSpanish
+spanish.TaskStartService=Iniciar el servicio tras la instalación
+spanish.GroupService=Servicio de Windows:
+spanish.TaskDesktopIcon=Crear un acceso directo en el escritorio
+spanish.GroupIcons=Iconos:
+spanish.TaskAutostart=Abrir el navegador automáticamente al iniciar Windows
+spanish.GroupAutostart=Inicio automático:
+spanish.IconOpenBrowser=Abrir %1 en el navegador
+spanish.IconUninstall=Desinstalar %1
+spanish.StatusInstallService=Instalando el servicio de Windows...
+spanish.StatusStartService=Iniciando el servicio...
+spanish.ServiceDescription=MeshCom WebDesk – monitor y interfaz web de la red Mesh
+#endif
+
+#ifdef HaveFrench
+french.TaskStartService=Démarrer le service après l'installation
+french.GroupService=Service Windows :
+french.TaskDesktopIcon=Créer un raccourci sur le Bureau
+french.GroupIcons=Icônes :
+french.TaskAutostart=Ouvrir automatiquement le navigateur au démarrage de Windows
+french.GroupAutostart=Démarrage automatique :
+french.IconOpenBrowser=Ouvrir %1 dans le navigateur
+french.IconUninstall=Désinstaller %1
+french.StatusInstallService=Installation du service Windows...
+french.StatusStartService=Démarrage du service...
+french.ServiceDescription=MeshCom WebDesk – moniteur et interface web du réseau Mesh
+#endif
+
+#ifdef HaveItalian
+italian.TaskStartService=Avvia il servizio dopo l'installazione
+italian.GroupService=Servizio Windows:
+italian.TaskDesktopIcon=Crea un collegamento sul desktop
+italian.GroupIcons=Icone:
+italian.TaskAutostart=Apri automaticamente il browser all'avvio di Windows
+italian.GroupAutostart=Avvio automatico:
+italian.IconOpenBrowser=Apri %1 nel browser
+italian.IconUninstall=Disinstalla %1
+italian.StatusInstallService=Installazione del servizio Windows...
+italian.StatusStartService=Avvio del servizio...
+italian.ServiceDescription=MeshCom WebDesk – monitor e interfaccia web della rete Mesh
+#endif
 
 [Tasks]
-Name: "startservice"; Description: "Dienst nach der Installation starten";          GroupDescription: "Windows-Dienst:"
-Name: "desktopicon";  Description: "Desktop-Verknüpfung erstellen";                 GroupDescription: "Symbole:"
-Name: "autostart";    Description: "Browser beim Windows-Start automatisch öffnen"; GroupDescription: "Autostart:"; Flags: unchecked
+Name: "startservice"; Description: "{cm:TaskStartService}"; GroupDescription: "{cm:GroupService}"
+Name: "desktopicon";  Description: "{cm:TaskDesktopIcon}"; GroupDescription: "{cm:GroupIcons}"
+Name: "autostart";    Description: "{cm:TaskAutostart}";    GroupDescription: "{cm:GroupAutostart}"; Flags: unchecked
 
 [Files]
 ; All root-level publish files (exe, static-assets manifest, native DLLs, web.config, …)
@@ -71,8 +160,8 @@ Name: "{app}\data"; Permissions: everyone-modify
 Name: "{app}\keys"; Permissions: everyone-modify
 
 [Icons]
-Name: "{group}\{#AppName} im Browser öffnen";  Filename: "{win}\explorer.exe"; Parameters: "http://localhost:5162"; IconFilename: "{app}\app.ico"
-Name: "{group}\{#AppName} deinstallieren";        Filename: "{uninstallexe}"
+Name: "{group}\{cm:IconOpenBrowser,{#AppName}}";  Filename: "{win}\explorer.exe"; Parameters: "http://localhost:5162"; IconFilename: "{app}\app.ico"
+Name: "{group}\{cm:IconUninstall,{#AppName}}";        Filename: "{uninstallexe}"
 ; Desktop shortcut (only when task is selected)
 Name: "{commondesktop}\{#AppName}";             Filename: "{win}\explorer.exe"; Parameters: "http://localhost:5162"; IconFilename: "{app}\app.ico"; Tasks: desktopicon
 ; Autostart shortcut: opens browser at login (only when task is selected)
@@ -80,14 +169,14 @@ Name: "{userstartup}\{#AppName}";               Filename: "{win}\explorer.exe"; 
 
 [Run]
 ; Install Windows Service
-Filename: "{sys}\sc.exe"; Parameters: "create {#ServiceName} binPath= ""{app}\{#AppExeName}"" start= auto DisplayName= ""{#AppName}"""; Flags: runhidden; StatusMsg: "Windows-Dienst wird installiert..."
-Filename: "{sys}\sc.exe"; Parameters: "description {#ServiceName} ""MeshCom WebDesk – Mesh Network Monitor und Web-Interface"""; Flags: runhidden
+Filename: "{sys}\sc.exe"; Parameters: "create {#ServiceName} binPath= ""{app}\{#AppExeName}"" start= auto DisplayName= ""{#AppName}"""; Flags: runhidden; StatusMsg: "{cm:StatusInstallService}"
+Filename: "{sys}\sc.exe"; Parameters: "description {#ServiceName} ""{cm:ServiceDescription}"""; Flags: runhidden
 ; Auto-restart on failure: reset after 1 day, restart after 5s / 10s / 30s
 Filename: "{sys}\sc.exe"; Parameters: "failure {#ServiceName} reset= 86400 actions= restart/5000/restart/10000/restart/30000"; Flags: runhidden
 ; Start now (optional task)
-Filename: "{sys}\sc.exe"; Parameters: "start {#ServiceName}"; Flags: runhidden; Tasks: startservice; StatusMsg: "Dienst wird gestartet..."
+Filename: "{sys}\sc.exe"; Parameters: "start {#ServiceName}"; Flags: runhidden; Tasks: startservice; StatusMsg: "{cm:StatusStartService}"
 ; Open browser after install
-Filename: "{sys}\cmd.exe"; Parameters: "/c start http://localhost:5162"; Flags: runhidden postinstall skipifsilent; Description: "MeshcomWebDesk im Browser öffnen"
+Filename: "{sys}\cmd.exe"; Parameters: "/c start http://localhost:5162"; Flags: runhidden postinstall skipifsilent; Description: "{cm:IconOpenBrowser,{#AppName}}"
 
 [UninstallRun]
 Filename: "{sys}\sc.exe"; Parameters: "stop   {#ServiceName}"; Flags: runhidden; RunOnceId: "StopService"
