@@ -1101,6 +1101,7 @@
     "Display mode (this browser only)": "Modo de pantalla (solo este navegador)",
     "Automatic (detect small displays)": "Automático (detectar pantallas pequeñas)",
     "Normal": "Normal",
-    "Compact (e.g. 480×320 touch display)": "Compacto (p. ej. pantalla táctil de 480×320)"
+    "Compact (e.g. 480×320 touch display)": "Compacto (p. ej. pantalla táctil de 480×320)",
+    "Prefer Wero or a bank transfer? Send me a short e-mail – I will send you my bank details or request the amount via Wero (please include the phone number or e-mail of your Wero account). If you would like a license, please include your callsign.": "¿Prefieres Wero o una transferencia bancaria? Envíame un breve correo: te mando mis datos bancarios o te solicito el importe por Wero (indica el teléfono o el correo de tu cuenta Wero). Si quieres una licencia, indica tu indicativo."
   }
 }

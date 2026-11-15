@@ -151,7 +151,8 @@ Built with **.NET 10** and **Blazor Interactive Server**.
   <strong>☕ Do you like my work? Then buy me a coffee! ☕</strong><br><br>
   <a href="https://paypal.me/DH1FR">
     <img src="https://img.shields.io/badge/Donate%20via%20PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="Donate via PayPal" />
-  </a>
+  </a><br><br>
+  <sub>Prefer <strong>Wero</strong> or a <strong>bank transfer</strong>? Send me a short <a href="mailto:dh1fr@darc.de?subject=MeshCom%20WebDesk%20-%20Coffee%20donation%20(Wero%20%2F%20bank%20transfer)">e-mail</a> – I will send you my bank details or request the amount via Wero.</sub>
 </p>
 
 ---
