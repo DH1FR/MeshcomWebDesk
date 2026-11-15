@@ -793,7 +793,6 @@
     "Send message": "Invia messaggio",
     "Send native telemetry (extudp)": "Invia telemetria nativa (extudp)",
     "Send now": "Invia ora",
-    "Send ping to \"{0}\"?": "Inviare un ping a \"{0}\"?",
     "Send Telemetry Now": "Invia telemetria ora",
     "Send times (hours 0–23)": "Orari di invio (ore 0–23)",
     "Send Topics": "Topic di invio",
@@ -898,7 +897,6 @@
     "The Weather API writes measurement values directly to the telemetry JSON file. Use these field names as JSON-Key in the Telemetry Mapping:": "La Weather API scrive i valori misurati direttamente nel file JSON di telemetria. Usa questi nomi di campo come chiave JSON nella mappatura della telemetria:",
     "Theme name": "Nome del tema",
     "This PC only (localhost)": "Solo questo PC (localhost)",
-    "This usually belongs in a direct tab.": "Di solito appartiene a una scheda diretta.",
     "Thursday": "Giovedì",
     "Time": "Ora",
     "Time Offset (Hours)": "Scostamento orario (ore)",
@@ -1044,6 +1042,7 @@
     "Delivery failed – the node gave up after several retransmits": "Consegna non riuscita: il nodo ha rinunciato dopo diverse ritrasmissioni",
     "LoRa modulation ID of the node": "ID di modulazione LoRa del nodo",
     "Remaining hop budget of the last packet heard": "Budget di hop residuo dell'ultimo pacchetto ascoltato",
-    "APRS symbol": "Simbolo APRS"
+    "APRS symbol": "Simbolo APRS",
+    "Ping is only possible to a single callsign (the node firmware rejects groups and broadcast). Please send it from a direct tab.": "Il ping è possibile solo verso un singolo nominativo (il firmware del nodo rifiuta gruppi e broadcast). Invialo da una scheda diretta."
   }
 }

@@ -813,7 +813,6 @@
     "Send message": "Envoyer message",
     "Send native telemetry (extudp)": "Envoyer la télémétrie native (extudp)",
     "Send now": "Envoyer maintenant",
-    "Send ping to \"{0}\"?": "Envoyer un ping à « {0} » ?",
     "Send Telemetry Now": "Envoyer la télémétrie maintenant",
     "Send times (hours 0–23)": "Heures d'envoi (0–23)",
     "Send Topics": "Topics d'envoi",
@@ -920,7 +919,6 @@
     "The Weather API writes measurement values directly to the telemetry JSON file. Use these field names as JSON-Key in the Telemetry Mapping:": "L'API météo écrit les valeurs mesurées directement dans le fichier JSON de télémétrie. Utilisez ces noms de champ comme clé JSON dans le mappage de télémétrie :",
     "Theme name": "Nom du thème",
     "This PC only (localhost)": "Ce PC uniquement (localhost)",
-    "This usually belongs in a direct tab.": "Cela appartient généralement à un onglet direct.",
     "Thursday": "Jeudi",
     "Time": "Heure",
     "Time Offset (Hours)": "Décalage horaire (heures)",
@@ -1068,6 +1066,7 @@
     "Delivery failed – the node gave up after several retransmits": "Échec de la remise : le nœud a abandonné après plusieurs retransmissions",
     "LoRa modulation ID of the node": "ID de modulation LoRa du nœud",
     "Remaining hop budget of the last packet heard": "Budget de sauts restant du dernier paquet entendu",
-    "APRS symbol": "Symbole APRS"
+    "APRS symbol": "Symbole APRS",
+    "Ping is only possible to a single callsign (the node firmware rejects groups and broadcast). Please send it from a direct tab.": "Le ping n'est possible que vers un seul indicatif (le firmware du nœud refuse les groupes et le broadcast). Envoyez-le depuis un onglet direct."
   }
 }
