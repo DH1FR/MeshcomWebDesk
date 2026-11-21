@@ -67,6 +67,50 @@ sudo ufw allow 1799/udp
 
 ---
 
+## Verbindungsprüfung und Einrichtungs-Assistent
+
+In **Einstellungen → 🔌 Verbindung** gibt es zwei Schaltflächen:
+
+- **🔍 Einstellungen prüfen** prüft die aktuellen Werte (auch ungespeicherte) und sagt, was nicht passt und was zu ändern ist: Format von IP-Adressen und Ports, ob die **Listen IP** zu diesem PC gehört (häufiger Fehler: die IP des Nodes statt `0.0.0.0`), ob der UDP-Socket offen ist, ob der Node erreichbar ist, ob Pakete ankommen und ob **Rufzeichen und SSID** zum Node passen.
+- **🧙 Einrichtungs-Assistent** führt Schritt für Schritt durch die Einrichtung (WLAN-Node, Bluetooth-Hub auf diesem PC oder auf einem anderen Rechner) Gleich im ersten Schritt wählen Sie *Node automatisch konfigurieren* (voreingestellt; WebDesk stellt ext UDP und die Ziel-IP über die Net-Console ein; ist sie ausgeschaltet, führt der Assistent über die Weboberfläche des Nodes zum Einschalten) oder *Node manuell konfigurieren* (Befehle zum Kopieren). Die Werte werden erst nach Klick auf *In Formular übernehmen* eingetragen; danach müssen Sie noch speichern.
+
+Beide ändern **nichts automatisch** und senden **nichts an den Node**. Auch bei **Weiteren Nodes** gibt es pro Node einen Prüfen-Knopf (🔍) und einen Assistenten (🧙).
+
+Ist der **UDP-Status in der Statusleiste rot** oder gelb, öffnet ein Klick darauf die Prüfung (rot: direkt in den Einstellungen mit dem konkreten Fehlergrund).
+
+**Erster Start:** Ist noch kein Node eingerichtet (keine Node-Liste und nach dem Start innerhalb weniger Sekunden keine Daten von einem Node; auch wenn alle Nodes gelöscht wurden) fragt WebDesk beim Start sofort, ob der Einrichtungs-Assistent gestartet werden soll (*Ja, Assistent starten* / *Später* / *Nicht mehr fragen*; pro Browser-Tab einmal). *Später* lässt oben im Chat ein Banner mit *Einrichtung starten* als Erinnerung stehen; es öffnet die Einstellungen mit dem Assistenten. *Nicht mehr fragen* bzw. *Nicht mehr anzeigen* blendet Frage und Banner dauerhaft aus. Nach dem ersten Speichern erscheint es nicht mehr.
+
+**Node im Netzwerk suchen:** Im Node-Schritt des Assistenten startet die Suche automatisch; die Treffer stehen in einer **Auswahlliste** am IP-Feld (*Erneut suchen* wiederholt sie). Die Suche löst das Rufzeichen als Hostname auf (die Firmware nutzt es als DHCP-/mDNS-Namen) auf, zeigt IPs, von denen schon Pakete eingegangen sind, und fragt die Adressen Ihres lokalen /24-Netzes auf einen MeshCom-Webserver (Port 80, Seitentitel „RUFZEICHEN - Meshcom“) ab. Das findet nur Nodes mit eingeschaltetem Webserver; ein reiner ext-UDP-Node meldet sich nicht von selbst. Ein Klick auf einen Treffer übernimmt nur die IP in den Assistenten.
+
+**Einstellungen am Node lesen und korrigieren (Net-Console):** Ist die Net-Console des Nodes eingeschaltet (Port 2323, HMAC-Passwort), zeigt die Prüfung unten den Bereich *Node-Einstellungen über die Net-Console*. *Vom Node lesen* meldet ext UDP, die Ziel-IP und das Rufzeichen des Nodes. Weicht etwas ab, bietet *Am Node korrigieren …* die Befehle `--extudp on` und `--extudpip <IP dieses PCs>` an; gesendet wird erst nach Ihrer Bestätigung, und nur diese beiden Befehle. Das Rufzeichen am Node wird nie geändert; stattdessen übernimmt *Rufzeichen … in WebDesk übernehmen* den Wert des Nodes ins Formular. Ist die Net-Console nicht erreichbar, weist die Prüfung darauf hin, dass sie am Node eingeschaltet sein muss (Weboberfläche: IP Network Settings → net console, oder `--netconsole on`; Passwort mit `--passwd`).
+
+**Automatischer Abgleich aller Node-Einstellungen:** Ist die Net-Console erreichbar und das Node-Passwort bekannt, liest die Prüfung den Node bei jedem Lauf selbst aus (nur lesend, `--info`) und vergleicht, was WebDesk dazu konfiguriert hat: **Rufzeichen/SSID**, **ext UDP** (an) und **Ziel-IP** (diese PC-IP), die **IP-Adresse des Nodes** (gegen die Device IP) sowie bei aktivem KISS **KISS/TCP, TX, RxMeta und Auth**. Zusätzlich zeigt sie, ob `--nopmother` fremde Direktnachrichten zurückhält. Der Bereich unter der Prüfung zeigt alles als Tabelle (*Am Node* / *Erwartet*). Die Korrektur bietet nur `--extudp on`, `--extudpip`, `--kiss on`, `--kiss tx on` und `--kiss meta on` an.
+
+**KISS am Node aktivieren:** Ist unter *Verbindung* (oder bei einem weiteren Node) KISS/TCP eingeschaltet, erscheint dort der Knopf *KISS am Node über die Net-Console aktivieren*. Er liest den Node aus und bietet `--kiss on`, `--kiss tx on` und `--kiss meta on` an – gesendet wird erst nach Ihrer Bestätigung. Nur ESP32-Nodes mit passender Firmware bieten KISS.
+
+**Rufzeichen auf beiden Seiten übernehmen:** Weicht das Rufzeichen ab, gibt es zwei Knöpfe. *Rufzeichen … in WebDesk übernehmen* trägt den Wert des Nodes ins Formular ein (danach speichern). *Rufzeichen am Node auf … ändern …* setzt es am Node auf das Rufzeichen aus WebDesk (`--setcall`, über die Net-Console). Das geschieht nur nach Klick und Bestätigung; die Warnung weist darauf hin, dass sich die Identität des Nodes im Mesh ändert und der Node neu starten kann. Es wird immer nur dieser eine Befehl gesendet.
+
+**Falsche SSID sofort bemerken:** Auch ohne Net-Console fällt eine Abweichung auf: Sendet WebDesk eine Nachricht und der Node meldet sie unter einem anderen Rufzeichen zurück, erscheint in der Statusleiste das Warn-Badge **⚠️ Rufzeichen?** (Klick öffnet die Prüfung) und die Prüfung nennt das Rufzeichen, das der Node wirklich nutzt. WebDesk ändert nichts automatisch.
+
+**Rufzeichen und SSID:** WebDesk erkennt eigene Pakete am Rufzeichen. Stimmt die SSID nicht mit dem Node überein, kommen zwar Pakete an, der UDP-Status bleibt aber gelb. Die Prüfung vergleicht mit dem, was der Node selbst meldet (Position, Telemetrie, Nachrichten-Echo oder `--info` über die Net-Console) und nennt den korrekten Wert.
+
+---
+
+## Bluetooth-Hub (MeshCom UDP Bluetooth Hub)
+
+Nodes ohne WLAN (z. B. Heltec T114) lassen sich über den **MeshCom UDP Bluetooth Hub** anbinden. Der Hub gibt sich WebDesk gegenüber als Node mit ext-UDP aus. Läuft er auf demselben PC, belegen Hub und WebDesk nicht denselben Port:
+
+| WebDesk-Einstellung | Wert |
+|---|---|
+| Device IP | `127.0.0.1` (oder IP des Hub-Rechners) |
+| Device Port | `1798` (der „UDP port“ des Hubs) |
+| Listen IP / Listen Port | `127.0.0.1` oder `0.0.0.0` / `1799` |
+| Rufzeichen | **das des Nodes**, mit SSID |
+
+Im Hub: Node per Bluetooth verbinden (Handy-App vorher trennen), „WebDesk“ = `127.0.0.1:1799`. Die Verbindungsprüfung erkennt den Hub-Betrieb, prüft, ob auf dem Hub-Port etwas lauscht, und warnt vor Port-Konflikten. **Zwei Nodes mit derselben IP** (z. B. zwei Hubs auf einem PC) kann WebDesk nicht unterscheiden, weil es Pakete über die Absender-IP zuordnet. Mit dem aktuellen Hub vergleicht die Prüfung außerdem dessen **UDP-Port** (= Device Port) und den **Port, an den er sendet** (= Listen Port) mit den WebDesk-Einstellungen und prüft, ob WebDesk auf der Adresse lauscht, an die der Hub sendet (ein Hub, der an `127.0.0.1` sendet, erreicht WebDesk nicht, wenn dieses nur auf der LAN-Adresse lauscht).
+
+---
+
 ## Monitor-Filter
 
 Im **Monitor-Fenster** (unterer Bereich) befindet sich in der Titelleiste ein Suchfeld 🔍.

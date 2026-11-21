@@ -1,0 +1,34 @@
+@* First-run prompt: WebDesk is not connected to a node yet – offer the setup wizard right away. *@
+@inject LanguageService Loc
+
+<div class="welcome-overlay" @onclick="Later">
+    <div class="welcome-modal" @onclick:stopPropagation="true">
+        <div class="welcome-icon">🧙</div>
+        <p class="welcome-title">@Loc.T("Willkommen bei MeshCom WebDesk", "Welcome to MeshCom WebDesk")</p>
+        <p class="welcome-text">
+            @Loc.T(
+                "WebDesk ist noch nicht mit einem Node verbunden. Möchten Sie jetzt den Einrichtungs-Assistenten starten? Er führt Sie in wenigen Schritten durch die Verbindung (WLAN-Node oder Bluetooth-Hub) und prüft die Einstellungen.",
+                "WebDesk is not connected to a node yet. Do you want to start the setup wizard now? It guides you through the connection (WiFi node or Bluetooth hub) in a few steps and checks the settings.")
+        </p>
+        <div class="welcome-buttons">
+            <button class="welcome-btn-coffee" @onclick="Start">🧙 @Loc.T("Ja, Assistent starten", "Yes, start the wizard")</button>
+            <button class="welcome-btn-dismiss" @onclick="Later">@Loc.T("Später", "Later")</button>
+            <button class="welcome-btn-dismiss" @onclick="Never">@Loc.T("Nicht mehr fragen", "Do not ask again")</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    /// <summary>The user wants the setup wizard now.</summary>
+    [Parameter] public EventCallback OnStart { get; set; }
+
+    /// <summary>Ask again next time (the banner stays as a reminder).</summary>
+    [Parameter] public EventCallback OnLater { get; set; }
+
+    /// <summary>Never ask again (also hides the banner).</summary>
+    [Parameter] public EventCallback OnNever { get; set; }
+
+    private Task Start() => OnStart.InvokeAsync();
+    private Task Later() => OnLater.InvokeAsync();
+    private Task Never() => OnNever.InvokeAsync();
+}

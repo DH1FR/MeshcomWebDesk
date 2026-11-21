@@ -1,6 +1,7 @@
 ﻿@rendermode InteractiveServer
 @inject MeshcomWebDesk.Services.UpdateCheckService UpdateCheck
 @inject MeshcomWebDesk.Services.LanguageService Loc
+@inject MeshcomWebDesk.Services.Update.DockerUpdateService Docker
 @implements IDisposable
 
 @if (!UpdateCheck.Dismissed && UpdateCheck.LatestVersion is not null)
@@ -16,10 +17,30 @@
     </div>
 }
 
+@if (!UpdateCheck.Dismissed && _dockerDev is { Available: true })
+{
+    <div class="update-banner">
+        <span>🚀 @Loc.TF("Neuer Dev-Build verfügbar: {0}", "New dev build available: {0}", _dockerDev.Latest)</span>
+        <a href="/update" class="update-banner-link">@Loc.T("Jetzt aktualisieren", "Update now") →</a>
+        <button class="update-banner-dismiss" @onclick="Dismiss" @onclick:stopPropagation="true"
+                title="@Loc.T("Schließen", "Dismiss")">✕</button>
+    </div>
+}
+
 @code {
-    protected override void OnInitialized()
+    private MeshcomWebDesk.Services.Update.DockerUpdateInfo? _dockerDev;
+
+    protected override async Task OnInitializedAsync()
     {
         UpdateCheck.OnUpdateAvailable += OnUpdateFound;
+
+        // Docker, dev channel: the release check does not know about new dev builds – ask the dev branch.
+        if (MeshcomWebDesk.Services.Update.DockerUpdateService.InContainer
+            && MeshcomWebDesk.Services.Update.DockerUpdateService.Channel == "dev")
+        {
+            try { _dockerDev = await Docker.GetInfoAsync(); }
+            catch (Exception) { /* offline: no banner */ }
+        }
     }
 
     private void OnUpdateFound() => InvokeAsync(StateHasChanged);

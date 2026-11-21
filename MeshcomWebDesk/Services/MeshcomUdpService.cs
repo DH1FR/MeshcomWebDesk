@@ -100,6 +100,66 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     /// <summary>Live connection and statistics status. Updated on every relevant event.</summary>
     public ConnectionStatus Status { get; } = new();
 
+    /// <summary>Which sender callsigns each node reports in its own packets (read by the connection check).</summary>
+    public NodeCallsignObserver CallsignObserver { get; } = new();
+
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, int> _rawRxBySource = new();
+
+    /// <summary>What WebDesk did with packets of one sender that it did not count as radio traffic.</summary>
+    public sealed class SourceRxStats
+    {
+        /// <summary>Node relay echoes (<c>src_type:"node"</c>) of other callsigns – skipped on purpose, the real packet follows.</summary>
+        public int Skipped;
+        /// <summary>Callsign of the last skipped echo.</summary>
+        public string? LastSkippedFrom;
+        /// <summary>Delivery-status datagrams (ACK) – not radio traffic.</summary>
+        public int Acks;
+        /// <summary>Datagrams that could not be parsed (shown as raw lines in the monitor only).</summary>
+        public int Unparsed;
+    }
+
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, SourceRxStats> _rxStats = new();
+
+    private SourceRxStats StatsFor(string ip) => _rxStats.GetOrAdd(ip, _ => new SourceRxStats());
+
+    /// <summary>A snapshot of what happened to the not-counted packets of the sender <paramref name="ip"/>.</summary>
+    public SourceRxStats GetSourceStats(string ip)
+    {
+        var st = _rxStats.GetValueOrDefault(ip);
+        if (st is null) return new SourceRxStats();
+        lock (st) return new SourceRxStats { Skipped = st.Skipped, LastSkippedFrom = st.LastSkippedFrom, Acks = st.Acks, Unparsed = st.Unparsed };
+    }
+
+    /// <summary>Texts WebDesk sent in the last minute (text, time, node) – to recognise the node's echo of them.</summary>
+    private readonly List<(string Text, DateTime Time, Guid NodeKey)> _recentSent = [];
+
+    private void RememberSent(string text, Guid? nodeId)
+    {
+        lock (_recentSent)
+        {
+            _recentSent.RemoveAll(r => DateTime.UtcNow - r.Time > TimeSpan.FromMinutes(1));
+            _recentSent.Add((text, DateTime.UtcNow, nodeId ?? Guid.Empty));
+        }
+    }
+
+    /// <summary>True when <paramref name="text"/> is the echo of a message WebDesk sent a moment ago.</summary>
+    private bool IsEchoOfRecentSent(string? text, Guid nodeKey)
+    {
+        if (string.IsNullOrEmpty(text)) return false;
+        lock (_recentSent)
+        {
+            return _recentSent.Any(r => r.NodeKey == nodeKey
+                && DateTime.UtcNow - r.Time <= TimeSpan.FromMinutes(1)
+                && (text == r.Text || text.StartsWith(r.Text, StringComparison.Ordinal)));
+        }
+    }
+
+    /// <summary>
+    /// Number of UDP datagrams received per sender IP since startup, whether or not they were accepted as
+    /// node data. Read by the connection check to tell "nothing arrives" from "arrives but is not assigned".
+    /// </summary>
+    public IReadOnlyDictionary<string, int> RawRxBySource => _rawRxBySource;
+
     /// <summary>UTC time the last ext-udp packet was attributed to a given node, by node id.
     /// Lets the UI show a separate "ext-udp alive" indicator next to the KISS one – on a KISS
     /// node ext-udp still carries the node's own position / telemetry / firmware, which KISS
@@ -206,6 +266,8 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         {
             var localEp = new IPEndPoint(IPAddress.Parse(_settings.ListenIp), _settings.ListenPort);
             _udpClient = new UdpClient(localEp);
+            Status.LastBindError = null;
+            Status.BoundListenEndpoint = $"{_settings.ListenIp}:{_settings.ListenPort}";
             // Disable IPv4-mapped IPv6 (dual-stack) so RemoteEndPoint always returns plain IPv4 addresses.
             // This ensures ResolveNodeByIp can match NodeProfile.DeviceIp entries reliably.
             if (_udpClient.Client.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
@@ -214,6 +276,11 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         catch (Exception ex)
         {
             _logger.LogCritical(ex, "Failed to bind UDP socket on {Ip}:{Port}", _settings.ListenIp, _settings.ListenPort);
+            // Surface the reason in the UI (status bar badge + connection check) – the user
+            // would otherwise only see a red badge without any explanation.
+            Status.LastBindError = ex.Message;
+            Status.BoundListenEndpoint = string.Empty;
+            NotifyStatusChange();
             return;
         }
 
@@ -242,6 +309,12 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                     if (string.IsNullOrWhiteSpace(raw))
                         continue;
 
+                    // Raw per-sender counter for the connection check ("packets arrive but are not accepted").
+                    var rawSender = result.RemoteEndPoint.Address.IsIPv4MappedToIPv6
+                        ? result.RemoteEndPoint.Address.MapToIPv4()
+                        : result.RemoteEndPoint.Address;
+                    _rawRxBySource.AddOrUpdate(rawSender.ToString(), 1, (_, n) => n + 1);
+
                     _logger.LogDebug("UDP RX [{Remote}]: {Data}", result.RemoteEndPoint, raw);
                     if (_settings.LogUdpTraffic)
                         _logger.LogInformation("[UDP-RX] {Remote} {Data}", result.RemoteEndPoint, raw);
@@ -269,6 +342,38 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                     {
                         // Tag the message with the node it arrived from
                         message.NodeId = sourceNode?.Id;
+
+                        // Remember which sender callsigns the node reports itself (connection check:
+                        // detects a callsign / SSID that differs from the configured one).
+                        if (message.IsNodePacket && !message.IsAck && !message.IsJsonAck)
+                        {
+                            var nodeKey = sourceNode?.Id ?? Guid.Empty;
+                            CallsignObserver.Record(nodeKey, message.From);
+
+                            // The node returned a message we just sent, but under another callsign/SSID: WebDesk
+                            // is configured with a callsign the node does not use. Tell the UI (status bar + check).
+                            if (!string.Equals(message.From, myCallsign, StringComparison.OrdinalIgnoreCase)
+                                && IsEchoOfRecentSent(message.Text, nodeKey))
+                            {
+                                CallsignObserver.RecordOwnEcho(nodeKey, message.From);
+                                if (!string.Equals(Status.NodeCallsignMismatch, message.From, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    Status.NodeCallsignMismatch = message.From;
+                                    _logger.LogWarning(
+                                        "Node sends our message as {NodeCall}, but WebDesk uses {OwnCall} – callsign/SSID mismatch",
+                                        message.From, myCallsign);
+                                    NotifyStatusChange();
+                                }
+                            }
+                            else if (string.Equals(message.From, myCallsign, StringComparison.OrdinalIgnoreCase)
+                                     && Status.NodeCallsignMismatch is not null)
+                            {
+                                // A packet with our own callsign arrived: the mismatch is gone.
+                                CallsignObserver.ClearOwnEcho(nodeKey);
+                                Status.NodeCallsignMismatch = null;
+                                NotifyStatusChange();
+                            }
+                        }
 
                         // Record that ext-udp is alive for this node (feeds the "ext-udp" health
                         // dot next to the KISS one). We do NOT drop ext-udp frames from a KISS
@@ -306,12 +411,16 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                             // Node delivery-status datagram: update the matching outgoing message only.
                             // Not counted as RX traffic – it is not a heard packet.
                             _chatService.AddNodeAck(message, message.NodeId);
+                            var ackStats = StatsFor(rawSender.ToString());
+                            lock (ackStats) ackStats.Acks++;
                         }
                         else if (message.IsNodePacket &&
                             !message.IsAck && !message.IsHoldNotice &&
                             !string.Equals(message.From, myCallsign, StringComparison.OrdinalIgnoreCase))
                         {
                             _logger.LogDebug("Skipping node relay echo from foreign station {From} (src_type=node)", message.From);
+                            var skipStats = StatsFor(rawSender.ToString());
+                            lock (skipStats) { skipStats.Skipped++; skipStats.LastSkippedFrom = message.From; }
                         }
                         else if (string.Equals(message.From, myCallsign, StringComparison.OrdinalIgnoreCase))
                         {
@@ -438,6 +547,8 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                     else
                     {
                         // Unparseable data (status, telemetry, etc.) – raw feed only, no tab
+                        var rawStats = StatsFor(rawSender.ToString());
+                        lock (rawStats) rawStats.Unparsed++;
                         _chatService.AddRawMessage(new MeshcomMessage
                         {
                             Text   = raw,
@@ -463,6 +574,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             _udpClient = null;
             Status.IsListening = false;
             Status.IsRegistered = false;
+            Status.BoundListenEndpoint = string.Empty;
             NotifyStatusChange();
             _logger.LogInformation("MeshCom UDP service stopped");
         }
@@ -1543,6 +1655,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             // Monitor whether the node echoes back the packet within 5 seconds.
             // The node echoes every sent message (direct, group, broadcast) via src_type:"node".
             // Group and broadcast echoes carry no {NNN} sequence number – handled in AssignOutgoingSequence.
+            RememberSent(text, selectedNodeId);
             _ = Task.Run(async () =>
             {
                 await Task.Delay(TimeSpan.FromSeconds(5));

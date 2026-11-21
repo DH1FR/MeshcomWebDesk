@@ -321,6 +321,11 @@ window.meshcomChat = (function () {
         },
         setTabOrder: (keys) =>
             localStorage.setItem('meshcom-tab-order', JSON.stringify(keys || [])),
+        getSetupHintDismissed: () => { try { return localStorage.getItem('meshcom-setup-hint-dismissed') === '1'; } catch (e) { return false; } },
+        setSetupHintDismissed: () => { try { localStorage.setItem('meshcom-setup-hint-dismissed', '1'); } catch (e) { } },
+        getSetupPromptSeen: () => { try { return sessionStorage.getItem('meshcom-setup-prompt-seen') === '1'; } catch (e) { return false; } },
+        setSetupPromptSeen: () => { try { sessionStorage.setItem('meshcom-setup-prompt-seen', '1'); } catch (e) { } },
+        scrollToId: (id) => { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); },
         getSettingsSections: () => localStorage.getItem('meshcom-settings-sections'),
         setSettingsSections: (csv) => localStorage.setItem('meshcom-settings-sections', csv ?? ''),
         getLoraHighlight:    () => localStorage.getItem('meshcom-lora-highlight') === '1',

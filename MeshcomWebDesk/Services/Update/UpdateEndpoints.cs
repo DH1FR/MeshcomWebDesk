@@ -33,6 +33,22 @@ public static class UpdateEndpoints
             return Results.Json(new { ok, message });
         }).DisableAntiforgery();
 
+        // Docker: where the update page and banner read the state, and the button that asks Watchtower to update.
+        app.MapGet("/api/update/docker/info", async (DockerUpdateService docker, CancellationToken ct) =>
+            Results.Json(await docker.GetInfoAsync(ct)));
+
+        app.MapPost("/api/update/docker", async (HttpContext ctx, DockerUpdateService docker) =>
+        {
+            // A container is normally reached over the network, so this is not limited to loopback like the
+            // file-swap update; the custom header keeps foreign web pages from triggering it, and Watchtower only
+            // ever pulls a newer image of WebDesk's own channel.
+            if (!DockerUpdateService.InContainer) return Results.Json(new { ok = false, message = "not-docker" }, statusCode: 404);
+            if (!ctx.Request.Headers.ContainsKey(RequiredHeader))
+                return Results.Json(new { ok = false, message = "forbidden" }, statusCode: 403);
+            var (ok, message) = await docker.TriggerAsync(CancellationToken.None);
+            return Results.Json(new { ok, message });
+        }).DisableAntiforgery();
+
         app.MapPost("/api/update/rollback", async (HttpContext ctx, SelfUpdateService update, string name) =>
         {
             if (!IsLocalRequest(ctx) || !ctx.Request.Headers.ContainsKey(RequiredHeader))

@@ -1,0 +1,309 @@
+@inject NodeConsoleFixService Fix
+@inject ConnectionCheckService Check
+@inject LanguageService Loc
+@implements IDisposable
+
+<div class="node-console-box">
+    <div class="node-console-head">🔧 <strong>@Loc.T("Node-Einstellungen über die Net-Console", "Node settings via the net console")</strong></div>
+    @if (!Compact)
+    {
+        <p class="conn-check-note">ℹ️ @Loc.T(
+            "Liest die Einstellungen des Nodes über die Net-Console und vergleicht sie mit der WebDesk-Konfiguration. Am Node wird nur nach Ihrer Bestätigung etwas geändert – und nur ext UDP, die Ziel-IP und die KISS-Schalter.",
+            "Reads the node's settings over the net console and compares them with the WebDesk configuration. Something is only changed on the node after your confirmation – and only ext UDP, the target IP and the KISS switches.")</p>
+    }
+
+    <div class="node-console-row">
+        <label>@Loc.T("Node-Passwort", "Node password")</label>
+        <input type="password" @bind="_password" autocomplete="new-password"
+               placeholder="@Loc.T("leer = ohne Passwort", "empty = no password")" />
+        <button type="button" class="btn-small" disabled="@_busy" @onclick="ReadAsync">
+            @(_busy && !_confirming ? Loc.T("Lese …", "Reading …") : Loc.T("Vom Node lesen", "Read from node"))
+        </button>
+    </div>
+
+    @if (_snap is { Error: not NodeConsoleError.None } failed)
+    {
+        <div class="conn-check-summary conn-check-bad">@ErrorText(failed)</div>
+    }
+    else if (_snap is not null)
+    {
+        @if (_rows.Count == 0)
+        {
+            <p class="conn-check-note">@(KissFocus
+                ? Loc.T("Der Node meldet keine KISS-Einstellungen (nur ESP32-Nodes mit passender Firmware bieten KISS).", "The node reports no KISS settings (only ESP32 nodes with suitable firmware offer KISS).")
+                : Loc.T("Der Node hat keine vergleichbaren Einstellungen gemeldet.", "The node did not report any comparable settings."))</p>
+        }
+        else
+        {
+            <table class="node-console-table">
+                <thead>
+                    <tr>
+                        <th>@Loc.T("Einstellung", "Setting")</th>
+                        <th>@Loc.T("Am Node", "On the node")</th>
+                        <th>@Loc.T("Erwartet (WebDesk)", "Expected (WebDesk)")</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in _rows)
+                    {
+                        <tr>
+                            <td>@r.Label</td>
+                            <td><code>@(r.NodeValue ?? "–")</code></td>
+                            <td><code>@r.Expected</code></td>
+                            <td>@Icon(r.Severity) @r.Hint</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            @if (_snap.RawInfo is { Length: > 0 } rawInfo && _rows.Any(r => r.NodeValue is null))
+            {
+                <p class="conn-check-note"><strong>@Loc.T("Antwort des Nodes: ", "Node's answer: ")</strong><code style="word-break:break-all">@rawInfo</code></p>
+            }
+        }
+
+        @if (CallsignRow is { Severity: CheckSeverity.Error } cr)
+        {
+            <div class="conn-check-cmds">
+                <button type="button" class="btn-small" disabled="@_busy" @onclick="UseCallsignAsync"
+                        title="@Loc.T("Trägt das Rufzeichen des Nodes ins Formular ein; am Node wird nichts geändert.", "Enters the node's callsign into the form; nothing is changed on the node.")">
+                    ⬅ @Loc.TF("Rufzeichen {0} in WebDesk übernehmen", "Use callsign {0} in WebDesk", cr.NodeValue)
+                </button>
+                @if (_callCommand is not null)
+                {
+                    <button type="button" class="btn-small" disabled="@_busy" @onclick="AskCallsign">
+                        🛠 @Loc.TF("Rufzeichen am Node auf {0} ändern …", "Change callsign on the node to {0} …", cr.Expected)
+                    </button>
+                }
+            </div>
+        }
+
+        @if (_fixCommands.Count > 0 && !_confirming)
+        {
+            <div class="conn-check-cmds">
+                <button type="button" class="btn-small" disabled="@_busy" @onclick="AskFixes">
+                    🛠 @(KissFocus ? Loc.T("KISS am Node aktivieren …", "Activate KISS on the node …")
+                        : Compact ? Loc.T("Node jetzt einstellen …", "Configure node now …") : Loc.T("Am Node korrigieren …", "Correct on the node …"))
+                </button>
+            </div>
+        }
+        else if (_rows.Count > 0 && _rows.All(r => r.Severity is CheckSeverity.Ok or CheckSeverity.Info) && !_applied)
+        {
+            <div class="conn-check-summary conn-check-good">@Loc.T("Die Einstellungen am Node passen zur WebDesk-Konfiguration.", "The node's settings match the WebDesk configuration.")</div>
+        }
+    }
+
+    @if (_confirming)
+    {
+        <div class="node-console-confirm">
+            <strong>@Loc.T("Diese Befehle jetzt an den Node senden?", "Send these commands to the node now?")</strong>
+            <div class="conn-check-cmds">
+                @foreach (var c in _pending)
+                {
+                    <code class="node-console-cmd">@c</code>
+                }
+            </div>
+            @if (_pending.FirstOrDefault(NodeConsoleFixService.IsSetCall) is { } setCmd)
+            {
+                <p class="conn-check-note">⚠️ @Loc.TF(
+                    "Das Ändern des Rufzeichens ändert die Identität des Nodes im Mesh (Nachrichten, Routing, Anzeige) und der Node kann neu starten. Tun Sie das nur, wenn {0} wirklich das Rufzeichen dieses Nodes sein soll.",
+                    "Changing the callsign changes the node's identity in the mesh (messages, routing, display) and the node may restart. Only do this if {0} really is the callsign this node should have.",
+                    setCmd["--setcall ".Length..])</p>
+            }
+            @if (_pcIps.Count > 1 && _pending.Any(c => c.StartsWith("--extudpip ", StringComparison.Ordinal)))
+            {
+                <label class="node-console-pick">
+                    @Loc.T("IP dieses PCs im Netz des Nodes:", "This PC's IP in the node's network:")
+                    <select @bind="_targetIp" @bind:after="RebuildFix">
+                        @foreach (var ip in _pcIps)
+                        {
+                            <option value="@ip">@ip</option>
+                        }
+                    </select>
+                </label>
+            }
+            <p class="conn-check-note">@Loc.T(
+                "Die Befehle ändern die Einstellungen des Nodes. Greift eine Änderung nicht sofort, starten Sie den Node neu (--reboot am Node).",
+                "The commands change the node's settings. If a change does not take effect right away, restart the node (--reboot on the node).")</p>
+            <div class="conn-check-cmds">
+                <button type="button" class="btn-secondary" disabled="@_busy" @onclick="ApplyAsync">
+                    @(_busy ? Loc.T("Sende …", "Sending …") : Loc.T("Senden", "Send"))
+                </button>
+                <button type="button" class="btn-small" disabled="@_busy" @onclick="() => _confirming = false">@Loc.T("Abbrechen", "Cancel")</button>
+            </div>
+        </div>
+    }
+
+    @if (_replies.Count > 0)
+    {
+        <div class="conn-check-summary conn-check-warn">@Loc.TF("Antwort des Nodes: {0}", "Node reply: {0}", string.Join(" | ", _replies))</div>
+    }
+
+    @if (_restarting)
+    {
+        <div class="conn-check-summary conn-check-warn">@Loc.T("Gesendet. Der Node startet vermutlich neu – prüfen Sie in ein paar Sekunden erneut.", "Sent. The node is probably restarting – check again in a few seconds.")</div>
+    }
+    else if (_applied)
+    {
+        <div class="conn-check-summary @(_fixCommands.Count == 0 && _callCommand is null ? "conn-check-good" : "conn-check-warn")">
+            @(_fixCommands.Count == 0 && _callCommand is null
+                ? Loc.T("Gesendet – der Node meldet die Werte jetzt richtig.", "Sent – the node now reports the values correctly.")
+                : Loc.T("Gesendet, aber der Node meldet noch abweichende Werte. Starten Sie ihn ggf. neu und lesen Sie erneut.", "Sent, but the node still reports different values. Restart it if needed and read again."))
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>Supplies the values the box works on (device IP, callsign …) – the current form state.</summary>
+    [Parameter, EditorRequired] public Func<ConnectionCheckInput> InputProvider { get; set; } = default!;
+
+    /// <summary>Node password from the settings form, used to prefill the password field.</summary>
+    [Parameter] public Func<string?>? PasswordProvider { get; set; }
+
+    /// <summary>Raised with the node's callsign when the user chooses to take it over into WebDesk.</summary>
+    [Parameter] public EventCallback<string> OnUseCallsign { get; set; }
+
+    /// <summary>Read the node as soon as the box appears (setup wizard).</summary>
+    [Parameter] public bool AutoRead { get; set; }
+
+    /// <summary>Shorter wording without the explanatory note (setup wizard).</summary>
+    [Parameter] public bool Compact { get; set; }
+
+    /// <summary>"kiss": show and correct only the KISS/TCP switches of the node (Settings → KISS/TCP).</summary>
+    [Parameter] public string? Focus { get; set; }
+
+    private bool KissFocus => string.Equals(Focus, "kiss", StringComparison.OrdinalIgnoreCase);
+
+    private ConnectionCheckInput _input = default!;
+    private string _password = "";
+    private NodeConsoleSnapshot? _snap;
+    private IReadOnlyList<SettingRow> _rows = [];
+    private List<string> _pcIps = [];
+    private string _targetIp = "";
+    private List<string> _fixCommands = [];      // ext UDP / KISS corrections
+    private string? _callCommand;                // --setcall <WebDesk callsign> – always confirmed on its own
+    private List<string> _pending = [];          // what the open confirmation would send
+    private bool _busy;
+    private bool _confirming;
+    private bool _applied;
+    private bool _restarting;
+    private IReadOnlyList<string> _replies = [];
+    private CancellationTokenSource? _cts;
+
+    private SettingRow? CallsignRow => _rows.FirstOrDefault(r => r.Key == "callsign");
+
+    protected override void OnInitialized()
+    {
+        _input = InputProvider();
+        _password = PasswordProvider?.Invoke() ?? "";
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && AutoRead)
+            await ReadAsync();
+    }
+
+    private static string Icon(CheckSeverity s) => s switch
+    {
+        CheckSeverity.Ok      => "✅",
+        CheckSeverity.Info    => "ℹ️",
+        CheckSeverity.Warning => "⚠️",
+        _                     => "❌",
+    };
+
+    private string ErrorText(NodeConsoleSnapshot s) => s.Error switch
+    {
+        NodeConsoleError.AuthFailed  => Loc.T("Anmeldung fehlgeschlagen – bitte das Node-Passwort prüfen (am Node mit --passwd gesetzt).", "Login failed – please check the node password (set on the node with --passwd)."),
+        NodeConsoleError.Unreachable => Loc.T("Keine Verbindung zur Net-Console. Ist sie am Node eingeschaltet (--netconsole on)?", "No connection to the net console. Is it switched on at the node (--netconsole on)?"),
+        NodeConsoleError.Busy        => Loc.TF("Die Konsole von WebDesk ist gerade mit {0} verbunden. Trennen Sie sie zuerst (Einstellungen → Console).", "WebDesk's console is currently connected to {0}. Disconnect it first (Settings → Console).", s.BusyHost ?? "?"),
+        _                            => Loc.T("Die Verbindung zur Net-Console ist fehlgeschlagen.", "The connection to the net console failed."),
+    };
+
+    private async Task ReadAsync()
+    {
+        _input = InputProvider() with { NodePassword = _password };
+        _pcIps = ConnectionCheckService.SuggestPcIps(_input.DeviceIp.Trim()).ToList();
+        if (_targetIp.Length == 0 || !_pcIps.Contains(_targetIp))
+            _targetIp = _pcIps.FirstOrDefault() ?? "";
+
+        _cts?.Cancel();
+        _cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        _busy = true; _confirming = false; _applied = false; _restarting = false; _snap = null; _rows = []; _replies = [];
+        StateHasChanged();
+        try
+        {
+            _snap = await Fix.ReadAsync(_input.DeviceIp, _password, _cts.Token);
+            RebuildFix();
+        }
+        catch (OperationCanceledException) { }
+        finally
+        {
+            _busy = false;
+            // Started from OnAfterRenderAsync (AutoRead): Blazor does not re-render by itself afterwards.
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    /// <summary>Recompares and collects the corrections for everything that does not match.</summary>
+    private void RebuildFix()
+    {
+        _rows = _snap is { Error: NodeConsoleError.None } ? Check.CompareNodeSettings(_input, _snap) : [];
+        if (KissFocus)
+            _rows = _rows.Where(r => r.Key.StartsWith("kiss", StringComparison.Ordinal)).ToList();
+        _fixCommands = _rows
+            .Where(r => r.Key != "callsign" && r.FixCommand is not null && r.Severity >= CheckSeverity.Info && r.Severity != CheckSeverity.Ok)
+            .Select(r => r.Key == "extudpip" && _targetIp.Length > 0 ? $"--extudpip {_targetIp}" : r.FixCommand!)
+            .OrderBy(c => c.StartsWith("--extudpip ", StringComparison.Ordinal) ? 0 : 1)
+            .ToList();
+        _callCommand = _rows.FirstOrDefault(r => r.Key == "callsign" && r.Severity == CheckSeverity.Error)?.FixCommand;
+
+        // The target-IP picker changes what an open confirmation would send.
+        if (_confirming && !_pending.Any(NodeConsoleFixService.IsSetCall))
+            _pending = _fixCommands.ToList();
+    }
+
+    private void AskFixes()
+    {
+        _pending = _fixCommands.ToList();
+        _confirming = true;
+    }
+
+    private void AskCallsign()
+    {
+        if (_callCommand is null) return;
+        _pending = [_callCommand];
+        _confirming = true;
+    }
+
+    private async Task ApplyAsync()
+    {
+        if (_pending.Count == 0) return;
+        var sent = _pending.ToList();
+        var setCall = sent.Any(NodeConsoleFixService.IsSetCall);
+        _cts?.Cancel();
+        _cts = new CancellationTokenSource(TimeSpan.FromSeconds(40));
+        _busy = true;
+        StateHasChanged();
+        try
+        {
+            _snap = await Fix.ApplyAsync(_input.DeviceIp, _password, sent, _cts.Token);
+            _replies = _snap.Replies ?? [];
+            _confirming = false;
+            // After --setcall the node may restart and drop the console: expected, not a failure.
+            _restarting = setCall && _snap.Error is NodeConsoleError.Other or NodeConsoleError.Unreachable;
+            _applied = _snap.Error == NodeConsoleError.None;
+            RebuildFix();
+        }
+        catch (OperationCanceledException) { }
+        finally { _busy = false; }
+    }
+
+    private async Task UseCallsignAsync()
+    {
+        if (CallsignRow?.NodeValue is { } c)
+            await OnUseCallsign.InvokeAsync(c.Trim().ToUpperInvariant());
+    }
+
+    public void Dispose() => _cts?.Cancel();
+}

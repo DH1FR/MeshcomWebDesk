@@ -221,6 +221,7 @@ builder.Services.AddSingleton<QrzService>();
 builder.Services.AddSingleton<MqttService>();
 builder.Services.AddSingleton<UpdateCheckService>();
 builder.Services.AddSingleton<MeshcomWebDesk.Services.Update.SelfUpdateService>();
+builder.Services.AddSingleton<MeshcomWebDesk.Services.Update.DockerUpdateService>();
 builder.Services.AddHostedService<MeshcomWebDesk.Services.Update.UpdateHealthService>();
 builder.Services.AddSingleton<ElevationService>();
 builder.Services.AddSingleton<TelnetService>();
@@ -246,6 +247,10 @@ builder.Services.AddSingleton<MeshcomWebDesk.Services.WeatherApiPollingService>(
 builder.Services.AddSingleton<GatewayService>();
 builder.Services.AddSingleton<NodePresenceService>();
 builder.Services.AddSingleton<NodeManager>();
+builder.Services.AddSingleton<NodeDiscoveryService>();
+builder.Services.AddSingleton<RemoteAccessService>();
+builder.Services.AddSingleton<NodeConsoleFixService>();
+builder.Services.AddSingleton<ConnectionCheckService>();
 builder.Services.AddSingleton<CalendarBeaconService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<UpdateCheckService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<GatewayService>());

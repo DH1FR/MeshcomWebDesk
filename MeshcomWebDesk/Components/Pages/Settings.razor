@@ -106,6 +106,17 @@
                                 "Rufzeichen-SSID > 15: KISS-Empfang funktioniert, aber Senden nicht – AX.25 kennt nur SSID 0–15.",
                                 "Callsign SSID > 15: KISS receive works, but sending does not – AX.25 only has SSID 0–15.")</small>
                         }
+                        <div style="margin-top:.4rem">
+                            <button type="button" class="btn-small" @onclick="() => ToggleKissNodeBox(kissNode.Id)"
+                                    title="@Loc.T("Schaltet KISS/TCP (und TX/RxMeta) am Node über die Net-Console ein – erst nach Ihrer Bestätigung.", "Switches KISS/TCP (and TX/RxMeta) on at the node over the net console – only after your confirmation.")">
+                                🔌 @Loc.T("KISS am Node über die Net-Console aktivieren", "Activate KISS on the node via the net console")
+                            </button>
+                        </div>
+                        @if (_kissNodeBoxOpen.Contains(kissNode.Id))
+                        {
+                            <NodeConsoleBox Focus="kiss" Compact="true" AutoRead="true"
+                                            InputProvider="PrimaryCheckInput" PasswordProvider="PrimaryNodePassword" />
+                        }
                     }
                 </div>
                 @if (PrimaryKissEnabled && _model.Nodes.FirstOrDefault(n => n.IsPrimary) is { } pwNode)
@@ -125,6 +136,31 @@
                     "How do I configure my MeshCom node for WebDesk?")
                 <span class="settings-help-banner-arrow">→</span>
             </a>
+            <div class="settings-conn-actions">
+                <button type="button" class="btn-secondary" @onclick="ToggleConnCheck"
+                        title="@Loc.T("Prüft die Verbindungseinstellungen und erklärt, was zu ändern ist – ändert selbst nichts.", "Checks the connection settings and explains what to change – changes nothing itself.")">
+                    🔍 @Loc.T("Einstellungen prüfen", "Check settings")
+                </button>
+                <button type="button" class="btn-secondary" @onclick="ToggleWizard"
+                        title="@Loc.T("Führt Schritt für Schritt durch die Einrichtung von Node/Hub und WebDesk.", "Guides you step by step through setting up node/hub and WebDesk.")">
+                    🧙 @Loc.T("Einrichtungs-Assistent", "Setup wizard")
+                </button>
+            </div>
+            @if (_connCheckOpen)
+            {
+                <ConnectionCheckPanel Id="conn-check" InputProvider="PrimaryCheckInput" AutoRun="true" ScrollIntoView="_connCheckScroll"
+                                      PasswordProvider="PrimaryNodePassword" OnUseCallsign="UsePrimaryCallsign" />
+            }
+            @if (_wizardOpen)
+            {
+                <ConnectionWizard Initial="@(new WizardValues(_model.MyCallsign, _model.DeviceIp, _model.DevicePort, _model.ListenIp, _model.ListenPort))"
+                                  IsPrimary="true"
+                                  NodeId="PrimaryProfile?.Id"
+                                  NodeLabel="@PrimaryProfile?.Name"
+                                  OthersProvider="() => OtherNodes(PrimaryProfile)"
+                                  OnApply="ApplyPrimaryWizard"
+                                  OnClose="CloseWizard" />
+            }
             }
         </div>
 
@@ -159,11 +195,29 @@
                         }
                         <div class="settings-node-actions">
                             @if (!node.IsPrimary) {
+                                <button class="btn-small" @onclick="() => ToggleNodeCheck(node.Id)" title="@Loc.T("Verbindung dieses Nodes prüfen", "Check this node's connection")">🔍 @Loc.T("Prüfen", "Check")</button>
+                                <button class="btn-small" @onclick="() => ToggleNodeWizard(node.Id)" title="@Loc.T("Einrichtungs-Assistent für diesen Node", "Setup wizard for this node")">🧙</button>
                                 <button class="btn-small" @onclick="() => SetPrimaryNode(node)">@Loc.T("Als Primär", "Set Primary")</button>
                             }
                             <button class="btn-small btn-danger" @onclick="() => RemoveNode(node)">✕</button>
                         </div>
                     </div>
+                    @if (!node.IsPrimary && _nodeCheckOpen.Contains(node.Id))
+                    {
+                        <ConnectionCheckPanel Id="@($"node-check-{node.Id}")" InputProvider="() => NodeCheckInput(node)" AutoRun="true"
+                                              PasswordProvider="() => node.TelnetPassword" OnUseCallsign="(string c) => UseNodeCallsign(node, c)" />
+                    }
+                    @if (!node.IsPrimary && _nodeWizardOpen.Contains(node.Id))
+                    {
+                        <ConnectionWizard Initial="@(new WizardValues(node.Callsign, node.DeviceIp, node.DevicePort, node.ListenIp, node.ListenPort))"
+                                          IsPrimary="false"
+                                          NodeId="node.Id"
+                                          NodeLabel="@node.Name"
+                                          PrimaryListen="() => (_model.ListenIp, _model.ListenPort)"
+                                          OthersProvider="() => OtherNodes(node)"
+                                          OnApply="(WizardValues v) => ApplyNodeWizard(node, v)"
+                                          OnClose="() => CloseNodeWizard(node.Id)" />
+                    }
                     <div class="settings-grid" style="margin-top:.5rem">
                         <label>@Loc.T("Name", "Name")</label>
                         <input type="text" @bind="node.Name" />
@@ -257,6 +311,20 @@
                                     <small style="color:#f85149;display:block;margin-top:.3rem">⚠️ @Loc.T(
                                         "Rufzeichen-SSID > 15: KISS-Empfang funktioniert, aber Senden nicht – AX.25 kennt nur SSID 0–15. Für KISS-TX eine SSID ≤ 15 verwenden.",
                                         "Callsign SSID > 15: KISS receive works, but sending does not – AX.25 only has SSID 0–15. Use an SSID ≤ 15 for KISS TX.")</small>
+                                }
+                                @if (!node.IsPrimary)
+                                {
+                                    <div style="margin-top:.4rem">
+                                        <button type="button" class="btn-small" @onclick="() => ToggleKissNodeBox(node.Id)"
+                                                title="@Loc.T("Schaltet KISS/TCP (und TX/RxMeta) am Node über die Net-Console ein – erst nach Ihrer Bestätigung.", "Switches KISS/TCP (and TX/RxMeta) on at the node over the net console – only after your confirmation.")">
+                                            🔌 @Loc.T("KISS am Node über die Net-Console aktivieren", "Activate KISS on the node via the net console")
+                                        </button>
+                                    </div>
+                                    @if (_kissNodeBoxOpen.Contains(node.Id))
+                                    {
+                                        <NodeConsoleBox Focus="kiss" Compact="true" AutoRead="true"
+                                                        InputProvider="() => NodeCheckInput(node)" PasswordProvider="() => node.TelnetPassword" />
+                                    }
                                 }
                             }
                         </div>
@@ -611,6 +679,27 @@
                             + @Loc.T("Quelle hinzufügen", "Add Source")
                         </button>
                     </div>
+                </div>
+            </div>
+            }
+        </div>
+
+        <!-- Access from other devices -->
+        <div class="settings-section @(IsOpen("remote") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("remote")'>📱 @Loc.T("Zugriff von anderen Geräten", "Access from other devices") <span class="section-chevron">@(IsOpen("remote") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("remote")) {
+            <div class="settings-grid">
+                <label>
+                    @Loc.T("Adresse dieses WebDesk", "Address of this WebDesk")<br />
+                    <small>@Loc.T("Optional. Die Adresse, unter der Handy/Tablet WebDesk erreichen (z. B. https://webdesk.local:5163/). Nur nötig bei Docker oder Reverse-Proxy – sonst wird sie automatisch ermittelt.", "Optional. The address under which a phone/tablet reaches WebDesk (e.g. https://webdesk.local:5163/). Only needed with Docker or a reverse proxy – otherwise it is worked out automatically.")</small>
+                </label>
+                <div>
+                    <input type="text" @bind="_model.PublicBaseUrl" placeholder="https://…" style="width:100%" />
+                    @if (!string.IsNullOrWhiteSpace(_model.PublicBaseUrl) && !WebLinkEntry.IsValidUrl(_model.PublicBaseUrl))
+                    {
+                        <small style="color:#f85149">❌ @Loc.T("Ungültige URL (http/https)", "Invalid URL (http/https)")</small>
+                    }
+                    <small style="display:block;color:#8b949e;margin-top:.3rem">📱 @Loc.T("Den QR-Code zeigt der Knopf 📱 in der Navigationsleiste (ab einer bestimmten Bildschirmbreite).", "The 📱 button in the navigation bar shows the QR code (on wide enough screens).")</small>
                 </div>
             </div>
             }
@@ -2799,6 +2888,80 @@
                 string.Join(",", _openSections)).AsTask();
     }
 
+    // ── Connection check / setup wizard ────────────────────────────────────
+    private bool _connCheckOpen;
+    private bool _connCheckScroll;
+    private bool _wizardOpen;
+    private bool _checkRequested;
+    private bool _wizardRequested;
+    private readonly HashSet<Guid> _kissNodeBoxOpen = [];
+    private void ToggleKissNodeBox(Guid id)
+    {
+        if (!_kissNodeBoxOpen.Remove(id)) _kissNodeBoxOpen.Add(id);
+    }
+
+    private readonly HashSet<Guid> _nodeCheckOpen  = [];
+    private readonly HashSet<Guid> _nodeWizardOpen = [];
+
+    private NodeProfile? PrimaryProfile => _model.Nodes.FirstOrDefault(n => n.IsPrimary);
+
+    private void ToggleConnCheck()  { _connCheckOpen = !_connCheckOpen; _connCheckScroll = false; }
+    private void ToggleWizard()     { _wizardOpen = !_wizardOpen; }
+    private void CloseWizard()      { _wizardOpen = false; }
+    private void ToggleNodeCheck(Guid id)
+    {
+        if (!_nodeCheckOpen.Remove(id)) _nodeCheckOpen.Add(id);
+    }
+    private void ToggleNodeWizard(Guid id)
+    {
+        if (!_nodeWizardOpen.Remove(id)) _nodeWizardOpen.Add(id);
+    }
+    private void CloseNodeWizard(Guid id) => _nodeWizardOpen.Remove(id);
+
+    /// <summary>Check values of the primary node: the Connection form fields (unsaved state included).</summary>
+    private ConnectionCheckInput PrimaryCheckInput() =>
+        new(_model.ListenIp, _model.ListenPort, _model.DeviceIp, _model.DevicePort, _model.MyCallsign,
+            PrimaryKissEnabled, PrimaryProfile?.Id, true, OtherNodes(PrimaryProfile), PrimaryNodePassword());
+
+    /// <summary>Check values of an additional node; all nodes share the primary node's UDP socket.</summary>
+    private ConnectionCheckInput NodeCheckInput(NodeProfile n) =>
+        new(_model.ListenIp, _model.ListenPort, n.DeviceIp, n.DevicePort, n.Callsign,
+            n.Transport == NodeTransport.Kiss, n.Id, false, OtherNodes(n), n.TelnetPassword);
+
+    /// <summary>All other enabled nodes (the primary one with the values of the Connection form).</summary>
+    private IReadOnlyList<OtherNodeInfo> OtherNodes(NodeProfile? self) =>
+        _model.Nodes
+            .Where(n => n.Enabled && (self is null || n.Id != self.Id))
+            .Select(n => n.IsPrimary
+                ? new OtherNodeInfo(n.Name, _model.MyCallsign, _model.DeviceIp, _model.DevicePort)
+                : new OtherNodeInfo(n.Name, n.Callsign, n.DeviceIp, n.DevicePort))
+            .ToList();
+
+    /// <summary>Node password for the primary node: its profile (if any) else the console password of the Console section.</summary>
+    private string? PrimaryNodePassword() =>
+        !string.IsNullOrEmpty(PrimaryProfile?.TelnetPassword) ? PrimaryProfile!.TelnetPassword : _model.TelnetPassword;
+
+    private void UsePrimaryCallsign(string callsign) => _model.MyCallsign = callsign;
+
+    private void UseNodeCallsign(NodeProfile node, string callsign) => node.Callsign = callsign;
+
+    private void ApplyPrimaryWizard(WizardValues v)
+    {
+        _model.MyCallsign = v.Callsign;
+        _model.DeviceIp   = v.DeviceIp;
+        _model.DevicePort = v.DevicePort;
+        _model.ListenIp   = v.ListenIp;
+        _model.ListenPort = v.ListenPort;
+    }
+
+    private void ApplyNodeWizard(NodeProfile node, WizardValues v)
+    {
+        node.Callsign   = v.Callsign;
+        node.DeviceIp   = v.DeviceIp;
+        node.DevicePort = v.DevicePort;
+    }
+    // ──────────────────────────────────────────────────────────────────────
+
     // ── Multi-node helpers ─────────────────────────────────────────────────
     private void AddNode()
     {
@@ -2875,6 +3038,18 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        try
+        {
+            await OnAfterRenderCoreAsync(firstRender);
+        }
+        catch (Exception ex) when (ex is TaskCanceledException or OperationCanceledException or JSDisconnectedException)
+        {
+            // Circuit gone while a JS interop call was running (reload, navigation, closed tab): not an error.
+        }
+    }
+
+    private async Task OnAfterRenderCoreAsync(bool firstRender)
+    {
         if (!firstRender) return;
         try
         {
@@ -2894,8 +3069,30 @@
         }
         catch (JSException) { }
 
+        // Arrived via the red UDP badge in the status bar: open the Connection section and run the check.
+        if (_checkRequested)
+        {
+            _openSections.Add("conn");
+            _connCheckOpen   = true;
+            _connCheckScroll = true;
+        }
+
+        // Arrived via the first-run banner: open the Connection section with the setup wizard.
+        if (_wizardRequested)
+        {
+            _openSections.Add("conn");
+            _wizardOpen = true;
+        }
+
         await RefreshPathWarningsAsync();
         StateHasChanged();
+
+        if (_wizardRequested)
+        {
+            await Task.Delay(300);
+            try { await JS.InvokeVoidAsync("meshcomChat.scrollToId", "conn-wizard"); }
+            catch (JSException) { }
+        }
     }
 
     private async Task RefreshPathWarningsAsync()
@@ -3474,6 +3671,8 @@
         var uri   = new Uri(Nav.Uri);
         var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
         _restored = query["restored"] == "1";
+        _checkRequested = query["check"] == "conn";
+        _wizardRequested = query["wizard"] == "1";
         if (_restored) _openSections.Add("backup");
         _model = new FormModel
         {
@@ -3500,6 +3699,7 @@
                 ConsoleLogEnabled     = n.ConsoleLogEnabled
             }).ToList(),
             LogPath             = s.LogPath,
+            PublicBaseUrl       = s.PublicBaseUrl,
             LogRetainDays       = s.LogRetainDays,
             LogUdpTraffic       = s.LogUdpTraffic,
             ConsoleLogEnabled   = s.ConsoleLogEnabled,
@@ -4362,7 +4562,8 @@
                     ConsoleLogEnabled     = n.ConsoleLogEnabled
                 }).ToList(),
                 LogPath             = s.LogPath,
-                LogRetainDays       = s.LogRetainDays,
+                PublicBaseUrl       = s.PublicBaseUrl,
+            LogRetainDays       = s.LogRetainDays,
                 LogUdpTraffic       = s.LogUdpTraffic,
                 ConsoleLogEnabled   = s.ConsoleLogEnabled,
                 MonitorMaxMessages  = s.MonitorMaxMessages,
@@ -4526,6 +4727,7 @@
         public int    DevicePort          { get; set; } = 1799;
         public string MyCallsign          { get; set; } = "NOCALL-1";
         public string LogPath             { get; set; } = string.Empty;
+        public string PublicBaseUrl       { get; set; } = string.Empty;
         public int    LogRetainDays       { get; set; } = 30;
         public bool   LogUdpTraffic       { get; set; }
         public bool   ConsoleLogEnabled   { get; set; }
@@ -4719,6 +4921,7 @@
             DevicePort          = DevicePort,
             MyCallsign          = MyCallsign,
             LogPath             = LogPath,
+            PublicBaseUrl       = PublicBaseUrl?.Trim() ?? string.Empty,
             LogRetainDays       = LogRetainDays,
             LogUdpTraffic       = LogUdpTraffic,
             MonitorMaxMessages  = MonitorMaxMessages,

@@ -67,6 +67,50 @@ sudo ufw allow 1799/udp
 
 ---
 
+## Connection Check and Setup Wizard
+
+**Settings → 🔌 Connection** has two buttons:
+
+- **🔍 Check settings** checks the current values (unsaved ones too) and tells you what does not fit and what to change: format of IP addresses and ports, whether the **Listen IP** belongs to this PC (a frequent mistake: the node's IP instead of `0.0.0.0`), whether the UDP socket is open, whether the node is reachable, whether packets arrive and whether **callsign and SSID** match the node.
+- **🧙 Setup wizard** guides you step by step (WiFi node, Bluetooth hub on this PC or on another machine) Right in the first step you choose *Configure node automatically* (preselected; WebDesk sets ext UDP and the target IP over the net console; if it is switched off the wizard guides you to switch it on in the node's web interface) or *Configure node manually* (commands to copy). Values are only entered after you click *Apply to form*; you still have to save afterwards.
+
+Neither changes **anything automatically** and neither sends **anything to the node**. Under **Additional Nodes** every node has its own check button (🔍) and wizard (🧙).
+
+If the **UDP status in the status bar is red** or yellow, clicking it opens the check (red: straight to the settings with the concrete error reason).
+
+**First start:** If no node is set up yet (no node list and no data from a node within a few seconds after start; also after all nodes were deleted) WebDesk asks right at startup whether to start the setup wizard (*Yes, start the wizard* / *Later* / *Do not ask again*; once per browser tab). *Later* leaves a banner with *Start setup* at the top of the chat as a reminder; it opens the settings with the wizard. *Do not ask again* / *Do not show again* hides the question and the banner permanently. After the first save it no longer appears.
+
+**Finding a node on the network:** In the wizard's node step the search starts automatically; the results are in a **selection list** at the IP field (*Search again* repeats it). The search resolves the callsign as hostname (the firmware uses it as DHCP/mDNS name), lists IPs that already sent packets and asks the addresses of your local /24 network for a MeshCom web server (port 80, page title "CALLSIGN - Meshcom"). This only finds nodes with the web server switched on; a pure ext-UDP node does not announce itself. Clicking a result only copies the IP into the wizard.
+
+**Reading and correcting settings on the node (net console):** If the node's net console is switched on (port 2323, HMAC password), the check shows the section *Node settings via the net console* below. *Read from node* reports ext UDP, the target IP and the node's callsign. If something differs, *Correct on the node …* offers the commands `--extudp on` and `--extudpip <this PC's IP>`; nothing is sent until you confirm, and only these two commands. The callsign on the node is never changed; instead *Use callsign … in WebDesk* copies the node's value into the form. If the net console is not reachable, the check tells you it must be switched on at the node (web interface: IP Network Settings → net console, or `--netconsole on`; password with `--passwd`).
+
+**Automatic comparison of all node settings:** If the net console is reachable and the node password is known, the check reads the node by itself on every run (read-only, `--info`) and compares what WebDesk is configured for: **callsign/SSID**, **ext UDP** (on) and **target IP** (this PC's IP), the **node's IP address** (against the Device IP) and, when KISS is enabled, **KISS/TCP, TX, RxMeta and Auth**. It also shows whether `--nopmother` withholds foreign direct messages. The section below the check shows everything as a table (*On the node* / *Expected*). The correction only offers `--extudp on`, `--extudpip`, `--kiss on`, `--kiss tx on` and `--kiss meta on`.
+
+**Activating KISS on the node:** If KISS/TCP is switched on under *Connection* (or for an additional node), the button *Activate KISS on the node via the net console* appears there. It reads the node and offers `--kiss on`, `--kiss tx on` and `--kiss meta on` – nothing is sent until you confirm. Only ESP32 nodes with suitable firmware offer KISS.
+
+**Taking over the callsign on either side:** If the callsign differs there are two buttons. *Use callsign … in WebDesk* enters the node's value into the form (then save). *Change callsign on the node to …* sets the node to the callsign from WebDesk (`--setcall`, over the net console). This only happens after a click and confirmation; the warning points out that the node's identity in the mesh changes and that the node may restart. Only this one command is sent.
+
+**Noticing a wrong SSID right away:** A mismatch is also noticed without the net console: if WebDesk sends a message and the node returns it under a different callsign, the status bar shows the warning badge **⚠️ Callsign?** (a click opens the check) and the check names the callsign the node really uses. WebDesk changes nothing automatically.
+
+**Callsign and SSID:** WebDesk recognises its own packets by the callsign. If the SSID differs from the node, packets arrive but the UDP status stays yellow. The check compares with what the node reports itself (position, telemetry, message echo or `--info` via the net console) and names the correct value.
+
+---
+
+## Bluetooth Hub (MeshCom UDP Bluetooth Hub)
+
+Nodes without WiFi (e.g. Heltec T114) can be connected through the **MeshCom UDP Bluetooth Hub**. The hub presents itself to WebDesk as a node with ext-UDP. When it runs on the same PC, hub and WebDesk must not use the same port:
+
+| WebDesk setting | Value |
+|---|---|
+| Device IP | `127.0.0.1` (or the hub machine's IP) |
+| Device Port | `1798` (the hub's "UDP port") |
+| Listen IP / Listen Port | `127.0.0.1` or `0.0.0.0` / `1799` |
+| Callsign | **the node's**, with SSID |
+
+In the hub: connect the node via Bluetooth (disconnect the phone app first), "WebDesk" = `127.0.0.1:1799`. The connection check recognises hub operation, checks whether something listens on the hub port and warns about port conflicts. WebDesk cannot tell **two nodes with the same IP** apart (e.g. two hubs on one PC) because it assigns packets by their sender IP. With the current hub the check also compares its **UDP port** (= Device Port) and the **port it sends to** (= Listen Port) with the WebDesk settings, and checks that WebDesk listens on the address the hub sends to (a hub sending to `127.0.0.1` does not reach WebDesk if it only listens on the LAN address).
+
+---
+
 ## Monitor Filter
 
 The **monitor pane** (lower area) has a search field 🔍 in its title bar.

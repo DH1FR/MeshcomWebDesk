@@ -1,0 +1,283 @@
+@inject ConnectionCheckService Check
+@inject LanguageService Loc
+@inject IJSRuntime JS
+@inject NodeConsoleFixService Fix
+@implements IDisposable
+
+<div class="conn-check" id="@Id">
+    <div class="conn-check-head">
+        <strong>🔍 @Loc.T("Verbindungsprüfung", "Connection check")</strong>
+        <button type="button" class="btn-small" disabled="@_running" @onclick="RunAsync">
+            @(_running ? Loc.T("Prüfe …", "Checking …") : (_results is null ? Loc.T("Jetzt prüfen", "Check now") : Loc.T("Erneut prüfen", "Check again")))
+        </button>
+    </div>
+    <p class="conn-check-note">ℹ️ @Loc.T(
+        "Die Prüfung zeigt, was nicht passt und was zu ändern ist. Der Node wird nur gelesen; geändert wird nichts automatisch – Korrekturen am Node erst nach Ihrem Klick und Ihrer Bestätigung.",
+        "The check shows what does not fit and what to change. The node is only read; nothing is changed automatically – corrections on the node only after your click and confirmation.")</p>
+
+    @if (_fixMessage is not null)
+    {
+        <div class="conn-check-summary @(_fixFailed ? "conn-check-bad" : "conn-check-good")">@_fixMessage</div>
+    }
+
+    @if (_results is not null)
+    {
+        var errors = _results.Count(r => r.Severity == CheckSeverity.Error);
+        var warnings = _results.Count(r => r.Severity == CheckSeverity.Warning);
+        <div class="conn-check-summary @(errors > 0 ? "conn-check-bad" : warnings > 0 ? "conn-check-warn" : "conn-check-good")">
+            @if (errors > 0)
+            {
+                @Loc.TF("{0} Fehler, {1} Hinweis(e) – bitte korrigieren", "{0} error(s), {1} warning(s) – please fix", errors, warnings)
+            }
+            else if (warnings > 0)
+            {
+                @Loc.TF("Keine Fehler, {0} Hinweis(e)", "No errors, {0} warning(s)", warnings)
+            }
+            else
+            {
+                @Loc.T("Alles in Ordnung", "Everything looks fine")
+            }
+        </div>
+        <ul class="conn-check-list">
+            @for (var i = 0; i < _results.Count; i++)
+            {
+                var idx = i;
+                var r = _results[i];
+                <li class="conn-check-item conn-check-@r.Severity.ToString().ToLowerInvariant()">
+                    <span class="conn-check-icon">@Icon(r.Severity)</span>
+                    <div class="conn-check-body">
+                        <div class="conn-check-title">@r.Title</div>
+                        @if (!string.IsNullOrEmpty(r.Detail))
+                        {
+                            <div class="conn-check-detail">@r.Detail</div>
+                        }
+                        @if (r.Commands is { Count: > 0 })
+                        {
+                            <div class="conn-check-cmds">
+                                @foreach (var c in r.Commands)
+                                {
+                                    var cmd = c;
+                                    <button type="button" class="conn-check-cmd" title="@Loc.T("In Zwischenablage kopieren", "Copy to clipboard")"
+                                            @onclick="() => CopyAsync(cmd)">📋 @cmd</button>
+                                }
+                            </div>
+                        }
+                        @if (_confirmIdx == idx)
+                        {
+                            <div class="node-console-confirm">
+                                <strong>@Loc.T("Diese Befehle jetzt an den Node senden?", "Send these commands to the node now?")</strong>
+                                <div class="conn-check-cmds">
+                                    @foreach (var c in r.Commands!)
+                                    {
+                                        <code class="node-console-cmd">@c</code>
+                                    }
+                                </div>
+                                @if (r.Commands!.FirstOrDefault(NodeConsoleFixService.IsSetCall) is { } setCmd)
+                                {
+                                    <p class="conn-check-note">⚠️ @Loc.TF(
+                                        "Das Ändern des Rufzeichens ändert die Identität des Nodes im Mesh (Nachrichten, Routing, Anzeige) und der Node kann neu starten. Tun Sie das nur, wenn {0} wirklich das Rufzeichen dieses Nodes sein soll.",
+                                        "Changing the callsign changes the node's identity in the mesh (messages, routing, display) and the node may restart. Only do this if {0} really is the callsign this node should have.",
+                                        setCmd["--setcall ".Length..])</p>
+                                }
+                                <div class="conn-check-cmds">
+                                    <button type="button" class="btn-secondary" disabled="@_fixBusy" @onclick="() => ApplyFixAsync(idx)">
+                                        @(_fixBusy ? Loc.T("Sende …", "Sending …") : Loc.T("Senden", "Send"))
+                                    </button>
+                                    <button type="button" class="btn-small" disabled="@_fixBusy" @onclick="() => _confirmIdx = -1">@Loc.T("Abbrechen", "Cancel")</button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    @if (CanFixOnNode(r) && _confirmIdx != idx)
+                    {
+                        <div class="conn-check-action">
+                            <button type="button" class="btn-small" disabled="@_fixBusy" @onclick="() => _confirmIdx = idx"
+                                    title="@Loc.T("Sendet den Befehl über die Net-Console an den Node – erst nach Ihrer Bestätigung.", "Sends the command to the node over the net console – only after your confirmation.")">
+                                🛠 @if (r.Commands![0].StartsWith("--setcall ", StringComparison.Ordinal))
+                                {
+                                    @Loc.TF("Rufzeichen am Node auf {0} ändern …", "Change callsign on the node to {0} …", r.Commands[0]["--setcall ".Length..])
+                                }
+                                else
+                                {
+                                    @Loc.T("Am Node korrigieren …", "Correct on the node …")
+                                }
+                            </button>
+                        </div>
+                    }
+                    @if (r.SuggestCallsign is not null && OnUseCallsign.HasDelegate)
+                    {
+                        <div class="conn-check-action">
+                            <button type="button" class="btn-small" @onclick="() => UseCallsignAsync(r.SuggestCallsign!)"
+                                    title="@Loc.T("Trägt das Rufzeichen des Nodes ins Formular ein; am Node wird nichts geändert.", "Enters the node's callsign into the form; nothing is changed on the node.")">
+                                ⬅ @Loc.TF("Rufzeichen {0} in WebDesk übernehmen", "Use callsign {0} in WebDesk", r.SuggestCallsign)
+                            </button>
+                        </div>
+                    }
+                </li>
+            }
+        </ul>
+        @if (_results.Any(r => r.Code is "netconsole-ok" or "netconsole-try"))
+        {
+            <NodeConsoleBox @key="_runId" InputProvider="InputProvider" PasswordProvider="PasswordProvider" OnUseCallsign="OnUseCallsign" />
+        }
+    }
+    else if (_running)
+    {
+        <p class="conn-check-note">@Loc.T("Einstellungen werden geprüft …", "Checking settings …")</p>
+    }
+</div>
+
+@code {
+    /// <summary>Supplies the values to check – called on every run, so it always reflects the current form.</summary>
+    [Parameter, EditorRequired] public Func<ConnectionCheckInput> InputProvider { get; set; } = default!;
+
+    /// <summary>Element id (also the scroll target).</summary>
+    [Parameter] public string Id { get; set; } = "conn-check";
+
+    /// <summary>Run once right after the first render.</summary>
+    [Parameter] public bool AutoRun { get; set; }
+
+    /// <summary>Scroll the panel into view after the automatic run.</summary>
+    [Parameter] public bool ScrollIntoView { get; set; }
+
+    /// <summary>Node password from the form, used to prefill the net console box.</summary>
+    [Parameter] public Func<string?>? PasswordProvider { get; set; }
+
+    /// <summary>Raised with the node's own callsign when the user takes it over from the net console box.</summary>
+    [Parameter] public EventCallback<string> OnUseCallsign { get; set; }
+
+    /// <summary>Raised with the results after every run.</summary>
+    [Parameter] public EventCallback<IReadOnlyList<CheckResult>> OnCompleted { get; set; }
+
+    private IReadOnlyList<CheckResult>? _results;
+    private bool _running;
+    private int _runId;
+    private CancellationTokenSource? _cts;
+    private int _confirmIdx = -1;
+    private bool _fixBusy;
+    private bool _fixFailed;
+    private string? _fixMessage;
+
+    /// <summary>A finding whose commands may be sent to the node (ext UDP / KISS) and the net console is a candidate.</summary>
+    private bool CanFixOnNode(CheckResult r) =>
+        r.Commands is { Count: > 0 } cmds
+        && cmds.All(NodeConsoleFixService.IsAllowedCommand)
+        && _results is not null
+        && _results.Any(x => x.Code is "netconsole-ok" or "netconsole-try");
+
+    private async Task UseCallsignAsync(string callsign)
+    {
+        await OnUseCallsign.InvokeAsync(callsign.Trim().ToUpperInvariant());
+        await RunAsync();
+    }
+
+    /// <summary>Sends the finding's commands to the node (the user confirmed) and checks again.</summary>
+    private async Task ApplyFixAsync(int index)
+    {
+        if (_results is null || index < 0 || index >= _results.Count || _results[index].Commands is not { Count: > 0 } commands) return;
+        var input = InputProvider();
+        _fixBusy = true; _fixMessage = null; _fixFailed = false;
+        StateHasChanged();
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(40));
+            var password = PasswordProvider?.Invoke() ?? input.NodePassword ?? Fix.SavedPassword(input.NodeId);
+            var snap = await Fix.ApplyAsync(input.DeviceIp.Trim(), password, commands, cts.Token);
+            // After --setcall the node may restart and drop the console: that is expected, not a failure.
+            var restarting = commands.Any(NodeConsoleFixService.IsSetCall) && snap.Error is NodeConsoleError.Other or NodeConsoleError.Unreachable;
+            _fixFailed = snap.Error != NodeConsoleError.None && !restarting;
+            var replyNote = snap.Replies is { Count: > 0 } rep
+                ? " " + Loc.TF("Antwort des Nodes: {0}", "Node reply: {0}", string.Join(" | ", rep))
+                : "";
+            _fixMessage = restarting
+                ? Loc.T("Gesendet. Der Node startet vermutlich neu – prüfen Sie in ein paar Sekunden erneut.", "Sent. The node is probably restarting – check again in a few seconds.")
+                : _fixFailed
+                    ? ErrorText(snap)
+                    : Loc.TF("Befehle gesendet: {0}. Die Prüfung wurde erneut ausgeführt.", "Commands sent: {0}. The check was run again.", string.Join(", ", commands)) + replyNote;
+        }
+        catch (OperationCanceledException)
+        {
+            _fixFailed = true;
+            _fixMessage = Loc.T("Die Verbindung zur Net-Console ist fehlgeschlagen.", "The connection to the net console failed.");
+        }
+        finally
+        {
+            _fixBusy = false;
+            _confirmIdx = -1;
+        }
+        await RunAsync();
+    }
+
+    private string ErrorText(NodeConsoleSnapshot s) => s.Error switch
+    {
+        NodeConsoleError.AuthFailed  => Loc.T("Anmeldung fehlgeschlagen – bitte das Node-Passwort prüfen (am Node mit --passwd gesetzt).", "Login failed – please check the node password (set on the node with --passwd)."),
+        NodeConsoleError.Unreachable => Loc.T("Keine Verbindung zur Net-Console. Ist sie am Node eingeschaltet (--netconsole on)?", "No connection to the net console. Is it switched on at the node (--netconsole on)?"),
+        NodeConsoleError.Busy        => Loc.TF("Die Konsole von WebDesk ist gerade mit {0} verbunden. Trennen Sie sie zuerst (Einstellungen → Console).", "WebDesk's console is currently connected to {0}. Disconnect it first (Settings → Console).", s.BusyHost ?? "?"),
+        _                            => Loc.T("Die Verbindung zur Net-Console ist fehlgeschlagen.", "The connection to the net console failed."),
+    };
+
+    /// <summary>The latest results, or null before the first run.</summary>
+    public IReadOnlyList<CheckResult>? Results => _results;
+
+    protected override void OnInitialized() => Loc.OnChange += StateHasChanged;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || !AutoRun) return;
+        try
+        {
+            await RunAsync();
+            if (ScrollIntoView)
+                await JS.InvokeVoidAsync("meshcomChat.scrollToId", Id);
+        }
+        catch (Exception ex) when (ex is JSException or TaskCanceledException or OperationCanceledException or JSDisconnectedException)
+        {
+            // JS call failed or the circuit went away (reload, navigation): nothing to do.
+        }
+    }
+
+    public async Task RunAsync()
+    {
+        if (_running) return;
+        _running = true;
+        _runId++;
+        _cts?.Cancel();
+        _cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        StateHasChanged();
+        try
+        {
+            _results = await Check.RunAsync(InputProvider(), _cts.Token);
+        }
+        catch (Exception ex)
+        {
+            _results = [new CheckResult(CheckSeverity.Error,
+                Loc.T("Die Prüfung ist fehlgeschlagen", "The check failed"), ex.Message)];
+        }
+        finally
+        {
+            _running = false;
+        }
+        await OnCompleted.InvokeAsync(_results);
+        StateHasChanged();
+    }
+
+    private static string Icon(CheckSeverity s) => s switch
+    {
+        CheckSeverity.Ok      => "✅",
+        CheckSeverity.Info    => "ℹ️",
+        CheckSeverity.Warning => "⚠️",
+        _                     => "❌",
+    };
+
+    private async Task CopyAsync(string text)
+    {
+        try { await JS.InvokeVoidAsync("meshcomChat.copyToClipboard", text); }
+        catch { /* clipboard not available */ }
+    }
+
+    public void Dispose()
+    {
+        Loc.OnChange -= StateHasChanged;
+        _cts?.Cancel();
+    }
+}

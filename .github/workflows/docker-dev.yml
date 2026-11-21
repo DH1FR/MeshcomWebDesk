@@ -1,0 +1,54 @@
+# Builds the Docker image of the dev branch on every push (update channel "dev").
+#
+# The image ghcr.io/dh1fr/meshcomwebdesk:dev carries the commit it was built from (WEBDESK_COMMIT), so the
+# update page of a running container can tell whether a newer dev build exists, and Watchtower can pull it.
+# Releases are built by release.yml (:latest and :vX.Y.Z).
+name: Docker dev image
+
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+# A newer push replaces a build that is still running.
+concurrency:
+  group: docker-dev
+  cancel-in-progress: true
+
+jobs:
+  docker:
+    name: Docker Image :dev (ghcr.io, amd64)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          build-args: |
+            APP_COMMIT=${{ github.sha }}
+            APP_CHANNEL=dev
+          tags: |
+            ghcr.io/dh1fr/meshcomwebdesk:dev
+            ghcr.io/dh1fr/meshcomwebdesk:dev-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

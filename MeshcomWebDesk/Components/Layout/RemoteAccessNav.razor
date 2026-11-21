@@ -1,0 +1,15 @@
+@rendermode InteractiveServer
+@* The layout itself is static, so the button and its dialog live in this small interactive component. *@
+@inject LanguageService Loc
+
+<button type="button" class="app-nav-link app-nav-qr" @onclick="() => _show = true"
+        title="@Loc.T("QR-Code: WebDesk auf Handy oder Tablet öffnen", "QR code: open WebDesk on a phone or tablet")">📱 <span class="nav-label">QR</span></button>
+
+@if (_show)
+{
+    <RemoteAccessDialog OnClose="() => _show = false" />
+}
+
+@code {
+    private bool _show;
+}

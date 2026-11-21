@@ -7,6 +7,22 @@ window.meshcomUpdate = {
             return (await r.json()).local === true;
         } catch { return false; }
     },
+    // After a Docker update was requested: poll until the (new) container answers with another version/commit.
+    watchDocker: function (version, commit) {
+        const started = Date.now();
+        const timer = setInterval(async function () {
+            if (Date.now() - started > 10 * 60 * 1000) { clearInterval(timer); return; }
+            try {
+                const r = await fetch('/api/update/docker/info', { cache: 'no-store' });
+                if (!r.ok) return;
+                const j = await r.json();
+                if (j.version !== version || (j.runningCommit || '') !== (commit || '')) {
+                    clearInterval(timer);
+                    location.reload();
+                }
+            } catch (e) { /* the container is being replaced */ }
+        }, 4000);
+    },
     post: async function (path) {
         try {
             const r = await fetch(path, { method: 'POST', headers: { 'X-MeshcomWebDesk': '1' } });

@@ -112,6 +112,12 @@ public class MeshcomSettings
     public string DataPath { get; set; } = @"C:\Temp\MeshcomData";
 
     /// <summary>
+    /// Address under which other devices (phone, tablet) reach this WebDesk, e.g. <c>https://webdesk.local:5163/</c>.
+    /// Used for the QR code (nav bar 📱). Empty = worked out automatically; needed behind Docker or a reverse proxy.
+    /// </summary>
+    public string PublicBaseUrl { get; set; } = string.Empty;
+
+    /// <summary>
     /// Hours added to incoming timestamps for local time display.
     /// Supports half-hour offsets (e.g. 5.5 for IST).
     /// Set to 0 when the host OS is already in the correct timezone.

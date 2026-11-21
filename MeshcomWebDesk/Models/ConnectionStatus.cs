@@ -8,6 +8,21 @@ public class ConnectionStatus
     /// <summary>True while the UDP socket is bound and listening.</summary>
     public bool IsListening { get; set; }
 
+    /// <summary>
+    /// Reason why the UDP socket could not be bound (e.g. "The requested address is not valid in its
+    /// context"). Null while the socket is open or when binding has not been attempted yet.
+    /// </summary>
+    public string? LastBindError { get; set; }
+
+    /// <summary>The listen address the socket is currently bound to (empty while not listening).</summary>
+    public string BoundListenEndpoint { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Callsign the node really uses when it differs from the configured one (detected from the echo of a sent
+    /// message). Null while nothing wrong was seen. Shown as a clickable warning in the status bar.
+    /// </summary>
+    public string? NodeCallsignMismatch { get; set; }
+
     /// <summary>True after the registration packet was successfully sent to the device.</summary>
     public bool IsRegistered { get; set; }
 

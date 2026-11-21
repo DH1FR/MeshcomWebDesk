@@ -24,6 +24,12 @@ public class SettingsService
 
     public string EffectiveDataPath => _dataPath;
 
+    /// <summary>
+    /// True once the user has saved settings through the UI at least once (the override file exists).
+    /// A fresh installation has no such file yet.
+    /// </summary>
+    public bool HasSavedSettings => File.Exists(_overridePath);
+
     public SettingsService(IConfiguration config, ILogger<SettingsService> logger,
                            ISettingsProtector protector)
     {
@@ -198,6 +204,7 @@ public class SettingsService
                 ["WatchOnAck"]          = s.WatchOnAck,
                 ["WatchAlertMinutes"]   = s.WatchAlertMinutes,
                 ["DataPath"]            = s.DataPath,
+                ["PublicBaseUrl"]       = s.PublicBaseUrl,
                 ["TimeOffsetHours"]     = s.TimeOffsetHours,
                 ["AutoReplyEnabled"]    = s.AutoReplyEnabled,
                 ["AutoReplyText"]       = s.AutoReplyText,
