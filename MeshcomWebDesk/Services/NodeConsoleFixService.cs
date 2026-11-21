@@ -182,6 +182,9 @@ public sealed partial class NodeConsoleFixService
                 if (!_hmac.IsConnected)
                     return new NodeConsoleSnapshot(ClassifyConnectFailure(), null, null, null);
                 weConnected = true;
+                // Fresh connection = fresh log: replies of an earlier node must not be read as this node's (the node IP
+                // line of another node was shown for this one), and a log at its 500-line cap would swallow new replies.
+                lock (_hmac.Lines) _hmac.Lines.Clear();
             }
 
             return await action();
