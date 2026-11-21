@@ -1429,6 +1429,9 @@
     "Watchtower is not set up.": "Watchtower no está configurado.",
     "Watchtower pulls the new image and restarts the container with the same settings and data.": "Watchtower descarga la nueva imagen y reinicia el contenedor con los mismos ajustes y datos.",
     "Watchtower rejected the token – check WATCHTOWER_TOKEN in the .env.": "Watchtower rechazó el token – comprueba WATCHTOWER_TOKEN en el .env.",
-    "WebDesk is up to date.": "WebDesk está actualizado."
+    "WebDesk is up to date.": "WebDesk está actualizado.",
+    "KISS/TCP: WebDesk is connected to the node via KISS": "KISS/TCP: WebDesk está conectado al nodo por KISS",
+    "KISS/TCP: port 8001 is busy – another KISS client is connected to the node": "KISS/TCP: el puerto 8001 está ocupado – otro cliente KISS está conectado al nodo",
+    "The node serves only one KISS client. Close the other connection (e.g. another WebDesk instance or a KISS program); WebDesk then connects by itself.": "El nodo atiende un solo cliente KISS. Cierra la otra conexión (p. ej. otra instancia de WebDesk o un programa KISS); WebDesk se conectará solo."
   }
 }

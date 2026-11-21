@@ -27,6 +27,7 @@ public sealed partial class ConnectionCheckService
     private readonly LanguageService _loc;
     private readonly NodeDiscoveryService _discovery;
     private readonly NodeConsoleFixService _fix;
+    private readonly MeshcomWebDesk.Services.Kiss.KissClientService _kiss;
 
     public ConnectionCheckService(
         MeshcomUdpService udp,
@@ -34,8 +35,10 @@ public sealed partial class ConnectionCheckService
         ConsoleCommandHelperService console,
         LanguageService loc,
         NodeDiscoveryService discovery,
-        NodeConsoleFixService fix)
+        NodeConsoleFixService fix,
+        MeshcomWebDesk.Services.Kiss.KissClientService kiss)
     {
+        _kiss      = kiss;
         _fix       = fix;
         _udp       = udp;
         _nodes     = nodes;
@@ -303,8 +306,21 @@ public sealed partial class ConnectionCheckService
         // ── 8. KISS reachability ─────────────────────────────────────────
         if (input.Kiss && deviceOk && !deviceIsLocal)
         {
-            var kissOk = await TcpProbeAsync(deviceIp!, 8001, ct);
-            results.Add(kissOk
+            // The node serves ONE KISS client: if WebDesk itself holds the slot, a second probe connection is
+            // refused although KISS is on - so ask WebDesk's own KISS connection first.
+            var nodeKey = input.NodeId ?? _nodes.PrimaryNode?.Id ?? Guid.Empty;
+            var kissState = _kiss.GetStatus(nodeKey).State;
+            var ownKiss = nodeKey != Guid.Empty && _kiss.IsConnected(nodeKey);
+            var kissBusy = kissState == MeshcomWebDesk.Services.Kiss.KissConnectionState.SlotBusy;
+            var kissOk = ownKiss || kissBusy || await TcpProbeAsync(deviceIp!, 8001, ct);
+            results.Add(ownKiss
+                ? new(CheckSeverity.Ok, T("KISS/TCP: WebDesk ist mit dem Node über KISS verbunden", "KISS/TCP: WebDesk is connected to the node via KISS"))
+                : kissBusy
+                ? new(CheckSeverity.Warning,
+                    T("KISS/TCP: Port 8001 ist belegt – ein anderer KISS-Client hängt am Node", "KISS/TCP: port 8001 is busy – another KISS client is connected to the node"),
+                    T("Der Node bedient nur einen KISS-Client. Beenden Sie die andere Verbindung (z. B. eine andere WebDesk-Instanz oder ein KISS-Programm), dann verbindet WebDesk sich selbst.",
+                      "The node serves only one KISS client. Close the other connection (e.g. another WebDesk instance or a KISS program); WebDesk then connects by itself."))
+                : kissOk
                 ? new(CheckSeverity.Ok, T("KISS/TCP: Node nimmt Verbindungen auf Port 8001 an", "KISS/TCP: node accepts connections on port 8001"))
                 : new(CheckSeverity.Warning,
                     T("KISS/TCP: Node nimmt auf Port 8001 keine Verbindung an", "KISS/TCP: node does not accept connections on port 8001"),
