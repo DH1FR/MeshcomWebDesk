@@ -1,0 +1,584 @@
+@using System.Net
+@inject LanguageService Loc
+@inject IJSRuntime JS
+@inject NodeDiscoveryService Discovery
+@inject NodeConsoleFixService ConsoleFix
+@implements IDisposable
+
+<div class="conn-wizard" id="conn-wizard">
+    <div class="conn-wizard-head">
+        <strong>🧙 @Loc.T("Einrichtungs-Assistent", "Setup wizard")@(string.IsNullOrEmpty(NodeLabel) ? "" : " – " + NodeLabel)</strong>
+        <span class="conn-wizard-step">@Loc.TF("Schritt {0} von {1}", "Step {0} of {1}", _step + 1, StepCount)</span>
+        <button type="button" class="btn-small btn-danger" @onclick="Close" title="@Loc.T("Assistent schließen", "Close wizard")">✕</button>
+    </div>
+    <p class="conn-check-note">ℹ️ @Loc.T(
+        "Der Assistent übernimmt Werte erst, wenn Sie am Ende auf \"In Formular übernehmen\" klicken – und auch dann müssen Sie noch speichern. Am Node ändert er nichts.",
+        "The wizard only transfers values when you click \"Apply to form\" at the end – and you still have to save afterwards. It changes nothing on the node.")</p>
+
+    @* ── Step 1: kind of counterpart ── *@
+    @if (_step == 0)
+    {
+        <h4>@Loc.T("Womit verbindet sich WebDesk?", "What does WebDesk connect to?")</h4>
+        <label class="conn-wizard-option">
+            <input type="radio" name="wiz-kind" checked="@(_kind == Kind.Node)" @onchange="() => SetKind(Kind.Node)" />
+            <span>
+                <strong>@Loc.T("MeshCom-Node im WLAN/LAN", "MeshCom node on WiFi/LAN")</strong><br />
+                <small>@Loc.T("ESP32-Node mit ext UDP (Port 1799 fest). Der Node sendet an die IP dieses PCs.", "ESP32 node with ext UDP (port 1799 fixed). The node sends to this PC's IP.")</small>
+            </span>
+        </label>
+        <label class="conn-wizard-option">
+            <input type="radio" name="wiz-kind" checked="@(_kind == Kind.HubLocal)" @onchange="() => SetKind(Kind.HubLocal)" />
+            <span>
+                <strong>@Loc.T("Bluetooth-Hub auf diesem PC", "Bluetooth hub on this PC")</strong><br />
+                <small>@Loc.T("MeshCom UDP Bluetooth Hub (z. B. für Heltec T114 ohne WLAN). Hub und WebDesk laufen auf demselben Rechner.", "MeshCom UDP Bluetooth hub (e.g. for a Heltec T114 without WiFi). Hub and WebDesk run on the same machine.")</small>
+            </span>
+        </label>
+        <label class="conn-wizard-option">
+            <input type="radio" name="wiz-kind" checked="@(_kind == Kind.HubRemote)" @onchange="() => SetKind(Kind.HubRemote)" />
+            <span>
+                <strong>@Loc.T("Bluetooth-Hub auf einem anderen Rechner", "Bluetooth hub on another machine")</strong><br />
+                <small>@Loc.T("Z. B. ein Raspberry Pi mit dem Hub, WebDesk läuft auf einem anderen PC.", "E.g. a Raspberry Pi running the hub, WebDesk runs on another PC.")</small>
+            </span>
+        </label>
+
+        @if (_kind == Kind.Node)
+        {
+            <h4>@Loc.T("Wie möchten Sie den Node konfigurieren?", "How do you want to configure the node?")</h4>
+            <label class="conn-wizard-option">
+                <input type="radio" name="wiz-mode" checked="@(_nodeMode == NodeMode.Auto)" @onchange="() => _nodeMode = NodeMode.Auto" />
+                <span>
+                    <strong>🤖 @Loc.T("Node automatisch konfigurieren", "Configure node automatically")</strong><br />
+                    <small>@Loc.T("WebDesk stellt ext UDP und die Ziel-IP über die Net-Console des Nodes ein – nach Ihrer Bestätigung.", "WebDesk sets ext UDP and the target IP over the node's net console – after your confirmation.")</small>
+                </span>
+            </label>
+            <label class="conn-wizard-option">
+                <input type="radio" name="wiz-mode" checked="@(_nodeMode == NodeMode.Manual)" @onchange="() => _nodeMode = NodeMode.Manual" />
+                <span>
+                    <strong>✍️ @Loc.T("Node manuell konfigurieren", "Configure node manually")</strong><br />
+                    <small>@Loc.T("Sie geben die Befehle selbst am Node ein (Weboberfläche, USB oder Net-Console).", "You enter the commands on the node yourself (web interface, USB or net console).")</small>
+                </span>
+            </label>
+        }
+    }
+
+    @* ── Step 2: node / hub data ── *@
+    @if (_step == 1)
+    {
+        <h4>@(_kind == Kind.Node ? Loc.T("Ihr Node", "Your node") : Loc.T("Ihr Hub und Node", "Your hub and node"))</h4>
+        <div class="settings-grid">
+            <label>
+                @Loc.T("Rufzeichen mit SSID", "Callsign with SSID")<br />
+                <small>@Loc.T("Exakt wie am Node (Display oder --info), z. B. OE1XYZ-1.", "Exactly as on the node (display or --info), e.g. OE1XYZ-1.")</small>
+            </label>
+            <input type="text" @bind="_callsign" @bind:event="oninput" style="text-transform:uppercase" placeholder="OE1XYZ-1" />
+
+            <label>
+                @(_kind == Kind.HubLocal ? Loc.T("Device IP (Hub)", "Device IP (hub)") : _kind == Kind.HubRemote ? Loc.T("IP des Hub-Rechners", "IP of the hub machine") : Loc.T("IP-Adresse des Nodes", "Node IP address"))<br />
+                <small>
+                    @if (_kind == Kind.HubLocal)
+                    {
+                        @Loc.T("Der Hub läuft auf diesem PC: 127.0.0.1.", "The hub runs on this PC: 127.0.0.1.")
+                    }
+                    else
+                    {
+                        @Loc.T("Im Router oder am Node-Display zu finden. Am besten am Node fest einstellen.", "Find it in your router or on the node display. Best set to a fixed IP on the node.")
+                    }
+                </small>
+            </label>
+            <input type="text" @bind="_deviceIp" @bind:event="oninput" />
+
+            @if (_kind != Kind.HubLocal)
+            {
+                <span></span>
+                <div class="conn-discovery">
+                    <div class="conn-discovery-actions">
+                        <select class="conn-discovery-select" @onchange="OnPickChanged"
+                                disabled="@(_searching || _found is null || _found.Count == 0)">
+                            <option value="">@PickPlaceholder</option>
+                            @if (_found is not null)
+                            {
+                                @foreach (var d in _found)
+                                {
+                                    <option value="@d.Ip" title="@SourceTip(d.Source)" selected="@(d.Ip == _deviceIp.Trim())">
+                                        @SourceIcon(d.Source) @(d.Callsign ?? "?") · @d.Ip
+                                    </option>
+                                }
+                            }
+                        </select>
+                        <button type="button" class="btn-small" disabled="@_searching" @onclick="DiscoverAllAsync">
+                            🔎 @Loc.T("Erneut suchen", "Search again")
+                        </button>
+                        @if (_searching)
+                        {
+                            <span class="conn-discovery-status">@_searchStatus</span>
+                        }
+                    </div>
+                    <small class="conn-discovery-note">@Loc.T(
+                        "Das lokale Netz wird nach MeshCom-Nodes durchsucht (es werden nur normale Webseiten auf Port 80 abgefragt).",
+                        "Your local network is searched for MeshCom nodes (only normal web pages on port 80 are requested).")</small>
+                    @if (_pickedCallsign is not null && !string.Equals(_pickedCallsign, _callsign.Trim(), StringComparison.OrdinalIgnoreCase))
+                    {
+                        <div class="conn-discovery-hint">
+                            ⚠️ @Loc.TF("Der gewählte Node nennt sich {0}, eingetragen ist {1}.", "The selected node calls itself {0}, you entered {1}.", _pickedCallsign, string.IsNullOrWhiteSpace(_callsign) ? "–" : _callsign.Trim().ToUpperInvariant())
+                            <button type="button" class="btn-small" @onclick="UsePickedCallsign">⬅ @Loc.TF("Rufzeichen {0} verwenden", "Use callsign {0}", _pickedCallsign)</button>
+                        </div>
+                    }
+                    @if (_found is { Count: 0 } && !_searching)
+                    {
+                        <small class="conn-discovery-none">@Loc.T("Nichts gefunden. Nodes ohne Webserver melden sich nicht von selbst – tragen Sie die IP von Hand ein (Router oder Node-Display).", "Nothing found. Nodes without a web server do not announce themselves – enter the IP by hand (router or node display).")</small>
+                    }
+                </div>
+            }
+
+            <label>
+                Device Port<br />
+                <small>
+                    @if (_kind == Kind.Node)
+                    {
+                        @Loc.T("Beim Node fest 1799.", "Fixed 1799 on the node.")
+                    }
+                    else
+                    {
+                        @Loc.T("Der \"UDP port\" im Hub-Fenster. Neben WebDesk auf demselben PC: 1798.", "The hub window's \"UDP port\". Next to WebDesk on the same PC: 1798.")
+                    }
+                </small>
+            </label>
+            <input type="number" min="1" max="65535" @bind="_devicePort" @bind:event="oninput" disabled="@(_kind == Kind.Node)" />
+        </div>
+    }
+
+    @* ── Step 3: this PC ── *@
+    @if (_step == 2)
+    {
+        <h4>@Loc.T("Dieser PC (WebDesk)", "This PC (WebDesk)")</h4>
+        @if (!IsPrimary)
+        {
+            <p class="settings-hint">@Loc.T(
+                "Weitere Nodes nutzen den UDP-Socket des Primär-Node – hier ist nichts einzustellen. Der Node erkennt WebDesk an der IP-Adresse dieses PCs (nächster Schritt).",
+                "Additional nodes use the primary node's UDP socket – nothing to set here. The node reaches WebDesk at this PC's IP address (next step).")</p>
+        }
+        else
+        {
+            <div class="settings-grid">
+                <label>
+                    Listen IP<br />
+                    <small>@Loc.T("Adresse DIESES PCs, nicht die des Nodes. 0.0.0.0 = alle Netzwerkkarten (empfohlen).", "Address of THIS PC, not the node's. 0.0.0.0 = all network adapters (recommended).")</small>
+                </label>
+                <div>
+                    <input type="text" @bind="_listenIp" @bind:event="oninput" style="width:100%" />
+                    <div class="conn-wizard-chips">
+                        <button type="button" class="conn-check-cmd" @onclick='() => _listenIp = "0.0.0.0"'>0.0.0.0</button>
+                        @if (_kind == Kind.HubLocal)
+                        {
+                            <button type="button" class="conn-check-cmd" @onclick='() => _listenIp = "127.0.0.1"'>127.0.0.1</button>
+                        }
+                        @foreach (var ip in _pcIps)
+                        {
+                            var v = ip;
+                            <button type="button" class="conn-check-cmd" @onclick="() => _listenIp = v">@v</button>
+                        }
+                    </div>
+                </div>
+                <label>
+                    Listen Port<br />
+                    <small>@Loc.T("Standard 1799. Der Node sendet immer an 1799.", "Default 1799. The node always sends to 1799.")</small>
+                </label>
+                <input type="number" min="1" max="65535" @bind="_listenPort" @bind:event="oninput" />
+            </div>
+        }
+    }
+
+    @* ── Step 4: what to do on the node / hub ── *@
+    @if (_step == 3)
+    {
+        @if (_kind == Kind.Node)
+        {
+            <h4>@Loc.T("Am Node einstellen", "Set on the node")</h4>
+
+            @if (_nodeMode == NodeMode.Auto)
+            {
+                @switch (_consoleProbe)
+                {
+                    case ConsoleProbe.Reachable:
+                        <NodeConsoleBox @key="_probeRun" InputProvider="BuildInput" OnUseCallsign="UseNodeCallsign" AutoRead="true" Compact="true" />
+                        break;
+
+                    case ConsoleProbe.Unreachable:
+                        <div class="node-console-confirm">
+                            <strong>@Loc.T("Die Net-Console ist am Node noch ausgeschaltet.", "The net console is still switched off on the node.")</strong>
+                            <ol class="conn-check-checklist">
+                                <li>@Loc.T("Öffnen Sie die Weboberfläche des Nodes (Knopf unten; bei einer Passwortabfrage das Web-Passwort des Nodes verwenden).", "Open the node's web interface (button below; if asked for a password use the node's web password).")</li>
+                                <li>@Loc.T("Schalten Sie unter „IP Network Settings“ den Schalter „net console“ auf ON und setzen Sie ein Passwort.", "Under \"IP Network Settings\" switch \"net console\" to ON and set a password.")</li>
+                                <li>@Loc.T("Kommen Sie hierher zurück und klicken Sie auf „Erneut prüfen“.", "Come back here and click \"Check again\".")</li>
+                            </ol>
+                            <div class="conn-check-cmds">
+                                <a class="btn-secondary" href="@NodeWebUrl" target="_blank" rel="noopener">🌐 @Loc.T("Weboberfläche des Nodes öffnen", "Open the node's web interface")</a>
+                                <button type="button" class="btn-small" @onclick="ProbeConsoleAsync">🔄 @Loc.T("Erneut prüfen", "Check again")</button>
+                                <button type="button" class="btn-small" @onclick="() => _nodeMode = NodeMode.Manual">✍️ @Loc.T("Stattdessen manuell konfigurieren", "Configure manually instead")</button>
+                            </div>
+                            <small class="conn-check-note">@Loc.T("Alternativ am Node eingeben: --netconsole on – oder wählen Sie „manuell“.", "Alternatively enter on the node: --netconsole on – or choose \"manual\".")</small>
+                        </div>
+                        break;
+
+                    default:
+                        <p class="settings-hint">@Loc.T("Prüfe, ob die Net-Console am Node erreichbar ist …", "Checking whether the net console is reachable on the node …")</p>
+                        break;
+                }
+            }
+            else
+            {
+                <p class="settings-hint">@Loc.T(
+                    "Geben Sie diese Befehle in der Konsole des Nodes ein (Web-Oberfläche, USB oder Net-Console). WebDesk sendet sie nicht selbst.",
+                    "Enter these commands in the node's console (web interface, USB or net console). WebDesk does not send them by itself.")</p>
+                @if (_pcIpsForNode.Count > 1)
+                {
+                    <p class="settings-hint">@Loc.T("Dieser PC hat mehrere Adressen – wählen Sie die im Netz des Nodes:", "This PC has several addresses – pick the one in the node's network:")</p>
+                }
+                <div class="conn-check-cmds">
+                    @foreach (var ip in _pcIpsForNode)
+                    {
+                        var cmd = $"--extudpip {ip}";
+                        <button type="button" class="conn-check-cmd" @onclick="() => CopyAsync(cmd)">📋 @cmd</button>
+                    }
+                    <button type="button" class="conn-check-cmd" @onclick='() => CopyAsync("--extudp on")'>📋 --extudp on</button>
+                    <button type="button" class="conn-check-cmd" @onclick='() => CopyAsync("--info")'>📋 --info</button>
+                </div>
+                <ul class="conn-check-checklist">
+                    <li>@Loc.T("ext UDP an, Ziel-IP = IP dieses PCs, Port 1799. Keine Broadcast-Adresse und nicht die Node-IP selbst (ab Firmware 4.40a.10).", "ext UDP on, target IP = this PC's IP, port 1799. No broadcast address and not the node's own IP (from firmware 4.40a.10).")</li>
+                    <li>@Loc.T("Rufzeichen und SSID am Node prüfen (--info oder Display): sie müssen mit dem Eintrag in WebDesk übereinstimmen.", "Check callsign and SSID on the node (--info or display): they must match the entry in WebDesk.")</li>
+                    <li>@Loc.T("Firewall dieses PCs: eingehendes UDP auf dem Listen Port erlauben.", "This PC's firewall: allow inbound UDP on the Listen Port.")</li>
+                </ul>
+                <div class="conn-check-cmds">
+                    <button type="button" class="conn-check-cmd" @onclick="() => CopyAsync(FirewallCmd)">📋 @Loc.T("Windows-Firewall-Regel", "Windows firewall rule")</button>
+                </div>
+            }
+        }
+        else
+        {
+            <h4>@Loc.T("Im Bluetooth-Hub einstellen", "Set in the Bluetooth hub")</h4>
+            <p class="settings-hint">🚀 @Loc.T(
+                "Starten Sie zuerst den Bluetooth-Hub (python hub.py --gui) und verbinden Sie ihn mit dem Node. WebDesk erreicht den Hub erst, wenn er läuft.",
+                "Start the Bluetooth hub first (python hub.py --gui) and connect it to the node. WebDesk can only reach the hub once it is running.")</p>
+            @if (_kind == Kind.HubLocal && _hubListening is { } hubUp)
+            {
+                <div class="conn-check-summary @(hubUp ? "conn-check-good" : "conn-check-warn")">
+                    @(hubUp
+                        ? Loc.TF("Auf diesem PC lauscht ein Programm auf UDP {0} (Hub läuft)", "A program on this PC listens on UDP {0} (hub is running)", _devicePort)
+                        : Loc.TF("Auf diesem PC lauscht nichts auf UDP {0}", "Nothing on this PC listens on UDP {0}", _devicePort))
+                    <button type="button" class="btn-small" style="margin-left:.6rem" @onclick="CheckHub">🔄 @Loc.T("Erneut prüfen", "Check again")</button>
+                </div>
+            }
+            <table class="conn-wizard-table">
+                <tr><td>@Loc.T("Node", "Node")</td><td>@Loc.T("per Bluetooth verbinden (Handy-App vorher trennen – ein Node bedient nur einen BLE-Client)", "connect via Bluetooth (disconnect the phone app first – a node serves only one BLE client)")</td></tr>
+                <tr><td>UDP port</td><td><code>@_devicePort</code></td></tr>
+                <tr><td>WebDesk</td><td><code>@HubPeer</code> @Loc.T("(Adresse von WebDesk; der Hub lernt sie auch aus den Paketen)", "(WebDesk's address; the hub also learns it from the packets)")</td></tr>
+            </table>
+            <ul class="conn-check-checklist">
+                <li>@Loc.T("Das Rufzeichen in WebDesk muss das des Nodes sein, sonst erkennt WebDesk das Echo eigener Nachrichten nicht (Warndreieck).", "The callsign in WebDesk must be the node's, otherwise WebDesk does not recognise the echo of its own messages (warning triangle).")</li>
+                @if (_kind == Kind.HubLocal)
+                {
+                    <li>@Loc.T("Hub und WebDesk dürfen nicht denselben UDP-Port nutzen: Hub 1798, WebDesk Listen Port 1799.", "Hub and WebDesk must not use the same UDP port: hub 1798, WebDesk Listen Port 1799.")</li>
+                }
+                else
+                {
+                    <li>@Loc.T("Im Hub-Feld \"WebDesk\" die IP dieses PCs eintragen und diese Firewall für den Listen Port öffnen.", "Enter this PC's IP in the hub's \"WebDesk\" field and open this firewall for the Listen Port.")</li>
+                }
+                <li>@Loc.T("Net-Console des Hubs (Port 2323) ist getrennt in den Einstellungen unter Console einzurichten.", "The hub's net console (port 2323) is set up separately in the settings under Console.")</li>
+            </ul>
+        }
+    }
+
+    @* ── Step 5: check + apply ── *@
+    @if (_step == 4)
+    {
+        <h4>@Loc.T("Prüfen und übernehmen", "Check and apply")</h4>
+        <ConnectionCheckPanel @ref="_panel" Id="conn-wizard-check" InputProvider="BuildInput" AutoRun="true" OnUseCallsign="UseNodeCallsign" />
+        <p class="conn-check-note">ℹ️ @Loc.T(
+            "Ergebnisse zu Socket und empfangenen Paketen zeigen den derzeit laufenden Stand. Sie ändern sich erst, nachdem Sie gespeichert und WebDesk neu gestartet haben.",
+            "Results about the socket and received packets show the state that is running right now. They only change after you have saved and restarted WebDesk.")</p>
+        <div class="conn-wizard-values">
+            <strong>@Loc.T("Diese Werte werden übernommen:", "These values will be applied:")</strong>
+            <code>@_callsign.Trim().ToUpperInvariant() · @_deviceIp.Trim():@_devicePort@(IsPrimary ? $" · Listen {_listenIp.Trim()}:{_listenPort}" : "")</code>
+        </div>
+        @if (_applied)
+        {
+            <div class="conn-check-summary conn-check-good">
+                @Loc.T("Werte sind im Formular. Jetzt unten auf Speichern klicken.", "Values are in the form. Now click Save below.")
+                @if (IsPrimary)
+                {
+                    <br />@Loc.T("Listen IP / Listen Port wirken erst nach einem Neustart von WebDesk. Danach zeigt der UDP-Status in der Statusleiste 🟢, sobald der Node Pakete sendet.", "Listen IP / Listen Port only take effect after restarting WebDesk. Afterwards the UDP status in the status bar turns 🟢 as soon as the node sends packets.")
+                }
+            </div>
+        }
+    }
+
+    <div class="conn-wizard-nav">
+        <button type="button" class="btn-secondary" disabled="@(_step == 0)" @onclick="Back">← @Loc.T("Zurück", "Back")</button>
+        @if (_step < StepCount - 1)
+        {
+            <button type="button" class="btn-secondary" disabled="@(!CanContinue)" @onclick="Next">@Loc.T("Weiter", "Next") →</button>
+        }
+        else
+        {
+            <button type="button" class="btn-secondary" disabled="@_applied" @onclick="ApplyAsync">✔ @Loc.T("In Formular übernehmen", "Apply to form")</button>
+        }
+    </div>
+</div>
+
+@code {
+    private enum Kind { Node, HubLocal, HubRemote }
+
+    private const int StepCount = 5;
+
+    /// <summary>Values the wizard starts with (the current form values of the node).</summary>
+    [Parameter, EditorRequired] public WizardValues Initial { get; set; } = default!;
+
+    /// <summary>True for the primary node (owns Listen IP / Listen Port).</summary>
+    [Parameter] public bool IsPrimary { get; set; } = true;
+
+    /// <summary>Node profile id of the node being set up (null in legacy single-node mode).</summary>
+    [Parameter] public Guid? NodeId { get; set; }
+
+    /// <summary>Shown in the header, e.g. the node's name.</summary>
+    [Parameter] public string? NodeLabel { get; set; }
+
+    /// <summary>The primary node's listen values – used for the check of additional nodes.</summary>
+    [Parameter] public Func<(string Ip, int Port)>? PrimaryListen { get; set; }
+
+    /// <summary>Other enabled nodes of the form, for the clash checks.</summary>
+    [Parameter] public Func<IReadOnlyList<OtherNodeInfo>>? OthersProvider { get; set; }
+
+    /// <summary>Raised when the user clicks "Apply to form".</summary>
+    [Parameter] public EventCallback<WizardValues> OnApply { get; set; }
+
+    /// <summary>Raised when the wizard is closed.</summary>
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private int _step;
+    private Kind _kind;
+    private string _callsign = "";
+    private string _deviceIp = "";
+    private int _devicePort = 1799;
+    private string _listenIp = "0.0.0.0";
+    private int _listenPort = 1799;
+    private bool _applied;
+    private ConnectionCheckPanel? _panel;
+    private List<string> _pcIps = [];
+
+    private const string FirewallCmd =
+        "netsh advfirewall firewall add rule name=\"MeshCom WebDesk UDP 1799\" protocol=UDP dir=in localport=1799 action=allow";
+
+    private IReadOnlyList<string> _pcIpsForNode => ConnectionCheckService.SuggestPcIps(_deviceIp.Trim());
+    private string HubPeer => $"{(_kind == Kind.HubLocal ? "127.0.0.1" : (_pcIpsForNode.FirstOrDefault() ?? "<PC-IP>"))}:{_listenPort}";
+
+    protected override void OnInitialized()
+    {
+        _callsign   = Initial.Callsign;
+        _deviceIp   = Initial.DeviceIp;
+        _devicePort = Initial.DevicePort;
+        _listenIp   = Initial.ListenIp;
+        _listenPort = Initial.ListenPort;
+        _pcIps      = NetworkHelper.GetLocalIpv4Addresses();
+
+        _kind = IPAddress.TryParse(_deviceIp, out var ip) && NetworkHelper.IsLocalAddress(ip) ? Kind.HubLocal
+              : _devicePort == 1798 ? Kind.HubRemote
+              : Kind.Node;
+    }
+
+    private bool CanContinue => _step switch
+    {
+        1 => !string.IsNullOrWhiteSpace(_callsign) && IPAddress.TryParse(_deviceIp.Trim(), out _) && _devicePort is >= 1 and <= 65535,
+        2 => !IsPrimary || (IPAddress.TryParse(_listenIp.Trim(), out _) && _listenPort is >= 1 and <= 65535),
+        _ => true,
+    };
+
+    private void SetKind(Kind k)
+    {
+        _kind = k;
+        switch (k)
+        {
+            case Kind.Node:
+                _devicePort = 1799;
+                if (_deviceIp is "127.0.0.1" or "") _deviceIp = "";
+                if (_listenIp == "127.0.0.1") _listenIp = "0.0.0.0";
+                break;
+            case Kind.HubLocal:
+                _deviceIp   = "127.0.0.1";
+                _devicePort = 1798;
+                _listenPort = 1799;
+                break;
+            case Kind.HubRemote:
+                if (_deviceIp is "127.0.0.1") _deviceIp = "";
+                _devicePort = 1798;
+                if (_listenIp == "127.0.0.1") _listenIp = "0.0.0.0";
+                break;
+        }
+    }
+
+    // ── Node discovery ───────────────────────────────────────────────────
+    private List<DiscoveredNode>? _found;
+    private bool _searching;
+    private string _searchStatus = "";
+    private CancellationTokenSource? _searchCts;
+
+    private static string SourceIcon(DiscoverySource s) => s switch
+    {
+        DiscoverySource.Name    => "🏷",
+        DiscoverySource.Passive => "📨",
+        _                       => "📡",
+    };
+
+    private string SourceTip(DiscoverySource s) => s switch
+    {
+        DiscoverySource.Name    => Loc.T("Über den Hostnamen (Rufzeichen) gefunden", "Found by hostname (callsign)"),
+        DiscoverySource.Passive => Loc.T("Hat bereits Pakete an diesen PC gesendet", "Already sent packets to this PC"),
+        _                       => Loc.T("Über den Webserver im lokalen Netz gefunden", "Found by its web server in the local network"),
+    };
+
+    private void Merge(IEnumerable<DiscoveredNode> add)
+    {
+        _found ??= [];
+        foreach (var d in add)
+        {
+            var existing = _found.FindIndex(f => f.Ip == d.Ip);
+            if (existing < 0) _found.Add(d);
+            else if (_found[existing].Callsign is null && d.Callsign is not null) _found[existing] = d;
+        }
+    }
+
+    private bool? _hubListening;
+
+    /// <summary>Is the Bluetooth hub running on this PC (something listens on the hub's UDP port)?</summary>
+    private void CheckHub() => _hubListening = ConnectionCheckService.IsHubPortInUse(_devicePort);
+
+    private enum NodeMode { Auto, Manual }
+    private enum ConsoleProbe { Unknown, Checking, Reachable, Unreachable }
+
+    private NodeMode _nodeMode = NodeMode.Auto;
+    private ConsoleProbe _consoleProbe = ConsoleProbe.Unknown;
+    private int _probeRun;
+
+    private string NodeWebUrl => $"http://{_deviceIp.Trim()}/";
+
+    /// <summary>Is the node's net console switched on? Decides whether the automatic setup can start.</summary>
+    private async Task ProbeConsoleAsync()
+    {
+        _consoleProbe = ConsoleProbe.Checking;
+        await InvokeAsync(StateHasChanged);
+        var ok = await ConsoleFix.IsReachableAsync(_deviceIp.Trim());
+        _probeRun++;
+        _consoleProbe = ok ? ConsoleProbe.Reachable : ConsoleProbe.Unreachable;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private bool _autoSearched;
+
+    private string PickPlaceholder =>
+        _searching ? Loc.T("Suche …", "Searching …")
+        : _found is null || _found.Count == 0 ? Loc.T("Keine Nodes gefunden", "No nodes found")
+        : Loc.T("Gefundene Nodes – auswählen …", "Found nodes – select …");
+
+    /// <summary>Looks for nodes by name (callsign), by packets already received and by scanning the local network.</summary>
+    private async Task DiscoverAllAsync()
+    {
+        _searchCts?.Cancel();
+        _searchCts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var ct = _searchCts.Token;
+        _searching = true;
+        _found = [];
+        _searchStatus = Loc.T("Suche …", "Searching …");
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+            Merge(Discovery.PassiveSenders());
+            Merge(await Discovery.LookupByCallsignAsync(_callsign, ct));
+            await InvokeAsync(StateHasChanged);
+
+            _searchStatus = Loc.T("Netzwerk wird durchsucht …", "Scanning network …");
+            var scan = await Discovery.ScanAsync((done, total) =>
+            {
+                if (done % 16 == 0 || done == total)
+                {
+                    _searchStatus = Loc.TF("Netzwerk wird durchsucht … {0} von {1}", "Scanning network … {0} of {1}", done, total);
+                    _ = InvokeAsync(StateHasChanged);
+                }
+            }, ct);
+            Merge(scan);
+        }
+        catch (OperationCanceledException) { }
+        finally
+        {
+            _searching = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void OnPickChanged(ChangeEventArgs e)
+    {
+        var ip = e.Value?.ToString();
+        if (!string.IsNullOrEmpty(ip) && _found?.FirstOrDefault(d => d.Ip == ip) is { } d)
+            Pick(d);
+    }
+
+    private string? _pickedCallsign;
+
+    private void Pick(DiscoveredNode d)
+    {
+        _deviceIp = d.Ip;
+        _pickedCallsign = d.Callsign;
+        if (string.IsNullOrWhiteSpace(_callsign) && d.Callsign is not null)
+            _callsign = d.Callsign;
+    }
+
+    private void UsePickedCallsign()
+    {
+        if (_pickedCallsign is not null) _callsign = _pickedCallsign;
+    }
+
+    public void Dispose() => _searchCts?.Cancel();
+
+    private void UseNodeCallsign(string callsign) => _callsign = callsign;
+
+    private void Next()
+    {
+        if (CanContinue && _step < StepCount - 1) _step++;
+
+        // Local hub: show right away whether it is already running.
+        if (_step == 3 && _kind == Kind.HubLocal)
+            CheckHub();
+
+        // Automatic branch: the node step starts checking the net console right away (no second question).
+        if (_step == 3 && _kind == Kind.Node && _nodeMode == NodeMode.Auto)
+            _ = ProbeConsoleAsync();
+
+        // Entering the node step: start looking for nodes right away so the IP can be picked from a list.
+        if (_step == 1 && _kind != Kind.HubLocal && !_autoSearched)
+        {
+            _autoSearched = true;
+            _ = DiscoverAllAsync();
+        }
+    }
+    private void Back() { if (_step > 0) { _step--; _applied = false; } }
+
+    private ConnectionCheckInput BuildInput()
+    {
+        var (lip, lport) = IsPrimary ? (_listenIp.Trim(), _listenPort) : (PrimaryListen?.Invoke() ?? ("0.0.0.0", 1799));
+        return new ConnectionCheckInput(lip, lport, _deviceIp.Trim(), _devicePort, _callsign.Trim().ToUpperInvariant(),
+            Kiss: false, NodeId, IsPrimary, OthersProvider?.Invoke());
+    }
+
+    private async Task ApplyAsync()
+    {
+        _applied = true;
+        await OnApply.InvokeAsync(new WizardValues(
+            _callsign.Trim().ToUpperInvariant(), _deviceIp.Trim(), _devicePort, _listenIp.Trim(), _listenPort));
+    }
+
+    private Task Close() => OnClose.InvokeAsync();
+
+    private async Task CopyAsync(string text)
+    {
+        try { await JS.InvokeVoidAsync("meshcomChat.copyToClipboard", text); }
+        catch { /* clipboard not available */ }
+    }
+}

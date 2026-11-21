@@ -246,6 +246,9 @@ builder.Services.AddSingleton<MeshcomWebDesk.Services.WeatherApiPollingService>(
 builder.Services.AddSingleton<GatewayService>();
 builder.Services.AddSingleton<NodePresenceService>();
 builder.Services.AddSingleton<NodeManager>();
+builder.Services.AddSingleton<NodeDiscoveryService>();
+builder.Services.AddSingleton<NodeConsoleFixService>();
+builder.Services.AddSingleton<ConnectionCheckService>();
 builder.Services.AddSingleton<CalendarBeaconService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<UpdateCheckService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<GatewayService>());

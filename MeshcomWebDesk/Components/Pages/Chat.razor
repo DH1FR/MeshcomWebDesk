@@ -19,6 +19,8 @@
 @inject SerialConsoleService SerialConsoleService
 @inject HmacConsoleService HmacConsoleService
 @inject NodeManager NodeManager
+@inject SettingsService SettingsService
+@inject NavigationManager Nav
 @inject NodePresenceService Presence
 @inject MeshcomWebDesk.Services.Kiss.KissClientService KissService
 @implements IDisposable
@@ -28,6 +30,21 @@
 <ErrorBoundary>
     <ChildContent>
 <div class="meshcom-container">
+    @* ===== FIRST-RUN SETUP HINT (default callsign, no node configured) ===== *@
+    @if (NeedsSetupHint)
+    {
+        <div class="setup-hint-banner" role="status">
+            <span class="setup-hint-text">
+                🧙 <strong>@Loc.T("WebDesk ist noch nicht mit einem Node verbunden.", "WebDesk is not connected to a node yet.")</strong>
+                @Loc.T("Der Einrichtungs-Assistent führt Sie in wenigen Schritten durch die Verbindung.", "The setup wizard guides you through the connection in a few steps.")
+            </span>
+            <span class="setup-hint-actions">
+                <button type="button" class="btn-secondary" @onclick="StartSetupWizard">@Loc.T("Einrichtung starten", "Start setup")</button>
+                <button type="button" class="btn-small" @onclick="HideSetupHintForNow">@Loc.T("Später", "Later")</button>
+                <button type="button" class="btn-small" @onclick="DismissSetupHintForever">@Loc.T("Nicht mehr anzeigen", "Do not show again")</button>
+            </span>
+        </div>
+    }
     @* ===== NODE SWITCHER (only when more than one node is enabled) ===== *@
     @if (NodeManager.HasMultipleNodes) {
     <div class="node-switcher-bar">
@@ -532,16 +549,25 @@
                 <span class="status-badge @(consoleConnected ? "status-badge-ok" : "status-badge-err")">@(consoleConnected ? consoleIcon : consoleIcon + "✗")</span>
             </button>
         }
+        @if (!string.IsNullOrEmpty(_status.NodeCallsignMismatch))
+        {
+            <span class="status-sep">|</span>
+            <span class="status-item">
+                <span class="status-badge status-badge-warn status-badge-link"
+                      title="@Loc.TF("Der Node sendet als {0}, WebDesk nutzt {1}. Klicken zum Prüfen.", "The node sends as {0}, WebDesk uses {1}. Click to check.", _status.NodeCallsignMismatch, NodeManager.GetPrimaryCallsign())"
+                      @onclick="GoToConnectionCheck">⚠️ @Loc.T("Rufzeichen?", "Callsign?")</span>
+            </span>
+        }
         <span class="status-sep">|</span>
         <span class="status-item udp-diag-wrap" @ref="_udpDiagWrapRef">
             @if (PrimaryIsKiss)
             {
                 <span class="status-badge @ExtUdpAuxBadgeCss" title="@ExtUdpAuxTooltip">@ExtUdpAuxIcon ext-udp</span>
-                <span class="status-badge @KissStatusBadgeCss" title="@KissStatusTooltip">@KissStatusIcon KISS</span>
+                <span class="@KissBadgeClass" title="@KissBadgeTooltip" @onclick="OnKissBadgeClick">@KissStatusIcon KISS</span>
             }
             else
             {
-            <span class="status-badge @UdpStatusBadgeCss" title="@UdpStatusTooltip">@UdpStatusIcon UDP</span>
+            <span class="@UdpBadgeClass" title="@UdpStatusTooltip" @onclick="OnUdpBadgeClick">@UdpStatusIcon UDP</span>
             @if (_status.IsListening && !UdpDataFresh)
             {
                 <button type="button" class="udp-diag-btn" @onclick="ToggleUdpDiag"
@@ -560,7 +586,12 @@
                             <li>@Loc.T("Am Node: ext UDP-Ziel-IP muss exakt auf die IP unten zeigen, Port 1799", "On the node: the ext UDP target IP must point exactly to the IP below, port 1799")</li>
                             <li>@Loc.T("Firewall auf diesem PC: eingehendes UDP auf Port 1799 zulassen", "Firewall on this PC: allow inbound UDP on port 1799")</li>
                             <li>@Loc.T("Der Node selbst empfängt möglicherweise nichts vom Mesh", "The node itself may not be receiving anything from the mesh")</li>
+                            <li>@Loc.T("Bluetooth-Hub: Hub gestartet, Node per Bluetooth verbunden (Handy-App getrennt), Hub-Port = Device Port in WebDesk", "Bluetooth hub: hub started, node connected via Bluetooth (phone app disconnected), hub port = Device Port in WebDesk")</li>
+                            <li>@Loc.T("Rufzeichen samt SSID muss exakt dem am Node entsprechen", "Callsign including SSID must exactly match the one on the node")</li>
                         </ul>
+                        <button type="button" class="udp-diag-check" @onclick="GoToConnectionCheck">
+                            🔍 @Loc.T("Einstellungen prüfen", "Check settings") →
+                        </button>
                         @if (_localIps.Count > 0)
                         {
                             <div class="udp-diag-ips">
@@ -979,6 +1010,11 @@
     </div>
 }
 
+    @if (_showSetupPrompt)
+    {
+        <SetupPromptDialog OnStart="StartSetupFromPrompt" OnLater="LaterSetupPrompt" OnNever="NeverSetupPrompt" />
+    }
+
     @if (_showDonationDialog)
     {
         <WelcomeDonationDialog Version="@_appVersion" OnDismiss="DismissDonationDialog" />
@@ -1156,6 +1192,55 @@
     private static readonly string _appVersion =
         typeof(Chat).Assembly.GetName().Version is { } v
             ? $"{v.Major}.{v.Minor}.{v.Build}" : "?";
+    // ── First-run setup hint ─────────────────────────────────────────────
+    private bool _setupHintLoaded;        // localStorage flag read (avoids a flash for users who dismissed it)
+    private bool _setupHintDismissed;     // "do not show again" (persisted in the browser)
+    private bool _setupHintHidden;        // "later" (this page view only)
+
+    /// <summary>
+    /// "No node set up yet": no node profile exists and nothing has been received from a node. An empty node list is
+    /// also the old single-node mode (connection fields in the Connection section), so a connection that delivers
+    /// data counts as set up. Settings that were never saved and carry a callsign of their own (Docker / appsettings
+    /// users) are left alone; a saved configuration without a node – e.g. all nodes were deleted – is asked again.
+    /// </summary>
+    private bool NeedsSetupHint =>
+        _setupHintLoaded && !_setupHintDismissed && !_setupHintHidden
+        && NodeManager.Nodes.Count == 0
+        && !_status.HasReceivedData
+        && (SettingsService.HasSavedSettings || IsShippedDefaultCallsign(NodeManager.GetPrimaryCallsign()));
+
+    private static bool IsShippedDefaultCallsign(string callsign) =>
+        callsign.StartsWith("NOCALL", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(callsign, "DH1FR-2", StringComparison.OrdinalIgnoreCase);
+
+    private bool _showSetupPrompt;    // first-run question "start the setup wizard now?"
+
+    private void StartSetupWizard() => Nav.NavigateTo("/settings?wizard=1");
+
+    private void StartSetupFromPrompt()
+    {
+        _showSetupPrompt = false;
+        StartSetupWizard();
+    }
+
+    /// <summary>"Later": close the question; the banner stays as a reminder.</summary>
+    private void LaterSetupPrompt() => _showSetupPrompt = false;
+
+    private async Task NeverSetupPrompt()
+    {
+        _showSetupPrompt = false;
+        await DismissSetupHintForever();
+    }
+
+    private void HideSetupHintForNow() => _setupHintHidden = true;
+
+    private async Task DismissSetupHintForever()
+    {
+        _setupHintDismissed = true;
+        try { await JS.InvokeVoidAsync("meshcomChat.setSetupHintDismissed"); }
+        catch (JSException) { }
+    }
+
     private bool _showDonationDialog;
     private string _pendingDonationVersionKey = "";
 
@@ -1214,6 +1299,19 @@
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        try
+        {
+            await OnAfterRenderCoreAsync(firstRender);
+        }
+        catch (Exception ex) when (ex is TaskCanceledException or OperationCanceledException or JSDisconnectedException)
+        {
+            // The circuit went away while a JS interop call was running (page reload, navigation, closed tab,
+            // hot reload). Blazor Server cancels pending JS calls then – nothing left to render, not an error.
+        }
+    }
+
+    private async Task OnAfterRenderCoreAsync(bool firstRender)
     {
         if (firstRender)
         {
@@ -1301,8 +1399,35 @@
             if (needsRender)
                 StateHasChanged();
 
+            try
+            {
+                _setupHintDismissed = await JS.InvokeAsync<bool>("meshcomChat.getSetupHintDismissed");
+            }
+            catch (JSException) { }
+            _setupHintLoaded = true;
+            if (NeedsSetupHint)
+            {
+                // Ask once per browser tab (a reload or coming back from Settings does not ask again) – after a short
+                // moment, so a node that is already delivering data is not asked about.
+                var seen = false;
+                try { seen = await JS.InvokeAsync<bool>("meshcomChat.getSetupPromptSeen"); }
+                catch (JSException) { }
+                if (!seen)
+                {
+                    await Task.Delay(4000);
+                    if (NeedsSetupHint)
+                    {
+                        _showSetupPrompt = true;
+                        try { await JS.InvokeVoidAsync("meshcomChat.setSetupPromptSeen"); }
+                        catch (JSException) { }
+                    }
+                }
+                StateHasChanged();
+            }
+
             // Coffee-donation prompt: shown once per minor version, skipped once a valid license exists.
-            if (!AppLicense.IsLicensed)
+            // While the first-run setup hint is pending the setup comes first (no two overlays in a row).
+            if (!AppLicense.IsLicensed && !NeedsSetupHint)
             {
                 try
                 {
@@ -2518,11 +2643,38 @@
 
     private string UdpStatusTooltip => !_status.IsListening
         ? Loc.T("UDP: Kein Socket – Port nicht geöffnet", "UDP: No socket – port not open")
+          + (string.IsNullOrEmpty(_status.LastBindError) ? "" : $" ({_status.LastBindError})")
+          + " · " + Loc.T("Klicken zum Prüfen der Verbindungseinstellungen", "Click to check the connection settings")
         : UdpDataFresh
             ? Loc.T("UDP: Empfang OK", "UDP: Receiving OK")
             : UdpDataStale
                 ? Loc.T("UDP: Seit über 15 Minuten kein Paket mehr – meist liegt's am Node. Klicke auf ❓ für Diagnose.", "UDP: No packet for over 15 minutes – usually the node. Click ❓ for diagnostics.")
                 : Loc.T("UDP: Warte auf Signal – meist liegt's am Node. Klicke auf ❓ für Diagnose.", "UDP: Waiting for signal – usually the node. Click ❓ for diagnostics.");
+
+    /// <summary>Opens Settings → Connection and runs the connection check there.</summary>
+    private void GoToConnectionCheck() => Nav.NavigateTo("/settings?check=conn");
+
+    /// <summary>Red badge (no socket): straight to the check. Yellow (waiting / stale): toggle the quick diagnostics.</summary>
+    private void OnUdpBadgeClick()
+    {
+        if (!_status.IsListening) GoToConnectionCheck();
+        else if (!UdpDataFresh) ToggleUdpDiag();
+    }
+
+    private bool KissNeedsAttention => KissPrimaryStatus.State != KissConnectionState.Connected;
+
+    private string KissBadgeClass => "status-badge " + KissStatusBadgeCss + (KissNeedsAttention ? " status-badge-link" : "");
+
+    private string KissBadgeTooltip => KissNeedsAttention
+        ? KissStatusTooltip + " · " + Loc.T("Klicken zum Prüfen der Verbindungseinstellungen", "Click to check the connection settings")
+        : KissStatusTooltip;
+
+    private string UdpBadgeClass => "status-badge " + UdpStatusBadgeCss + (UdpDataFresh ? "" : " status-badge-link");
+
+    private void OnKissBadgeClick()
+    {
+        if (KissNeedsAttention) GoToConnectionCheck();
+    }
 
     private void ToggleUdpDiag()
     {

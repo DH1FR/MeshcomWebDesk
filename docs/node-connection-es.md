@@ -67,6 +67,50 @@ sudo ufw allow 1799/udp
 
 ---
 
+## Comprobación de la conexión y asistente de configuración
+
+En **Ajustes → 🔌 Conexión** hay dos botones:
+
+- **🔍 Comprobar ajustes** comprueba los valores actuales (también los no guardados) e indica qué no encaja y qué cambiar: formato de direcciones IP y puertos, si **Listen IP** pertenece a este PC (error frecuente: la IP del nodo en lugar de `0.0.0.0`), si el socket UDP está abierto, si el nodo es accesible, si llegan paquetes y si **indicativo y SSID** coinciden con el nodo.
+- **🧙 Asistente de configuración** te guía paso a paso (nodo WiFi, hub Bluetooth en este PC o en otro equipo) Ya en el primer paso eliges *Configurar el nodo automáticamente* (preseleccionado; WebDesk configura ext UDP y la IP de destino mediante la consola de red; si está desactivada, el asistente te guía para activarla en la interfaz web del nodo) o *Configurar el nodo manualmente* (comandos para copiar). Los valores solo se introducen al hacer clic en *Aplicar al formulario*; después aún debes guardar.
+
+Ninguno cambia **nada automáticamente** ni envía **nada al nodo**. En **Nodos adicionales** cada nodo tiene su propio botón de comprobación (🔍) y asistente (🧙).
+
+Si el **estado UDP de la barra de estado está en rojo** o amarillo, al hacer clic se abre la comprobación (rojo: directamente en los ajustes con el motivo concreto del error).
+
+**Primer inicio:** Si todavía no hay ningún nodo configurado (sin lista de nodos y sin datos de un nodo pocos segundos después del inicio; también tras borrar todos los nodos) el chat muestra arriba un banner con *Iniciar configuración*. Abre los ajustes con el asistente. *Más tarde* lo oculta solo hasta la próxima carga, *No volver a mostrar* de forma permanente. Tras el primer guardado ya no aparece.
+
+**Buscar un nodo en la red:** El asistente tiene dos botones. *Buscar nodo* resuelve el indicativo como nombre de host (el firmware lo usa como nombre DHCP/mDNS) y muestra las IP que ya han enviado paquetes. *Buscar en la red* consulta, a petición, las direcciones de tu red local /24 en busca de un servidor web de MeshCom (puerto 80, título de página «INDICATIVO - Meshcom»). Solo encuentra nodos con el servidor web activado; un nodo solo con ext-UDP no se anuncia por sí mismo. Al hacer clic en un resultado solo se copia la IP en el asistente.
+
+**Leer y corregir ajustes en el nodo (consola de red):** Si la consola de red del nodo está activada (puerto 2323, contraseña HMAC), la comprobación muestra abajo la sección *Ajustes del nodo mediante la consola de red*. *Leer del nodo* informa de ext UDP, la IP de destino y el indicativo del nodo. Si algo difiere, *Corregir en el nodo …* ofrece los comandos `--extudp on` y `--extudpip <IP de este PC>`; no se envía nada hasta que confirmes, y solo estos dos comandos. El indicativo del nodo nunca se modifica; en su lugar *Usar el indicativo … en WebDesk* copia el valor del nodo al formulario. Si la consola de red no es accesible, la comprobación indica que debe estar activada en el nodo (interfaz web: IP Network Settings → net console, o `--netconsole on`; contraseña con `--passwd`).
+
+**Comparación automática de todos los ajustes del nodo:** Si la consola de red es accesible y se conoce la contraseña del nodo, la comprobación lee el nodo por sí sola en cada ejecución (solo lectura, `--info`) y compara lo que WebDesk tiene configurado: **indicativo/SSID**, **ext UDP** (activado) e **IP de destino** (la IP de este PC), la **dirección IP del nodo** (frente a Device IP) y, con KISS activado, **KISS/TCP, TX, RxMeta y Auth**. Además muestra si `--nopmother` retiene mensajes directos ajenos. La sección bajo la comprobación lo muestra todo en una tabla (*En el nodo* / *Esperado*). La corrección solo ofrece `--extudp on`, `--extudpip`, `--kiss on`, `--kiss tx on` y `--kiss meta on`.
+
+**Activar KISS en el nodo:** Si KISS/TCP está activado en *Conexión* (o en un nodo adicional), allí aparece el botón *Activar KISS en el nodo mediante la consola de red*. Lee el nodo y ofrece `--kiss on`, `--kiss tx on` y `--kiss meta on` – no se envía nada hasta que confirmes. Solo los nodos ESP32 con el firmware adecuado ofrecen KISS.
+
+**Adoptar el indicativo en cualquiera de los dos lados:** Si el indicativo difiere hay dos botones. *Usar el indicativo … en WebDesk* introduce el valor del nodo en el formulario (después guarda). *Cambiar el indicativo en el nodo a …* ajusta el nodo al indicativo de WebDesk (`--setcall`, mediante la consola de red). Esto solo ocurre tras un clic y una confirmación; la advertencia señala que cambia la identidad del nodo en la malla y que el nodo puede reiniciarse. Solo se envía este único comando.
+
+**Notar enseguida un SSID incorrecto:** Una discrepancia también se nota sin consola de red: si WebDesk envía un mensaje y el nodo lo devuelve con otro indicativo, la barra de estado muestra la insignia de aviso **⚠️ ¿Indicativo?** (un clic abre la comprobación) y la comprobación indica el indicativo que el nodo usa realmente. WebDesk no cambia nada automáticamente.
+
+**Indicativo y SSID:** WebDesk reconoce sus propios paquetes por el indicativo. Si el SSID difiere del nodo, los paquetes llegan, pero el estado UDP sigue en amarillo. La comprobación compara con lo que informa el propio nodo (posición, telemetría, eco de mensajes o `--info` mediante la consola de red) e indica el valor correcto.
+
+---
+
+## Hub Bluetooth (MeshCom UDP Bluetooth Hub)
+
+Los nodos sin WiFi (p. ej. Heltec T114) se pueden conectar mediante el **MeshCom UDP Bluetooth Hub**. El hub se presenta ante WebDesk como un nodo con ext-UDP. Si se ejecuta en el mismo PC, hub y WebDesk no deben usar el mismo puerto:
+
+| Ajuste de WebDesk | Valor |
+|---|---|
+| Device IP | `127.0.0.1` (o la IP del equipo del hub) |
+| Device Port | `1798` (el «UDP port» del hub) |
+| Listen IP / Listen Port | `127.0.0.1` o `0.0.0.0` / `1799` |
+| Indicativo | **el del nodo**, con SSID |
+
+En el hub: conecta el nodo por Bluetooth (desconecta antes la app del móvil), «WebDesk» = `127.0.0.1:1799`. La comprobación reconoce el funcionamiento con hub, verifica si algo escucha en el puerto del hub y avisa de conflictos de puertos. WebDesk no puede distinguir **dos nodos con la misma IP** (p. ej. dos hubs en un PC), porque asigna los paquetes por su IP de origen.
+
+---
+
 ## Filtro del Monitor
 
 El **panel del monitor** (área inferior) tiene un campo de búsqueda 🔍 en la barra de título.

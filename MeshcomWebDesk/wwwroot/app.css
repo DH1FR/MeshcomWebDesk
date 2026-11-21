@@ -4413,3 +4413,133 @@ html[data-display="compact"] .settings-grid select {
 html[data-display="compact"] .settings-header {
     margin-bottom: 0;
 }
+
+/* ── Connection check + setup wizard ── */
+.conn-check, .conn-wizard {
+    margin-top: 1rem;
+    padding: .75rem 1rem;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+}
+.conn-check-head, .conn-wizard-head { display: flex; align-items: center; gap: .75rem; margin-bottom: .4rem; }
+.conn-check-head .btn-small, .conn-wizard-head .btn-small { margin-left: auto; }
+.conn-wizard-head .conn-wizard-step { color: var(--text-muted); font-size: .8rem; margin-left: auto; }
+.conn-wizard-head .btn-small { margin-left: 0; }
+.conn-check-note { margin: 0 0 .6rem 0; color: var(--text-muted); font-size: .8rem; }
+.conn-check-summary { padding: .4rem .7rem; border-radius: 6px; font-size: .85rem; font-weight: 600; margin-bottom: .6rem; }
+.conn-check-good { background: var(--chip-ok-bg); color: var(--ok); border: 1px solid var(--ok-strong); }
+.conn-check-warn { background: var(--chip-warn-bg); color: var(--warn-strong); border: 1px solid #9e6a03; }
+.conn-check-bad  { background: var(--chip-err-bg); color: var(--error); border: 1px solid var(--error-strong); }
+.conn-check-list { list-style: none; margin: 0; padding: 0; }
+.conn-check-item { display: flex; gap: .6rem; padding: .4rem 0; border-top: 1px solid var(--border-strong); font-size: .85rem; }
+.conn-check-item:first-child { border-top: none; }
+.conn-check-icon { flex: 0 0 1.4rem; text-align: center; }
+.conn-check-body { flex: 1; min-width: 0; }
+.conn-check-title { color: var(--text-soft); font-weight: 600; }
+.conn-check-error .conn-check-title { color: var(--error); }
+.conn-check-warning .conn-check-title { color: var(--warn); }
+.conn-check-detail { color: var(--text-muted); margin-top: .15rem; line-height: 1.4; }
+.conn-check-cmds, .conn-wizard-chips { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .35rem; }
+.conn-check-cmd {
+    padding: .2rem .55rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-strong);
+    background: var(--surface-alt);
+    color: var(--link);
+    cursor: pointer;
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: .78rem;
+}
+.conn-check-cmd:hover { background: var(--border-strong); }
+.conn-check-checklist { margin: .6rem 0 .3rem 1.1rem; padding: 0; color: var(--text-soft); font-size: .85rem; }
+.conn-check-checklist li { margin-bottom: .3rem; }
+.conn-wizard h4 { margin: .5rem 0; color: var(--text-soft); }
+.conn-wizard-option { display: flex; gap: .6rem; align-items: flex-start; padding: .5rem .6rem; margin-bottom: .4rem; border: 1px solid var(--border-strong); border-radius: 6px; cursor: pointer; }
+.conn-wizard-option:hover { background: var(--bg-hover); }
+.conn-wizard-option small { color: var(--text-muted); }
+.conn-wizard-table { border-collapse: collapse; font-size: .85rem; margin-bottom: .4rem; }
+.conn-wizard-table td { padding: .25rem .6rem .25rem 0; vertical-align: top; color: var(--text-soft); }
+.conn-wizard-table td:first-child { color: var(--text-muted); white-space: nowrap; }
+.conn-wizard-values { margin-top: .7rem; font-size: .85rem; color: var(--text-soft); }
+.conn-wizard-values code { display: block; margin-top: .2rem; }
+.conn-wizard-nav { display: flex; justify-content: space-between; margin-top: .9rem; }
+.conn-wizard-nav .btn-secondary:disabled { opacity: .5; cursor: not-allowed; }
+.settings-conn-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .75rem; }
+
+/* clickable status badge (red/yellow UDP, KISS problem) → opens the connection check */
+.status-badge-link { cursor: pointer; }
+.status-badge-link:hover { filter: brightness(1.25); text-decoration: underline; }
+.udp-diag-check {
+    display: block;
+    width: 100%;
+    margin: 0 0 .5rem 0;
+    padding: .35rem .5rem;
+    border-radius: 6px;
+    border: 1px solid #1f6feb;
+    background: var(--chip-info-bg);
+    color: var(--link);
+    text-align: left;
+    cursor: pointer;
+    font-size: .8rem;
+    font-family: inherit;
+}
+.udp-diag-check:hover { background: var(--border-strong); }
+
+/* first-run setup hint banner (Chat) */
+.setup-hint-banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .6rem 1rem;
+    margin: 0 0 .5rem 0;
+    padding: .6rem .9rem;
+    background: var(--chip-info-bg);
+    border: 1px solid #1f6feb;
+    border-radius: 8px;
+    color: var(--text-soft);
+    font-size: .88rem;
+}
+.setup-hint-text { flex: 1 1 320px; }
+.setup-hint-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+
+/* node discovery in the setup wizard */
+.conn-discovery { display: flex; flex-direction: column; gap: .35rem; }
+.conn-discovery-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; }
+.conn-discovery-status { color: var(--text-muted); font-size: .8rem; }
+.conn-discovery small { color: var(--text-muted); }
+.conn-discovery-none { line-height: 1.4; }
+
+/* net console box (read / correct node settings) */
+.node-console-box { margin-top: .8rem; padding: .65rem .8rem; border: 1px dashed var(--border-strong); border-radius: 8px; }
+.node-console-head { margin-bottom: .3rem; color: var(--text-soft); }
+.node-console-row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin: .4rem 0; font-size: .85rem; color: var(--text-muted); }
+.node-console-row input { min-width: 10rem; }
+.node-console-table { border-collapse: collapse; font-size: .85rem; margin: .4rem 0; }
+.node-console-table td { padding: .2rem .8rem .2rem 0; color: var(--text-soft); vertical-align: top; }
+.node-console-table td:first-child { color: var(--text-muted); }
+.node-console-confirm { margin-top: .6rem; padding: .6rem .7rem; background: var(--chip-warn-bg); border: 1px solid #9e6a03; border-radius: 6px; }
+.node-console-cmd { padding: .15rem .5rem; border-radius: 4px; background: var(--surface-alt); color: var(--text); font-size: .8rem; }
+.node-console-pick { display: block; margin-top: .4rem; font-size: .82rem; color: var(--text-muted); }
+
+/* per-finding action button at the end of a check row */
+.conn-check-action { flex: 0 0 auto; align-self: flex-start; margin-left: auto; padding-left: .5rem; }
+.conn-check-item { align-items: flex-start; }
+
+.conn-discovery-select {
+    min-width: 16rem;
+    max-width: 100%;
+    padding: .25rem .4rem;
+    background: var(--bg-input);
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+    border-radius: 5px;
+    font-size: .85rem;
+}
+.conn-discovery-select:disabled { opacity: .6; }
+.conn-discovery-note { color: var(--text-muted); line-height: 1.4; }
+.conn-discovery-hint { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; font-size: .82rem; color: var(--warn); }
+
+/* wizard: the two big choices (button flavour of .conn-wizard-option) */
+.conn-wizard-option-btn { width: 100%; text-align: left; background: none; color: inherit; font: inherit; }
+.conn-wizard-option-btn:hover { border-color: var(--link); }
