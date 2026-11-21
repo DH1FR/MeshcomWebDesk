@@ -11,13 +11,12 @@
 - **KISS button** – with KISS/TCP switched on in Settings, *Activate KISS on the node via the net console* switches KISS, TX and RxMeta on at the node (after confirmation).
 - **Status bar** – a red/yellow UDP or KISS badge opens the check when clicked; a new *Callsign?* badge appears when the node returns a sent message under a different callsign.
 - **One-click Docker update** – on the update page of a Docker installation, *Update now* pulls the newer image and restarts WebDesk (the page reloads itself). A second container, Watchtower, does the Docker work, so WebDesk gets no access to Docker. Two update channels: **`latest`** (releases, recommended) and **`dev`** (every push to the dev branch, built by GitHub as `ghcr.io/dh1fr/meshcomwebdesk:dev`, amd64). A banner announces a newer build of the channel you use. New `docker-compose.image.yml`, `.env.example` and `scripts/update-docker.sh` (`--image` or built from source); guide: `docs/docker-update-en.md`.
+- **Check now** – the update page has a *Check now* button that asks GitHub immediately (release or dev channel) and shows when it last checked; it also works for installs that update by swapping files.
 - **QR code for phone/tablet** – a 📱 button in the navigation bar (wide screens only) shows, on request, a QR code with the address under which WebDesk can be opened on another device in the same network. https addresses come first, the address can be set in Settings → *Access from other devices* (Docker / reverse proxy), and the dialog warns that WebDesk has no access protection.
 - **Bluetooth hub** – recognised by the check and the wizard (hub running? port conflict? nodes on the same IP). The hub's `--info` now also reports callsign, ext UDP and node values in the firmware's wording (hub update included in its own repository). With the current hub the check also compares the hub's **UDP port** and the **port it sends to** with the WebDesk settings and checks that WebDesk listens on the address the hub sends to.
 
 ### Bugfixes
 - **Bind errors were invisible** – a failed UDP bind was only written to the log; the red status badge now shows the reason in its tooltip.
-- **Net console reads** no longer send `--volt` / `--netconsole` (the Bluetooth hub answered them with "wrong command"); only `--info` is sent.
-- **`--info` parsing** – an empty `...EXT IP` no longer reads the dots of the next field as an address; `--nopmother` is parsed.
 - **Cancelled JS calls** (reload, navigation, hot reload) no longer end as an unhandled exception in `OnAfterRenderAsync`.
 
 ### Docs
