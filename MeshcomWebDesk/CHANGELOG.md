@@ -1,5 +1,28 @@
 ﻿# Changelog
 
+## [1.18.0] – released
+
+### Features
+- **Connection check** (Settings → Connection → *Check settings*) – checks the current, even unsaved, values and explains what does not fit and what to change: IP/port format, whether *Listen IP* belongs to this PC (typical mistake: the node's IP instead of `0.0.0.0`), the real bind error, ping, port conflicts, Bluetooth hub, KISS reachability, nodes that share an IP or callsign, and whether callsign + SSID match the node. Nothing is changed automatically.
+- **Setup wizard** (*Setup wizard*, also per additional node) – five steps: node kind (WiFi/LAN node, Bluetooth hub on this PC or another machine), automatic or manual configuration, node and PC data with a **node search in the local network** (hostname/mDNS, packets already received, scan for the node's web page) and a selection list for the node IP, node setup, check. Values reach the form only on *Apply to form*; saving stays with you.
+- **First-start prompt** – if no node is set up and no data arrives, WebDesk asks right at startup whether to start the wizard (once per browser tab; *Later* leaves a banner, *Do not ask again* hides both).
+- **Read and correct the node over the net console** – the check reads `--info` (read-only) and compares ext UDP, target IP, the node's IP, KISS switches, `--nopmother` and the callsign with the WebDesk configuration. A button at the end of each finding corrects it on the node – only after your click and confirmation. Only `--extudpip`, `--extudp on`, `--kiss on|tx on|meta on` and `--setcall` can be sent; `--extudpip` always goes first (the firmware refuses `--extudp on` without a target IP) and the node's reply is shown.
+- **Callsign on either side** – on a mismatch take over the node's callsign into WebDesk, or set the node to the WebDesk callsign (`--setcall`, with a warning that the node's identity changes and it may restart).
+- **KISS button** – with KISS/TCP switched on in Settings, *Activate KISS on the node via the net console* switches KISS, TX and RxMeta on at the node (after confirmation).
+- **Status bar** – a red/yellow UDP or KISS badge opens the check when clicked; a new *Callsign?* badge appears when the node returns a sent message under a different callsign.
+- **Bluetooth hub** – recognised by the check and the wizard (hub running? port conflict? nodes on the same IP). The hub's `--info` now also reports callsign, ext UDP and node values in the firmware's wording (hub update included in its own repository).
+
+### Bugfixes
+- **Bind errors were invisible** – a failed UDP bind was only written to the log; the red status badge now shows the reason in its tooltip.
+- **Net console reads** no longer send `--volt` / `--netconsole` (the Bluetooth hub answered them with "wrong command"); only `--info` is sent.
+- **`--info` parsing** – an empty `...EXT IP` no longer reads the dots of the next field as an address; `--nopmother` is parsed.
+- **Cancelled JS calls** (reload, navigation, hot reload) no longer end as an unhandled exception in `OnAfterRenderAsync`.
+
+### Docs
+- **Node connection guides** (de/en/es/it) describe the check, the wizard, the node search, correcting settings over the net console, the callsign handling, KISS activation and the Bluetooth hub. All new texts are available in German, English, Spanish, French and Italian.
+
+---
+
 ## [1.17.4] – released
 
 ### Features

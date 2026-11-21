@@ -8,9 +8,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
-    <AssemblyVersion>1.17.5.0</AssemblyVersion>
-    <FileVersion>1.17.5.0</FileVersion>
-    <InformationalVersion>1.17.5-dev</InformationalVersion>
+    <AssemblyVersion>1.18.0.0</AssemblyVersion>
+    <FileVersion>1.18.0.0</FileVersion>
+    <InformationalVersion>1.18.0</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>
