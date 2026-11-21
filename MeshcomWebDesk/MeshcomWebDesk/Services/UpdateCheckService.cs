@@ -35,6 +35,13 @@ public sealed class UpdateCheckService : IHostedService, IDisposable
     /// <summary>Marks the banner as dismissed.</summary>
     public void Dismiss() => Dismissed = true;
 
+    /// <summary>When the last check finished (UTC) and whether it failed (offline, GitHub rate limit).</summary>
+    public DateTime? LastCheckUtc { get; private set; }
+    public bool LastCheckFailed { get; private set; }
+
+    /// <summary>Asks GitHub right now (the "Check now" button), without waiting for the timer.</summary>
+    public Task CheckNowAsync(CancellationToken ct = default) => CheckAsync(ct);
+
     public UpdateCheckService(ILogger<UpdateCheckService> logger)
     {
         _logger = logger;
@@ -68,11 +75,12 @@ public sealed class UpdateCheckService : IHostedService, IDisposable
             http.Timeout = TimeSpan.FromSeconds(10);
 
             var release = await http.GetFromJsonAsync<GitHubRelease>(ReleaseUrl, ct);
-            if (release is null || string.IsNullOrEmpty(release.TagName)) return;
+            if (release is null || string.IsNullOrEmpty(release.TagName)) { LastCheckFailed = true; LastCheckUtc = DateTime.UtcNow; return; }
 
             // Parse tag, strip leading 'v'
             var tag = release.TagName.TrimStart('v');
-            if (!Version.TryParse(tag, out var latest)) return;
+            if (!Version.TryParse(tag, out var latest)) { LastCheckFailed = true; LastCheckUtc = DateTime.UtcNow; return; }
+            LastCheckFailed = false; LastCheckUtc = DateTime.UtcNow;
 
             if (latest > _current)
             {
@@ -88,6 +96,7 @@ public sealed class UpdateCheckService : IHostedService, IDisposable
         }
         catch (Exception ex)
         {
+            LastCheckFailed = true; LastCheckUtc = DateTime.UtcNow;
             _logger.LogDebug(ex, "Update check failed (offline or rate-limited).");
         }
     }

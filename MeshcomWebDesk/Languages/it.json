@@ -1435,6 +1435,7 @@
     "AX.25 (KISS) only has SSID 0–15. WebDesk receives via KISS and sends with this SSID automatically via ext UDP – so ext UDP must be switched on at the node.": "AX.25 (KISS) ha solo SSID 0–15. WebDesk riceve via KISS e con questo SSID invia automaticamente via ext UDP – quindi ext UDP deve essere attivo sul nodo.",
     "Net console is reachable, but the settings could not be read": "La console di rete è raggiungibile, ma le impostazioni non hanno potuto essere lette",
     "WebDesk's console is currently connected to {0}, so the callsign cannot be compared. Disconnect it first (Settings → Console) and check again.": "La console di WebDesk è attualmente collegata a {0}, quindi il nominativo non può essere confrontato. Scollegala prima (Impostazioni → Console) e ricontrolla.",
-    "The connection was made, but the node did not answer (completely). Check again; if that does not help, use \"Read from node\" below and look at the reply.": "La connessione è stata stabilita, ma il nodo non ha risposto (completamente). Ricontrolla; se non basta, usa «Leggi dal nodo» qui sotto e guarda la risposta."
+    "The connection was made, but the node did not answer (completely). Check again; if that does not help, use \"Read from node\" below and look at the reply.": "La connessione è stata stabilita, ma il nodo non ha risposto (completamente). Ricontrolla; se non basta, usa «Leggi dal nodo» qui sotto e guarda la risposta.",
+    "Last checked: {0}": "Ultimo controllo: {0}"
   }
 }

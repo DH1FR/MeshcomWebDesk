@@ -29,6 +29,19 @@
                 }
             </p>
         }
+        <p>
+            <button class="btn btn-secondary btn-sm" disabled="@_checking" @onclick="CheckNow">
+                🔄 @(_checking ? Loc.T("Prüfe …", "Checking …") : Loc.T("Jetzt prüfen", "Check now"))
+            </button>
+            @if (_lastChecked is { } lc)
+            {
+                <small style="opacity:.75"> @Loc.TF("Zuletzt geprüft: {0}", "Last checked: {0}", lc.ToLocalTime().ToString("HH:mm:ss"))</small>
+            }
+            @if (!IsDocker && _checkFailed)
+            {
+                <br /><small>⚠️ @Loc.T("Die neueste Version konnte nicht ermittelt werden (offline oder GitHub-Limit).", "The newest version could not be determined (offline or GitHub limit).")</small>
+            }
+        </p>
         <p style="opacity:.75;font-size:.9em">
             @Loc.T("Installationsart", "Install type"): @ModeText(Updater.Install.Mode)
             · @Updater.Install.Rid@(Updater.Install.SelfContained ? " (self-contained)" : "")
@@ -204,6 +217,9 @@
     private bool? _local;
     private DockerUpdateInfo? _docker;
     private bool _dockerBusy;
+    private bool _checking;
+    private bool _checkFailed;
+    private DateTime? _lastChecked;
     private bool _dockerRestarting;
     private string? _dockerMsg;
 
@@ -218,6 +234,26 @@
             try { _docker = await Docker.GetInfoAsync(); }
             catch (Exception) { /* shown as "could not be determined" */ }
         }
+    }
+
+    private async Task CheckNow()
+    {
+        _checking = true;
+        try
+        {
+            if (IsDocker)
+            {
+                try { _docker = await Docker.GetInfoAsync(force: true); }
+                catch (Exception) { _checkFailed = true; }
+            }
+            else
+            {
+                await UpdateCheck.CheckNowAsync();
+                _checkFailed = UpdateCheck.LastCheckFailed;
+            }
+            _lastChecked = DateTime.UtcNow;
+        }
+        finally { _checking = false; }
     }
 
     private async Task CopyAsync(string text)

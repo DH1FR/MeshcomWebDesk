@@ -68,17 +68,18 @@ public sealed class DockerUpdateService
     private static string Short(string? commit) => commit is { Length: > 7 } c ? c[..7] : commit ?? "";
 
     /// <summary>The current state of the update check. The dev head is cached for ten minutes (GitHub rate limit).</summary>
-    public async Task<DockerUpdateInfo> GetInfoAsync(CancellationToken ct = default)
+    public async Task<DockerUpdateInfo> GetInfoAsync(CancellationToken ct = default, bool force = false)
     {
         var channel = Channel;
         if (channel == "latest")
         {
+            if (force) await _releases.CheckNowAsync(ct);
             // UpdateCheckService already asks GitHub for the latest release and only reports a newer one.
             return new(channel, Version, RunningCommit, WatchtowerConfigured,
-                _releases.LatestVersion is not null, _releases.LatestVersion, false);
+                _releases.LatestVersion is not null, _releases.LatestVersion, force && _releases.LastCheckFailed);
         }
 
-        var head = await GetDevHeadAsync(ct);
+        var head = await GetDevHeadAsync(ct, force);
         var running = RunningCommit;
         var available = head is not null && running is not null && !SameCommit(head, running);
         return new(channel, Version, running, WatchtowerConfigured, available, head is null ? null : Short(head), head is null && _devHeadFailed);
@@ -90,13 +91,13 @@ public sealed class DockerUpdateService
         return n >= 7 && string.Equals(a[..n], b[..n], StringComparison.OrdinalIgnoreCase);
     }
 
-    private async Task<string?> GetDevHeadAsync(CancellationToken ct)
+    private async Task<string?> GetDevHeadAsync(CancellationToken ct, bool force = false)
     {
         await _gate.WaitAsync(ct);
         try
         {
-            if (_devHead is not null && DateTime.UtcNow - _devHeadAtUtc < DevCacheTime) return _devHead;
-            if (_devHeadFailed && DateTime.UtcNow - _devHeadAtUtc < TimeSpan.FromMinutes(2)) return _devHead;
+            if (!force && _devHead is not null && DateTime.UtcNow - _devHeadAtUtc < DevCacheTime) return _devHead;
+            if (!force && _devHeadFailed && DateTime.UtcNow - _devHeadAtUtc < TimeSpan.FromMinutes(2)) return _devHead;
 
             try
             {
