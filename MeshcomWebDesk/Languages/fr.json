@@ -1204,7 +1204,6 @@
     "IP of the hub machine": "IP de la machine du hub",
     "Is the Bluetooth hub started? The hub's \"UDP port\" must equal the Device Port.": "Le hub Bluetooth est-il démarré ? Le « UDP port » du hub doit être égal au Device Port.",
     "It is almost always the node settings: ext UDP must be on and the ext UDP target IP must be this PC's IP ({0}), port 1799. Also this PC's firewall must allow inbound UDP on port {1}. Firmware from 4.40a.10 refuses broadcast addresses and the node's own IP as target.": "Ce sont presque toujours les réglages du nœud : ext UDP doit être activé et l'IP cible ext UDP doit être l'IP de ce PC ({0}), port 1799. De plus, le pare-feu de ce PC doit autoriser l'UDP entrant sur le port {1}. Le firmware à partir de 4.40a.10 refuse les adresses de diffusion et l'IP du nœud lui-même comme cible.",
-    "KISS receive works, but sending does not – AX.25 only has SSID 0–15.": "La réception KISS fonctionne, mais pas l'envoi – AX.25 n'a que les SSID 0–15.",
     "KISS/TCP must be switched on at the node (--kiss on). Only ESP32 nodes with suitable firmware offer KISS.": "KISS/TCP doit être activé sur le nœud (--kiss on). Seuls les nœuds ESP32 avec un firmware adapté offrent KISS.",
     "KISS/TCP: node accepts connections on port 8001": "KISS/TCP : le nœud accepte les connexions sur le port 8001",
     "KISS/TCP: node does not accept connections on port 8001": "KISS/TCP : le nœud n'accepte pas les connexions sur le port 8001",
@@ -1243,7 +1242,6 @@
     "Shared UDP socket is not open (red UDP status)": "Le socket UDP partagé n'est pas ouvert (état UDP rouge)",
     "Shared UDP socket is open on {0}": "Le socket UDP partagé est ouvert sur {0}",
     "SSID \"{0}\" is invalid": "Le SSID « {0} » n'est pas valide",
-    "SSID above 15 with KISS": "SSID supérieur à 15 avec KISS",
     "SSID probably does not match the node": "Le SSID ne correspond probablement pas au nœud",
     "Step {0} of {1}": "Étape {0} sur {1}",
     "The adapter {0} is not in the same subnet as the node {1}. The node may not reach this address. If in doubt use 0.0.0.0.": "La carte {0} n'est pas dans le même sous-réseau que le nœud {1}. Le nœud n'atteint peut-être pas cette adresse. En cas de doute, utilisez 0.0.0.0.",
@@ -1456,6 +1454,8 @@
     "WebDesk is up to date.": "WebDesk est à jour.",
     "KISS/TCP: WebDesk is connected to the node via KISS": "KISS/TCP : WebDesk est connecté au nœud via KISS",
     "KISS/TCP: port 8001 is busy – another KISS client is connected to the node": "KISS/TCP : le port 8001 est occupé – un autre client KISS est connecté au nœud",
-    "The node serves only one KISS client. Close the other connection (e.g. another WebDesk instance or a KISS program); WebDesk then connects by itself.": "Le nœud ne sert qu'un seul client KISS. Fermez l'autre connexion (p. ex. une autre instance de WebDesk ou un programme KISS) ; WebDesk se connectera ensuite tout seul."
+    "The node serves only one KISS client. Close the other connection (e.g. another WebDesk instance or a KISS program); WebDesk then connects by itself.": "Le nœud ne sert qu'un seul client KISS. Fermez l'autre connexion (p. ex. une autre instance de WebDesk ou un programme KISS) ; WebDesk se connectera ensuite tout seul.",
+    "SSID above 15 with KISS: sending goes via ext UDP": "SSID supérieur à 15 avec KISS : l'envoi passe par ext UDP",
+    "AX.25 (KISS) only has SSID 0–15. WebDesk receives via KISS and sends with this SSID automatically via ext UDP – so ext UDP must be switched on at the node.": "AX.25 (KISS) ne connaît que les SSID 0–15. WebDesk reçoit par KISS et, avec ce SSID, envoie automatiquement par ext UDP – ext UDP doit donc être activé sur le nœud."
   }
 }

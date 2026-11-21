@@ -510,10 +510,10 @@ public sealed partial class ConnectionCheckService
         }
         else if (input.Kiss && int.Parse(ssid) > 15)
         {
-            results.Add(new(CheckSeverity.Warning,
-                T("SSID über 15 mit KISS", "SSID above 15 with KISS"),
-                T("KISS-Empfang funktioniert, aber Senden nicht – AX.25 kennt nur SSID 0–15.",
-                  "KISS receive works, but sending does not – AX.25 only has SSID 0–15.")));
+            results.Add(new(CheckSeverity.Info,
+                T("SSID über 15 mit KISS: Senden läuft über ext UDP", "SSID above 15 with KISS: sending goes via ext UDP"),
+                T("AX.25 (KISS) kennt nur SSID 0–15. WebDesk empfängt über KISS und sendet bei dieser SSID automatisch über ext UDP – ext UDP muss am Node deshalb eingeschaltet sein.",
+                  "AX.25 (KISS) only has SSID 0–15. WebDesk receives via KISS and sends with this SSID automatically via ext UDP – so ext UDP must be switched on at the node.")));
         }
 
         if (raw != raw.ToUpperInvariant() && formatOk)
