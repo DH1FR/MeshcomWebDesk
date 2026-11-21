@@ -1410,6 +1410,25 @@
     "Scan the QR code with the device's camera. The phone/tablet and this PC must be in the same network (WiFi).": "Escanea el código QR con la cámara del dispositivo. El móvil/la tableta y este PC deben estar en la misma red (WiFi).",
     "The 📱 button in the navigation bar shows the QR code (on wide enough screens).": "El botón 📱 de la barra de navegación muestra el código QR (en pantallas suficientemente anchas).",
     "WebDesk has no access protection: anyone who can reach this address can send messages and change settings. Use it in your own network only.": "WebDesk no tiene protección de acceso: quien alcance esta dirección puede enviar mensajes y cambiar ajustes. Úsalo solo en tu propia red.",
-    "WebDesk runs in a container and does not know its address in your network. Enter it in Settings under \"Access from other devices\".": "WebDesk se ejecuta en un contenedor y no conoce su dirección en tu red. Introdúcela en Ajustes, en «Acceso desde otros dispositivos»."
+    "WebDesk runs in a container and does not know its address in your network. Enter it in Settings under \"Access from other devices\".": "WebDesk se ejecuta en un contenedor y no conoce su dirección en tu red. Introdúcela en Ajustes, en «Acceso desde otros dispositivos».",
+    "(built from source)": "(compilado desde el código fuente)",
+    "(published image)": "(imagen publicada)",
+    "A one-click update needs Watchtower. Until then run on the server:": "Una actualización con un clic necesita Watchtower. Hasta entonces, ejecuta en el servidor:",
+    "build": "build",
+    "Dev (every state of dev)": "Dev (cada estado de dev)",
+    "Guide: setting up the one-click update": "Guía: configurar la actualización con un clic",
+    "New dev build available: {0}": "Nueva compilación dev disponible: {0}",
+    "Newer version available: {0}": "Versión más reciente disponible: {0}",
+    "Release": "Release",
+    "The newest version could not be determined (offline or GitHub limit).": "No se pudo determinar la versión más reciente (sin conexión o límite de GitHub).",
+    "The update could not be started ({0}).": "No se pudo iniciar la actualización ({0}).",
+    "This image does not know its build (not started from the dev image) – a comparison is not possible.": "Esta imagen no conoce su compilación (no se inició desde la imagen dev) – no es posible comparar.",
+    "Update channel": "Canal de actualización",
+    "Updating … WebDesk restarts and the page reloads by itself afterwards (this can take a minute).": "Actualizando … WebDesk se reinicia y la página se recarga sola después (puede tardar un minuto).",
+    "Watchtower is not reachable – is the container running and is WEBDESK_WATCHTOWER_URL correct?": "Watchtower no es accesible – ¿está en marcha el contenedor y es correcta WEBDESK_WATCHTOWER_URL?",
+    "Watchtower is not set up.": "Watchtower no está configurado.",
+    "Watchtower pulls the new image and restarts the container with the same settings and data.": "Watchtower descarga la nueva imagen y reinicia el contenedor con los mismos ajustes y datos.",
+    "Watchtower rejected the token – check WATCHTOWER_TOKEN in the .env.": "Watchtower rechazó el token – comprueba WATCHTOWER_TOKEN en el .env.",
+    "WebDesk is up to date.": "WebDesk está actualizado."
   }
 }

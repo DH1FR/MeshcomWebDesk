@@ -4,6 +4,7 @@
 @inject MeshcomWebDesk.Services.LanguageService Loc
 @inject MeshcomWebDesk.Services.UpdateCheckService UpdateCheck
 @inject SelfUpdateService Updater
+@inject DockerUpdateService Docker
 @inject IJSRuntime JS
 @implements IDisposable
 
@@ -13,24 +14,102 @@
     <div class="about-card" style="max-width:720px;text-align:left">
         <h1 class="about-title" style="text-align:center">🚀 @Loc.T("Aktualisieren", "Update")</h1>
 
+        @if (!IsDocker)
+        {
         <p>
-            @Loc.T("Installierte Version", "Installed version"): <strong>v@_current</strong><br />
-            @if (UpdateCheck.LatestVersion is not null)
-            {
-                <span>@Loc.T("Verfügbar", "Available"): <strong>@UpdateCheck.LatestVersion</strong>
-                    (<a href="@UpdateCheck.ReleasePageUrl" target="_blank" rel="noopener">@Loc.T("Release-Hinweise", "Release notes") ↗</a>)</span>
-            }
-            else
-            {
-                <span>@Loc.T("Keine neuere Version bekannt.", "No newer version known.")</span>
-            }
-        </p>
+                @Loc.T("Installierte Version", "Installed version"): <strong>v@_current</strong><br />
+                @if (UpdateCheck.LatestVersion is not null)
+                {
+                    <span>@Loc.T("Verfügbar", "Available"): <strong>@UpdateCheck.LatestVersion</strong>
+                        (<a href="@UpdateCheck.ReleasePageUrl" target="_blank" rel="noopener">@Loc.T("Release-Hinweise", "Release notes") ↗</a>)</span>
+                }
+                else
+                {
+                    <span>@Loc.T("Keine neuere Version bekannt.", "No newer version known.")</span>
+                }
+            </p>
+        }
         <p style="opacity:.75;font-size:.9em">
             @Loc.T("Installationsart", "Install type"): @ModeText(Updater.Install.Mode)
             · @Updater.Install.Rid@(Updater.Install.SelfContained ? " (self-contained)" : "")
         </p>
 
-        @if (Updater.LastResult is { } last)
+        @if (IsDocker)
+        {
+            <div class="docker-update">
+                <p>
+                    @Loc.T("Installierte Version", "Installed version"): <strong>v@_current</strong>
+                    @if (_docker?.RunningCommit is { Length: > 0 } rc)
+                    {
+                        <span> · @Loc.T("Build", "build") <code>@(rc.Length > 7 ? rc[..7] : rc)</code></span>
+                    }
+                    <br />
+                    @Loc.T("Update-Kanal", "Update channel"): <strong>@(_docker?.Channel == "dev" ? Loc.T("Dev (jeder Stand von dev)", "Dev (every state of dev)") : Loc.T("Release", "Release"))</strong>
+                </p>
+
+                @if (_docker is null)
+                {
+                    <p>@Loc.T("Prüfe …", "Checking …")</p>
+                }
+                else if (_docker.Available)
+                {
+                    <p>🚀 @Loc.TF("Neuere Version verfügbar: {0}", "Newer version available: {0}", _docker.Latest)</p>
+                }
+                else if (_docker.CheckFailed)
+                {
+                    <p>⚠️ @Loc.T("Die neueste Version konnte nicht ermittelt werden (offline oder GitHub-Limit).", "The newest version could not be determined (offline or GitHub limit).")</p>
+                }
+                else
+                {
+                    <p>✅ @Loc.T("WebDesk ist auf dem neuesten Stand.", "WebDesk is up to date.")</p>
+                }
+
+                @if (_docker is { Channel: "dev", RunningCommit: null })
+                {
+                    <p style="font-size:.85em;opacity:.8">ℹ️ @Loc.T("Dieses Image kennt seinen Build nicht (nicht aus dem Dev-Image gestartet) – ein Vergleich ist nicht möglich.", "This image does not know its build (not started from the dev image) – a comparison is not possible.")</p>
+                }
+
+                @if (_dockerRestarting)
+                {
+                    <p>⏳ @Loc.T("Aktualisierung läuft … WebDesk startet neu, die Seite lädt sich danach automatisch neu (das kann eine Minute dauern).", "Updating … WebDesk restarts and the page reloads by itself afterwards (this can take a minute).")</p>
+                }
+                else if (_docker?.WatchtowerConfigured == true)
+                {
+                    <p>
+                        <button class="btn btn-primary" disabled="@(_docker is not { Available: true } || _dockerBusy)" @onclick="StartDockerUpdate">
+                            ⬆️ @Loc.T("Jetzt aktualisieren", "Update now")
+                        </button>
+                    </p>
+                    @if (_dockerMsg is not null)
+                    {
+                        <p class="text-danger">@_dockerMsg</p>
+                    }
+                    <p style="font-size:.85em;opacity:.75">
+                        @Loc.T("Watchtower lädt das neue Image und startet den Container mit denselben Einstellungen und Daten neu.",
+                               "Watchtower pulls the new image and restarts the container with the same settings and data.")
+                    </p>
+                }
+                else
+                {
+                    <p>ℹ️ @Loc.T("Für ein Update per Klick wird Watchtower benötigt. Bis dahin auf dem Server ausführen:", "A one-click update needs Watchtower. Until then run on the server:")</p>
+                    <p>
+                        <code>sudo ./scripts/update-docker.sh</code>
+                        <button type="button" class="btn-small" @onclick='() => CopyAsync("sudo ./scripts/update-docker.sh")'>📋</button>
+                        <small style="opacity:.75"> @Loc.T("(aus dem Quellcode gebaut)", "(built from source)")</small><br />
+                        <code>sudo ./scripts/update-docker.sh --image</code>
+                        <button type="button" class="btn-small" @onclick='() => CopyAsync("sudo ./scripts/update-docker.sh --image")'>📋</button>
+                        <small style="opacity:.75"> @Loc.T("(veröffentlichtes Image)", "(published image)")</small>
+                    </p>
+                    <p style="font-size:.85em">
+                        <a href="@($"https://github.com/DH1FR/MeshcomWebDesk/blob/master/docs/docker-update-{Loc.DocsLanguage}.md")" target="_blank" rel="noopener">
+                            @Loc.T("Anleitung: Update per Klick einrichten", "Guide: setting up the one-click update") ↗
+                        </a>
+                    </p>
+                }
+            </div>
+        }
+
+        @if (!IsDocker && Updater.LastResult is { } last)
         {
             <p style="font-size:.9em">
                 @if (last.Kind == "ok")
@@ -48,7 +127,11 @@
             </p>
         }
 
-        @if (!Updater.Install.Supported)
+        @if (IsDocker)
+        {
+            @* Docker: the panel above is everything. *@
+        }
+        else if (!Updater.Install.Supported)
         {
             <p>ℹ️ @Loc.T("Für diese Installation ist kein Selbst-Update möglich:", "Self-update is not available for this installation:")
                @Updater.UnsupportedText</p>
@@ -59,7 +142,7 @@
                          "For security reasons an update can only be started on the machine itself (localhost).")</p>
         }
 
-        @if (Updater.Status.Phase != UpdatePhase.Idle)
+        @if (!IsDocker && Updater.Status.Phase != UpdatePhase.Idle)
         {
             <p>
                 @PhaseText(Updater.Status)
@@ -74,41 +157,44 @@
             </p>
         }
 
-        <p>
-            <button class="btn btn-primary" disabled="@(!CanAct || UpdateCheck.LatestVersion is null)" @onclick="StartUpdate">
-                ⬆️ @Loc.T("Jetzt aktualisieren", "Update now")
-            </button>
-        </p>
-        <p style="font-size:.85em;opacity:.75">
-            @Loc.T("Vor dem Update wird die aktuelle Version samt Daten gesichert. Startet die neue Version nicht, wird automatisch zurückgesetzt.",
-                   "Before updating, the current version and its data are backed up. If the new version fails to start, it is rolled back automatically.")
-        </p>
-
-        <h3>@Loc.T("Sicherungen", "Backups")</h3>
-        @if (Updater.Backups.Count == 0)
+        @if (!IsDocker)
         {
-            <p style="opacity:.75">@Loc.T("Noch keine Sicherung vorhanden.", "No backups yet.")</p>
-        }
-        else
-        {
-            <table style="width:100%">
-                @foreach (var b in Updater.Backups)
-                {
-                    <tr>
-                        <td>v@b.Version</td>
-                        <td>@b.CreatedUtc.ToLocalTime().ToString("g")</td>
-                        <td style="text-align:right">
-                            <button class="btn btn-secondary btn-sm" disabled="@(!CanAct)" @onclick="() => Rollback(b)">
-                                ↩️ @Loc.T("Zurücksetzen", "Roll back")
-                            </button>
-                        </td>
-                    </tr>
-                }
-            </table>
-            <p style="font-size:.85em;opacity:.75">
-                @Loc.T("Beim Zurücksetzen werden auch die gesicherten Daten (Einstellungen, Chat-Verlauf) wiederhergestellt.",
-                       "Rolling back also restores the backed-up data (settings, chat history).")
+            <p>
+                <button class="btn btn-primary" disabled="@(!CanAct || UpdateCheck.LatestVersion is null)" @onclick="StartUpdate">
+                    ⬆️ @Loc.T("Jetzt aktualisieren", "Update now")
+                </button>
             </p>
+            <p style="font-size:.85em;opacity:.75">
+                @Loc.T("Vor dem Update wird die aktuelle Version samt Daten gesichert. Startet die neue Version nicht, wird automatisch zurückgesetzt.",
+                       "Before updating, the current version and its data are backed up. If the new version fails to start, it is rolled back automatically.")
+            </p>
+
+            <h3>@Loc.T("Sicherungen", "Backups")</h3>
+            @if (Updater.Backups.Count == 0)
+            {
+                <p style="opacity:.75">@Loc.T("Noch keine Sicherung vorhanden.", "No backups yet.")</p>
+            }
+            else
+            {
+                <table style="width:100%">
+                    @foreach (var b in Updater.Backups)
+                    {
+                        <tr>
+                            <td>v@b.Version</td>
+                            <td>@b.CreatedUtc.ToLocalTime().ToString("g")</td>
+                            <td style="text-align:right">
+                                <button class="btn btn-secondary btn-sm" disabled="@(!CanAct)" @onclick="() => Rollback(b)">
+                                    ↩️ @Loc.T("Zurücksetzen", "Roll back")
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </table>
+                <p style="font-size:.85em;opacity:.75">
+                    @Loc.T("Beim Zurücksetzen werden auch die gesicherten Daten (Einstellungen, Chat-Verlauf) wiederhergestellt.",
+                           "Rolling back also restores the backed-up data (settings, chat history).")
+                </p>
+            }
         }
     </div>
 </div>
@@ -116,6 +202,55 @@
 @code {
     private static readonly string _current = UpdateRecovery.CurrentVersion;
     private bool? _local;
+    private DockerUpdateInfo? _docker;
+    private bool _dockerBusy;
+    private bool _dockerRestarting;
+    private string? _dockerMsg;
+
+    private bool IsDocker => Updater.Install.Mode == InstallMode.Docker;
+
+    private sealed record PostResult(bool Ok, string? Message);
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (IsDocker)
+        {
+            try { _docker = await Docker.GetInfoAsync(); }
+            catch (Exception) { /* shown as "could not be determined" */ }
+        }
+    }
+
+    private async Task CopyAsync(string text)
+    {
+        try { await JS.InvokeVoidAsync("meshcomChat.copyToClipboard", text); }
+        catch { /* clipboard not available */ }
+    }
+
+    private async Task StartDockerUpdate()
+    {
+        if (_docker is null) return;
+        var confirmed = await JS.InvokeAsync<bool>("confirm", Loc.TF(
+            "Auf {0} aktualisieren? WebDesk wird dabei neu gestartet.",
+            "Update to {0}? WebDesk will restart.", _docker.Latest));
+        if (!confirmed) return;
+
+        _dockerBusy = true; _dockerMsg = null;
+        var result = await JS.InvokeAsync<PostResult>("meshcomUpdate.post", "/api/update/docker");
+        _dockerBusy = false;
+        if (result.Ok)
+        {
+            _dockerRestarting = true;
+            await JS.InvokeVoidAsync("meshcomUpdate.watchDocker", _docker.Version, _docker.RunningCommit ?? "");
+            return;
+        }
+        _dockerMsg = result.Message switch
+        {
+            "unauthorized"   => Loc.T("Watchtower hat das Token abgelehnt – WATCHTOWER_TOKEN in der .env prüfen.", "Watchtower rejected the token – check WATCHTOWER_TOKEN in the .env."),
+            "unreachable"    => Loc.T("Watchtower ist nicht erreichbar – läuft der Container und stimmt WEBDESK_WATCHTOWER_URL?", "Watchtower is not reachable – is the container running and is WEBDESK_WATCHTOWER_URL correct?"),
+            "not-configured" => Loc.T("Watchtower ist nicht eingerichtet.", "Watchtower is not set up."),
+            _                => Loc.TF("Das Update konnte nicht gestartet werden ({0}).", "The update could not be started ({0}).", result.Message ?? "?"),
+        };
+    }
 
     private bool CanAct => Updater.Install.Supported && _local == true && !Updater.Status.Busy;
 

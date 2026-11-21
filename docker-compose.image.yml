@@ -1,0 +1,60 @@
+# MeshCom WebDesk – published image with update by one click (Watchtower)
+#
+# Instead of building from source (docker-compose.yml) this runs the image from ghcr.io. A second container,
+# Watchtower, owns the access to Docker: the "Update now" button on WebDesk's update page asks it (HTTP API,
+# token) to pull the newer image and recreate WebDesk. WebDesk itself gets no access to Docker.
+#
+# Setup (once):
+#   1. cp .env.example .env     and set WATCHTOWER_TOKEN (e.g. `openssl rand -hex 16`)
+#   2. Pick the update channel in .env:  WEBDESK_CHANNEL=latest  (releases)  or  dev  (every push to the dev branch)
+#   3. sudo docker compose -f docker-compose.image.yml up -d
+#      with HTTPS (certificate in ./certs, see create-lan-cert.sh):
+#      sudo docker compose -f docker-compose.image.yml -f docker-compose.https.yml up -d
+#
+# Update without the button:  sudo ./scripts/update-docker.sh --image
+# The data in ./data, ./logs and ./keys survives every update.
+
+services:
+  meshcom-webdesk:
+    image: ghcr.io/dh1fr/meshcomwebdesk:${WEBDESK_CHANNEL:-latest}
+    container_name: meshcom-webdesk
+    restart: unless-stopped
+    network_mode: host          # required for UDP RX from the MeshCom device
+    labels:
+      - com.centurylinklabs.watchtower.enable=true      # only this container is updated by Watchtower
+    volumes:
+      - ./logs:/app/logs
+      - ./keys:/app/keys
+      - ./data:/app/data
+      - ./bot-scripts:/app/bot-scripts
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - DATAPROTECTION_KEYPATH=/app/keys
+      - Meshcom__DeviceIp=192.168.1.60
+      - Meshcom__DevicePort=1799
+      - Meshcom__ListenPort=1799
+      - Meshcom__MyCallsign=DH1FR-2
+      - Meshcom__LogPath=/app/logs
+      - Meshcom__DataPath=/app/data
+      - Meshcom__BotExternalCommandsPath=/app/bot-scripts
+      # one-click update
+      - WEBDESK_CHANNEL=${WEBDESK_CHANNEL:-latest}
+      - WEBDESK_WATCHTOWER_URL=http://127.0.0.1:8080
+      - WEBDESK_WATCHTOWER_TOKEN=${WATCHTOWER_TOKEN:?set WATCHTOWER_TOKEN in the .env file (see .env.example)}
+      - WEBDESK_IMAGE=ghcr.io/dh1fr/meshcomwebdesk
+
+  watchtower:
+    # The original project (containrrr/watchtower) is no longer developed but still works; maintained forks
+    # (e.g. nickfedor/watchtower) take the same settings – change the image here if you prefer one.
+    image: containrrr/watchtower:latest
+    container_name: meshcom-watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "127.0.0.1:8080:8080"   # HTTP API, reachable from this machine only (WebDesk runs in host network mode)
+    environment:
+      - WATCHTOWER_HTTP_API_UPDATE=true          # update only when asked (no polling)
+      - WATCHTOWER_HTTP_API_TOKEN=${WATCHTOWER_TOKEN:?set WATCHTOWER_TOKEN in the .env file (see .env.example)}
+      - WATCHTOWER_LABEL_ENABLE=true             # only containers with the watchtower.enable label
+      - WATCHTOWER_CLEANUP=true                  # remove the old image after an update

@@ -22,6 +22,13 @@ RUN RID=$( [ "$TARGETARCH" = "arm64" ] && echo "linux-arm64" || echo "linux-x64"
 FROM debian:bookworm-slim AS runtime
 WORKDIR /app
 
+# Set by the CI: the commit this image was built from and its update channel ("latest" = releases, "dev" = every dev push).
+# WebDesk uses them on the update page to tell whether a newer build exists.
+ARG APP_COMMIT=""
+ARG APP_CHANNEL="latest"
+LABEL org.opencontainers.image.source="https://github.com/DH1FR/MeshcomWebDesk" \
+      org.opencontainers.image.revision="${APP_COMMIT}"
+
 # libicu is required by .NET globalization; tzdata for correct local time;
 # ca-certificates is required for outgoing HTTPS connections (e.g. QRZ.com XML API)
 RUN apt-get update \
@@ -43,6 +50,8 @@ ENV Meshcom__LogPath=/app/logs
 ENV Meshcom__DataPath=/app/data
 ENV Meshcom__BotExternalCommandsPath=/app/bot-scripts
 ENV TZ=Europe/Berlin
+ENV WEBDESK_COMMIT=${APP_COMMIT}
+ENV WEBDESK_CHANNEL=${APP_CHANNEL}
 
 EXPOSE 5162
 EXPOSE 1799/udp

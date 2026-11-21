@@ -221,6 +221,7 @@ builder.Services.AddSingleton<QrzService>();
 builder.Services.AddSingleton<MqttService>();
 builder.Services.AddSingleton<UpdateCheckService>();
 builder.Services.AddSingleton<MeshcomWebDesk.Services.Update.SelfUpdateService>();
+builder.Services.AddSingleton<MeshcomWebDesk.Services.Update.DockerUpdateService>();
 builder.Services.AddHostedService<MeshcomWebDesk.Services.Update.UpdateHealthService>();
 builder.Services.AddSingleton<ElevationService>();
 builder.Services.AddSingleton<TelnetService>();
