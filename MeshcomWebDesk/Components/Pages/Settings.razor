@@ -684,6 +684,27 @@
             }
         </div>
 
+        <!-- Access from other devices -->
+        <div class="settings-section @(IsOpen("remote") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("remote")'>📱 @Loc.T("Zugriff von anderen Geräten", "Access from other devices") <span class="section-chevron">@(IsOpen("remote") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("remote")) {
+            <div class="settings-grid">
+                <label>
+                    @Loc.T("Adresse dieses WebDesk", "Address of this WebDesk")<br />
+                    <small>@Loc.T("Optional. Die Adresse, unter der Handy/Tablet WebDesk erreichen (z. B. https://webdesk.local:5163/). Nur nötig bei Docker oder Reverse-Proxy – sonst wird sie automatisch ermittelt.", "Optional. The address under which a phone/tablet reaches WebDesk (e.g. https://webdesk.local:5163/). Only needed with Docker or a reverse proxy – otherwise it is worked out automatically.")</small>
+                </label>
+                <div>
+                    <input type="text" @bind="_model.PublicBaseUrl" placeholder="https://…" style="width:100%" />
+                    @if (!string.IsNullOrWhiteSpace(_model.PublicBaseUrl) && !WebLinkEntry.IsValidUrl(_model.PublicBaseUrl))
+                    {
+                        <small style="color:#f85149">❌ @Loc.T("Ungültige URL (http/https)", "Invalid URL (http/https)")</small>
+                    }
+                    <small style="display:block;color:#8b949e;margin-top:.3rem">📱 @Loc.T("Den QR-Code zeigt der Knopf 📱 in der Navigationsleiste (ab einer bestimmten Bildschirmbreite).", "The 📱 button in the navigation bar shows the QR code (on wide enough screens).")</small>
+                </div>
+            </div>
+            }
+        </div>
+
         <!-- Web -->
         <div class="settings-section @(IsOpen("web") ? "" : "settings-section-collapsed")">
             <h2 class="settings-section-title" @onclick='() => Toggle("web")'>🌐 Web <span class="section-chevron">@(IsOpen("web") ? "▲" : "▼")</span></h2>
@@ -3678,6 +3699,7 @@
                 ConsoleLogEnabled     = n.ConsoleLogEnabled
             }).ToList(),
             LogPath             = s.LogPath,
+            PublicBaseUrl       = s.PublicBaseUrl,
             LogRetainDays       = s.LogRetainDays,
             LogUdpTraffic       = s.LogUdpTraffic,
             ConsoleLogEnabled   = s.ConsoleLogEnabled,
@@ -4540,7 +4562,8 @@
                     ConsoleLogEnabled     = n.ConsoleLogEnabled
                 }).ToList(),
                 LogPath             = s.LogPath,
-                LogRetainDays       = s.LogRetainDays,
+                PublicBaseUrl       = s.PublicBaseUrl,
+            LogRetainDays       = s.LogRetainDays,
                 LogUdpTraffic       = s.LogUdpTraffic,
                 ConsoleLogEnabled   = s.ConsoleLogEnabled,
                 MonitorMaxMessages  = s.MonitorMaxMessages,
@@ -4704,6 +4727,7 @@
         public int    DevicePort          { get; set; } = 1799;
         public string MyCallsign          { get; set; } = "NOCALL-1";
         public string LogPath             { get; set; } = string.Empty;
+        public string PublicBaseUrl       { get; set; } = string.Empty;
         public int    LogRetainDays       { get; set; } = 30;
         public bool   LogUdpTraffic       { get; set; }
         public bool   ConsoleLogEnabled   { get; set; }
@@ -4897,6 +4921,7 @@
             DevicePort          = DevicePort,
             MyCallsign          = MyCallsign,
             LogPath             = LogPath,
+            PublicBaseUrl       = PublicBaseUrl?.Trim() ?? string.Empty,
             LogRetainDays       = LogRetainDays,
             LogUdpTraffic       = LogUdpTraffic,
             MonitorMaxMessages  = MonitorMaxMessages,

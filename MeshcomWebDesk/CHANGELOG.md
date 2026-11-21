@@ -10,6 +10,7 @@
 - **Callsign on either side** – on a mismatch take over the node's callsign into WebDesk, or set the node to the WebDesk callsign (`--setcall`, with a warning that the node's identity changes and it may restart).
 - **KISS button** – with KISS/TCP switched on in Settings, *Activate KISS on the node via the net console* switches KISS, TX and RxMeta on at the node (after confirmation).
 - **Status bar** – a red/yellow UDP or KISS badge opens the check when clicked; a new *Callsign?* badge appears when the node returns a sent message under a different callsign.
+- **QR code for phone/tablet** – a 📱 button in the navigation bar (wide screens only) shows, on request, a QR code with the address under which WebDesk can be opened on another device in the same network. https addresses come first, the address can be set in Settings → *Access from other devices* (Docker / reverse proxy), and the dialog warns that WebDesk has no access protection.
 - **Bluetooth hub** – recognised by the check and the wizard (hub running? port conflict? nodes on the same IP). The hub's `--info` now also reports callsign, ext UDP and node values in the firmware's wording (hub update included in its own repository). With the current hub the check also compares the hub's **UDP port** and the **port it sends to** with the WebDesk settings and checks that WebDesk listens on the address the hub sends to.
 
 ### Bugfixes

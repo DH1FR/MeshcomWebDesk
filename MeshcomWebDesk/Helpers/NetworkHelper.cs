@@ -69,6 +69,41 @@ public static class NetworkHelper
         return result;
     }
 
+    /// <summary>Adapters a phone can never reach (virtual switches, VMs, containers, Bluetooth, capture drivers).</summary>
+    private static readonly Regex NotReachablePattern = new(
+        "vEthernet|Hyper-V|WSL|VMware|VirtualBox|Docker|Npcap|Bluetooth|Loopback|Pseudo",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    /// <summary>
+    /// IPv4 addresses of this PC that another device in the same network (or VPN, e.g. Tailscale) can use: all running
+    /// adapters except virtual/VM/container ones. Private LAN addresses (10/8, 172.16/12, 192.168/16) come first.
+    /// </summary>
+    public static List<string> GetReachableAddresses()
+    {
+        var result = new List<(string Ip, bool Private)>();
+        try
+        {
+            foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
+            {
+                if (nic.OperationalStatus != OperationalStatus.Up || nic.NetworkInterfaceType == NetworkInterfaceType.Loopback) continue;
+                if (NotReachablePattern.IsMatch(nic.Name) || NotReachablePattern.IsMatch(nic.Description)) continue;
+                foreach (var ua in nic.GetIPProperties().UnicastAddresses)
+                {
+                    if (ua.Address.AddressFamily != AddressFamily.InterNetwork) continue;
+                    var b = ua.Address.GetAddressBytes();
+                    if (b[0] == 169 && b[1] == 254) continue;                 // link-local, no DHCP answer
+                    var isPrivate = b[0] == 10 || (b[0] == 172 && b[1] is >= 16 and <= 31) || (b[0] == 192 && b[1] == 168);
+                    result.Add((ua.Address.ToString(), isPrivate));
+                }
+            }
+        }
+        catch
+        {
+            // no network information available
+        }
+        return result.OrderBy(r => r.Private ? 0 : 1).Select(r => r.Ip).Distinct().ToList();
+    }
+
     /// <summary>True when <paramref name="ip"/> is a loopback address (127.x.x.x).</summary>
     public static bool IsLoopback(IPAddress ip) => IPAddress.IsLoopback(ip);
 

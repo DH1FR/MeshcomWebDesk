@@ -4543,3 +4543,16 @@ html[data-display="compact"] .settings-header {
 /* wizard: the two big choices (button flavour of .conn-wizard-option) */
 .conn-wizard-option-btn { width: 100%; text-align: left; background: none; color: inherit; font: inherit; }
 .conn-wizard-option-btn:hover { border-color: var(--link); }
+
+/* QR code to open WebDesk on a phone / tablet (nav bar button + dialog) */
+.app-nav-qr { background: none; border: 0; font: inherit; cursor: pointer; }
+@media (max-width: 1023px) { .app-nav-qr { display: none !important; } }       /* only on wide enough screens */
+html[data-display="compact"] .app-nav-qr { display: none !important; }
+.remote-modal { max-width: 440px; }
+.qr-box { background: #fff; padding: 14px; border-radius: 10px; width: 240px; height: 240px; margin: .6rem auto; box-sizing: border-box; }
+.qr-box svg { width: 100%; height: 100%; display: block; }
+.remote-select { width: 100%; margin: .2rem 0; padding: .3rem; background: var(--bg-input); color: var(--text); border: 1px solid var(--border-strong); border-radius: 6px; font-size: .8rem; }
+.remote-url { display: flex; align-items: center; justify-content: center; gap: .5rem; flex-wrap: wrap; margin: .4rem 0; font-size: .85rem; }
+.remote-url code { word-break: break-all; }
+.remote-note { margin: .4rem 0; font-size: .78rem; color: var(--text-muted); line-height: 1.4; text-align: left; }
+.remote-warn { color: var(--warn); }

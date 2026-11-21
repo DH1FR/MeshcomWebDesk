@@ -247,6 +247,7 @@ builder.Services.AddSingleton<GatewayService>();
 builder.Services.AddSingleton<NodePresenceService>();
 builder.Services.AddSingleton<NodeManager>();
 builder.Services.AddSingleton<NodeDiscoveryService>();
+builder.Services.AddSingleton<RemoteAccessService>();
 builder.Services.AddSingleton<NodeConsoleFixService>();
 builder.Services.AddSingleton<ConnectionCheckService>();
 builder.Services.AddSingleton<CalendarBeaconService>();

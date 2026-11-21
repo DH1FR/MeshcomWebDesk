@@ -1,0 +1,121 @@
+@* On-request QR code so a phone or tablet can open this WebDesk. *@
+@inject RemoteAccessService Remote
+@inject NavigationManager Nav
+@inject LanguageService Loc
+@inject IJSRuntime JS
+
+<div class="welcome-overlay" @onclick="Close">
+    <div class="welcome-modal remote-modal" @onclick:stopPropagation="true">
+        <div class="welcome-icon">📱</div>
+        <p class="welcome-title">@Loc.T("Auf Handy oder Tablet öffnen", "Open on phone or tablet")</p>
+
+        @if (_urls.Count == 0)
+        {
+            <p class="welcome-text">
+                @(RemoteAccessService.InContainer
+                    ? Loc.T("WebDesk läuft in einem Container und kennt seine Adresse im Netz nicht. Tragen Sie sie in den Einstellungen unter „Zugriff von anderen Geräten“ ein.",
+                            "WebDesk runs in a container and does not know its address in your network. Enter it in Settings under \"Access from other devices\".")
+                    : Loc.T("Es wurde keine Adresse gefunden, unter der WebDesk von anderen Geräten erreichbar ist. Tragen Sie sie in den Einstellungen unter „Zugriff von anderen Geräten“ ein.",
+                            "No address was found under which other devices can reach WebDesk. Enter it in Settings under \"Access from other devices\"."))
+            </p>
+            <div class="welcome-buttons">
+                <a class="welcome-btn-coffee" href="/settings" @onclick="Close">⚙️ @Loc.T("Zu den Einstellungen", "Go to settings")</a>
+                <button class="welcome-btn-dismiss" @onclick="Close">@Loc.T("Schließen", "Close")</button>
+            </div>
+        }
+        else
+        {
+            <p class="welcome-text">
+                @Loc.T("Scannen Sie den QR-Code mit der Kamera des Geräts. Handy/Tablet und dieser PC müssen im selben Netz (WLAN) sein.",
+                       "Scan the QR code with the device's camera. The phone/tablet and this PC must be in the same network (WiFi).")
+            </p>
+
+            <div class="qr-box"><div id="remote-qr"></div></div>
+
+            @if (_urls.Count > 1)
+            {
+                <select class="remote-select" @bind="_selected">
+                    @foreach (var u in _urls)
+                    {
+                        <option value="@u.Url">@(u.Secure ? "🔒 " : "")@u.Url – @KindLabel(u.Kind)</option>
+                    }
+                </select>
+            }
+
+            <div class="remote-url">
+                <code>@_selected</code>
+                <button type="button" class="btn-small" @onclick="CopyAsync">📋 @Loc.T("Kopieren", "Copy")</button>
+            </div>
+
+            @if (!_selectedSecure)
+            {
+                <p class="remote-note">ℹ️ @Loc.T(
+                    "Über http gelten die Browser-Funktionen „Als App installieren“ und Standort auf dem Gerät nicht. Dafür wird https benötigt (siehe Anleitung zum LAN-Zertifikat).",
+                    "Over http the browser features \"install as app\" and location are not available on the device. That needs https (see the LAN certificate guide).")</p>
+            }
+
+            <p class="remote-note remote-warn">⚠️ @Loc.T(
+                "WebDesk hat keinen Zugriffsschutz: Wer diese Adresse erreicht, kann Nachrichten senden und Einstellungen ändern. Nur im eigenen Netz verwenden.",
+                "WebDesk has no access protection: anyone who can reach this address can send messages and change settings. Use it in your own network only.")</p>
+
+            <p class="remote-note">
+                @Loc.TF("Verbindet das Gerät nicht? Die Windows-Firewall muss eingehendes TCP auf Port {0} erlauben:",
+                        "Does the device not connect? The Windows firewall must allow inbound TCP on port {0}:", _port)
+                <button type="button" class="conn-check-cmd" @onclick="CopyFirewallAsync">📋 @Loc.T("Firewall-Regel", "Firewall rule")</button>
+            </p>
+
+            <div class="welcome-buttons">
+                <button class="welcome-btn-dismiss" @onclick="Close">@Loc.T("Schließen", "Close")</button>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    /// <summary>The dialog was closed.</summary>
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private IReadOnlyList<RemoteUrl> _urls = [];
+    private string _selected = "";
+    private string _renderedFor = "";
+
+    private bool _selectedSecure => _urls.FirstOrDefault(u => u.Url == _selected)?.Secure ?? false;
+    private int _port => Uri.TryCreate(_selected, UriKind.Absolute, out var u) ? u.Port : 5162;
+
+    protected override void OnInitialized()
+    {
+        _urls = Remote.GetCandidates(Nav.BaseUri);
+        _selected = _urls.FirstOrDefault()?.Url ?? "";
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_selected.Length == 0 || _selected == _renderedFor) return;
+        _renderedFor = _selected;
+        try { await JS.InvokeVoidAsync("meshcomQr.render", "remote-qr", _selected); }
+        catch (Exception ex) when (ex is JSException or TaskCanceledException or OperationCanceledException or JSDisconnectedException) { }
+    }
+
+    private string KindLabel(RemoteUrlKind kind) => kind switch
+    {
+        RemoteUrlKind.Configured => Loc.T("aus den Einstellungen", "from the settings"),
+        RemoteUrlKind.Current    => Loc.T("aktuelle Adresse", "current address"),
+        RemoteUrlKind.Host       => Loc.T("Rechnername", "computer name"),
+        _                        => Loc.T("LAN-Adresse", "LAN address"),
+    };
+
+    private async Task CopyAsync()
+    {
+        try { await JS.InvokeVoidAsync("meshcomChat.copyToClipboard", _selected); }
+        catch { /* clipboard not available */ }
+    }
+
+    private async Task CopyFirewallAsync()
+    {
+        var cmd = $"netsh advfirewall firewall add rule name=\"MeshCom WebDesk TCP {_port}\" protocol=TCP dir=in localport={_port} action=allow";
+        try { await JS.InvokeVoidAsync("meshcomChat.copyToClipboard", cmd); }
+        catch { /* clipboard not available */ }
+    }
+
+    private Task Close() => OnClose.InvokeAsync();
+}

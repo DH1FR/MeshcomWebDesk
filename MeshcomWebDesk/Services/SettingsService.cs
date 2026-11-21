@@ -204,6 +204,7 @@ public class SettingsService
                 ["WatchOnAck"]          = s.WatchOnAck,
                 ["WatchAlertMinutes"]   = s.WatchAlertMinutes,
                 ["DataPath"]            = s.DataPath,
+                ["PublicBaseUrl"]       = s.PublicBaseUrl,
                 ["TimeOffsetHours"]     = s.TimeOffsetHours,
                 ["AutoReplyEnabled"]    = s.AutoReplyEnabled,
                 ["AutoReplyText"]       = s.AutoReplyText,

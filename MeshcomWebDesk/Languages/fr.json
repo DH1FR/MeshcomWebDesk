@@ -1416,6 +1416,24 @@
     "Hub UDP port": "Port UDP du hub",
     "The hub listens on UDP {0}, WebDesk has Device Port {1}. Enter Device Port {0} in WebDesk (or change the UDP port in the hub).": "Le hub écoute sur UDP {0}, WebDesk a le Device Port {1}. Saisissez le Device Port {0} dans WebDesk (ou changez le port UDP dans le hub).",
     "The hub sends to port {0}, WebDesk listens on {1}. The hub's \"WebDesk\" field must hold {2}:{1} (or change the Listen Port in WebDesk).": "Le hub envoie vers le port {0}, WebDesk écoute sur {1}. Le champ « WebDesk » du hub doit contenir {2}:{1} (ou changez le Listen Port dans WebDesk).",
-    "WebDesk only listens on {0}, but the sender uses {1}. Set the Listen IP to 0.0.0.0 or let it send to {0}.": "WebDesk n'écoute que sur {0}, mais l'émetteur utilise {1}. Mettez la Listen IP sur 0.0.0.0 ou faites-le émettre vers {0}."
+    "WebDesk only listens on {0}, but the sender uses {1}. Set the Listen IP to 0.0.0.0 or let it send to {0}.": "WebDesk n'écoute que sur {0}, mais l'émetteur utilise {1}. Mettez la Listen IP sur 0.0.0.0 ou faites-le émettre vers {0}.",
+    "Access from other devices": "Accès depuis d'autres appareils",
+    "Address of this WebDesk": "Adresse de ce WebDesk",
+    "computer name": "nom de l'ordinateur",
+    "current address": "adresse actuelle",
+    "Does the device not connect? The Windows firewall must allow inbound TCP on port {0}:": "L'appareil ne se connecte pas ? Le pare-feu Windows doit autoriser le TCP entrant sur le port {0} :",
+    "Firewall rule": "Règle de pare-feu",
+    "from the settings": "des paramètres",
+    "Go to settings": "Aller aux paramètres",
+    "LAN address": "adresse LAN",
+    "No address was found under which other devices can reach WebDesk. Enter it in Settings under \"Access from other devices\".": "Aucune adresse n'a été trouvée par laquelle d'autres appareils peuvent joindre WebDesk. Saisissez-la dans les paramètres sous « Accès depuis d'autres appareils ».",
+    "Open on phone or tablet": "Ouvrir sur téléphone ou tablette",
+    "Optional. The address under which a phone/tablet reaches WebDesk (e.g. https://webdesk.local:5163/). Only needed with Docker or a reverse proxy – otherwise it is worked out automatically.": "Facultatif. L'adresse par laquelle un téléphone/une tablette joint WebDesk (p. ex. https://webdesk.local:5163/). Nécessaire seulement avec Docker ou un proxy inverse – sinon elle est déterminée automatiquement.",
+    "Over http the browser features \"install as app\" and location are not available on the device. That needs https (see the LAN certificate guide).": "Avec http, les fonctions du navigateur « installer comme application » et la localisation ne sont pas disponibles sur l'appareil. Il faut pour cela https (voir le guide du certificat LAN).",
+    "QR code: open WebDesk on a phone or tablet": "Code QR : ouvrir WebDesk sur un téléphone ou une tablette",
+    "Scan the QR code with the device's camera. The phone/tablet and this PC must be in the same network (WiFi).": "Scannez le code QR avec l'appareil photo de l'appareil. Le téléphone/la tablette et ce PC doivent être dans le même réseau (WiFi).",
+    "The 📱 button in the navigation bar shows the QR code (on wide enough screens).": "Le bouton 📱 de la barre de navigation affiche le code QR (sur des écrans suffisamment larges).",
+    "WebDesk has no access protection: anyone who can reach this address can send messages and change settings. Use it in your own network only.": "WebDesk n'a pas de protection d'accès : quiconque peut joindre cette adresse peut envoyer des messages et modifier les paramètres. À utiliser uniquement dans votre propre réseau.",
+    "WebDesk runs in a container and does not know its address in your network. Enter it in Settings under \"Access from other devices\".": "WebDesk fonctionne dans un conteneur et ne connaît pas son adresse dans votre réseau. Saisissez-la dans les paramètres sous « Accès depuis d'autres appareils »."
   }
 }
