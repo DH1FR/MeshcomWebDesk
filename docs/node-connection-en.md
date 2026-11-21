@@ -107,7 +107,7 @@ Nodes without WiFi (e.g. Heltec T114) can be connected through the **MeshCom UDP
 | Listen IP / Listen Port | `127.0.0.1` or `0.0.0.0` / `1799` |
 | Callsign | **the node's**, with SSID |
 
-In the hub: connect the node via Bluetooth (disconnect the phone app first), "WebDesk" = `127.0.0.1:1799`. The connection check recognises hub operation, checks whether something listens on the hub port and warns about port conflicts. WebDesk cannot tell **two nodes with the same IP** apart (e.g. two hubs on one PC) because it assigns packets by their sender IP.
+In the hub: connect the node via Bluetooth (disconnect the phone app first), "WebDesk" = `127.0.0.1:1799`. The connection check recognises hub operation, checks whether something listens on the hub port and warns about port conflicts. WebDesk cannot tell **two nodes with the same IP** apart (e.g. two hubs on one PC) because it assigns packets by their sender IP. With the current hub the check also compares its **UDP port** (= Device Port) and the **port it sends to** (= Listen Port) with the WebDesk settings, and checks that WebDesk listens on the address the hub sends to (a hub sending to `127.0.0.1` does not reach WebDesk if it only listens on the LAN address).
 
 ---
 

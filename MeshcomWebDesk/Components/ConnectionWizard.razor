@@ -369,7 +369,13 @@
         "netsh advfirewall firewall add rule name=\"MeshCom WebDesk UDP 1799\" protocol=UDP dir=in localport=1799 action=allow";
 
     private IReadOnlyList<string> _pcIpsForNode => ConnectionCheckService.SuggestPcIps(_deviceIp.Trim());
-    private string HubPeer => $"{(_kind == Kind.HubLocal ? "127.0.0.1" : (_pcIpsForNode.FirstOrDefault() ?? "<PC-IP>"))}:{_listenPort}";
+    /// <summary>The address the hub must send to: the chosen Listen IP, else loopback (hub on this PC) or this PC's address.</summary>
+    private string HubPeerIp =>
+        IPAddress.TryParse(_listenIp.Trim(), out var li) && !li.Equals(IPAddress.Any) ? li.ToString()
+        : _kind == Kind.HubLocal ? "127.0.0.1"
+        : _pcIpsForNode.FirstOrDefault() ?? "<PC-IP>";
+
+    private string HubPeer => $"{HubPeerIp}:{_listenPort}";
 
     protected override void OnInitialized()
     {

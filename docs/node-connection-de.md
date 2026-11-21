@@ -107,7 +107,7 @@ Nodes ohne WLAN (z. B. Heltec T114) lassen sich über den **MeshCom UDP Bluetoot
 | Listen IP / Listen Port | `127.0.0.1` oder `0.0.0.0` / `1799` |
 | Rufzeichen | **das des Nodes**, mit SSID |
 
-Im Hub: Node per Bluetooth verbinden (Handy-App vorher trennen), „WebDesk“ = `127.0.0.1:1799`. Die Verbindungsprüfung erkennt den Hub-Betrieb, prüft, ob auf dem Hub-Port etwas lauscht, und warnt vor Port-Konflikten. **Zwei Nodes mit derselben IP** (z. B. zwei Hubs auf einem PC) kann WebDesk nicht unterscheiden, weil es Pakete über die Absender-IP zuordnet.
+Im Hub: Node per Bluetooth verbinden (Handy-App vorher trennen), „WebDesk“ = `127.0.0.1:1799`. Die Verbindungsprüfung erkennt den Hub-Betrieb, prüft, ob auf dem Hub-Port etwas lauscht, und warnt vor Port-Konflikten. **Zwei Nodes mit derselben IP** (z. B. zwei Hubs auf einem PC) kann WebDesk nicht unterscheiden, weil es Pakete über die Absender-IP zuordnet. Mit dem aktuellen Hub vergleicht die Prüfung außerdem dessen **UDP-Port** (= Device Port) und den **Port, an den er sendet** (= Listen Port) mit den WebDesk-Einstellungen und prüft, ob WebDesk auf der Adresse lauscht, an die der Hub sendet (ein Hub, der an `127.0.0.1` sendet, erreicht WebDesk nicht, wenn dieses nur auf der LAN-Adresse lauscht).
 
 ---
 

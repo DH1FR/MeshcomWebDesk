@@ -776,7 +776,14 @@ public sealed partial class ConnectionCheckService
         }
 
         var extIp = V("extudpip");
-        var extIpOk = IPAddress.TryParse(extIp, out var extTarget) && (ips.Contains(extTarget.ToString()) || NetworkHelper.IsLocalAddress(extTarget));
+
+        // WebDesk only receives what is sent to an address it listens on: 0.0.0.0 covers every local address, a specific
+        // Listen IP only itself (a hub sending to 127.0.0.1 is lost when WebDesk listens only on the LAN address).
+        var listenSpecific = IPAddress.TryParse(input.ListenIp?.Trim(), out var listenAddr) && !listenAddr.Equals(IPAddress.Any);
+        IReadOnlyList<string> targetIps = listenSpecific && !IPAddress.IsLoopback(listenAddr!) ? new List<string> { listenAddr!.ToString() } : ips;
+        var extIpLocal = IPAddress.TryParse(extIp, out var extTarget) && (ips.Contains(extTarget.ToString()) || NetworkHelper.IsLocalAddress(extTarget));
+        var extIpCovered = !listenSpecific || (extIpLocal && extTarget!.Equals(listenAddr));
+        var extIpOk = extIpLocal && extIpCovered;
 
         // ext UDP and its target IP belong together (the firmware prints them on one line). A real node always reports
         // them; the Bluetooth hub only if its console happens to – then both rows are shown, never just one.
@@ -800,12 +807,40 @@ public sealed partial class ConnectionCheckService
         {
             var ok = extIpOk;
             rows.Add(new("extudpip", T("ext UDP Ziel-IP", "ext UDP target IP"), extIp ?? "–",
-                ips.Count > 0 ? string.Join(" / ", ips) : T("IP dieses PCs", "this PC's IP"),
+                listenSpecific && !IPAddress.IsLoopback(listenAddr!) || (listenSpecific && hub) ? listenAddr!.ToString()
+                    : ips.Count > 0 ? string.Join(" / ", ips) : T("IP dieses PCs", "this PC's IP"),
                 ok ? CheckSeverity.Ok : CheckSeverity.Error,
                 ok ? null
+                   : extIpLocal && !extIpCovered
+                       ? TF("WebDesk lauscht nur auf {0}, der Absender sendet aber an {1}. Setzen Sie die Listen IP auf 0.0.0.0 oder stellen Sie den Absender auf {0} ein.",
+                            "WebDesk only listens on {0}, but the sender uses {1}. Set the Listen IP to 0.0.0.0 or let it send to {0}.",
+                            listenAddr, extIp)
                    : hub ? T("Im Hub muss im Feld „WebDesk“ die Adresse dieses PCs stehen.", "In the hub the field \"WebDesk\" must hold this PC's address.")
                          : T("Der Node sendet an eine andere Adresse als die dieses PCs.", "The node sends to an address other than this PC's."),
-                ok || hub || ips.Count == 0 ? null : $"--extudpip {ips[0]}"));
+                ok || hub || targetIps.Count == 0 ? null : $"--extudpip {targetIps[0]}"));
+        }
+
+        // Bluetooth hub: its two UDP ports (reported by the current hub --info) must match WebDesk's settings
+        if (hub)
+        {
+            if (V("hubudpport") is { } hubUdp && int.TryParse(hubUdp, out var hubUdpPort))
+            {
+                var ok = hubUdpPort == input.DevicePort;
+                rows.Add(new("hubudpport", T("Hub UDP-Port", "Hub UDP port"), hubUdp, input.DevicePort.ToString(),
+                    ok ? CheckSeverity.Ok : CheckSeverity.Error,
+                    ok ? null : TF("Der Hub lauscht auf UDP {0}, in WebDesk steht Device Port {1}. Tragen Sie in WebDesk den Device Port {0} ein (oder ändern Sie den UDP-Port im Hub).",
+                                   "The hub listens on UDP {0}, WebDesk has Device Port {1}. Enter Device Port {0} in WebDesk (or change the UDP port in the hub).",
+                                   hubUdpPort, input.DevicePort)));
+            }
+            if (V("hubextport") is { } hubPeer && int.TryParse(hubPeer, out var hubPeerPort))
+            {
+                var ok = hubPeerPort == input.ListenPort;
+                rows.Add(new("hubextport", T("Hub sendet an Port", "Hub sends to port"), hubPeer, input.ListenPort.ToString(),
+                    ok ? CheckSeverity.Ok : CheckSeverity.Error,
+                    ok ? null : TF("Der Hub sendet an Port {0}, WebDesk lauscht auf {1}. Im Hub-Feld „WebDesk“ muss {2}:{1} stehen (oder in WebDesk den Listen Port ändern).",
+                                   "The hub sends to port {0}, WebDesk listens on {1}. The hub's \"WebDesk\" field must hold {2}:{1} (or change the Listen Port in WebDesk).",
+                                   hubPeerPort, input.ListenPort, extIp ?? "127.0.0.1")));
+            }
         }
 
         // The node's own IP must be what WebDesk uses as Device IP

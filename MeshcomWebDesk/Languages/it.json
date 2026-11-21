@@ -1387,6 +1387,11 @@
     "So far only relay echoes (src_type node) arrived, the last one from {0}. The node reports every received radio packet first as a relay echo and then as the actual packet – WebDesk only counts the actual one and stays on \"waiting for signal\" until then. That is normal at the beginning. If it stays like this for long, the callsign probably does not match (in WebDesk: {1}).": "Finora sono arrivati solo rilanci (src_type node), l'ultimo da {0}. Il nodo segnala ogni pacchetto radio ricevuto prima come rilancio e poi come pacchetto vero – WebDesk conta solo quello vero e fino ad allora resta su «in attesa di segnale». All'inizio è normale. Se resta così a lungo, probabilmente il nominativo non corrisponde (in WebDesk: {1}).",
     "{0} UDP packet(s) arrived from the node, but no radio traffic has been counted yet": "Sono arrivati {0} pacchetto/i UDP dal nodo, ma non è ancora stato contato traffico radio",
     "Start the Bluetooth hub first (python hub.py --gui) and connect it to the node. WebDesk can only reach the hub once it is running.": "Avvia prima l'hub Bluetooth (python hub.py --gui) e collegalo al nodo. WebDesk può raggiungere l'hub solo quando è in esecuzione.",
-    "In the hub the field \"WebDesk\" must hold this PC's address.": "Nell'hub il campo «WebDesk» deve contenere l'indirizzo di questo PC."
+    "In the hub the field \"WebDesk\" must hold this PC's address.": "Nell'hub il campo «WebDesk» deve contenere l'indirizzo di questo PC.",
+    "Hub sends to port": "L'hub invia alla porta",
+    "Hub UDP port": "Porta UDP dell'hub",
+    "The hub listens on UDP {0}, WebDesk has Device Port {1}. Enter Device Port {0} in WebDesk (or change the UDP port in the hub).": "L'hub è in ascolto su UDP {0}, WebDesk ha Device Port {1}. Inserisci il Device Port {0} in WebDesk (oppure cambia la porta UDP nell'hub).",
+    "The hub sends to port {0}, WebDesk listens on {1}. The hub's \"WebDesk\" field must hold {2}:{1} (or change the Listen Port in WebDesk).": "L'hub invia alla porta {0}, WebDesk è in ascolto su {1}. Il campo «WebDesk» dell'hub deve contenere {2}:{1} (oppure cambia il Listen Port in WebDesk).",
+    "WebDesk only listens on {0}, but the sender uses {1}. Set the Listen IP to 0.0.0.0 or let it send to {0}.": "WebDesk ascolta solo su {0}, ma il mittente usa {1}. Imposta la Listen IP su 0.0.0.0 oppure fallo inviare a {0}."
   }
 }

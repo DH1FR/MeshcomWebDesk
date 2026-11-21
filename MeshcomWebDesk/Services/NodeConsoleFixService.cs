@@ -218,21 +218,31 @@ public sealed partial class NodeConsoleFixService
         return NodeConsoleError.Other;
     }
 
-    /// <summary>The node's own IP from the <c>--info</c> line "...IP address   : a.b.c.d" (latest occurrence).</summary>
-    private string? ReadNodeIp()
+    /// <summary>The newest console line matching <paramref name="rx"/> (first group), ANSI codes stripped.</summary>
+    private string? ReadLast(Regex rx)
     {
         List<string> lines;
         lock (_hmac.Lines) lines = [.. _hmac.Lines];
         for (var i = lines.Count - 1; i >= 0; i--)
         {
-            var m = NodeIpPattern().Match(AnsiPattern().Replace(lines[i], ""));
+            var m = rx.Match(AnsiPattern().Replace(lines[i], ""));
             if (m.Success) return m.Groups[1].Value;
         }
         return null;
     }
 
+    /// <summary>The node's own IP from the <c>--info</c> line "...IP address   : a.b.c.d" (latest occurrence).</summary>
+    private string? ReadNodeIp() => ReadLast(NodeIpPattern());
+
     [GeneratedRegex(@"\.\.\.IP address\s*:\s*((?:\d{1,3}\.){3}\d{1,3})", RegexOptions.IgnoreCase)]
     private static partial Regex NodeIpPattern();
+
+    /// <summary>Bluetooth hub only: the port it sends to ("...EXT PORT n") and the UDP port it listens on ("...UDP PORT n").</summary>
+    [GeneratedRegex(@"\.\.\.EXT PORT\s+(\d{1,5})")]
+    private static partial Regex HubPeerPortPattern();
+
+    [GeneratedRegex(@"\.\.\.UDP PORT\s+(\d{1,5})")]
+    private static partial Regex HubUdpPortPattern();
 
     [GeneratedRegex(@"\x1B\[[0-9;?]*[A-Za-z]")]
     private static partial Regex AnsiPattern();
@@ -267,6 +277,8 @@ public sealed partial class NodeConsoleFixService
         foreach (var key in new[] { "extudp", "extudpip", "setcall", "kiss", "kiss tx", "kiss meta", "kiss auth", "netconsole", "gateway", "webserver", "nopmother" })
             if (Get(key) is { } val) all[key] = val;
         if (ReadNodeIp() is { } ip) all["ip"] = ip;
+        if (ReadLast(HubPeerPortPattern()) is { } hubPeerPort) all["hubextport"] = hubPeerPort;
+        if (ReadLast(HubUdpPortPattern()) is { } hubUdpPort) all["hubudpport"] = hubUdpPort;
 
         return new NodeConsoleSnapshot(NodeConsoleError.None, Get("extudp"), Get("extudpip"), Get("setcall"), null, all);
     }

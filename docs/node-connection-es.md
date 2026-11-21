@@ -107,7 +107,7 @@ Los nodos sin WiFi (p. ej. Heltec T114) se pueden conectar mediante el **MeshCom
 | Listen IP / Listen Port | `127.0.0.1` o `0.0.0.0` / `1799` |
 | Indicativo | **el del nodo**, con SSID |
 
-En el hub: conecta el nodo por Bluetooth (desconecta antes la app del móvil), «WebDesk» = `127.0.0.1:1799`. La comprobación reconoce el funcionamiento con hub, verifica si algo escucha en el puerto del hub y avisa de conflictos de puertos. WebDesk no puede distinguir **dos nodos con la misma IP** (p. ej. dos hubs en un PC), porque asigna los paquetes por su IP de origen.
+En el hub: conecta el nodo por Bluetooth (desconecta antes la app del móvil), «WebDesk» = `127.0.0.1:1799`. La comprobación reconoce el funcionamiento con hub, verifica si algo escucha en el puerto del hub y avisa de conflictos de puertos. WebDesk no puede distinguir **dos nodos con la misma IP** (p. ej. dos hubs en un PC), porque asigna los paquetes por su IP de origen. Con el hub actual, la comprobación también compara su **puerto UDP** (= Device Port) y el **puerto al que envía** (= Listen Port) con los ajustes de WebDesk, y verifica que WebDesk escuche en la dirección a la que envía el hub (un hub que envía a `127.0.0.1` no llega a WebDesk si este solo escucha en la dirección LAN).
 
 ---
 
