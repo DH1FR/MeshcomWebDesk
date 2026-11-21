@@ -738,6 +738,18 @@ public sealed partial class ConnectionCheckService
                     Code: "netconsole-ok"));
                 return;
             }
+            if (snap is { Error: NodeConsoleError.Busy or NodeConsoleError.Other or NodeConsoleError.Unreachable })
+            {
+                results.Add(new(CheckSeverity.Warning,
+                    T("Net-Console erreichbar, die Einstellungen konnten aber nicht gelesen werden", "Net console is reachable, but the settings could not be read"),
+                    snap.Error == NodeConsoleError.Busy
+                        ? TF("Die Konsole von WebDesk ist gerade mit {0} verbunden, daher kann das Rufzeichen nicht abgeglichen werden. Trennen Sie sie zuerst (Einstellungen → Console) und prüfen Sie erneut.",
+                             "WebDesk's console is currently connected to {0}, so the callsign cannot be compared. Disconnect it first (Settings → Console) and check again.", snap.BusyHost ?? "?")
+                        : T("Die Verbindung kam zustande, der Node hat aber nicht (vollständig) geantwortet. Prüfen Sie erneut; hilft das nicht, öffnen Sie unten „Vom Node lesen“ und sehen Sie sich die Antwort an.",
+                            "The connection was made, but the node did not answer (completely). Check again; if that does not help, use \"Read from node\" below and look at the reply."),
+                    Code: "netconsole-ok"));
+                return;
+            }
             results.Add(new(CheckSeverity.Ok,
                 T("Net-Console am Node erreichbar", "Net console on the node is reachable"),
                 T("Sie können die Einstellungen am Node auslesen und auf Wunsch korrigieren (Bereich unten).",

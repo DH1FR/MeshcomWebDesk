@@ -1432,6 +1432,9 @@
     "KISS/TCP: port 8001 is busy – another KISS client is connected to the node": "KISS/TCP: el puerto 8001 está ocupado – otro cliente KISS está conectado al nodo",
     "The node serves only one KISS client. Close the other connection (e.g. another WebDesk instance or a KISS program); WebDesk then connects by itself.": "El nodo atiende un solo cliente KISS. Cierra la otra conexión (p. ej. otra instancia de WebDesk o un programa KISS); WebDesk se conectará solo.",
     "SSID above 15 with KISS: sending goes via ext UDP": "SSID superior a 15 con KISS: el envío va por ext UDP",
-    "AX.25 (KISS) only has SSID 0–15. WebDesk receives via KISS and sends with this SSID automatically via ext UDP – so ext UDP must be switched on at the node.": "AX.25 (KISS) solo tiene SSID 0–15. WebDesk recibe por KISS y con este SSID envía automáticamente por ext UDP – por eso ext UDP debe estar activado en el nodo."
+    "AX.25 (KISS) only has SSID 0–15. WebDesk receives via KISS and sends with this SSID automatically via ext UDP – so ext UDP must be switched on at the node.": "AX.25 (KISS) solo tiene SSID 0–15. WebDesk recibe por KISS y con este SSID envía automáticamente por ext UDP – por eso ext UDP debe estar activado en el nodo.",
+    "Net console is reachable, but the settings could not be read": "La consola de red es accesible, pero no se pudieron leer los ajustes",
+    "WebDesk's console is currently connected to {0}, so the callsign cannot be compared. Disconnect it first (Settings → Console) and check again.": "La consola de WebDesk está conectada ahora a {0}, por lo que no se puede comparar el indicativo. Desconéctala primero (Ajustes → Consola) y vuelve a comprobar.",
+    "The connection was made, but the node did not answer (completely). Check again; if that does not help, use \"Read from node\" below and look at the reply.": "La conexión se estableció, pero el nodo no respondió (por completo). Vuelve a comprobar; si no ayuda, usa «Leer del nodo» abajo y mira la respuesta."
   }
 }
