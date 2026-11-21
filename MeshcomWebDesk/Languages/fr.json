@@ -1460,6 +1460,8 @@
     "Net console is reachable, but the settings could not be read": "La console réseau est joignable, mais les réglages n'ont pas pu être lus",
     "WebDesk's console is currently connected to {0}, so the callsign cannot be compared. Disconnect it first (Settings → Console) and check again.": "La console de WebDesk est actuellement connectée à {0}, l'indicatif ne peut donc pas être comparé. Déconnectez-la d'abord (Paramètres → Console) puis vérifiez à nouveau.",
     "The connection was made, but the node did not answer (completely). Check again; if that does not help, use \"Read from node\" below and look at the reply.": "La connexion a été établie, mais le nœud n'a pas répondu (complètement). Vérifiez à nouveau ; si cela n'aide pas, utilisez « Lire depuis le nœud » ci-dessous et regardez la réponse.",
-    "Last checked: {0}": "Dernière vérification : {0}"
+    "Last checked: {0}": "Dernière vérification : {0}",
+    "The node did not report this in its --info answer, so WebDesk cannot judge it. The node's answer is shown below.": "Le nœud n'a pas indiqué cette valeur dans sa réponse à --info, WebDesk ne peut donc pas l'évaluer. La réponse du nœud est affichée ci-dessous.",
+    "Node's answer: ": "Réponse du nœud : "
   }
 }

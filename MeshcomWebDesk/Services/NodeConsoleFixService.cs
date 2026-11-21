@@ -28,7 +28,8 @@ public sealed record NodeConsoleSnapshot(
     string? Callsign,
     string? BusyHost = null,
     IReadOnlyDictionary<string, string>? Values = null,
-    IReadOnlyList<string>? Replies = null);
+    IReadOnlyList<string>? Replies = null,
+    string? RawInfo = null);
 
 /// <summary>
 /// Reads the connection-relevant settings from a node over its NET console (port 2323, HMAC) and – only when the
@@ -258,6 +259,8 @@ public sealed partial class NodeConsoleFixService
 
         // Only "--info": it carries everything compared here. RefreshAsync would also send --volt/--netconsole,
         // which the Bluetooth hub does not know ("wrong command" in its console log).
+        int linesBefore;
+        lock (_hmac.Lines) linesBefore = _hmac.Lines.Count;
         await _console.SendRawAsync("--info");
 
         // The answers arrive asynchronously; wait until all three are in or the time is up. A console that
@@ -283,6 +286,13 @@ public sealed partial class NodeConsoleFixService
         if (ReadLast(HubPeerPortPattern()) is { } hubPeerPort) all["hubextport"] = hubPeerPort;
         if (ReadLast(HubUdpPortPattern()) is { } hubUdpPort) all["hubudpport"] = hubUdpPort;
 
-        return new NodeConsoleSnapshot(NodeConsoleError.None, Get("extudp"), Get("extudpip"), Get("setcall"), null, all);
+        // What the node actually answered (for the check to show when a value is missing).
+        List<string> rawLines;
+        lock (_hmac.Lines) rawLines = [.. _hmac.Lines];
+        var fresh = rawLines.Count >= linesBefore ? rawLines.Skip(linesBefore) : rawLines.TakeLast(30);
+        var raw = string.Join(" | ", fresh.Select(l => AnsiPattern().Replace(l, "").Trim()).Where(l => l.Length > 0).Take(40));
+        if (raw.Length > 1500) raw = raw[..1500] + " …";
+
+        return new NodeConsoleSnapshot(NodeConsoleError.None, Get("extudp"), Get("extudpip"), Get("setcall"), null, all, null, raw);
     }
 }

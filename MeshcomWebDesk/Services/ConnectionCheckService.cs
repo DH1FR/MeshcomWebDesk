@@ -822,13 +822,16 @@ public sealed partial class ConnectionCheckService
         if (showExt)
         {
             var ok = On(extudp);
+            var unknown = extudp is null;   // the node's answer did not contain it – not the same as "off"
             rows.Add(new("extudp", "ext UDP", extudp ?? "–", "on",
-                ok ? CheckSeverity.Ok : (input.Kiss ? CheckSeverity.Warning : CheckSeverity.Error),
+                ok ? CheckSeverity.Ok : (unknown || input.Kiss ? CheckSeverity.Warning : CheckSeverity.Error),
                 ok ? null
+                   : unknown ? T("Der Node hat diese Angabe in seiner --info-Antwort nicht gemeldet, WebDesk kann sie nicht beurteilen. Die Antwort des Nodes steht unten.",
+                                 "The node did not report this in its --info answer, so WebDesk cannot judge it. The node's answer is shown below.")
                    : extIpOk ? T("Ohne ext UDP sendet der Node nichts an WebDesk.", "Without ext UDP the node sends nothing to WebDesk.")
                              : T("Ohne ext UDP sendet der Node nichts an WebDesk. Der Node schaltet ext UDP nur ein, wenn die Ziel-IP schon gesetzt ist – deshalb wird sie zuerst mitgesendet.",
                                  "Without ext UDP the node sends nothing to WebDesk. The node only switches ext UDP on once the target IP is set – so it is sent first."),
-                ok || hub ? null : "--extudp on"));
+                ok || hub || unknown ? null : "--extudp on"));
         }
 
         if (showExt)
@@ -837,15 +840,17 @@ public sealed partial class ConnectionCheckService
             rows.Add(new("extudpip", T("ext UDP Ziel-IP", "ext UDP target IP"), extIp ?? "–",
                 listenSpecific && !IPAddress.IsLoopback(listenAddr!) || (listenSpecific && hub) ? listenAddr!.ToString()
                     : ips.Count > 0 ? string.Join(" / ", ips) : T("IP dieses PCs", "this PC's IP"),
-                ok ? CheckSeverity.Ok : CheckSeverity.Error,
+                ok ? CheckSeverity.Ok : (extIp is null ? CheckSeverity.Warning : CheckSeverity.Error),
                 ok ? null
+                   : extIp is null ? T("Der Node hat diese Angabe in seiner --info-Antwort nicht gemeldet, WebDesk kann sie nicht beurteilen. Die Antwort des Nodes steht unten.",
+                                       "The node did not report this in its --info answer, so WebDesk cannot judge it. The node's answer is shown below.")
                    : extIpLocal && !extIpCovered
                        ? TF("WebDesk lauscht nur auf {0}, der Absender sendet aber an {1}. Setzen Sie die Listen IP auf 0.0.0.0 oder stellen Sie den Absender auf {0} ein.",
                             "WebDesk only listens on {0}, but the sender uses {1}. Set the Listen IP to 0.0.0.0 or let it send to {0}.",
                             listenAddr, extIp)
                    : hub ? T("Im Hub muss im Feld „WebDesk“ die Adresse dieses PCs stehen.", "In the hub the field \"WebDesk\" must hold this PC's address.")
                          : T("Der Node sendet an eine andere Adresse als die dieses PCs.", "The node sends to an address other than this PC's."),
-                ok || hub || targetIps.Count == 0 ? null : $"--extudpip {targetIps[0]}"));
+                ok || hub || extIp is null || targetIps.Count == 0 ? null : $"--extudpip {targetIps[0]}"));
         }
 
         // Bluetooth hub: its two UDP ports (reported by the current hub --info) must match WebDesk's settings
@@ -940,9 +945,12 @@ public sealed partial class ConnectionCheckService
             var commands = r.FixCommand is null ? null
                 : r.Key == "extudp" && ipFix is not null ? new List<string> { ipFix, r.FixCommand }
                 : new List<string> { r.FixCommand };
+            var hint = r.Hint;
+            if (r.NodeValue is null && !string.IsNullOrWhiteSpace(snap.RawInfo))
+                hint = (hint is null ? "" : hint + " ") + T("Antwort des Nodes: ", "Node's answer: ") + snap.RawInfo;
             results.Add(new(r.Severity,
                 TF("Am Node: {0} = {1} (erwartet: {2})", "On the node: {0} = {1} (expected: {2})", r.Label, r.NodeValue ?? "–", r.Expected),
-                r.Hint,
+                hint,
                 commands));
         }
         // Only claim "all match" when really everything does – the callsign included.

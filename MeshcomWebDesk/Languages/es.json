@@ -1436,6 +1436,8 @@
     "Net console is reachable, but the settings could not be read": "La consola de red es accesible, pero no se pudieron leer los ajustes",
     "WebDesk's console is currently connected to {0}, so the callsign cannot be compared. Disconnect it first (Settings → Console) and check again.": "La consola de WebDesk está conectada ahora a {0}, por lo que no se puede comparar el indicativo. Desconéctala primero (Ajustes → Consola) y vuelve a comprobar.",
     "The connection was made, but the node did not answer (completely). Check again; if that does not help, use \"Read from node\" below and look at the reply.": "La conexión se estableció, pero el nodo no respondió (por completo). Vuelve a comprobar; si no ayuda, usa «Leer del nodo» abajo y mira la respuesta.",
-    "Last checked: {0}": "Última comprobación: {0}"
+    "Last checked: {0}": "Última comprobación: {0}",
+    "The node did not report this in its --info answer, so WebDesk cannot judge it. The node's answer is shown below.": "El nodo no informó de esto en su respuesta a --info, por lo que WebDesk no puede valorarlo. La respuesta del nodo se muestra abajo.",
+    "Node's answer: ": "Respuesta del nodo: "
   }
 }

@@ -56,6 +56,10 @@
                     }
                 </tbody>
             </table>
+            @if (_snap.RawInfo is { Length: > 0 } rawInfo && _rows.Any(r => r.NodeValue is null))
+            {
+                <p class="conn-check-note"><strong>@Loc.T("Antwort des Nodes: ", "Node's answer: ")</strong><code style="word-break:break-all">@rawInfo</code></p>
+            }
         }
 
         @if (CallsignRow is { Severity: CheckSeverity.Error } cr)
