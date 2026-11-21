@@ -38,7 +38,7 @@ Geräteeinstellungen (`Meshcom__DeviceIp`, `Meshcom__MyCallsign`, …) tragen Si
 ### Gut zu wissen
 - Update-Seite und Banner zeigen eine neue Version nur für den Kanal, den Sie nutzen.
 - Watchtower aktualisiert nur den WebDesk-Container (Label `com.centurylinklabs.watchtower.enable`). Sein API-Port ist an `127.0.0.1` gebunden.
-- Das Originalprojekt `containrrr/watchtower` wird nicht mehr weiterentwickelt, funktioniert aber; gepflegte Forks nehmen dieselben Einstellungen (Zeile `image:` ändern).
+- Das Original `containrrr/watchtower` läuft mit aktuellem Docker nicht mehr (Docker 29: „client version 1.25 is too old“); die Datei nutzt deshalb den gepflegten Fork `nickfedor/watchtower` mit denselben Einstellungen. Es ist ein Fremd-Image mit Zugriff auf den Docker-Socket; Sie können die Zeile `image:` gegen einen anderen Fork tauschen.
 - WebDesk hat keine Anmeldung. *Jetzt aktualisieren* kann daher jeder auslösen, der WebDesk öffnen kann, es zieht aber nur ein neueres Image des eigenen Kanals.
 
 ---

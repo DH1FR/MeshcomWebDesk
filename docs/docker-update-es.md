@@ -38,7 +38,7 @@ Los ajustes del dispositivo (`Meshcom__DeviceIp`, `Meshcom__MyCallsign`, …) se
 ### Conviene saber
 - La página de actualización y el aviso solo muestran una versión nueva del canal que usas.
 - Watchtower solo actualiza el contenedor de WebDesk. Su puerto de API está ligado a `127.0.0.1`.
-- El proyecto original `containrrr/watchtower` ya no se desarrolla, pero funciona; los forks mantenidos aceptan los mismos ajustes (cambia la línea `image:`).
+- El original `containrrr/watchtower` ya no funciona con Docker actual (Docker 29: «client version 1.25 is too old»), por lo que el archivo usa el fork mantenido `nickfedor/watchtower` con los mismos ajustes. Es una imagen de terceros con acceso al socket de Docker; puedes cambiar la línea `image:` por otro fork.
 - WebDesk no tiene inicio de sesión: *Actualizar ahora* puede activarlo cualquiera que abra WebDesk, pero solo descarga una imagen más nueva de su propio canal.
 
 ---

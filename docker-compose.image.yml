@@ -44,9 +44,8 @@ services:
       - WEBDESK_IMAGE=ghcr.io/dh1fr/meshcomwebdesk
 
   watchtower:
-    # The original project (containrrr/watchtower) is no longer developed but still works; maintained forks
-    # (e.g. nickfedor/watchtower) take the same settings – change the image here if you prefer one.
-    image: containrrr/watchtower:latest
+    # Maintained fork of containrrr/watchtower (the original no longer works with Docker 29: "client version 1.25 is too old").
+    image: nickfedor/watchtower:latest
     container_name: meshcom-watchtower
     restart: unless-stopped
     volumes:
