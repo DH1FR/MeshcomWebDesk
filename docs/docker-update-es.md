@@ -64,4 +64,4 @@ Hace `git pull --ff-only`, recompila y reinicia. Se detiene si tienes cambios lo
 |---|---|
 | La versión no cambia tras actualizar | `git log -1 --oneline`, `sudo docker ps`, `sudo docker logs meshcom-webdesk \| head` |
 | «Watchtower rechazó el token» | `WATCHTOWER_TOKEN` en `.env` debe ser igual para ambos contenedores |
-| «Watchtower no es accesible» | ¿Está en marcha `meshcom-watchtower`? WebDesk debe usar la red host (`127.0.0.1:8080`) |
+| «Watchtower no es accesible» | ¿Está en marcha `meshcom-watchtower`? Si el puerto 8080 está ocupado, define `WATCHTOWER_PORT=18080` en `.env` y recrea |

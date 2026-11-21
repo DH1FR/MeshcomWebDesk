@@ -65,6 +65,6 @@ Does `git pull --ff-only`, rebuilds and restarts. It stops if you have local cha
 |---|---|
 | Version unchanged after the update | `git log -1 --oneline`, `sudo docker ps` (uptime), `sudo docker logs meshcom-webdesk \| head` – the banner shows the version |
 | "Watchtower rejected the token" | `WATCHTOWER_TOKEN` in `.env` must be identical for both containers; recreate them after changing it |
-| "Watchtower is not reachable" | `sudo docker ps` – is `meshcom-watchtower` running? WebDesk must run in host network mode (`127.0.0.1:8080`) |
+| "Watchtower is not reachable" | `sudo docker ps` – is `meshcom-watchtower` running? If port 8080 is taken (e.g. phpMyAdmin) set `WATCHTOWER_PORT=18080` in `.env` and recreate |
 | Dev channel says "does not know its build" | the container was not started from the `:dev` image (e.g. built from source) |
 | No new version although one was pushed | the dev image is built by GitHub after the push (a few minutes); the release image after the release |

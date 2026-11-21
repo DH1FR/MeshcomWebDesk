@@ -65,6 +65,6 @@ Macht `git pull --ff-only`, baut neu und startet neu. Bei lokalen Änderungen an
 |---|---|
 | Version nach dem Update unverändert | `git log -1 --oneline`, `sudo docker ps` (Laufzeit), `sudo docker logs meshcom-webdesk \| head` – das Banner zeigt die Version |
 | „Watchtower hat das Token abgelehnt“ | `WATCHTOWER_TOKEN` in `.env` muss für beide Container gleich sein; nach einer Änderung neu erstellen |
-| „Watchtower ist nicht erreichbar“ | `sudo docker ps` – läuft `meshcom-watchtower`? WebDesk muss im Host-Netzwerk laufen (`127.0.0.1:8080`) |
+| „Watchtower ist nicht erreichbar“ | `sudo docker ps` – läuft `meshcom-watchtower`? Ist Port 8080 belegt (z. B. phpMyAdmin), `WATCHTOWER_PORT=18080` in `.env` setzen und neu erstellen |
 | Dev-Kanal meldet „kennt seinen Build nicht“ | der Container wurde nicht aus dem `:dev`-Image gestartet (z. B. aus dem Quellcode gebaut) |
 | Keine neue Version, obwohl gepusht | das dev-Image baut GitHub nach dem Push (einige Minuten); das Release-Image nach dem Release |

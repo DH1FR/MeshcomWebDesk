@@ -39,7 +39,7 @@ services:
       - Meshcom__BotExternalCommandsPath=/app/bot-scripts
       # one-click update
       - WEBDESK_CHANNEL=${WEBDESK_CHANNEL:-latest}
-      - WEBDESK_WATCHTOWER_URL=http://127.0.0.1:8080
+      - WEBDESK_WATCHTOWER_URL=http://127.0.0.1:${WATCHTOWER_PORT:-8080}
       - WEBDESK_WATCHTOWER_TOKEN=${WATCHTOWER_TOKEN:?set WATCHTOWER_TOKEN in the .env file (see .env.example)}
       - WEBDESK_IMAGE=ghcr.io/dh1fr/meshcomwebdesk
 
@@ -52,7 +52,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
-      - "127.0.0.1:8080:8080"   # HTTP API, reachable from this machine only (WebDesk runs in host network mode)
+      - "127.0.0.1:${WATCHTOWER_PORT:-8080}:8080"   # HTTP API, this machine only (WebDesk runs in host network mode); change WATCHTOWER_PORT in .env if 8080 is taken
     environment:
       - WATCHTOWER_HTTP_API_UPDATE=true          # update only when asked (no polling)
       - WATCHTOWER_HTTP_API_TOKEN=${WATCHTOWER_TOKEN:?set WATCHTOWER_TOKEN in the .env file (see .env.example)}
