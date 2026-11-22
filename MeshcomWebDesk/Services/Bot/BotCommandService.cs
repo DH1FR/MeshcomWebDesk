@@ -6,7 +6,7 @@ using MeshcomWebDesk.Services;
 namespace MeshcomWebDesk.Services.Bot;
 
 /// <summary>
-/// Dispatches incoming bot commands (messages starting with <c>--</c>) to the correct
+/// Dispatches incoming bot commands (messages starting with <c>&gt;</c>) to the correct
 /// <see cref="IBotCommand"/> implementation.
 /// Built-in commands are injected via DI; user-defined commands are loaded live from
 /// <see cref="MeshcomSettings.BotCommands"/> and support hot-reload via
@@ -38,32 +38,13 @@ public class BotCommandService
     }
 
     /// <summary>
-    /// Returns true when <paramref name="text"/> is a bot command.
-    /// Accepts both <c>--</c> (two hyphens) and <c>\u2014</c> (em dash, typed automatically
-    /// by some MeshCom clients / mobile keyboards instead of --).
-    /// Also accepts a bare <c>ping</c> keyword (case-insensitive) for compatibility with
-    /// clients that send plain "ping" without a command prefix.
-    /// Note: after <c>--</c> or <c>—</c> a letter must follow immediately so that
-    /// decoration strings like <c>---===</c> or <c>---</c> are not mistaken for commands.
+    /// Returns true when <paramref name="text"/> is a bot command: it starts with <c>&gt;</c> and a letter
+    /// follows immediately (<c>&gt;ping</c>, <c>&gt;version</c>).
+    /// <c>--cmd</c> (the node firmware's own console commands), the em dash variant and a bare <c>ping</c>
+    /// are ordinary chat text and are NOT answered: the node firmware owns the <c>--</c> namespace.
     /// </summary>
     public static bool IsCommand(string? text) =>
         text != null &&
-        (IsHyphenCommand(text) ||
-         IsEmDashCommand(text) ||
-         IsGreaterThanCommand(text) ||
-         text.Trim().Equals("ping", StringComparison.OrdinalIgnoreCase));
-
-    private static bool IsHyphenCommand(string text) =>
-        text.Length > 2 &&
-        text.StartsWith("--", StringComparison.Ordinal) &&
-        char.IsLetter(text[2]);
-
-    private static bool IsEmDashCommand(string text) =>
-        text.Length > 1 &&
-        text[0] == '\u2014' &&
-        char.IsLetter(text[1]);
-
-    private static bool IsGreaterThanCommand(string text) =>
         text.Length > 1 &&
         text[0] == '>' &&
         char.IsLetter(text[1]);
@@ -86,20 +67,10 @@ public class BotCommandService
     /// </summary>
     public async Task<string> ExecuteAsync(string text, string senderCallsign, MeshcomMessage? context = null)
     {
-        // Normalize bare "ping" (case-insensitive) to "--ping" so it is dispatched like any other command
-        if (text.Trim().Equals("ping", StringComparison.OrdinalIgnoreCase))
-            text = "--ping";
-
-        // Strip the leading "--" or "—" (em dash U+2014, sent by some MeshCom clients / mobile keyboards)
-        string body;
-        if (text.StartsWith("--", StringComparison.Ordinal))
-            body = text.Length > 2 ? text[2..] : string.Empty;
-        else if (text.Length > 0 && text[0] == '\u2014')
-            body = text.Length > 1 ? text[1..] : string.Empty;
-        else if (text.Length > 0 && text[0] == '>')
-            body = text.Length > 1 ? text[1..] : string.Empty;
-        else
-            body = text;
+        // Strip the leading ">" (the Settings test box also accepts a bare command name)
+        var body = text.Length > 0 && text[0] == '>'
+            ? (text.Length > 1 ? text[1..] : string.Empty)
+            : text;
 
         var parts = body.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var name  = parts.Length > 0 ? parts[0].ToLowerInvariant() : string.Empty;

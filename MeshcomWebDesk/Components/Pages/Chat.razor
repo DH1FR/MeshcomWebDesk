@@ -1927,8 +1927,7 @@
 
         // Firmware 4.40a.10+ accepts ping targets that are plain callsigns only; a ping to a
         // group or broadcast is refused by the node (BP_SEND_INVALID), so do not send it.
-        var isPing = text.Trim().Equals("ping", StringComparison.OrdinalIgnoreCase)
-                  || text.Trim().Equals("--ping", StringComparison.OrdinalIgnoreCase);
+        var isPing = text.Trim().Equals(">ping", StringComparison.OrdinalIgnoreCase);
         if (isPing && (isBroadcast || isGroup))
         {
             await JS.InvokeVoidAsync("alert", Loc.T(

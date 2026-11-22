@@ -160,14 +160,9 @@ public class ChatService
 
     private static string PendingPingKey(Guid bucketId, string partner) => $"{bucketId}:{partner.Trim()}";
 
-    /// <summary>True for the bare ping command in any of its accepted forms ("ping", "--ping", ">ping").</summary>
-    private static bool IsPingText(string text)
-    {
-        var t = text.Trim();
-        return t.Equals("ping", StringComparison.OrdinalIgnoreCase)
-            || t.Equals("--ping", StringComparison.OrdinalIgnoreCase)
-            || t.Equals(">ping", StringComparison.OrdinalIgnoreCase);
-    }
+    /// <summary>True for the bare bot ping command ">ping"; a plain "ping" or "--ping" is ordinary text now.</summary>
+    private static bool IsPingText(string text) =>
+        text.Trim().Equals(">ping", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Raised when a message is added or a tab changes.</summary>
     public event Action? OnChange;

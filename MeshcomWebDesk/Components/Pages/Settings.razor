@@ -956,8 +956,8 @@
                             @if (IsOpen("bot")) {
                             <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
                                 ℹ️ @Loc.T(
-                                    "Eingehende Direkt-Nachrichten, die mit -- beginnen, werden als Befehle interpretiert. Eingebaut: --version, --time, --mh, --ping, --echo, --help.",
-                                    "Incoming direct messages starting with -- are interpreted as commands. Built-in: --version, --time, --mh, --ping, --echo, --help.")
+                                    "Eingehende Direkt-Nachrichten, die mit > beginnen, werden als Befehle interpretiert. Eingebaut: >version, >time, >mh, >ping, >echo, >help.",
+                                    "Incoming direct messages starting with > are interpreted as commands. Built-in: >version, >time, >mh, >ping, >echo, >help.")
                             </div>
                             <div class="settings-grid">
                                 <label>@Loc.T("Bot aktiv", "Bot Active")</label>
@@ -975,8 +975,8 @@
                             <div style="margin-top:1rem">
                                 <h3 style="font-size:1rem;margin-bottom:0.25rem">@Loc.T("Eigene Befehle", "Custom Commands")</h3>
                                 <p style="margin:0 0 0.5rem"><small>@Loc.T(
-                                    "Name: Befehlsname ohne -- (z.\u00a0B. info). Antwort: Text oder {Variablen}. Beschreibung: erscheint in --help.",
-                                    "Name: command name without -- (e.\u00a0g. info). Response: text or {variables}. Description: shown in --help.")</small>
+                                    "Name: Befehlsname ohne > (z.\u00a0B. info). Antwort: Text oder {Variablen}. Beschreibung: erscheint in >help.",
+                                    "Name: command name without > (e.\u00a0g. info). Response: text or {variables}. Description: shown in >help.")</small>
                                 </p>
                                 <table class="telemetry-mapping-table">
                                     <thead>
@@ -985,7 +985,7 @@
                                             <th style="width:36px;text-align:center" title="@Loc.T("Externer Prozess", "External Process")">⚙️</th>
                                             <th>@Loc.T("Antwort / Dateiname", "Response / Filename")</th>
                                             <th style="width:60px" title="@Loc.T("Timeout (Sek.)", "Timeout (sec.)")">⏱</th>
-                                            <th>@Loc.T("Beschreibung (--help)", "Description (--help)")</th>
+                                            <th>@Loc.T("Beschreibung (>help)", "Description (>help)")</th>
                                             <th></th>
                                         </tr>
                                     </thead>
@@ -1102,7 +1102,7 @@
                                 <label>@Loc.T("Befehl testen", "Test Command")</label>
                                 <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                                     <input type="text" @bind="_botTestCommand"
-                                           placeholder="--ping"
+                                           placeholder=">ping"
                                            style="flex:2; min-width:100px; font-family:monospace" />
                                     <input type="text" @bind="_botTestCallsign"
                                            placeholder="@Loc.T("Rufzeichen (opt.)", "Callsign (opt.)")"

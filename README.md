@@ -32,6 +32,7 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 ## 🆕 What's New in v1.18.1 (dev)
 
 ### ✨ Features
+- **Bot commands only with `>`** – the bot now reacts only to direct messages that start with `>` and a letter (`>ping`, `>version`, `>help`, `>time`, …). `--…` belongs to the node firmware's own console commands, and a bare `ping`, `--ping` or the em dash form are ordinary chat text and are no longer answered. With the bot switched off (default) `>ping`, `>version` and `>help` still answer. WebDesk's own ping (and its round-trip time display) uses `>ping`; other apps or older versions that still send `ping`/`--ping` get no reply any more. Settings texts, the `>help` output and the README are adjusted (de/en/es/fr/it).
 - **Easier to grab divider on touch screens** – the divider between chat and monitor is only 6 px high; on touch devices it now has an invisible touch area of about 20 px, so resizing the monitor with a finger no longer needs a precise hit. The look and the layout are unchanged.
 - **Tab bar on phones takes one row** – on screens up to 600 px wide the tabs sit in a single swipeable row instead of wrapping onto several rows (with 15 open tabs the bar was about 260 px high, now about 33 px). The tapped or newly active tab scrolls into view, the search buttons and *+* stay in reach, and dragging tabs to reorder them (long press) works as before. Wide screens are unchanged.
 - **Show/hide the monitor on every screen size** – the ▼/▲ button in the monitor title bar, until now only on phones and small displays, is now available everywhere. With the monitor hidden only the title bar stays and the chat uses the freed height; the choice is remembered per browser.
@@ -636,23 +637,23 @@ Automatically announces recurring events (e.g. club meetings) to a configured gr
 
 ### 🤖 Bot – Remote commands via direct message
 - **Command-based auto-responses** for incoming direct messages
-- Trigger: any direct message starting with `--` (two hyphens) or `—` (em dash, as typed by many MeshCom clients and mobile keyboards) **immediately followed by a letter** – decoration strings like `---===` are intentionally ignored
+- Trigger: any direct message starting with `>` **immediately followed by a letter** (`>ping`, `>version` …). `--…` is left to the node firmware's own console commands, so it (and a bare `ping`) is ordinary chat text and is not answered
 - **Built-in commands:**
 
   | Command | Response |
   |---------|----------|
-  | `--help` | List of all registered commands |
-  | `--version` | `MeshcomWebDesk vX.Y.Z` |
-  | `--time` | Current date and time |
-  | `--mh` | Count and callsigns of recently heard stations |
-  | `--ping` | `Pong! 👋 <callsign> \| RSSI: -87 dBm, SNR: 6.5 dB \| Route (2 hops): OE1XAR-62,DB0TAW-13 \| Received: 14:32:07` |
-  | `--echo <text>` | Echoes `<text>` back to the sender |
+  | `>help` | List of all registered commands |
+  | `>version` | `MeshcomWebDesk vX.Y.Z` |
+  | `>time` | Current date and time |
+  | `>mh` | Count and callsigns of recently heard stations |
+  | `>ping` | `Pong! 👋 <callsign> \| RSSI: -87 dBm, SNR: 6.5 dB \| Route (2 hops): OE1XAR-62,DB0TAW-13 \| Received: 14:32:07` |
+  | `>echo <text>` | Echoes `<text>` back to the sender |
 
-- **Bare `ping` keyword**: a direct message containing only `ping` (case-insensitive, with optional surrounding whitespace) is treated identically to `--ping`
+- **Bot switched off** (default): `>ping`, `>version` and `>help` are still answered
 - **User-defined commands** fully configurable in **Settings → 🤖 Bot** – no code changes required:
-  - `Name` – command name without `--` (e.g. `info`)
+  - `Name` – command name without `>` (e.g. `info`)
   - Response – reply text; supports all {variable} placeholders ({mycall}, {mylocator}, {callsign}, {locator}, {version}, {rssi}, {snr}, {hw}, {route}, {hops}, {srctype}, {srctype-label}, {date}, {time}, {telemetry}, {last-qso}, {my-tx-power}, {my-eirp}, {my-antenna}, {my-antenna-type}, {my-antenna-height}, {my-freq})
-  - `Description` – optional short text shown in `--help` output
+  - `Description` – optional short text shown in `>help` output
 - **External process commands** ⚙️ – tick the **⚙️ External** checkbox in the command table to run an arbitrary executable or script instead of returning a static response:
   - The script receives a **JSON payload on stdin** (UTF-8) and writes the reply to **stdout**
   - **Empty stdout** → no reply is sent (useful for conditional responses)

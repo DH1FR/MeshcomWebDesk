@@ -4,14 +4,14 @@ namespace MeshcomWebDesk.Services.Bot;
 
 /// <summary>
 /// Represents a single bot command that can be executed via an incoming direct message
-/// starting with <c>--</c>.
+/// starting with <c>&gt;</c>.
 /// </summary>
 public interface IBotCommand
 {
-    /// <summary>Command name without the -- prefix, e.g. "version".</summary>
+    /// <summary>Command name without the &gt; prefix, e.g. "version".</summary>
     string Name { get; }
 
-    /// <summary>Short description shown in --help output.</summary>
+    /// <summary>Short description shown in &gt;help output.</summary>
     string Description { get; }
 
     /// <summary>

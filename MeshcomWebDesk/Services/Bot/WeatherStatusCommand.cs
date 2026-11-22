@@ -6,7 +6,7 @@ using MeshcomWebDesk.Services.Weather;
 namespace MeshcomWebDesk.Services.Bot;
 
 /// <summary>
-/// Bot command --weather: returns the current weather provider status and license state.
+/// Bot command &gt;weather: returns the current weather provider status and license state.
 /// Example reply: "Weather: AWEKAS | Temp=18.4°C Hum=72% | lizenziert OE1KBC-1"
 /// </summary>
 public class WeatherStatusCommand : IBotCommand
