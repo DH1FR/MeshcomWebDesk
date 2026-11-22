@@ -1211,14 +1211,17 @@
     /// <summary>
     /// "No node set up yet": no node profile exists and nothing has been received from a node. An empty node list is
     /// also the old single-node mode (connection fields in the Connection section), so a connection that delivers
-    /// data counts as set up. Settings that were never saved and carry a callsign of their own (Docker / appsettings
-    /// users) are left alone; a saved configuration without a node – e.g. all nodes were deleted – is asked again.
+    /// data counts as set up. Anything with a callsign of its own (saved legacy single-node connection, Docker /
+    /// appsettings users) is left alone – only the shipped placeholder callsign means "not configured yet".
+    /// A node that has been in use before (restored message history) counts as set up even if it is silent or
+    /// offline right now – otherwise a legacy single-node setup that equals the shipped defaults is asked on every start.
     /// </summary>
     private bool NeedsSetupHint =>
         _setupHintLoaded && !_setupHintDismissed && !_setupHintHidden
         && NodeManager.Nodes.Count == 0
         && !_status.HasReceivedData
-        && (SettingsService.HasSavedSettings || IsShippedDefaultCallsign(NodeManager.GetPrimaryCallsign()));
+        && ChatService.AllMessages.Count == 0
+        && IsShippedDefaultCallsign(NodeManager.GetPrimaryCallsign());
 
     private static bool IsShippedDefaultCallsign(string callsign) =>
         callsign.StartsWith("NOCALL", StringComparison.OrdinalIgnoreCase)
