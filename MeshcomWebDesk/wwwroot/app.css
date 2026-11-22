@@ -445,6 +445,33 @@ h1:focus {
     gap: 4px;
 }
 
+/* ── "N neue Nachrichten"-Button (Leser ist nach oben gescrollt) ─────────── */
+.new-msg-fab-wrap {
+    position: sticky;
+    bottom: 0;
+    height: 0;
+    flex: none;
+    display: flex;
+    justify-content: center;
+    overflow: visible;
+}
+
+.new-msg-fab {
+    position: absolute;
+    bottom: 10px;
+    padding: 4px 14px;
+    border: none;
+    border-radius: 14px;
+    background: var(--link);
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.new-msg-fab:hover { filter: brightness(1.15); }
+
 /* ── Trennlinie "Neue Nachrichten" ─────────────────────────────────────── */
 .new-messages-divider {
     display: flex;

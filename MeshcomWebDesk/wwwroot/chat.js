@@ -677,6 +677,41 @@ window.scrollElementToBottom = function (elementId) {
     if (el) el.scrollTop = el.scrollHeight;
 };
 
+// ── Chat message list: follow the end only while the reader is at the end ──
+// 'stick' = the list was at (or near) the bottom before the last render. New content does not
+// change scrollTop, so no scroll event fires and the value still describes the pre-render state.
+window.chatScroll = (function () {
+    var stick = true;
+    var dn = null;
+    function atBottom(el) { return el.scrollHeight - el.scrollTop - el.clientHeight < 40; }
+
+    // scroll does not bubble → capture on document, works for a re-created #tab-messages as well
+    document.addEventListener('scroll', function (e) {
+        var el = e.target;
+        if (!el || el.id !== 'tab-messages') return;
+        var now = atBottom(el);
+        if (now !== stick) {
+            stick = now;
+            if (dn) dn.invokeMethodAsync('OnChatStickChanged', now).catch(function () { });
+        }
+    }, true);
+
+    return {
+        init: function (ref) { dn = ref; },
+        // Scrolls to the bottom if forced or if the reader was at the bottom; returns whether it scrolled.
+        after: function (id, force) {
+            var el = document.getElementById(id);
+            if (!el) return false;
+            if (force || stick) {
+                el.scrollTop = el.scrollHeight;
+                stick = true;
+                return true;
+            }
+            return false;
+        }
+    };
+}());
+
 // ── CallsignPopup: Popup am Viewport-Rand ausrichten ─────────────────────
 // Wird beim Anzeigen des Popups aufgerufen um sicherzustellen,
 // dass es nicht außerhalb des sichtbaren Bereichs erscheint.

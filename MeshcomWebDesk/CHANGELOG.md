@@ -1,5 +1,15 @@
 ﻿# Changelog
 
+## [1.18.1] – unreleased
+
+### Features
+- **"N new messages" button in the chat** – while you read older messages (scrolled up) and new ones arrive, a *↓ N New Messages* button appears at the bottom of the list; one click jumps to the end, scrolling down yourself dismisses it.
+
+### Bugfixes
+- **Chat jumped to the end on every new message** – the message list was forced to the bottom on each refresh, so scrolling up to read was constantly interrupted. It now only follows the end while you are at the end; switching tabs and sending your own message still scroll to the end.
+
+---
+
 ## [1.18.0] – released
 
 ### Features

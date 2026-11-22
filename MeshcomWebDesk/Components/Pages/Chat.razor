@@ -222,6 +222,12 @@
                             }
                         </div>
                     }
+                    @if (_unseenNew > 0)
+                    {
+                        <div class="new-msg-fab-wrap">
+                            <button class="new-msg-fab" @onclick="ScrollToLatestAsync">↓ @_unseenNew @Loc.T("Neue Nachrichten", "New Messages")</button>
+                        </div>
+                    }
                 </div>
 
                 <SendBar @key="@("sendbar")" @ref="_sendBar" OnSend="HandleSendMessage" Callsign="@_activeTab.Key" />
@@ -1094,7 +1100,12 @@
     private bool     _aiSearchAllContacts;   // true = search across all direct QSOs
     private bool     _globalSearchMode;       // true = dialog opened from tab-bar search button (no single callsign)
 
-    private bool _scrollMessages;
+    private bool _scrollMessages;      // run the after-render scroll step
+    private bool _forceScroll;         // scroll to the end even if the reader scrolled up (tab switch, own message)
+    private int  _scrollDelta;         // messages added since the last after-render scroll step
+    private int  _unseenNew;           // messages that arrived while the reader was scrolled up
+    private int  _lastCount;
+    private string? _lastCountKey;
 
     private bool _soundEnabled = true;
     private bool? _voiceEnabled = false;  // false until restored from localStorage; null = hide button
@@ -1388,6 +1399,8 @@
             _dotNetRef ??= DotNetObjectReference.Create(this);
             try { await JS.InvokeVoidAsync("meshcomChat.initTabDrag", _dotNetRef); }
             catch (JSException) { }
+            try { await JS.InvokeVoidAsync("chatScroll.init", _dotNetRef); }
+            catch (JSException) { }
 
             // From here on the server knows whether anybody is really looking at this page.
             try { await JS.InvokeVoidAsync("meshcomChat.attentionStart", _dotNetRef); }
@@ -1449,7 +1462,23 @@
         if (_scrollMessages)
         {
             _scrollMessages = false;
-            try { await JS.InvokeVoidAsync("scrollToBottom", "tab-messages"); }
+            var force = _forceScroll;
+            var delta = _scrollDelta;
+            _forceScroll = false;
+            _scrollDelta = 0;
+            try
+            {
+                var scrolled = await JS.InvokeAsync<bool>("chatScroll.after", "tab-messages", force);
+                if (scrolled)
+                {
+                    if (_unseenNew != 0) { _unseenNew = 0; StateHasChanged(); }
+                }
+                else if (delta > 0)
+                {
+                    _unseenNew += delta;
+                    StateHasChanged();
+                }
+            }
             catch (JSException) { }
         }
 
@@ -1625,6 +1654,21 @@
         Attention.SetView(_viewerId, _activeNodeId, string.IsNullOrEmpty(_activeTabKey) ? null : _activeTabKey);
         if (!string.IsNullOrEmpty(_activeTabKey) && Attention.IsAttending(_viewerId))
             ChatService.MarkAttended(_activeNodeId, _activeTabKey, notify: false);
+
+        // Follow the end only if the reader is there (decided in JS); count what arrives otherwise.
+        var count = _activeTabMessages.Count;
+        if (_lastCountKey != _activeTabKey)
+        {
+            _forceScroll = true;
+            _unseenNew = 0;
+        }
+        else if (count > _lastCount)
+        {
+            _scrollDelta += count - _lastCount;
+            if (_activeTabMessages[^1].IsOutgoing) _forceScroll = true;   // own message: always show it
+        }
+        _lastCountKey = _activeTabKey;
+        _lastCount = count;
         _scrollMessages = true;
 
         // Sound notification: play beep when a new direct chat message to own callsign arrives.
@@ -1741,6 +1785,11 @@
         ChatService.MarkAttended(_activeNodeId, key, notify: false);
         ChatService.SetActiveTabKey(_activeNodeId, key);
         Attention.SetView(_viewerId, _activeNodeId, key);
+        _forceScroll = true;
+        _unseenNew = 0;
+        _scrollDelta = 0;
+        _lastCountKey = key;
+        _lastCount = _activeTabMessages.Count;
         _scrollMessages = true;
         _ = JS.InvokeVoidAsync("meshcomChat.setActiveTab", key).AsTask();
 
@@ -2238,6 +2287,24 @@
                 return idx < 0 ? int.MaxValue : idx;
             })
             .ToList();
+    }
+
+    /// <summary>Called from chat.js when the reader reaches / leaves the end of the message list.</summary>
+    [JSInvokable]
+    public void OnChatStickChanged(bool atBottom)
+    {
+        if (atBottom && _unseenNew != 0)
+        {
+            _unseenNew = 0;
+            _ = InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task ScrollToLatestAsync()
+    {
+        _unseenNew = 0;
+        try { await JS.InvokeAsync<bool>("chatScroll.after", "tab-messages", true); }
+        catch (JSException) { }
     }
 
     [JSInvokable]

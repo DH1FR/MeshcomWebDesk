@@ -29,6 +29,16 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
+## 🆕 What's New in v1.18.1 (dev)
+
+### ✨ Features
+- **"N new messages" button in the chat** – while you read older messages (scrolled up) and new ones arrive, a *↓ N New Messages* button appears at the bottom of the list; one click jumps to the end, scrolling down yourself dismisses it.
+
+### 🔧 Bug Fixes
+- **Chat jumped to the end on every new message** – the message list was forced to the bottom on each refresh, so scrolling up to read was constantly interrupted. It now only follows the end while you are at the end; switching tabs and sending your own message still scroll to the end.
+
+---
+
 ## 🆕 What's New in v1.18.0
 
 ### ✨ Features
