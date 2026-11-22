@@ -4660,4 +4660,23 @@ html[data-display="compact"] .app-nav-qr { display: none !important; }
     button, a, input, textarea, select, label, summary, [role="button"] {
         touch-action: manipulation;
     }
+
+    /* Pane divider (chat / monitor): 6px is hard to hit with a finger. An invisible strip around it makes the
+       touch target ~20px without changing the layout or the look; mostly over the paddings of the send bar and
+       the monitor title bar. */
+    .pane-divider {
+        position: relative;
+    }
+    .pane-divider::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: -8px;
+        bottom: -6px;
+    }
+    html[data-display="compact"] .pane-divider::before {
+        top: -4px;
+        bottom: -4px;
+    }
 }

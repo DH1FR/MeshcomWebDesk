@@ -3,6 +3,7 @@
 ## [1.18.1] – unreleased
 
 ### Features
+- **Easier to grab divider on touch screens** – the divider between chat and monitor is only 6 px high; on touch devices it now has an invisible touch area of about 20 px, so resizing the monitor with a finger no longer needs a precise hit. The look and the layout are unchanged.
 - **Tab bar on phones takes one row** – on screens up to 600 px wide the tabs sit in a single swipeable row instead of wrapping onto several rows (with 15 open tabs the bar was about 260 px high, now about 33 px). The tapped or newly active tab scrolls into view, the search buttons and *+* stay in reach, and dragging tabs to reorder them (long press) works as before. Wide screens are unchanged.
 - **Show/hide the monitor on every screen size** – the ▼/▲ button in the monitor title bar, until now only on phones and small displays, is now available everywhere. With the monitor hidden only the title bar stays and the chat uses the freed height; the choice is remembered per browser.
 - **Chat list updates only what changed** – chat rows are keyed, so with a full tab (500 messages) a new message no longer rewrites every row (about 8000 DOM changes for 4 messages before, about 150 now). Following the end of the list now only stops when *you* scroll (mouse wheel, touch, keys, scrollbar), not when the browser adjusts the scroll position itself, and the *N New Messages* button counts correctly even when the tab buffer is full.
