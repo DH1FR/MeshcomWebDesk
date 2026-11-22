@@ -189,7 +189,7 @@
                             </div>
                         }
                         msgIdx++;
-                        <div class="message @(msg.IsOutgoing ? (_settings.OwnMessagesAlignLeft ? "msg-out-left" : "msg-out") : "msg-in")">
+                        <div class="message @(msg.IsOutgoing ? (_settings.OwnMessagesAlignLeft ? "msg-out-left" : "msg-out") : "msg-in")" @key="msg">
                             <span class="msg-time">
                                 @{ var msgTs = LT(msg.Timestamp); var msgDate = TsDate(msgTs); }
                                 @msgTs.ToString("HH:mm:ss")
@@ -1110,7 +1110,7 @@
     private bool _forceScroll;         // scroll to the end even if the reader scrolled up (tab switch, own message)
     private int  _scrollDelta;         // messages added since the last after-render scroll step
     private int  _unseenNew;           // messages that arrived while the reader was scrolled up
-    private int  _lastCount;
+    private MeshcomMessage? _lastMsg;   // newest message seen in the active tab (the count alone is useless once the buffer is full)
     private string? _lastCountKey;
 
     private bool _soundEnabled = true;
@@ -1679,13 +1679,17 @@
             _forceScroll = true;
             _unseenNew = 0;
         }
-        else if (count > _lastCount)
+        else if (count > 0 && !ReferenceEquals(_activeTabMessages[^1], _lastMsg))
         {
-            _scrollDelta += count - _lastCount;
+            // Messages after the one seen last. With a full buffer the oldest ones drop out, so count != delta.
+            var idx = -1;
+            for (var i = count - 1; i >= 0; i--)
+                if (ReferenceEquals(_activeTabMessages[i], _lastMsg)) { idx = i; break; }
+            _scrollDelta += idx >= 0 ? count - 1 - idx : count;
             if (_activeTabMessages[^1].IsOutgoing) _forceScroll = true;   // own message: always show it
         }
         _lastCountKey = _activeTabKey;
-        _lastCount = count;
+        _lastMsg = count > 0 ? _activeTabMessages[^1] : null;
         _scrollMessages = true;
 
         // Sound notification: play beep when a new direct chat message to own callsign arrives.
@@ -1806,7 +1810,7 @@
         _unseenNew = 0;
         _scrollDelta = 0;
         _lastCountKey = key;
-        _lastCount = _activeTabMessages.Count;
+        _lastMsg = _activeTabMessages.Count > 0 ? _activeTabMessages[^1] : null;
         _scrollMessages = true;
         _ = JS.InvokeVoidAsync("meshcomChat.setActiveTab", key).AsTask();
 

@@ -688,11 +688,25 @@ window.chatScroll = (function () {
     var dn = null;
     function atBottom(el) { return el.scrollHeight - el.scrollTop - el.clientHeight < 40; }
 
+    // Only the reader may switch following off. The browser also fires scroll events on its own when rows are
+    // removed at the top (full buffer) or content is re-laid out; at that moment freshly appended rows are not yet
+    // scrolled into view, which would look like "not at the end" and wrongly stop following.
+    var userUntil = 0;
+    var dragging  = false;
+    function inList(e) { var t = e.target; return !!(t && t.closest && t.closest('#tab-messages')); }
+    function markUser(e) { if (inList(e)) userUntil = performance.now() + 800; }
+    ['wheel', 'touchstart', 'touchmove', 'keydown'].forEach(function (n) {
+        document.addEventListener(n, markUser, { passive: true, capture: true });
+    });
+    document.addEventListener('mousedown', function (e) { if (inList(e)) { dragging = true; userUntil = performance.now() + 800; } }, true);
+    document.addEventListener('mouseup', function () { dragging = false; }, true);
+
     // scroll does not bubble → capture on document, works for a re-created #tab-messages as well
     document.addEventListener('scroll', function (e) {
         var el = e.target;
         if (!el || el.id !== 'tab-messages') return;
         var now = atBottom(el);
+        if (!now && !dragging && performance.now() > userUntil) return;   // layout-driven, not the reader
         if (now !== stick) {
             stick = now;
             if (dn) dn.invokeMethodAsync('OnChatStickChanged', now).catch(function () { });
