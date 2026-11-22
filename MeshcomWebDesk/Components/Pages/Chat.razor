@@ -1486,6 +1486,7 @@
             try
             {
                 var scrolled = await JS.InvokeAsync<bool>("chatScroll.after", "tab-messages", force);
+                if (force) await JS.InvokeVoidAsync("meshcomChat.revealActiveTab");
                 if (scrolled)
                 {
                     if (_unseenNew != 0) { _unseenNew = 0; StateHasChanged(); }

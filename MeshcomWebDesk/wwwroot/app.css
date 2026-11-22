@@ -1976,6 +1976,40 @@ html.mon-animate .lower-pane {
         font-size: 12px;
     }
 
+    /* Tabs: one swipeable row instead of wrapping onto several rows (many open tabs used to eat a third of the
+       screen height). Drag & drop reordering (long press) is unchanged; "+" and the search buttons stay in reach. */
+    .tab-bar {
+        flex-wrap: nowrap;
+        padding: 2px 4px 0;
+        scrollbar-width: none;
+    }
+    .tab-bar::-webkit-scrollbar {
+        display: none;
+    }
+    .tab-bar .tab-button {
+        flex-shrink: 0;
+    }
+    .tab-label-wrap {
+        flex-direction: row;
+        align-items: baseline;
+        gap: 4px;
+    }
+    .tab-qrz-name {
+        max-width: 64px;
+    }
+    .tab-bar > .tab-new-wrap:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        background: var(--bg-panel);
+    }
+    .tab-bar > .tab-new-wrap:last-child {
+        position: sticky;
+        right: 0;
+        z-index: 2;
+        background: var(--bg-panel);
+    }
+
     .message {
         max-width: 95%;
     }

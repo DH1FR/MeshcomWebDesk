@@ -98,6 +98,15 @@ window.meshcomChat = (function () {
         if (!tabBar || tabBar.dataset.dragInit) return;
         tabBar.dataset.dragInit = '1';
 
+        // Narrow screens (one swipeable row): bring a tapped tab to the middle right away, without waiting
+        // for the server round trip that re-renders the bar.
+        tabBar.addEventListener('click', function (e) {
+            if (e.target.closest('.tab-close, .tab-ai-icon')) return;
+            var btn = e.target.closest('.tab-button[data-tab-key]');
+            if (!btn || tabBar.scrollWidth <= tabBar.clientWidth + 1) return;
+            tabBar.scrollTo({ left: btn.offsetLeft - (tabBar.clientWidth - btn.offsetWidth) / 2, behavior: 'smooth' });
+        });
+
         var dragKey  = null;
         var hoverBtn = null;
 
@@ -297,6 +306,13 @@ window.meshcomChat = (function () {
         initQuickTextDrag,
         attentionStart,
         attentionStop,
+        // Narrow screens show the tabs in one swipeable row: bring the active tab into view.
+        revealActiveTab: () => {
+            var bar = document.querySelector('.tab-bar');
+            var btn = bar && bar.querySelector('.tab-button.active');
+            if (!bar || !btn || bar.scrollWidth <= bar.clientWidth + 1) return;
+            bar.scrollTo({ left: btn.offsetLeft - (bar.clientWidth - btn.offsetWidth) / 2, behavior: 'smooth' });
+        },
         getActiveTab:      () => localStorage.getItem('meshcom-active-tab') || '',
         setActiveTab:      (key) => {
             if (key) localStorage.setItem('meshcom-active-tab', key);
