@@ -303,13 +303,13 @@ window.meshcomChat = (function () {
             else     localStorage.removeItem('meshcom-active-tab');
         },
         getMonitorVisible: () => {
-            var v = localStorage.getItem('meshcom-monitor-visible');
+            var v = localStorage.getItem('meshcom-monitor-visible-v2');
             // First visit on a compact (tiny) display: start with the monitor hidden
             if (v === null && document.documentElement.getAttribute('data-display') === 'compact') return false;
             return v === null ? null : v === '1';
         },
         setMonitorVisible: (visible) => {
-            localStorage.setItem('meshcom-monitor-visible', visible ? '1' : '0');
+            localStorage.setItem('meshcom-monitor-visible-v2', visible ? '1' : '0');
             if (window.meshcomMonitor) window.meshcomMonitor.setVisible(visible, true);
         },
         getVoiceEnabled: () => {

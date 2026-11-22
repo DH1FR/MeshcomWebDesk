@@ -65,7 +65,9 @@
             var h = 0, vis = null;
             try {
                 h   = parseInt(localStorage.getItem('meshcom-monitor-height') || '0', 10) || 0;
-                vis = localStorage.getItem('meshcom-monitor-visible');
+                // v2: the old key was only ever set on phones, where it had no effect on a big screen; it must not hide
+                // the monitor there now that the toggle works on every screen size. Default: visible.
+                vis = localStorage.getItem('meshcom-monitor-visible-v2');
             } catch (e) { }
             // First visit on a compact (tiny) display starts with the monitor hidden, otherwise visible.
             var cur = vis === null ? (root.getAttribute('data-display') === 'compact' ? '0' : '1') : vis;
