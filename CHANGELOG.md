@@ -1,6 +1,6 @@
 ﻿# Changelog
 
-## [1.18.1] – unreleased
+## [1.18.1] – 2026-11-22
 
 ### Features
 - **Bot command `>rx`** – ask a neighbour station running WebDesk how it receives you: `>rx` answers *direct* or *via RELAY-12 (1 hop)* together with RSSI/SNR, e.g. `RX DL2BBB-2: via RELAY-12 (1 hop) | heard from RELAY-12: RSSI -101 dBm, SNR -3.5 dB | 11:54:25`. The answer says whose signal the values are (always the last radio hop, i.e. the relay that was heard); packets that came in via the gateway/server have no radio value. Like `>ping` it is answered even with the bot switched off. German, English, Spanish, French and Italian.
