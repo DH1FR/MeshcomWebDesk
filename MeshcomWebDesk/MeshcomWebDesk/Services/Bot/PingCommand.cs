@@ -28,16 +28,17 @@ public class PingCommand(LanguageService lang) : IBotCommand
             {
                 sb.Append($" | RSSI: {context.Rssi} dBm");
                 if (context.Snr.HasValue)
-                    sb.Append($", SNR: {context.Snr:F1} dB");
+                    sb.Append($", SNR: {context.Snr.Value.ToString("F1", lang.NumberFormat)} dB");
             }
 
-            // Route / relay path and hop count
-            if (!string.IsNullOrWhiteSpace(context.RelayPath))
+            // Route / relay path and hop count. The path starts with the sender itself; only the relays count as
+            // hops and are listed (same rule as >rx and the MH list).
+            var relays = RxCommand.RelaysOf(context.RelayPath);
+            if (relays.Count > 0)
             {
-                var hops  = context.RelayPath.Split(',', StringSplitOptions.RemoveEmptyEntries);
                 var label = lang.T("Route", "Route");
                 var hopLabel = lang.T("Hops", "hops");
-                sb.Append($" | {label} ({hops.Length} {hopLabel}): {context.RelayPath}");
+                sb.Append($" | {label} ({relays.Count} {hopLabel}): {string.Join(",", relays)}");
             }
 
             // Receive timestamp as proxy for transit context

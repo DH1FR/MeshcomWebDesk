@@ -189,7 +189,7 @@
                             </div>
                         }
                         msgIdx++;
-                        <div class="message @(msg.IsOutgoing ? (_settings.OwnMessagesAlignLeft ? "msg-out-left" : "msg-out") : "msg-in")">
+                        <div class="message @(msg.IsOutgoing ? (_settings.OwnMessagesAlignLeft ? "msg-out-left" : "msg-out") : "msg-in")" @key="msg">
                             <span class="msg-time">
                                 @{ var msgTs = LT(msg.Timestamp); var msgDate = TsDate(msgTs); }
                                 @msgTs.ToString("HH:mm:ss")
@@ -222,6 +222,12 @@
                             }
                         </div>
                     }
+                    @if (_unseenNew > 0)
+                    {
+                        <div class="new-msg-fab-wrap">
+                            <button class="new-msg-fab" @onclick="ScrollToLatestAsync">↓ @_unseenNew @Loc.T("Neue Nachrichten", "New Messages")</button>
+                        </div>
+                    }
                 </div>
 
                 <SendBar @key="@("sendbar")" @ref="_sendBar" OnSend="HandleSendMessage" Callsign="@_activeTab.Key" />
@@ -235,10 +241,10 @@
         </div>
     </div>
 
-    <div id="pane-divider" class="pane-divider @(_showMonitor ? "" : "pane-divider-collapsed")"></div>
+    <div id="pane-divider" class="pane-divider"></div>
 
     @* ===== LOWER AREA: Monitor ===== *@
-    <div id="lower-pane" class="lower-pane @(_showMonitor ? "" : "lower-pane-collapsed")">
+    <div id="lower-pane" class="lower-pane">
         <div class="pane-header">
             <span class="pane-header-title">📡 Monitor</span>
             <span class="mon-filter-wrap">
@@ -269,9 +275,9 @@
             </button>
         </div>
         <div class="mon-list" id="raw-messages">
-            @foreach (var m in _cachedFilteredMessages)
+            @foreach (var m in _cachedFilteredMessages.Take(_monitorRenderLimit))
             {
-                <div class="mon-row @MonRowClass(m)">
+                <div class="mon-row @MonRowClass(m)" @key="m">
                     @{ var monTs = LT(m.Timestamp); var monDate = TsDate(monTs); }
                     <span class="mon-time @(monDate != null ? "mon-time-dated" : "")" title="@(m.MsgId is not null ? $"ID: {m.MsgId}" : null)">
                         @monTs.ToString("HH:mm:ss")
@@ -459,6 +465,12 @@
                               title="@($"{Loc.T("APRS-Kommentar (nur KISS)", "APRS comment (KISS only)")}: {cmt}")">@cmt</span>
                     }
                 </div>
+            }
+            @if (_cachedFilteredMessages.Count > _monitorRenderLimit)
+            {
+                <button class="mon-more-btn" @onclick="ShowMoreMonitor">
+                    @Loc.T("Ältere Einträge anzeigen", "Show older entries") (@(_cachedFilteredMessages.Count - _monitorRenderLimit))
+                </button>
             }
         </div>
     </div>
@@ -1094,7 +1106,12 @@
     private bool     _aiSearchAllContacts;   // true = search across all direct QSOs
     private bool     _globalSearchMode;       // true = dialog opened from tab-bar search button (no single callsign)
 
-    private bool _scrollMessages;
+    private bool _scrollMessages;      // run the after-render scroll step
+    private bool _forceScroll;         // scroll to the end even if the reader scrolled up (tab switch, own message)
+    private int  _scrollDelta;         // messages added since the last after-render scroll step
+    private int  _unseenNew;           // messages that arrived while the reader was scrolled up
+    private MeshcomMessage? _lastMsg;   // newest message seen in the active tab (the count alone is useless once the buffer is full)
+    private string? _lastCountKey;
 
     private bool _soundEnabled = true;
     private bool? _voiceEnabled = false;  // false until restored from localStorage; null = hide button
@@ -1112,6 +1129,12 @@
     private readonly Dictionary<Guid, DateTime> _lastNotificationTime = new();
     private string _monitorFilter = string.Empty;
     private IReadOnlyList<MeshcomMessage> _cachedFilteredMessages = [];
+
+    // Only the newest rows of the monitor are rendered; building all (up to MonitorMaxMessages) on every page
+    // visit blocked the browser for seconds. Older rows are added on demand; filtering still searches all of them.
+    private const int MonitorRenderStep = 200;
+    private int _monitorRenderLimit = MonitorRenderStep;
+    private void ShowMoreMonitor() => _monitorRenderLimit += MonitorRenderStep;
     private CancellationTokenSource? _filterDebounce;
     private List<string> _tabOrder = [];
     private DotNetObjectReference<Chat>? _dotNetRef;
@@ -1134,6 +1157,7 @@
     private async Task OnMonitorFilterInput(ChangeEventArgs e)
     {
         _monitorFilter = e.Value?.ToString() ?? string.Empty;
+        _monitorRenderLimit = MonitorRenderStep;
 
         // Empty field: apply immediately without debounce
         if (string.IsNullOrEmpty(_monitorFilter))
@@ -1170,6 +1194,7 @@
     {
         _filterDebounce?.Cancel();
         _monitorFilter = string.Empty;
+        _monitorRenderLimit = MonitorRenderStep;
         RebuildFilterCache();
     }
 
@@ -1200,14 +1225,17 @@
     /// <summary>
     /// "No node set up yet": no node profile exists and nothing has been received from a node. An empty node list is
     /// also the old single-node mode (connection fields in the Connection section), so a connection that delivers
-    /// data counts as set up. Settings that were never saved and carry a callsign of their own (Docker / appsettings
-    /// users) are left alone; a saved configuration without a node – e.g. all nodes were deleted – is asked again.
+    /// data counts as set up. Anything with a callsign of its own (saved legacy single-node connection, Docker /
+    /// appsettings users) is left alone – only the shipped placeholder callsign means "not configured yet".
+    /// A node that has been in use before (restored message history) counts as set up even if it is silent or
+    /// offline right now – otherwise a legacy single-node setup that equals the shipped defaults is asked on every start.
     /// </summary>
     private bool NeedsSetupHint =>
         _setupHintLoaded && !_setupHintDismissed && !_setupHintHidden
         && NodeManager.Nodes.Count == 0
         && !_status.HasReceivedData
-        && (SettingsService.HasSavedSettings || IsShippedDefaultCallsign(NodeManager.GetPrimaryCallsign()));
+        && ChatService.AllMessages.Count == 0
+        && IsShippedDefaultCallsign(NodeManager.GetPrimaryCallsign());
 
     private static bool IsShippedDefaultCallsign(string callsign) =>
         callsign.StartsWith("NOCALL", StringComparison.OrdinalIgnoreCase)
@@ -1388,6 +1416,8 @@
             _dotNetRef ??= DotNetObjectReference.Create(this);
             try { await JS.InvokeVoidAsync("meshcomChat.initTabDrag", _dotNetRef); }
             catch (JSException) { }
+            try { await JS.InvokeVoidAsync("chatScroll.init", _dotNetRef); }
+            catch (JSException) { }
 
             // From here on the server knows whether anybody is really looking at this page.
             try { await JS.InvokeVoidAsync("meshcomChat.attentionStart", _dotNetRef); }
@@ -1449,7 +1479,24 @@
         if (_scrollMessages)
         {
             _scrollMessages = false;
-            try { await JS.InvokeVoidAsync("scrollToBottom", "tab-messages"); }
+            var force = _forceScroll;
+            var delta = _scrollDelta;
+            _forceScroll = false;
+            _scrollDelta = 0;
+            try
+            {
+                var scrolled = await JS.InvokeAsync<bool>("chatScroll.after", "tab-messages", force);
+                if (force) await JS.InvokeVoidAsync("meshcomChat.revealActiveTab");
+                if (scrolled)
+                {
+                    if (_unseenNew != 0) { _unseenNew = 0; StateHasChanged(); }
+                }
+                else if (delta > 0)
+                {
+                    _unseenNew += delta;
+                    StateHasChanged();
+                }
+            }
             catch (JSException) { }
         }
 
@@ -1625,6 +1672,25 @@
         Attention.SetView(_viewerId, _activeNodeId, string.IsNullOrEmpty(_activeTabKey) ? null : _activeTabKey);
         if (!string.IsNullOrEmpty(_activeTabKey) && Attention.IsAttending(_viewerId))
             ChatService.MarkAttended(_activeNodeId, _activeTabKey, notify: false);
+
+        // Follow the end only if the reader is there (decided in JS); count what arrives otherwise.
+        var count = _activeTabMessages.Count;
+        if (_lastCountKey != _activeTabKey)
+        {
+            _forceScroll = true;
+            _unseenNew = 0;
+        }
+        else if (count > 0 && !ReferenceEquals(_activeTabMessages[^1], _lastMsg))
+        {
+            // Messages after the one seen last. With a full buffer the oldest ones drop out, so count != delta.
+            var idx = -1;
+            for (var i = count - 1; i >= 0; i--)
+                if (ReferenceEquals(_activeTabMessages[i], _lastMsg)) { idx = i; break; }
+            _scrollDelta += idx >= 0 ? count - 1 - idx : count;
+            if (_activeTabMessages[^1].IsOutgoing) _forceScroll = true;   // own message: always show it
+        }
+        _lastCountKey = _activeTabKey;
+        _lastMsg = count > 0 ? _activeTabMessages[^1] : null;
         _scrollMessages = true;
 
         // Sound notification: play beep when a new direct chat message to own callsign arrives.
@@ -1741,6 +1807,11 @@
         ChatService.MarkAttended(_activeNodeId, key, notify: false);
         ChatService.SetActiveTabKey(_activeNodeId, key);
         Attention.SetView(_viewerId, _activeNodeId, key);
+        _forceScroll = true;
+        _unseenNew = 0;
+        _scrollDelta = 0;
+        _lastCountKey = key;
+        _lastMsg = _activeTabMessages.Count > 0 ? _activeTabMessages[^1] : null;
         _scrollMessages = true;
         _ = JS.InvokeVoidAsync("meshcomChat.setActiveTab", key).AsTask();
 
@@ -1856,8 +1927,7 @@
 
         // Firmware 4.40a.10+ accepts ping targets that are plain callsigns only; a ping to a
         // group or broadcast is refused by the node (BP_SEND_INVALID), so do not send it.
-        var isPing = text.Trim().Equals("ping", StringComparison.OrdinalIgnoreCase)
-                  || text.Trim().Equals("--ping", StringComparison.OrdinalIgnoreCase);
+        var isPing = text.Trim().Equals(">ping", StringComparison.OrdinalIgnoreCase);
         if (isPing && (isBroadcast || isGroup))
         {
             await JS.InvokeVoidAsync("alert", Loc.T(
@@ -2238,6 +2308,24 @@
                 return idx < 0 ? int.MaxValue : idx;
             })
             .ToList();
+    }
+
+    /// <summary>Called from chat.js when the reader reaches / leaves the end of the message list.</summary>
+    [JSInvokable]
+    public void OnChatStickChanged(bool atBottom)
+    {
+        if (atBottom && _unseenNew != 0)
+        {
+            _unseenNew = 0;
+            _ = InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task ScrollToLatestAsync()
+    {
+        _unseenNew = 0;
+        try { await JS.InvokeAsync<bool>("chatScroll.after", "tab-messages", true); }
+        catch (JSException) { }
     }
 
     [JSInvokable]

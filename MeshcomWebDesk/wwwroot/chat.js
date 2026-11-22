@@ -59,7 +59,7 @@ window.meshcomChat = (function () {
         let startY = 0, startH = 0;
 
         function onMove(e) {
-            if (lowerPane.classList.contains('lower-pane-collapsed')) return;
+            if (document.documentElement.getAttribute('data-monitor') === '0') return;
             const y    = e.touches ? e.touches[0].clientY : e.clientY;
             const contH = lowerPane.parentElement.getBoundingClientRect().height;
             const newH  = Math.max(40, Math.min(contH - 80, startH + (startY - y)));
@@ -69,8 +69,9 @@ window.meshcomChat = (function () {
         }
 
         function onUp() {
-            localStorage.setItem(STORAGE_KEY,
-                Math.round(lowerPane.getBoundingClientRect().height));
+            var h = Math.round(lowerPane.getBoundingClientRect().height);
+            localStorage.setItem(STORAGE_KEY, h);
+            if (window.meshcomMonitor) window.meshcomMonitor.setHeight(h);
             document.removeEventListener('mousemove', onMove);
             document.removeEventListener('mouseup',   onUp);
             document.removeEventListener('touchmove', onMove);
@@ -78,7 +79,7 @@ window.meshcomChat = (function () {
         }
 
         function onDown(e) {
-            if (lowerPane.classList.contains('lower-pane-collapsed')) return;
+            if (document.documentElement.getAttribute('data-monitor') === '0') return;
             startY = e.touches ? e.touches[0].clientY : e.clientY;
             startH = lowerPane.getBoundingClientRect().height;
             document.addEventListener('mousemove', onMove);
@@ -96,6 +97,15 @@ window.meshcomChat = (function () {
         var tabBar = document.querySelector('.tab-bar');
         if (!tabBar || tabBar.dataset.dragInit) return;
         tabBar.dataset.dragInit = '1';
+
+        // Narrow screens (one swipeable row): bring a tapped tab to the middle right away, without waiting
+        // for the server round trip that re-renders the bar.
+        tabBar.addEventListener('click', function (e) {
+            if (e.target.closest('.tab-close, .tab-ai-icon')) return;
+            var btn = e.target.closest('.tab-button[data-tab-key]');
+            if (!btn || tabBar.scrollWidth <= tabBar.clientWidth + 1) return;
+            tabBar.scrollTo({ left: btn.offsetLeft - (tabBar.clientWidth - btn.offsetWidth) / 2, behavior: 'smooth' });
+        });
 
         var dragKey  = null;
         var hoverBtn = null;
@@ -296,19 +306,28 @@ window.meshcomChat = (function () {
         initQuickTextDrag,
         attentionStart,
         attentionStop,
+        // Narrow screens show the tabs in one swipeable row: bring the active tab into view.
+        revealActiveTab: () => {
+            var bar = document.querySelector('.tab-bar');
+            var btn = bar && bar.querySelector('.tab-button.active');
+            if (!bar || !btn || bar.scrollWidth <= bar.clientWidth + 1) return;
+            bar.scrollTo({ left: btn.offsetLeft - (bar.clientWidth - btn.offsetWidth) / 2, behavior: 'smooth' });
+        },
         getActiveTab:      () => localStorage.getItem('meshcom-active-tab') || '',
         setActiveTab:      (key) => {
             if (key) localStorage.setItem('meshcom-active-tab', key);
             else     localStorage.removeItem('meshcom-active-tab');
         },
         getMonitorVisible: () => {
-            var v = localStorage.getItem('meshcom-monitor-visible');
+            var v = localStorage.getItem('meshcom-monitor-visible-v2');
             // First visit on a compact (tiny) display: start with the monitor hidden
             if (v === null && document.documentElement.getAttribute('data-display') === 'compact') return false;
             return v === null ? null : v === '1';
         },
-        setMonitorVisible: (visible) =>
-            localStorage.setItem('meshcom-monitor-visible', visible ? '1' : '0'),
+        setMonitorVisible: (visible) => {
+            localStorage.setItem('meshcom-monitor-visible-v2', visible ? '1' : '0');
+            if (window.meshcomMonitor) window.meshcomMonitor.setVisible(visible, true);
+        },
         getVoiceEnabled: () => {
             var v = localStorage.getItem('meshcom-voice-enabled');
             return v === null ? null : v === '1';
@@ -676,6 +695,55 @@ window.scrollElementToBottom = function (elementId) {
     var el = document.getElementById(elementId);
     if (el) el.scrollTop = el.scrollHeight;
 };
+
+// ── Chat message list: follow the end only while the reader is at the end ──
+// 'stick' = the list was at (or near) the bottom before the last render. New content does not
+// change scrollTop, so no scroll event fires and the value still describes the pre-render state.
+window.chatScroll = (function () {
+    var stick = true;
+    var dn = null;
+    function atBottom(el) { return el.scrollHeight - el.scrollTop - el.clientHeight < 40; }
+
+    // Only the reader may switch following off. The browser also fires scroll events on its own when rows are
+    // removed at the top (full buffer) or content is re-laid out; at that moment freshly appended rows are not yet
+    // scrolled into view, which would look like "not at the end" and wrongly stop following.
+    var userUntil = 0;
+    var dragging  = false;
+    function inList(e) { var t = e.target; return !!(t && t.closest && t.closest('#tab-messages')); }
+    function markUser(e) { if (inList(e)) userUntil = performance.now() + 800; }
+    ['wheel', 'touchstart', 'touchmove', 'keydown'].forEach(function (n) {
+        document.addEventListener(n, markUser, { passive: true, capture: true });
+    });
+    document.addEventListener('mousedown', function (e) { if (inList(e)) { dragging = true; userUntil = performance.now() + 800; } }, true);
+    document.addEventListener('mouseup', function () { dragging = false; }, true);
+
+    // scroll does not bubble → capture on document, works for a re-created #tab-messages as well
+    document.addEventListener('scroll', function (e) {
+        var el = e.target;
+        if (!el || el.id !== 'tab-messages') return;
+        var now = atBottom(el);
+        if (!now && !dragging && performance.now() > userUntil) return;   // layout-driven, not the reader
+        if (now !== stick) {
+            stick = now;
+            if (dn) dn.invokeMethodAsync('OnChatStickChanged', now).catch(function () { });
+        }
+    }, true);
+
+    return {
+        init: function (ref) { dn = ref; },
+        // Scrolls to the bottom if forced or if the reader was at the bottom; returns whether it scrolled.
+        after: function (id, force) {
+            var el = document.getElementById(id);
+            if (!el) return false;
+            if (force || stick) {
+                el.scrollTop = el.scrollHeight;
+                stick = true;
+                return true;
+            }
+            return false;
+        }
+    };
+}());
 
 // ── CallsignPopup: Popup am Viewport-Rand ausrichten ─────────────────────
 // Wird beim Anzeigen des Popups aufgerufen um sicherzustellen,

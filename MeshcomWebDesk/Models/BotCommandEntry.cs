@@ -5,7 +5,7 @@ namespace MeshcomWebDesk.Models;
 /// </summary>
 public class BotCommandEntry
 {
-    /// <summary>Command name without the -- prefix, e.g. "info".</summary>
+    /// <summary>Command name without the &gt; prefix, e.g. "info".</summary>
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
@@ -15,7 +15,7 @@ public class BotCommandEntry
     /// </summary>
     public string Response { get; set; } = string.Empty;
 
-    /// <summary>Short description shown in --help output.</summary>
+    /// <summary>Short description shown in &gt;help output.</summary>
     public string Description { get; set; } = string.Empty;
 
     /// <summary>

@@ -445,6 +445,33 @@ h1:focus {
     gap: 4px;
 }
 
+/* ── "N neue Nachrichten"-Button (Leser ist nach oben gescrollt) ─────────── */
+.new-msg-fab-wrap {
+    position: sticky;
+    bottom: 0;
+    height: 0;
+    flex: none;
+    display: flex;
+    justify-content: center;
+    overflow: visible;
+}
+
+.new-msg-fab {
+    position: absolute;
+    bottom: 10px;
+    padding: 4px 14px;
+    border: none;
+    border-radius: 14px;
+    background: var(--link);
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.new-msg-fab:hover { filter: brightness(1.15); }
+
 /* ── Trennlinie "Neue Nachrichten" ─────────────────────────────────────── */
 .new-messages-divider {
     display: flex;
@@ -818,7 +845,7 @@ h1:focus {
 .pane-divider:hover::after {
     background: #79b8ff;
 }
-.pane-divider-collapsed {
+html[data-monitor="0"] .pane-divider {
     cursor: default;
     pointer-events: none;
     opacity: 0.5;
@@ -862,7 +889,46 @@ h1:focus {
     flex-direction: column;
     min-height: 0;
     background: var(--bg-deep);
+}
+
+/* Saved monitor height: --monitor-h / data-mon-h are set on <html> before the first paint (App.razor),
+   so the pane starts at its final size instead of jumping when chat.js restores it later. */
+html[data-mon-h] .lower-pane {
+    height: var(--monitor-h);
+    flex: none;
+}
+
+/* Monitor hidden (toggle button, all screen sizes; phones/compact start hidden): only the title bar stays,
+   the chat gets the freed height. Must beat the saved-height rule above. */
+html[data-monitor="0"] .lower-pane {
+    flex: 0 0 auto !important;
+    height: auto !important;
+}
+html[data-monitor="0"] .lower-pane .mon-list,
+html[data-monitor="0"] .lower-pane .mon-filter-wrap {
+    display: none;
+}
+
+/* Animate only when the user toggles the monitor (class set briefly by chat.js), never on page build. */
+html.mon-animate .lower-pane {
     transition: height 0.15s ease, flex 0.15s ease;
+}
+
+.mon-more-btn {
+    align-self: center;
+    margin: 6px 0 10px;
+    padding: 4px 14px;
+    border: 1px solid var(--btn-border);
+    border-radius: 6px;
+    background: var(--btn-bg);
+    color: var(--btn-text);
+    font-size: 0.78rem;
+    cursor: pointer;
+}
+
+.mon-more-btn:hover {
+    background: var(--btn-hover-bg);
+    color: var(--btn-hover-text);
 }
 
 .mon-list {
@@ -1910,6 +1976,40 @@ h1:focus {
         font-size: 12px;
     }
 
+    /* Tabs: one swipeable row instead of wrapping onto several rows (many open tabs used to eat a third of the
+       screen height). Drag & drop reordering (long press) is unchanged; "+" and the search buttons stay in reach. */
+    .tab-bar {
+        flex-wrap: nowrap;
+        padding: 2px 4px 0;
+        scrollbar-width: none;
+    }
+    .tab-bar::-webkit-scrollbar {
+        display: none;
+    }
+    .tab-bar .tab-button {
+        flex-shrink: 0;
+    }
+    .tab-label-wrap {
+        flex-direction: row;
+        align-items: baseline;
+        gap: 4px;
+    }
+    .tab-qrz-name {
+        max-width: 64px;
+    }
+    .tab-bar > .tab-new-wrap:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        background: var(--bg-panel);
+    }
+    .tab-bar > .tab-new-wrap:last-child {
+        position: sticky;
+        right: 0;
+        z-index: 2;
+        background: var(--bg-panel);
+    }
+
     .message {
         max-width: 95%;
     }
@@ -1950,20 +2050,6 @@ h1:focus {
         font-size: 12px;
     }
 
-    /* Monitor pane: collapse to header-only on phones by default (user can expand) */
-    .lower-pane-collapsed .mon-list {
-        display: none;
-    }
-
-    .lower-pane-collapsed {
-        flex: 0 !important;
-    }
-
-    /* Monitor toggle button: visible on phones only */
-    .mon-toggle-btn {
-        display: inline-flex;
-    }
-
     /* Status bar: single line, smaller on phones */
     .status-bar {
         font-size: 11px;
@@ -1982,9 +2068,9 @@ h1:focus {
     }
 }
 
-/* Monitor toggle button: hidden on desktop */
+/* Monitor toggle button: shows/hides the monitor, on every screen size */
 .mon-toggle-btn {
-    display: none;
+    display: inline-flex;
     background: none;
     border: none;
     color: var(--link);
@@ -4170,15 +4256,15 @@ html[data-display="compact"] .char-counter {
 }
 
 /* Monitor: collapsed to its header by default, expandable via toggle */
-html[data-display="compact"] .lower-pane-collapsed .mon-list {
+html[data-display="compact"][data-monitor="0"] .lower-pane .mon-list {
     display: none;
 }
-html[data-display="compact"] .lower-pane-collapsed {
+html[data-display="compact"][data-monitor="0"] .lower-pane {
     /* keep the title bar (with the ▲ toggle) visible, otherwise the monitor cannot be reopened */
     flex: 0 0 auto !important;
     height: auto !important;   /* ignore the pane height saved on a big screen (inline style) */
 }
-html[data-display="compact"] .lower-pane-collapsed .mon-filter-wrap {
+html[data-display="compact"][data-monitor="0"] .lower-pane .mon-filter-wrap {
     display: none;
 }
 html[data-display="compact"] .mon-toggle-btn {
@@ -4220,7 +4306,7 @@ html[data-display="compact"] .message {
 html[data-display="compact"] .upper-pane {
     flex: 3 1 0 !important;
 }
-html[data-display="compact"] .lower-pane:not(.lower-pane-collapsed) {
+html[data-display="compact"]:not([data-monitor="0"]) .lower-pane {
     flex: 2 1 0 !important;
     height: auto !important;
 }
@@ -4556,3 +4642,41 @@ html[data-display="compact"] .app-nav-qr { display: none !important; }
 .remote-url code { word-break: break-all; }
 .remote-note { margin: .4rem 0; font-size: .78rem; color: var(--text-muted); line-height: 1.4; text-align: left; }
 .remote-warn { color: var(--warn); }
+
+/* ===== Touch devices (iPhone/iPad/Android): no unwanted zoom =====
+   iOS Safari zooms into a focused text field whose font is smaller than 16px and does not zoom back out, which
+   leaves the page enlarged and wider than the screen. So text fields get at least 16px on touch devices
+   (!important: the compact display mode and component styles set 12-14px). Pinch zoom stays available (the
+   viewport has no maximum-scale); only the double-tap zoom is switched off, because two quick taps on e.g. the
+   Send button otherwise zoom in. */
+@media (hover: none) and (pointer: coarse) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+    textarea,
+    select {
+        font-size: 16px !important;
+    }
+
+    html, body,
+    button, a, input, textarea, select, label, summary, [role="button"] {
+        touch-action: manipulation;
+    }
+
+    /* Pane divider (chat / monitor): 6px is hard to hit with a finger. An invisible strip around it makes the
+       touch target ~20px without changing the layout or the look; mostly over the paddings of the send bar and
+       the monitor title bar. */
+    .pane-divider {
+        position: relative;
+    }
+    .pane-divider::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: -8px;
+        bottom: -6px;
+    }
+    html[data-display="compact"] .pane-divider::before {
+        top: -4px;
+        bottom: -4px;
+    }
+}

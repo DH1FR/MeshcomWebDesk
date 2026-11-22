@@ -6,7 +6,7 @@ using MeshcomWebDesk.Services.Weather;
 namespace MeshcomWebDesk.Services.Bot;
 
 /// <summary>
-/// Bot command --weather: returns the current weather provider status and license state.
+/// Bot command &gt;weather: returns the current weather provider status and license state.
 /// Example reply: "Weather: AWEKAS | Temp=18.4°C Hum=72% | lizenziert OE1KBC-1"
 /// </summary>
 public class WeatherStatusCommand : IBotCommand
@@ -60,14 +60,15 @@ public class WeatherStatusCommand : IBotCommand
         if (_pollingService.LastData?.Fields is { Count: > 0 } fields)
         {
             sb.Append(" |");
+            var fmt = LanguageService.NumberFormatFor(_settings.Value.Language);   // decimal comma/point by language
             if (fields.TryGetValue(WeatherFields.TempOutdoor, out var temp))
-                sb.Append($" T={temp:F1}°C");
+                sb.Append($" T={temp.ToString("F1", fmt)}°C");
             if (fields.TryGetValue(WeatherFields.HumidityOutdoor, out var hum))
-                sb.Append($" H={hum:F0}%");
+                sb.Append($" H={hum.ToString("F0", fmt)}%");
             if (fields.TryGetValue(WeatherFields.PressureRelative, out var pres))
-                sb.Append($" P={pres:F0}hPa");
+                sb.Append($" P={pres.ToString("F0", fmt)}hPa");
             if (fields.TryGetValue(WeatherFields.WindSpeed, out var wind))
-                sb.Append($" W={wind:F1}km/h");
+                sb.Append($" W={wind.ToString("F1", fmt)}km/h");
 
             if (_pollingService.LastFetchUtc.HasValue)
                 sb.Append($" ({_pollingService.LastFetchUtc.Value:HH:mm}z)");

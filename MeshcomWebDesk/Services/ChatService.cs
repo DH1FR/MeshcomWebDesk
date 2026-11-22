@@ -160,14 +160,9 @@ public class ChatService
 
     private static string PendingPingKey(Guid bucketId, string partner) => $"{bucketId}:{partner.Trim()}";
 
-    /// <summary>True for the bare ping command in any of its accepted forms ("ping", "--ping", ">ping").</summary>
-    private static bool IsPingText(string text)
-    {
-        var t = text.Trim();
-        return t.Equals("ping", StringComparison.OrdinalIgnoreCase)
-            || t.Equals("--ping", StringComparison.OrdinalIgnoreCase)
-            || t.Equals(">ping", StringComparison.OrdinalIgnoreCase);
-    }
+    /// <summary>True for the bare bot ping command ">ping"; a plain "ping" or "--ping" is ordinary text now.</summary>
+    private static bool IsPingText(string text) =>
+        text.Trim().Equals(">ping", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Raised when a message is added or a tab changes.</summary>
     public event Action? OnChange;
@@ -1284,25 +1279,38 @@ public class ChatService
             ? (id & 0xFFFFF3FF).ToString("X8")
             : msgId;
 
+    /// <summary>
+    /// How long a copy registered WITHOUT msg_id still catches a later copy that carries one (the node and the
+    /// LoRa copy of the same packet arrive within milliseconds; a person re-sending the text does not).
+    /// </summary>
+    private static readonly TimeSpan CrossFormatWindow = TimeSpan.FromSeconds(60);
+
     private bool IsDuplicate(MeshcomMessage message, Guid bucketId, out bool isFirstReceipt)
     {
+        // A message that carries a msg_id is identified by that id alone: two messages with the same text but
+        // different ids are two messages (a second ">ping", "73", "ok" ...). Text is only the fallback for copies
+        // WITHOUT an id, and - briefly - for the same message arriving once with and once without an id.
+        // ACKs keep the strict text rule (their text names the acknowledged message, retransmissions get new ids).
+        var hasId      = !string.IsNullOrEmpty(message.MsgId);
+        var strictText = !hasId || message.IsAck;
+
         // msg_id, seq number, and text are sender-assigned and identify the message globally;
         // the bucket prefix scopes storage deduplication to one node's state.
-        string key = !string.IsNullOrEmpty(message.MsgId)
-            ? $"mid:{RetryNormalisedMsgId(message.MsgId)}"
+        string key = hasId
+            ? $"mid:{RetryNormalisedMsgId(message.MsgId!)}"
             : !string.IsNullOrEmpty(message.SequenceNumber)
                 ? $"seq:{message.From}:{message.SequenceNumber}"
                 : $"txt:{message.From}:{message.To}:{message.Text}";
 
-        // Text-based fallback key: same content may arrive once with msg_id and once without.
-        // Storing and checking both keys catches such cross-format duplicates.
-        string? txtKey = (!string.IsNullOrEmpty(message.From) &&
-                          !string.IsNullOrEmpty(message.To)   &&
-                          !string.IsNullOrEmpty(message.Text))
-            ? $"txt:{message.From}:{message.To}:{message.Text}"
-            : null;
+        var hasText = !string.IsNullOrEmpty(message.From) &&
+                      !string.IsNullOrEmpty(message.To)   &&
+                      !string.IsNullOrEmpty(message.Text);
+        // "txt:" = registered by a message without msg_id (or an ACK), "txtid:" = registered by a message with one.
+        string? txtKey   = hasText ? $"txt:{message.From}:{message.To}:{message.Text}"   : null;
+        string? txtIdKey = hasText ? $"txtid:{message.From}:{message.To}:{message.Text}" : null;
 
         var bucketPrefix = bucketId.ToString("N");
+        string B(string k) => $"{bucketPrefix}:{k}";
 
         lock (_lock)
         {
@@ -1317,20 +1325,30 @@ public class ChatService
             foreach (var k in expired)
                 _seenMessageKeys.Remove(k);
 
-            isFirstReceipt = !_seenMessageKeys.ContainsKey(key) &&
-                             (txtKey == null || !_seenMessageKeys.ContainsKey(txtKey));
+            bool Seen(string k) => _seenMessageKeys.ContainsKey(k);
+            bool SeenRecent(string k) => _seenMessageKeys.TryGetValue(k, out var t) && now - t < CrossFormatWindow;
 
-            if (_seenMessageKeys.ContainsKey($"{bucketPrefix}:{key}"))
+            // Globally: has ANY node delivered this message already? (gates one-time side effects)
+            isFirstReceipt = !Seen(key) &&
+                             (txtKey == null ||
+                              (strictText ? !Seen(txtKey) && !Seen(txtIdKey!) : !SeenRecent(txtKey)));
+
+            // This node's bucket: stored already?
+            if (Seen(B(key)))
                 return true;
-            if (txtKey != null && _seenMessageKeys.ContainsKey($"{bucketPrefix}:{txtKey}"))
-                return true;
+            if (txtKey != null)
+            {
+                if (strictText ? Seen(B(txtKey)) || Seen(B(txtIdKey!)) : SeenRecent(B(txtKey)))
+                    return true;
+            }
 
             _seenMessageKeys[key] = now;
-            _seenMessageKeys[$"{bucketPrefix}:{key}"] = now;
-            if (txtKey != null && txtKey != key)
+            _seenMessageKeys[B(key)] = now;
+            var textRegKey = strictText ? txtKey : txtIdKey;
+            if (textRegKey != null && textRegKey != key)
             {
-                _seenMessageKeys[txtKey] = now;
-                _seenMessageKeys[$"{bucketPrefix}:{txtKey}"] = now;
+                _seenMessageKeys[textRegKey] = now;
+                _seenMessageKeys[B(textRegKey)] = now;
             }
             return false;
         }

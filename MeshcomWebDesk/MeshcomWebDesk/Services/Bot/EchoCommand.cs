@@ -13,8 +13,8 @@ public class EchoCommand(LanguageService lang) : IBotCommand
         if (args.Length == 0)
         {
             var hint = lang.T(
-                "Verwendung: --echo <Text>",
-                "Usage: --echo <text>");
+                "Verwendung: >echo <Text>",
+                "Usage: >echo <text>");
             return Task.FromResult(hint);
         }
 

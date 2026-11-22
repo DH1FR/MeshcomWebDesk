@@ -98,7 +98,7 @@ Se lo **stato UDP nella barra di stato è rosso** o giallo, un clic apre il cont
 
 ## Hub Bluetooth (MeshCom UDP Bluetooth Hub)
 
-I nodi senza WiFi (ad es. Heltec T114) si possono collegare tramite il **MeshCom UDP Bluetooth Hub**. L'hub si presenta a WebDesk come un nodo con ext-UDP. Se gira sullo stesso PC, hub e WebDesk non devono usare la stessa porta:
+I nodi senza WiFi (ad es. Heltec T114) si possono collegare tramite il [**MeshCom UDP Bluetooth Hub**](https://github.com/DH1FR/MeshComUDPBluetoothHub). L'hub si presenta a WebDesk come un nodo con ext-UDP. Se gira sullo stesso PC, hub e WebDesk non devono usare la stessa porta:
 
 | Impostazione WebDesk | Valore |
 |---|---|

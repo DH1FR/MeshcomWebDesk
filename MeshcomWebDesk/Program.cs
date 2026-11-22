@@ -203,6 +203,7 @@ builder.Services.AddSingleton<IBotCommand, VersionCommand>();
 builder.Services.AddSingleton<IBotCommand, TimeCommand>();
 builder.Services.AddSingleton<IBotCommand, MhCommand>();
 builder.Services.AddSingleton<IBotCommand, PingCommand>();
+builder.Services.AddSingleton<IBotCommand, RxCommand>();
 builder.Services.AddSingleton<IBotCommand, EchoCommand>();
 builder.Services.AddSingleton<IBotCommand, MeshcomWebDesk.Services.Bot.WeatherStatusCommand>();
 builder.Services.AddSingleton<ExternalProcessRunner>();

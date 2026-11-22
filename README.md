@@ -18,14 +18,43 @@
 A **Blazor Server** web application for communicating with a [MeshCom 4.0](https://icssw.org/meshcom/) node via UDP (EXTUDP JSON protocol).  
 Built with **.NET 10** and **Blazor Interactive Server**.
 
-> **MeshCom Firmware:** Compatible with [icssw-org/MeshCom-Firmware](https://github.com/icssw-org/MeshCom-Firmware) v4.35+ (incl. 4.40a)  
+> **MeshCom Firmware:** Compatible with [icssw-org/MeshCom-Firmware](https://github.com/icssw-org/MeshCom-Firmware) v4.35+ (incl. 4.40a; checked against the source of v4.40a.11.22)  
 > Hardware IDs 1–61 supported (`TLORA`, `T-BEAM`, `T-ECHO`, `T-DECK`, `T-DECK-PLUS`, `T-DECK-PRO`, `T-ETH-ELITE`, `HELTEC-V1`–`V4`, `HELTEC-T114`, `HELTEC-E213`, `HELTEC-WPAPER`, `RAK4631`, `EBYTE-E22`, `T5-EPAPER`, `T3-S3`, `T-CONNECT-PRO`, `ESP32-LORAPRS`, `T-WATCH-S3`, …)
+
+> 🔵 **Node without WiFi?** (e.g. Heltec T114) – connect it over Bluetooth with the [**MeshCom UDP Bluetooth Hub**](https://github.com/DH1FR/MeshComUDPBluetoothHub) (BLE-to-ext-UDP/NET-console hub: it presents itself to WebDesk as a node). Setup: [node connection guide](docs/node-connection-en.md#bluetooth-hub-meshcom-udp-bluetooth-hub).
 
 > 💾 **Ready-to-run binaries** (Windows & Linux) – no build required:  
 > 👉 [**Download latest release**](https://github.com/DH1FR/MeshcomWebDesk/releases/latest)
 
 > 🧪 **Development branch (`dev`):** Contains the latest features and fixes – may be unstable.  
 > To try it: `git clone -b dev https://github.com/DH1FR/MeshcomWebDesk.git`
+
+---
+
+## 🆕 What's New in v1.18.1
+
+### ✨ Features
+- **Bot command `>rx`** – ask a neighbour station running WebDesk how it receives you: `>rx` answers *direct* or *via RELAY-12 (1 hop)* together with RSSI/SNR, e.g. `RX DL2BBB-2: via RELAY-12 (1 hop) | heard from RELAY-12: RSSI -101 dBm, SNR -3.5 dB | 11:54:25`. The answer says whose signal the values are (always the last radio hop, i.e. the relay that was heard); packets that came in via the gateway/server have no radio value. Like `>ping` it is answered even with the bot switched off. German, English, Spanish, French and Italian.
+- **Bot commands only with `>`** – the bot now reacts only to direct messages that start with `>` and a letter (`>ping`, `>version`, `>help`, `>time`, …). `--…` belongs to the node firmware's own console commands, and a bare `ping`, `--ping` or the em dash form are ordinary chat text and are no longer answered. With the bot switched off (default) `>ping`, `>version` and `>help` still answer. WebDesk's own ping (and its round-trip time display) uses `>ping`; other apps or older versions that still send `ping`/`--ping` get no reply any more. Settings texts, the `>help` output and the README are adjusted (de/en/es/fr/it).
+- **Easier to grab divider on touch screens** – the divider between chat and monitor is only 6 px high; on touch devices it now has an invisible touch area of about 20 px, so resizing the monitor with a finger no longer needs a precise hit. The look and the layout are unchanged.
+- **Tab bar on phones takes one row** – on screens up to 600 px wide the tabs sit in a single swipeable row instead of wrapping onto several rows (with 15 open tabs the bar was about 260 px high, now about 33 px). The tapped or newly active tab scrolls into view, the search buttons and *+* stay in reach, and dragging tabs to reorder them (long press) works as before. Wide screens are unchanged.
+- **Show/hide the monitor on every screen size** – the ▼/▲ button in the monitor title bar, until now only on phones and small displays, is now available everywhere. With the monitor hidden only the title bar stays and the chat uses the freed height; the choice is remembered per browser.
+- **Chat list updates only what changed** – chat rows are keyed, so with a full tab (500 messages) a new message no longer rewrites every row (about 8000 DOM changes for 4 messages before, about 150 now). Following the end of the list now only stops when *you* scroll (mouse wheel, touch, keys, scrollbar), not when the browser adjusts the scroll position itself, and the *N New Messages* button counts correctly even when the tab buffer is full.
+- **Faster switch back to Chat, lighter monitor** – the monitor now builds only its newest 200 rows (a *Show older entries* button adds 200 more; the filter still searches all entries) and its rows are keyed, so a new message inserts one row instead of rewriting the whole list. Switching from e.g. MH back to Chat with a full monitor takes about half the time (about 1 s of blocked browser instead of up to 3 s).
+- **"N new messages" button in the chat** – while you read older messages (scrolled up) and new ones arrive, a *↓ N New Messages* button appears at the bottom of the list; one click jumps to the end, scrolling down yourself dismisses it.
+
+### 🔧 Bug Fixes
+- **Identical messages were swallowed as "duplicates"** – besides the message id, WebDesk also treated two messages with the same sender, destination and text within 30 minutes as one, even when their ids differed. A second `>ping`, `73` or `ok` to the same station was dropped. A message that carries an id is now identified by the id alone (retries of the same message keep their id); the text comparison remains for copies without an id and, for 60 seconds, for the same packet arriving once with and once without an id (node and LoRa copy). ACKs keep the old rule.
+- **`>ping` route counts only the relays** – the route in the `>ping` reply started with the sender itself and counted it as a hop (a path `YOU,RELAY-12` was shown as *2 hops*). It now lists only the relay stations and counts them, the same way `>rx` and the MH list do.
+- **Decimal separator follows the language** – SNR in `>ping`/`>rx` replies and the values in `>weather` use a decimal comma (de/es/fr/it) or a point (en) according to the configured language instead of the server's operating-system setting.
+- **Monitor hidden after the toggle became available everywhere** – a stale *hidden* setting from an earlier phone-sized window, harmless on a big screen until now, hid the monitor on the normal screen. The setting is stored under a new key, so the monitor is visible by default again.
+- **No unwanted zoom on the iPhone** – iOS Safari zoomed into a text field with a font smaller than 16 px (the send field had 14 px) and stayed zoomed, so the page became wider than the screen and *Send* was hard to hit. On touch devices all text fields now use at least 16 px, and double-tap zoom is switched off. Pinch zoom with two fingers still works.
+- **Chat and monitor jumped when switching pages** – going from e.g. MH back to Chat built the page with default sizes and only afterwards applied the saved monitor height / visibility, so the monitor and the message input visibly jumped (twice on a big screen, once in compact mode with the monitor open). The saved size and visibility are now applied before the first paint, and the resize animation only runs when you toggle the monitor yourself.
+- **Setup assistant asked although a node was set up** – a saved single-node connection (no node profile) with your own callsign was treated as "not set up" as long as the node had not delivered data yet, so the first-start prompt and banner reappeared on every start. They now only appear for the placeholder callsigns (`NOCALL…`, `DH1FR-2`) and not at all once messages from the node exist.
+- **Chat jumped to the end on every new message** – the message list was forced to the bottom on each refresh, so scrolling up to read was constantly interrupted. It now only follows the end while you are at the end; switching tabs and sending your own message still scroll to the end.
+
+### 📚 Docs
+- **Bluetooth hub linked** – the README (intro) and the node connection guides (de/en/es/it) point to the [MeshCom UDP Bluetooth Hub](https://github.com/DH1FR/MeshComUDPBluetoothHub) for nodes without WiFi (e.g. Heltec T114). The Features sections of the README now describe the current scrolling, the monitor (show/hide on every screen size, newest 200 rows), the one-row tab bar on phones and the deduplication (message id first, 30 minutes); the firmware note says the source of v4.40a.11.22 was checked.
 
 ---
 
@@ -227,7 +256,7 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 - **Group messages** – group destinations appear as `#<group>` tabs with optional whitelist filter
 - **Group Labels** – configurable display names for group numbers (e.g. `#262` → `DL`); short label in the tab, full name as tooltip; pre-filled with the official MeshCom GRC group list
 - Smart routing: broadcast replies from a known callsign appear in their direct tab
-- **Auto-scroll** to the latest message when a tab is opened or a new message arrives
+- **Reading-friendly scrolling** – the list jumps to the latest message when a tab is opened and follows new messages only while you are at the end. Scroll up to read and the position stays put; a **↓ N New Messages** button shows how many arrived meanwhile and jumps back to the end (also after your own message)
 - **Unread badge** – inactive tabs show a yellow counter badge for new messages
 - **New-message divider** – a horizontal *„Neue Nachrichten / New messages"* line separates already-read messages from newly arrived ones after returning to a tab
 - **ACK delivery indicator** on every outgoing message:
@@ -246,6 +275,7 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 - **⚡ Quick Texts** – configurable one-click text buttons in the send bar; clicking a button loads the predefined text into the input field for review before sending; supports all `{variable}` placeholders (`{mycall}`, `{mylocator}`, `{callsign}`, `{locator}`, `{rssi}`, `{time}`, `{date}`, `{telemetry}`, …); buttons can be **reordered by drag & drop** in the flyout; new order is saved immediately; configured in **Settings → ⚡ Quick Texts**
 - **Variable expansion in the send bar** – type any `{variable}` directly in the message input field (e.g. `{telemetry}`, `{mycall}`, `{date}`); press **Tab** to expand as a live preview; variables are always expanded automatically on send
 - **Browser spell-check** – the message input field has `spellcheck="true"`; the browser's built-in spell checker underlines misspelled words when spell-checking is enabled in the browser settings
+- **Tab bar on phones** – up to 600 px width the tabs sit in one swipeable row (instead of wrapping onto several rows); the active tab scrolls into view, the search buttons and **+** stay in reach. Reordering by long press works there as well
 - **Draggable tabs** – chat tabs can be reordered by drag & drop; order is saved in `localStorage` and restored on every visit
 - **Timestamps** – time is always shown as `HH:mm:ss`; for messages not from today a compact date (`dd.MM.yy`) is shown below the time without increasing row height
 - **🔎 QSO dialog** – every direct-chat tab shows a 🔎 button once the MySQL database is active; opens a four-tab modal with **KI-Zusammenfassung** (AI summary), **Verlauf** (history), **Suche** (text search) and **KI-Suche** (AI search); History and Search work without an AI API key – MySQL only required; **KI-Suche** supports an optional „Search all direct QSOs" mode to search across all 1:1 conversations at once
@@ -423,9 +453,9 @@ see the clamped `-15`.)
 - **Telemetry rows** (`type:"tele"`) display temperature 🌡️, humidity 💧, pressure 🧭 and battery 🔋
 - Colour-coded rows: green for TX, cyan for position beacons, purple for telemetry, gold for ACKs
 - **UDP registration packet** (`{"type":"info",...}`) sent on startup is shown as a `SYS` TX entry
-- Newest entry always at the top; configurable history limit (`MonitorMaxMessages`)
+- Newest entry always at the top; configurable history limit (`MonitorMaxMessages`). Only the newest 200 rows are built (fast page changes); **Show older entries** adds 200 more, the live filter searches all of them
 - **Resizable**: drag the divider bar between chat and monitor to adjust the split – last position is saved in `localStorage` and restored on the next visit
-- Collapsible on mobile (toggle button)
+- **Show/hide** the monitor with the ▼/▲ button in its title bar – on every screen size; the choice and the height are remembered per browser and applied before the first paint (no jumping when changing pages). On touch screens the divider has an enlarged touch area
 - **Live filter** 🔍 in the monitor title bar – type any callsign or text fragment to instantly show only matching rows; press **Enter** to apply immediately; the entry counter switches to `X / Y Entries` while a filter is active; clear with the × button or delete all text; filter results are cached and only recomputed on change (debounced 250 ms)
 
 ### 📊 Status bar
@@ -436,9 +466,9 @@ see the clamped `-15`.)
 - 🔔 / 🔕 Sound notification toggle
 
 ### 🔄 Deduplication
-- Incoming messages are deduplicated using the `msg_id` field (unique hex ID from the node)
-- Fallback chain: `msg_id` → `{NNN}` sequence number → message text
-- Duplicate suppression window: 10 minutes (rolling cache, auto-pruned)
+- A message with a `msg_id` (unique hex ID from the node) is identified by that id alone – retransmissions of the same message keep their id, two messages with the same text but different ids are two messages (a second `>ping`, `73` …)
+- Copies **without** an id fall back to the `{NNN}` sequence number, then to sender + destination + text; the same packet arriving once with and once without an id (node and LoRa copy) is caught within 60 seconds. ACKs always use the text rule
+- Duplicate suppression window: 30 minutes (rolling cache, auto-pruned)
 
 ### 💾 State Persistence
 - Chat tabs, MH list, monitor history and **own GPS position** are saved to disk on shutdown
@@ -617,23 +647,24 @@ Automatically announces recurring events (e.g. club meetings) to a configured gr
 
 ### 🤖 Bot – Remote commands via direct message
 - **Command-based auto-responses** for incoming direct messages
-- Trigger: any direct message starting with `--` (two hyphens) or `—` (em dash, as typed by many MeshCom clients and mobile keyboards) **immediately followed by a letter** – decoration strings like `---===` are intentionally ignored
+- Trigger: any direct message starting with `>` **immediately followed by a letter** (`>ping`, `>version` …). `--…` is left to the node firmware's own console commands, so it (and a bare `ping`) is ordinary chat text and is not answered
 - **Built-in commands:**
 
   | Command | Response |
   |---------|----------|
-  | `--help` | List of all registered commands |
-  | `--version` | `MeshcomWebDesk vX.Y.Z` |
-  | `--time` | Current date and time |
-  | `--mh` | Count and callsigns of recently heard stations |
-  | `--ping` | `Pong! 👋 <callsign> \| RSSI: -87 dBm, SNR: 6.5 dB \| Route (2 hops): OE1XAR-62,DB0TAW-13 \| Received: 14:32:07` |
-  | `--echo <text>` | Echoes `<text>` back to the sender |
+  | `>help` | List of all registered commands |
+  | `>version` | `MeshcomWebDesk vX.Y.Z` |
+  | `>time` | Current date and time |
+  | `>mh` | Count and callsigns of recently heard stations |
+  | `>ping` | `Pong! 👋 <callsign> \| RSSI: -87 dBm, SNR: 6.5 dB \| Route (2 hops): OE1XAR-62,DB0TAW-13 \| Received: 14:32:07` |
+  | `>rx` | How the bot station receives *you*: `RX <callsign>: direct \| RSSI -95 dBm, SNR 6.5 dB \| 14:32:07` or `via RELAY-12 (1 hop) \| heard from RELAY-12: RSSI …` – the signal always belongs to the last radio hop; via gateway/server there is no radio value |
+  | `>echo <text>` | Echoes `<text>` back to the sender |
 
-- **Bare `ping` keyword**: a direct message containing only `ping` (case-insensitive, with optional surrounding whitespace) is treated identically to `--ping`
+- **Bot switched off** (default): `>ping`, `>rx`, `>version` and `>help` are still answered
 - **User-defined commands** fully configurable in **Settings → 🤖 Bot** – no code changes required:
-  - `Name` – command name without `--` (e.g. `info`)
+  - `Name` – command name without `>` (e.g. `info`)
   - Response – reply text; supports all {variable} placeholders ({mycall}, {mylocator}, {callsign}, {locator}, {version}, {rssi}, {snr}, {hw}, {route}, {hops}, {srctype}, {srctype-label}, {date}, {time}, {telemetry}, {last-qso}, {my-tx-power}, {my-eirp}, {my-antenna}, {my-antenna-type}, {my-antenna-height}, {my-freq})
-  - `Description` – optional short text shown in `--help` output
+  - `Description` – optional short text shown in `>help` output
 - **External process commands** ⚙️ – tick the **⚙️ External** checkbox in the command table to run an arbitrary executable or script instead of returning a static response:
   - The script receives a **JSON payload on stdin** (UTF-8) and writes the reply to **stdout**
   - **Empty stdout** → no reply is sent (useful for conditional responses)
