@@ -18,8 +18,10 @@
 A **Blazor Server** web application for communicating with a [MeshCom 4.0](https://icssw.org/meshcom/) node via UDP (EXTUDP JSON protocol).  
 Built with **.NET 10** and **Blazor Interactive Server**.
 
-> **MeshCom Firmware:** Compatible with [icssw-org/MeshCom-Firmware](https://github.com/icssw-org/MeshCom-Firmware) v4.35+ (incl. 4.40a)  
+> **MeshCom Firmware:** Compatible with [icssw-org/MeshCom-Firmware](https://github.com/icssw-org/MeshCom-Firmware) v4.35+ (incl. 4.40a; checked against the source of v4.40a.11.22)  
 > Hardware IDs 1–61 supported (`TLORA`, `T-BEAM`, `T-ECHO`, `T-DECK`, `T-DECK-PLUS`, `T-DECK-PRO`, `T-ETH-ELITE`, `HELTEC-V1`–`V4`, `HELTEC-T114`, `HELTEC-E213`, `HELTEC-WPAPER`, `RAK4631`, `EBYTE-E22`, `T5-EPAPER`, `T3-S3`, `T-CONNECT-PRO`, `ESP32-LORAPRS`, `T-WATCH-S3`, …)
+
+> 🔵 **Node without WiFi?** (e.g. Heltec T114) – connect it over Bluetooth with the [**MeshCom UDP Bluetooth Hub**](https://github.com/DH1FR/MeshComUDPBluetoothHub) (BLE-to-ext-UDP/NET-console hub: it presents itself to WebDesk as a node). Setup: [node connection guide](docs/node-connection-en.md#bluetooth-hub-meshcom-udp-bluetooth-hub).
 
 > 💾 **Ready-to-run binaries** (Windows & Linux) – no build required:  
 > 👉 [**Download latest release**](https://github.com/DH1FR/MeshcomWebDesk/releases/latest)
@@ -50,6 +52,9 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 - **Chat and monitor jumped when switching pages** – going from e.g. MH back to Chat built the page with default sizes and only afterwards applied the saved monitor height / visibility, so the monitor and the message input visibly jumped (twice on a big screen, once in compact mode with the monitor open). The saved size and visibility are now applied before the first paint, and the resize animation only runs when you toggle the monitor yourself.
 - **Setup assistant asked although a node was set up** – a saved single-node connection (no node profile) with your own callsign was treated as "not set up" as long as the node had not delivered data yet, so the first-start prompt and banner reappeared on every start. They now only appear for the placeholder callsigns (`NOCALL…`, `DH1FR-2`) and not at all once messages from the node exist.
 - **Chat jumped to the end on every new message** – the message list was forced to the bottom on each refresh, so scrolling up to read was constantly interrupted. It now only follows the end while you are at the end; switching tabs and sending your own message still scroll to the end.
+
+### 📚 Docs
+- **Bluetooth hub linked** – the README (intro) and the node connection guides (de/en/es/it) point to the [MeshCom UDP Bluetooth Hub](https://github.com/DH1FR/MeshComUDPBluetoothHub) for nodes without WiFi (e.g. Heltec T114). The Features sections of the README now describe the current scrolling, the monitor (show/hide on every screen size, newest 200 rows), the one-row tab bar on phones and the deduplication (message id first, 30 minutes); the firmware note says the source of v4.40a.11.22 was checked.
 
 ---
 
@@ -251,7 +256,7 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 - **Group messages** – group destinations appear as `#<group>` tabs with optional whitelist filter
 - **Group Labels** – configurable display names for group numbers (e.g. `#262` → `DL`); short label in the tab, full name as tooltip; pre-filled with the official MeshCom GRC group list
 - Smart routing: broadcast replies from a known callsign appear in their direct tab
-- **Auto-scroll** to the latest message when a tab is opened or a new message arrives
+- **Reading-friendly scrolling** – the list jumps to the latest message when a tab is opened and follows new messages only while you are at the end. Scroll up to read and the position stays put; a **↓ N New Messages** button shows how many arrived meanwhile and jumps back to the end (also after your own message)
 - **Unread badge** – inactive tabs show a yellow counter badge for new messages
 - **New-message divider** – a horizontal *„Neue Nachrichten / New messages"* line separates already-read messages from newly arrived ones after returning to a tab
 - **ACK delivery indicator** on every outgoing message:
@@ -270,6 +275,7 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 - **⚡ Quick Texts** – configurable one-click text buttons in the send bar; clicking a button loads the predefined text into the input field for review before sending; supports all `{variable}` placeholders (`{mycall}`, `{mylocator}`, `{callsign}`, `{locator}`, `{rssi}`, `{time}`, `{date}`, `{telemetry}`, …); buttons can be **reordered by drag & drop** in the flyout; new order is saved immediately; configured in **Settings → ⚡ Quick Texts**
 - **Variable expansion in the send bar** – type any `{variable}` directly in the message input field (e.g. `{telemetry}`, `{mycall}`, `{date}`); press **Tab** to expand as a live preview; variables are always expanded automatically on send
 - **Browser spell-check** – the message input field has `spellcheck="true"`; the browser's built-in spell checker underlines misspelled words when spell-checking is enabled in the browser settings
+- **Tab bar on phones** – up to 600 px width the tabs sit in one swipeable row (instead of wrapping onto several rows); the active tab scrolls into view, the search buttons and **+** stay in reach. Reordering by long press works there as well
 - **Draggable tabs** – chat tabs can be reordered by drag & drop; order is saved in `localStorage` and restored on every visit
 - **Timestamps** – time is always shown as `HH:mm:ss`; for messages not from today a compact date (`dd.MM.yy`) is shown below the time without increasing row height
 - **🔎 QSO dialog** – every direct-chat tab shows a 🔎 button once the MySQL database is active; opens a four-tab modal with **KI-Zusammenfassung** (AI summary), **Verlauf** (history), **Suche** (text search) and **KI-Suche** (AI search); History and Search work without an AI API key – MySQL only required; **KI-Suche** supports an optional „Search all direct QSOs" mode to search across all 1:1 conversations at once
@@ -447,9 +453,9 @@ see the clamped `-15`.)
 - **Telemetry rows** (`type:"tele"`) display temperature 🌡️, humidity 💧, pressure 🧭 and battery 🔋
 - Colour-coded rows: green for TX, cyan for position beacons, purple for telemetry, gold for ACKs
 - **UDP registration packet** (`{"type":"info",...}`) sent on startup is shown as a `SYS` TX entry
-- Newest entry always at the top; configurable history limit (`MonitorMaxMessages`)
+- Newest entry always at the top; configurable history limit (`MonitorMaxMessages`). Only the newest 200 rows are built (fast page changes); **Show older entries** adds 200 more, the live filter searches all of them
 - **Resizable**: drag the divider bar between chat and monitor to adjust the split – last position is saved in `localStorage` and restored on the next visit
-- Collapsible on mobile (toggle button)
+- **Show/hide** the monitor with the ▼/▲ button in its title bar – on every screen size; the choice and the height are remembered per browser and applied before the first paint (no jumping when changing pages). On touch screens the divider has an enlarged touch area
 - **Live filter** 🔍 in the monitor title bar – type any callsign or text fragment to instantly show only matching rows; press **Enter** to apply immediately; the entry counter switches to `X / Y Entries` while a filter is active; clear with the × button or delete all text; filter results are cached and only recomputed on change (debounced 250 ms)
 
 ### 📊 Status bar
@@ -460,9 +466,9 @@ see the clamped `-15`.)
 - 🔔 / 🔕 Sound notification toggle
 
 ### 🔄 Deduplication
-- Incoming messages are deduplicated using the `msg_id` field (unique hex ID from the node)
-- Fallback chain: `msg_id` → `{NNN}` sequence number → message text
-- Duplicate suppression window: 10 minutes (rolling cache, auto-pruned)
+- A message with a `msg_id` (unique hex ID from the node) is identified by that id alone – retransmissions of the same message keep their id, two messages with the same text but different ids are two messages (a second `>ping`, `73` …)
+- Copies **without** an id fall back to the `{NNN}` sequence number, then to sender + destination + text; the same packet arriving once with and once without an id (node and LoRa copy) is caught within 60 seconds. ACKs always use the text rule
+- Duplicate suppression window: 30 minutes (rolling cache, auto-pruned)
 
 ### 💾 State Persistence
 - Chat tabs, MH list, monitor history and **own GPS position** are saved to disk on shutdown

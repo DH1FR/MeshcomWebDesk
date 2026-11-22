@@ -98,7 +98,7 @@ If the **UDP status in the status bar is red** or yellow, clicking it opens the 
 
 ## Bluetooth Hub (MeshCom UDP Bluetooth Hub)
 
-Nodes without WiFi (e.g. Heltec T114) can be connected through the **MeshCom UDP Bluetooth Hub**. The hub presents itself to WebDesk as a node with ext-UDP. When it runs on the same PC, hub and WebDesk must not use the same port:
+Nodes without WiFi (e.g. Heltec T114) can be connected through the [**MeshCom UDP Bluetooth Hub**](https://github.com/DH1FR/MeshComUDPBluetoothHub). The hub presents itself to WebDesk as a node with ext-UDP. When it runs on the same PC, hub and WebDesk must not use the same port:
 
 | WebDesk setting | Value |
 |---|---|

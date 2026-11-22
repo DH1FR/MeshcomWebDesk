@@ -22,6 +22,9 @@
 - **Setup assistant asked although a node was set up** – a saved single-node connection (no node profile) with your own callsign was treated as "not set up" as long as the node had not delivered data yet, so the first-start prompt and banner reappeared on every start. They now only appear for the placeholder callsigns (`NOCALL…`, `DH1FR-2`) and not at all once messages from the node exist.
 - **Chat jumped to the end on every new message** – the message list was forced to the bottom on each refresh, so scrolling up to read was constantly interrupted. It now only follows the end while you are at the end; switching tabs and sending your own message still scroll to the end.
 
+### Docs
+- **Bluetooth hub linked** – the README (intro) and the node connection guides (de/en/es/it) point to the [MeshCom UDP Bluetooth Hub](https://github.com/DH1FR/MeshComUDPBluetoothHub) for nodes without WiFi (e.g. Heltec T114). The Features sections of the README now describe the current scrolling, the monitor (show/hide on every screen size, newest 200 rows), the one-row tab bar on phones and the deduplication (message id first, 30 minutes); the firmware note says the source of v4.40a.11.22 was checked.
+
 ---
 
 ## [1.18.0] – released
