@@ -32,6 +32,7 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 ## 🆕 What's New in v1.18.1 (dev)
 
 ### ✨ Features
+- **Show/hide the monitor on every screen size** – the ▼/▲ button in the monitor title bar, until now only on phones and small displays, is now available everywhere. With the monitor hidden only the title bar stays and the chat uses the freed height; the choice is remembered per browser.
 - **Chat list updates only what changed** – chat rows are keyed, so with a full tab (500 messages) a new message no longer rewrites every row (about 8000 DOM changes for 4 messages before, about 150 now). Following the end of the list now only stops when *you* scroll (mouse wheel, touch, keys, scrollbar), not when the browser adjusts the scroll position itself, and the *N New Messages* button counts correctly even when the tab buffer is full.
 - **Faster switch back to Chat, lighter monitor** – the monitor now builds only its newest 200 rows (a *Show older entries* button adds 200 more; the filter still searches all entries) and its rows are keyed, so a new message inserts one row instead of rewriting the whole list. Switching from e.g. MH back to Chat with a full monitor takes about half the time (about 1 s of blocked browser instead of up to 3 s).
 - **"N new messages" button in the chat** – while you read older messages (scrolled up) and new ones arrive, a *↓ N New Messages* button appears at the bottom of the list; one click jumps to the end, scrolling down yourself dismisses it.

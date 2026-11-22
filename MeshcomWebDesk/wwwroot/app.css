@@ -898,6 +898,17 @@ html[data-mon-h] .lower-pane {
     flex: none;
 }
 
+/* Monitor hidden (toggle button, all screen sizes; phones/compact start hidden): only the title bar stays,
+   the chat gets the freed height. Must beat the saved-height rule above. */
+html[data-monitor="0"] .lower-pane {
+    flex: 0 0 auto !important;
+    height: auto !important;
+}
+html[data-monitor="0"] .lower-pane .mon-list,
+html[data-monitor="0"] .lower-pane .mon-filter-wrap {
+    display: none;
+}
+
 /* Animate only when the user toggles the monitor (class set briefly by chat.js), never on page build. */
 html.mon-animate .lower-pane {
     transition: height 0.15s ease, flex 0.15s ease;
@@ -2005,20 +2016,6 @@ html.mon-animate .lower-pane {
         font-size: 12px;
     }
 
-    /* Monitor pane: collapse to header-only on phones by default (user can expand) */
-    html[data-monitor="0"] .lower-pane .mon-list {
-        display: none;
-    }
-
-    html[data-monitor="0"] .lower-pane {
-        flex: 0 !important;
-    }
-
-    /* Monitor toggle button: visible on phones only */
-    .mon-toggle-btn {
-        display: inline-flex;
-    }
-
     /* Status bar: single line, smaller on phones */
     .status-bar {
         font-size: 11px;
@@ -2037,9 +2034,9 @@ html.mon-animate .lower-pane {
     }
 }
 
-/* Monitor toggle button: hidden on desktop */
+/* Monitor toggle button: shows/hides the monitor, on every screen size */
 .mon-toggle-btn {
-    display: none;
+    display: inline-flex;
     background: none;
     border: none;
     color: var(--link);
