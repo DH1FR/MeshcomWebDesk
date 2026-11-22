@@ -31,6 +31,13 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
+## 🆕 What's New in v1.18.2 (dev)
+
+### 📚 Docs
+- **Current screenshots** – the README screenshots show WebDesk v1.18.2 instead of v1.11.1: chat with monitor, MH list, live map (a 274 KB JPEG instead of a 5.7 MB PNG), the phone view with the one-row tab bar, the Console Command Helper and the AI search dialog. Names and places from QRZ, positions and locators are blurred or masked. The outdated terminal banner screenshot (v1.6.11) is gone; the *Startup* section still describes the banner.
+
+---
+
 ## 🆕 What's New in v1.18.1
 
 ### ✨ Features
@@ -235,15 +242,17 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 
 <video src="docs/MeshComWebDesk.mp4" controls width="100%"></video>
 
-![MeshCom Web Client](docs/screenshot.png?v=3)
+![MeshCom Web Client](docs/screenshot.png?v=4)
+
+![MeshCom MH list](docs/Screenshot_MH.png)
 
 ![MeshCom AI Search](docs/Screenshot-AI-Search.png)
 
-![MeshCom Live Map](docs/Screenshot_Map.png)
+![MeshCom Live Map](docs/Screenshot_Map.jpg)
 
-![Terminal Startup Banner](docs/Screenshot_shell.png)
+<img src="docs/Screenshot_Mobile.png" alt="MeshCom WebDesk on a phone: one-row tab bar" width="300">
 
-![Console Command Helper mit Spektrum-Scan](docs/Console_Command_Helper.png)
+![Console Command Helper](docs/Console_Command_Helper.png)
 
 ---
 

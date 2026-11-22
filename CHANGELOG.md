@@ -1,5 +1,12 @@
 ﻿# Changelog
 
+## [1.18.2] – unreleased
+
+### Docs
+- **Current screenshots** – the README screenshots show WebDesk v1.18.2 instead of v1.11.1: chat with monitor, MH list, live map (a 274 KB JPEG instead of a 5.7 MB PNG), the phone view with the one-row tab bar, the Console Command Helper and the AI search dialog. Names and places from QRZ, positions and locators are blurred or masked. The outdated terminal banner screenshot (v1.6.11) is gone; the *Startup* section still describes the banner.
+
+---
+
 ## [1.18.1] – 2026-11-22
 
 ### Features
