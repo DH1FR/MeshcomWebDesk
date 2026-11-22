@@ -275,9 +275,9 @@
             </button>
         </div>
         <div class="mon-list" id="raw-messages">
-            @foreach (var m in _cachedFilteredMessages)
+            @foreach (var m in _cachedFilteredMessages.Take(_monitorRenderLimit))
             {
-                <div class="mon-row @MonRowClass(m)">
+                <div class="mon-row @MonRowClass(m)" @key="m">
                     @{ var monTs = LT(m.Timestamp); var monDate = TsDate(monTs); }
                     <span class="mon-time @(monDate != null ? "mon-time-dated" : "")" title="@(m.MsgId is not null ? $"ID: {m.MsgId}" : null)">
                         @monTs.ToString("HH:mm:ss")
@@ -465,6 +465,12 @@
                               title="@($"{Loc.T("APRS-Kommentar (nur KISS)", "APRS comment (KISS only)")}: {cmt}")">@cmt</span>
                     }
                 </div>
+            }
+            @if (_cachedFilteredMessages.Count > _monitorRenderLimit)
+            {
+                <button class="mon-more-btn" @onclick="ShowMoreMonitor">
+                    @Loc.T("Ältere Einträge anzeigen", "Show older entries") (@(_cachedFilteredMessages.Count - _monitorRenderLimit))
+                </button>
             }
         </div>
     </div>
@@ -1123,6 +1129,12 @@
     private readonly Dictionary<Guid, DateTime> _lastNotificationTime = new();
     private string _monitorFilter = string.Empty;
     private IReadOnlyList<MeshcomMessage> _cachedFilteredMessages = [];
+
+    // Only the newest rows of the monitor are rendered; building all (up to MonitorMaxMessages) on every page
+    // visit blocked the browser for seconds. Older rows are added on demand; filtering still searches all of them.
+    private const int MonitorRenderStep = 200;
+    private int _monitorRenderLimit = MonitorRenderStep;
+    private void ShowMoreMonitor() => _monitorRenderLimit += MonitorRenderStep;
     private CancellationTokenSource? _filterDebounce;
     private List<string> _tabOrder = [];
     private DotNetObjectReference<Chat>? _dotNetRef;
@@ -1145,6 +1157,7 @@
     private async Task OnMonitorFilterInput(ChangeEventArgs e)
     {
         _monitorFilter = e.Value?.ToString() ?? string.Empty;
+        _monitorRenderLimit = MonitorRenderStep;
 
         // Empty field: apply immediately without debounce
         if (string.IsNullOrEmpty(_monitorFilter))
@@ -1181,6 +1194,7 @@
     {
         _filterDebounce?.Cancel();
         _monitorFilter = string.Empty;
+        _monitorRenderLimit = MonitorRenderStep;
         RebuildFilterCache();
     }
 

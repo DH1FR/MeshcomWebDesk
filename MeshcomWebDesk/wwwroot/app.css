@@ -903,6 +903,23 @@ html.mon-animate .lower-pane {
     transition: height 0.15s ease, flex 0.15s ease;
 }
 
+.mon-more-btn {
+    align-self: center;
+    margin: 6px 0 10px;
+    padding: 4px 14px;
+    border: 1px solid var(--btn-border);
+    border-radius: 6px;
+    background: var(--btn-bg);
+    color: var(--btn-text);
+    font-size: 0.78rem;
+    cursor: pointer;
+}
+
+.mon-more-btn:hover {
+    background: var(--btn-hover-bg);
+    color: var(--btn-hover-text);
+}
+
 .mon-list {
     flex: 1;
     overflow-y: auto;
