@@ -68,6 +68,21 @@ public class LanguageService
     /// <summary>Currently active language code.</summary>
     public string Current => _lang;
 
+    private static readonly System.Globalization.NumberFormatInfo CommaFormat =
+        new() { NumberDecimalSeparator = ",", NumberGroupSeparator = "." };
+    private static readonly System.Globalization.NumberFormatInfo DotFormat =
+        new() { NumberDecimalSeparator = ".", NumberGroupSeparator = "," };
+
+    /// <summary>
+    /// Decimal separator of a language code: comma for de/es/fr/it, point otherwise. A hand-built format, not a
+    /// <see cref="System.Globalization.CultureInfo"/>, so it also works with InvariantGlobalization (Docker images).
+    /// </summary>
+    public static System.Globalization.NumberFormatInfo NumberFormatFor(string? lang) =>
+        lang is "de" or "es" or "fr" or "it" ? CommaFormat : DotFormat;
+
+    /// <summary>Number format of the configured language (decimal comma or point), not of the server's OS culture.</summary>
+    public System.Globalization.NumberFormatInfo NumberFormat => NumberFormatFor(_lang);
+
     /// <summary>Language of the linked docs (docs/node-connection-xx.md exist for de, en, es, it; everything else → en).</summary>
     public string DocsLanguage => _lang is "de" or "es" or "it" ? _lang : "en";
 
