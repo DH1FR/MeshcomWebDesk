@@ -2,6 +2,9 @@
 
 ## [1.18.2] – unreleased
 
+### Improvements
+- **Optimized license key request** – the coffee dialog and the About page now have a small form (name, callsign, *PayPal already donated* or *request payment via Wero*, *Request a license key*) that opens a prefilled e-mail to the author in the interface language, followed by the German text. The e-mail is only offered once name and payment option are filled in; for a license key the callsign is required as well. Wero and PayPal only – the bank transfer option is gone. Texts in German, English, Spanish, French and Italian.
+
 ### Docs
 - **Current screenshots** – the README screenshots show WebDesk v1.18.2 instead of v1.11.1: chat with monitor, MH list, live map (a 274 KB JPEG instead of a 5.7 MB PNG), the phone view with the one-row tab bar, the Console Command Helper and the AI search dialog. Names and places from QRZ, positions and locators are blurred or masked. The outdated terminal banner screenshot (v1.6.11) is gone; the *Startup* section still describes the banner.
 

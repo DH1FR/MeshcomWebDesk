@@ -1,0 +1,173 @@
+@* Small form (name, callsign, PayPal / license options) that builds a pre-filled mail to the author for
+   donations and license requests. Nothing is sent by the app itself – the user's mail client (or the clipboard) is used. *@
+@using Microsoft.Extensions.Options
+@inject LanguageService Loc
+@inject IOptionsMonitor<MeshcomSettings> Settings
+@inject IJSRuntime JS
+
+<div class="donation-mail">
+    <div class="donation-mail-fields">
+        <input class="donation-mail-input" type="text" maxlength="60" autocomplete="name"
+               placeholder="@Loc.T("Dein Name", "Your name")"
+               @bind="_name" @bind:event="oninput" />
+        <input class="donation-mail-input donation-mail-call" type="text" maxlength="20" autocapitalize="characters"
+               placeholder="@Loc.T("Rufzeichen", "Callsign")"
+               @bind="_callsign" @bind:event="oninput" />
+    </div>
+    <div class="donation-mail-pay">
+        <label class="donation-mail-check">
+            <input type="radio" name="donation-pay" checked="@(_pay == Pay.PayPal)" @onchange="() => _pay = Pay.PayPal" />
+            @Loc.T("Ich habe bereits per PayPal gespendet", "I have already donated via PayPal")
+        </label>
+        <label class="donation-mail-check">
+            <input type="radio" name="donation-pay" checked="@(_pay == Pay.Wero)" @onchange="() => _pay = Pay.Wero" />
+            @Loc.T("Zahlung per Wero anfordern", "Request payment via Wero")
+        </label>
+    </div>
+    @if (_pay == Pay.PayPal)
+    {
+        <input class="donation-mail-input" type="text" maxlength="80"
+               placeholder="@Loc.T("Name oder E-Mail im PayPal-Konto (zur Zuordnung deiner Zahlung)", "Name or e-mail of your PayPal account (to match your payment)")"
+               @bind="_payId" @bind:event="oninput" />
+    }
+    else if (_pay == Pay.Wero)
+    {
+        <input class="donation-mail-input" type="text" maxlength="80"
+               placeholder="@Loc.T("Telefonnummer oder E-Mail deines Wero-Kontos", "Phone number or e-mail of your Wero account")"
+               @bind="_payId" @bind:event="oninput" />
+    }
+    <label class="donation-mail-check">
+        <input type="checkbox" @bind="_wantLicense" />
+        @Loc.T("Lizenzschlüssel anfordern", "Request a license key")
+    </label>
+    @if (!Valid)
+    {
+        <div class="donation-mail-hint">
+            @if (string.IsNullOrWhiteSpace(_name))
+            {
+                <div>@Loc.T("Bitte den Namen eintragen.", "Please enter your name.")</div>
+            }
+            @if (_pay is null)
+            {
+                <div>@Loc.T("Bitte eine Zahlungsart auswählen.", "Please choose a payment option.")</div>
+            }
+            @if (_wantLicense && string.IsNullOrWhiteSpace(_callsign))
+            {
+                <div>@Loc.T("Für einen Lizenzschlüssel bitte das Rufzeichen eintragen.", "Please enter your callsign to request a license key.")</div>
+            }
+        </div>
+    }
+    <div class="donation-mail-actions">
+        @if (Valid)
+        {
+            <a class="donation-mail-btn" href="@MailtoUrl()">✉️ @Loc.T("E-Mail schreiben", "Write e-mail") (@Recipient)</a>
+        }
+        else
+        {
+            <button type="button" class="donation-mail-btn" disabled>✉️ @Loc.T("E-Mail schreiben", "Write e-mail") (@Recipient)</button>
+        }
+        <button type="button" class="donation-mail-btn donation-mail-copy" disabled="@(!Valid)" @onclick="CopyAsync">
+            @(_copied ? "✔ " + Loc.T("Kopiert", "Copied") : "📋 " + Loc.T("Text kopieren", "Copy text"))
+        </button>
+    </div>
+</div>
+
+@code {
+    private const string Recipient = "dh1fr@darc.de";
+
+    [Parameter] public string Version { get; set; } = "";
+
+    private string _name = "";
+    private string _callsign = "";
+    private string _payId = "";   // PayPal name / e-mail or Wero phone / e-mail, depending on _pay
+    private enum Pay { PayPal, Wero }
+    private Pay? _pay;   // no default: the user has to choose
+    private bool _wantLicense;
+    private bool _copied;
+
+    /// <summary>
+    /// A mail is only offered with a name and a chosen payment option; a license is bound to the
+    /// callsign, so requesting one requires it as well.
+    /// </summary>
+    private bool Valid =>
+        !string.IsNullOrWhiteSpace(_name) && _pay is not null
+        && (!_wantLicense || !string.IsNullOrWhiteSpace(_callsign));
+
+    protected override void OnInitialized()
+    {
+        // Pre-fill the callsign from the configuration (without SSID); NOCALL is the unconfigured default.
+        var cs = (Settings.CurrentValue.MyCallsign ?? "").Trim().ToUpperInvariant();
+        var dash = cs.IndexOf('-');
+        if (dash > 0) cs = cs[..dash];
+        _callsign = cs.StartsWith("NOCALL", StringComparison.Ordinal) ? "" : cs;
+    }
+
+    private string Subject() =>
+        "MeshCom WebDesk - Coffee donation ("
+        + (_pay == Pay.PayPal ? "PayPal" : "Wero request") + ")"
+        + (_wantLicense ? " + license request" : "");
+
+    /// <summary>
+    /// Mail body in the active UI language, followed by a German version so the author can always read it.
+    /// For German UI the text appears only once.
+    /// </summary>
+    private string Body()
+    {
+        if (Loc.Current == "de") return Build(german: true);
+        return Build(german: false) + "\r\n\r\n---------- Deutsch ----------\r\n\r\n" + Build(german: true);
+    }
+
+    private string Build(bool german)
+    {
+        var name = string.IsNullOrWhiteSpace(_name) ? "-" : _name.Trim();
+        var call = _callsign.Trim().ToUpperInvariant();
+        var ver  = string.IsNullOrWhiteSpace(Version) ? "" : $" v{Version}";
+        var payId = string.IsNullOrWhiteSpace(_payId) ? "-" : _payId.Trim();
+
+        // The English text is the translation key, so every template is a constant ({n} = values).
+        string P(string de, string en, params object[] a) => german ? string.Format(de, a) : Loc.TF(de, en, a);
+
+        var sb = new System.Text.StringBuilder();
+        sb.Append(P("Hallo Ralf,", "Hello Ralf,")).Append("\r\n\r\n");
+
+        switch (_pay)
+        {
+            case Pay.PayPal:
+                sb.Append(P("ich habe für MeshCom WebDesk{0} per PayPal gespendet. Name oder E-Mail in meinem PayPal-Konto: {1}",
+                            "I donated for MeshCom WebDesk{0} via PayPal. Name or e-mail of my PayPal account: {1}", ver, payId));
+                break;
+            default: // Pay.Wero
+                sb.Append(P("ich möchte dir für MeshCom WebDesk{0} einen Kaffee spendieren – per Wero. " +
+                            "Bitte fordere den Betrag per Wero an. Telefonnummer oder E-Mail meines Wero-Kontos: {1}",
+                            "I would like to buy you a coffee for MeshCom WebDesk{0} – via Wero. " +
+                            "Please request the amount via Wero. Phone number or e-mail of my Wero account: {1}", ver, payId));
+                break;
+        }
+        sb.Append("\r\n\r\n");
+
+        if (_wantLicense)
+            sb.Append(P("Bitte stelle mir außerdem einen Lizenzschlüssel für mein Rufzeichen aus.",
+                        "Please also issue a license key for my callsign.")).Append("\r\n\r\n");
+
+        sb.Append(P("Name: {0}", "Name: {0}", name)).Append("\r\n");
+        if (call.Length > 0)
+            sb.Append(P("Rufzeichen: {0}", "Callsign: {0}", call)).Append("\r\n");
+        sb.Append("\r\n73");
+        return sb.ToString();
+    }
+
+    private string MailtoUrl() =>
+        $"mailto:{Recipient}?subject={Uri.EscapeDataString(Subject())}&body={Uri.EscapeDataString(Body())}";
+
+    private async Task CopyAsync()
+    {
+        if (!Valid) return;
+        try
+        {
+            await JS.InvokeVoidAsync("meshcomChat.copyToClipboard",
+                $"To: {Recipient}\r\nSubject: {Subject()}\r\n\r\n{Body()}");
+            _copied = true;
+        }
+        catch { /* clipboard not available – the mailto link remains */ }
+    }
+}

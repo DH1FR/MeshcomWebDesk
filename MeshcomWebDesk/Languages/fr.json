@@ -1136,7 +1136,6 @@
     "Automatic (detect small displays)": "Automatique (détecter les petits écrans)",
     "Normal": "Normal",
     "Compact (e.g. 480×320 touch display)": "Compact (p. ex. écran tactile 480×320)",
-    "Prefer Wero or a bank transfer? Send me a short e-mail – I will send you my bank details or request the amount via Wero (please include the phone number or e-mail of your Wero account). If you would like a license, please include your callsign.": "Vous préférez Wero ou un virement bancaire ? Envoyez-moi un court e-mail : je vous communique mes coordonnées bancaires ou je vous demande le montant via Wero (indiquez le téléphone ou l'e-mail de votre compte Wero). Si vous souhaitez une licence, indiquez votre indicatif.",
     "(WebDesk's address; the hub also learns it from the packets)": "(adresse de WebDesk ; le hub l'apprend aussi à partir des paquets)",
     "0.0.0.0, broadcast and multicast addresses are not allowed. Enter the node's own IP address.": "0.0.0.0 ainsi que les adresses de diffusion (broadcast) et multicast ne sont pas autorisées. Saisissez l'adresse IP propre du nœud.",
     "A MeshCom node listens on UDP 1799 only and cannot change it. Only the Bluetooth hub (1798) or a port forward justify another port.": "Un nœud MeshCom écoute uniquement sur UDP 1799 et ne peut pas le modifier. Seuls le hub Bluetooth (1798) ou une redirection de port justifient un autre port.",
@@ -1472,6 +1471,24 @@
     "The connection was made, but the node did not answer (completely). Check again; if that does not help, use \"Read from node\" below and look at the reply.": "La connexion a été établie, mais le nœud n'a pas répondu (complètement). Vérifiez à nouveau ; si cela n'aide pas, utilisez « Lire depuis le nœud » ci-dessous et regardez la réponse.",
     "Last checked: {0}": "Dernière vérification : {0}",
     "The node did not report this in its --info answer, so WebDesk cannot judge it. The node's answer is shown below.": "Le nœud n'a pas indiqué cette valeur dans sa réponse à --info, WebDesk ne peut donc pas l'évaluer. La réponse du nœud est affichée ci-dessous.",
-    "Node's answer: ": "Réponse du nœud : "
+    "Node's answer: ": "Réponse du nœud : ",
+    "Your name": "Votre nom",
+    "Write e-mail": "Écrire un e-mail",
+    "Copied": "Copié",
+    "I have already donated via PayPal": "J'ai déjà fait un don via PayPal",
+    "Name or e-mail of your PayPal account (to match your payment)": "Nom ou e-mail de votre compte PayPal (pour identifier votre paiement)",
+    "Request a license key": "Demander une clé de licence",
+    "Please enter your callsign to request a license key.": "Pour demander une clé de licence, saisissez votre indicatif.",
+    "Hello Ralf,": "Bonjour Ralf,",
+    "I donated for MeshCom WebDesk{0} via PayPal. Name or e-mail of my PayPal account: {1}": "j'ai fait un don pour MeshCom WebDesk{0} via PayPal. Nom ou e-mail de mon compte PayPal : {1}",
+    "Please also issue a license key for my callsign.": "Merci d'établir aussi une clé de licence pour mon indicatif.",
+    "Name: {0}": "Nom : {0}",
+    "Callsign: {0}": "Indicatif : {0}",
+    "Request payment via Wero": "Demander le paiement via Wero",
+    "Phone number or e-mail of your Wero account": "Téléphone ou e-mail de votre compte Wero",
+    "I would like to buy you a coffee for MeshCom WebDesk{0} – via Wero. Please request the amount via Wero. Phone number or e-mail of my Wero account: {1}": "je voudrais t'offrir un café pour MeshCom WebDesk{0} – via Wero. Merci de demander le montant via Wero. Téléphone ou e-mail de mon compte Wero : {1}",
+    "Please enter your name.": "Veuillez saisir votre nom.",
+    "Please choose a payment option.": "Veuillez choisir un mode de paiement.",
+    "Prefer Wero? Send me a short e-mail – I will request the amount via Wero (please include the phone number or e-mail of your Wero account). If you would like a license, please include your callsign.": "Vous préférez Wero ? Écrivez-moi un court e-mail – je demanderai le montant via Wero (indiquez le téléphone ou l'e-mail de votre compte Wero). Si vous souhaitez une licence, indiquez votre indicatif."
   }
 }

@@ -1112,7 +1112,6 @@
     "Automatic (detect small displays)": "Automatica (rileva display piccoli)",
     "Normal": "Normale",
     "Compact (e.g. 480×320 touch display)": "Compatto (ad es. display touch 480×320)",
-    "Prefer Wero or a bank transfer? Send me a short e-mail – I will send you my bank details or request the amount via Wero (please include the phone number or e-mail of your Wero account). If you would like a license, please include your callsign.": "Preferisci Wero o un bonifico bancario? Scrivimi una breve e-mail: ti invio le coordinate bancarie oppure ti richiedo l'importo tramite Wero (indica il telefono o l'e-mail del tuo conto Wero). Se desideri una licenza, indica il tuo nominativo.",
     "(WebDesk's address; the hub also learns it from the packets)": "(indirizzo di WebDesk; l'hub lo impara anche dai pacchetti)",
     "0.0.0.0, broadcast and multicast addresses are not allowed. Enter the node's own IP address.": "0.0.0.0 e gli indirizzi broadcast e multicast non sono ammessi. Inserisci l'indirizzo IP del nodo stesso.",
     "A MeshCom node listens on UDP 1799 only and cannot change it. Only the Bluetooth hub (1798) or a port forward justify another port.": "Un nodo MeshCom ascolta solo su UDP 1799 e non può cambiarlo. Solo l'hub Bluetooth (1798) o un inoltro di porta giustificano un'altra porta.",
@@ -1448,6 +1447,24 @@
     "The connection was made, but the node did not answer (completely). Check again; if that does not help, use \"Read from node\" below and look at the reply.": "La connessione è stata stabilita, ma il nodo non ha risposto (completamente). Ricontrolla; se non basta, usa «Leggi dal nodo» qui sotto e guarda la risposta.",
     "Last checked: {0}": "Ultimo controllo: {0}",
     "The node did not report this in its --info answer, so WebDesk cannot judge it. The node's answer is shown below.": "Il nodo non ha riportato questo valore nella risposta a --info, quindi WebDesk non può valutarlo. La risposta del nodo è mostrata sotto.",
-    "Node's answer: ": "Risposta del nodo: "
+    "Node's answer: ": "Risposta del nodo: ",
+    "Your name": "Il tuo nome",
+    "Write e-mail": "Scrivi e-mail",
+    "Copied": "Copiato",
+    "I have already donated via PayPal": "Ho già donato tramite PayPal",
+    "Name or e-mail of your PayPal account (to match your payment)": "Nome o e-mail del tuo conto PayPal (per associare il pagamento)",
+    "Request a license key": "Richiedi una chiave di licenza",
+    "Please enter your callsign to request a license key.": "Per una chiave di licenza inserisci il tuo nominativo.",
+    "Hello Ralf,": "Ciao Ralf,",
+    "I donated for MeshCom WebDesk{0} via PayPal. Name or e-mail of my PayPal account: {1}": "ho donato per MeshCom WebDesk{0} tramite PayPal. Nome o e-mail del mio conto PayPal: {1}",
+    "Please also issue a license key for my callsign.": "Per favore emetti anche una chiave di licenza per il mio nominativo.",
+    "Name: {0}": "Nome: {0}",
+    "Callsign: {0}": "Nominativo: {0}",
+    "Request payment via Wero": "Richiedi il pagamento tramite Wero",
+    "Phone number or e-mail of your Wero account": "Numero di telefono o e-mail del tuo conto Wero",
+    "I would like to buy you a coffee for MeshCom WebDesk{0} – via Wero. Please request the amount via Wero. Phone number or e-mail of my Wero account: {1}": "vorrei offrirti un caffè per MeshCom WebDesk{0} – tramite Wero. Per favore richiedi l'importo tramite Wero. Numero di telefono o e-mail del mio conto Wero: {1}",
+    "Please enter your name.": "Inserisci il tuo nome.",
+    "Please choose a payment option.": "Scegli un metodo di pagamento.",
+    "Prefer Wero? Send me a short e-mail – I will request the amount via Wero (please include the phone number or e-mail of your Wero account). If you would like a license, please include your callsign.": "Preferisci Wero? Scrivimi una breve e-mail – richiederò l'importo tramite Wero (indica il numero di telefono o l'e-mail del tuo conto Wero). Se desideri una licenza, indica il tuo nominativo."
   }
 }

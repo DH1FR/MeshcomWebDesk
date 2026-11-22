@@ -3011,6 +3011,27 @@ html.mon-animate .lower-pane {
     color: var(--text-soft);
 }
 
+.donation-mail { width: 100%; margin-top: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.donation-mail-fields { display: flex; gap: 0.5rem; }
+.donation-mail-input {
+    flex: 2; min-width: 0;
+    background: var(--surface-alt); color: var(--text-soft);
+    border: 1px solid var(--border-strong); border-radius: 6px;
+    padding: 0.45rem 0.6rem; font-size: 0.85rem;
+}
+.donation-mail-input.donation-mail-call { flex: 1; text-transform: uppercase; }
+.donation-mail-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.donation-mail-btn {
+    flex: 1 1 auto; text-align: center; text-decoration: none; cursor: pointer;
+    background: var(--surface-alt); color: var(--link-soft);
+    border: 1px solid var(--border-strong); border-radius: 6px;
+    padding: 0.45rem 0.7rem; font-size: 0.85rem;
+}
+.donation-mail-btn:hover { background: #2d333b; }
+.donation-mail-check { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--link-soft); cursor: pointer; text-align: left; }
+.donation-mail-hint { font-size: 0.8rem; color: var(--text-muted); text-align: left; }
+.donation-mail-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
 .map-info-sep { color: var(--surface-alt); }
 .settings-section-collapsed > div,
 .settings-section-collapsed > a {

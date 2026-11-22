@@ -33,6 +33,9 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ## 🆕 What's New in v1.18.2 (dev)
 
+### ✨ Improvements
+- **Optimized license key request** – the coffee dialog and the About page now have a small form (name, callsign, *PayPal already donated* or *request payment via Wero*, *Request a license key*) that opens a prefilled e-mail to the author in the interface language, followed by the German text. The e-mail is only offered once name and payment option are filled in; for a license key the callsign is required as well. Wero and PayPal only – the bank transfer option is gone. Texts in German, English, Spanish, French and Italian.
+
 ### 📚 Docs
 - **Current screenshots** – the README screenshots show WebDesk v1.18.2 instead of v1.11.1: chat with monitor, MH list, live map (a 274 KB JPEG instead of a 5.7 MB PNG), the phone view with the one-row tab bar, the Console Command Helper and the AI search dialog. Names and places from QRZ, positions and locators are blurred or masked. The outdated terminal banner screenshot (v1.6.11) is gone; the *Startup* section still describes the banner.
 
@@ -223,7 +226,7 @@ Built with **.NET 10** and **Blazor Interactive Server**.
   <a href="https://paypal.me/DH1FR">
     <img src="https://img.shields.io/badge/Donate%20via%20PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="Donate via PayPal" />
   </a><br><br>
-  <sub>Prefer <strong>Wero</strong> or a <strong>bank transfer</strong>? Send me a short <a href="mailto:dh1fr@darc.de?subject=MeshCom%20WebDesk%20-%20Coffee%20donation%20(Wero%20%2F%20bank%20transfer)">e-mail</a> – I will send you my bank details or request the amount via Wero.</sub>
+  <sub>Prefer <strong>Wero</strong>? Use the form in the coffee dialog or on the About page, or send me a short <a href="mailto:dh1fr@darc.de?subject=MeshCom%20WebDesk%20-%20Coffee%20donation%20(Wero%20request)">e-mail</a> – I will request the amount via Wero.</sub>
 </p>
 
 ---
