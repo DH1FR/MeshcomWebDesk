@@ -59,7 +59,7 @@ window.meshcomChat = (function () {
         let startY = 0, startH = 0;
 
         function onMove(e) {
-            if (lowerPane.classList.contains('lower-pane-collapsed')) return;
+            if (document.documentElement.getAttribute('data-monitor') === '0') return;
             const y    = e.touches ? e.touches[0].clientY : e.clientY;
             const contH = lowerPane.parentElement.getBoundingClientRect().height;
             const newH  = Math.max(40, Math.min(contH - 80, startH + (startY - y)));
@@ -69,8 +69,9 @@ window.meshcomChat = (function () {
         }
 
         function onUp() {
-            localStorage.setItem(STORAGE_KEY,
-                Math.round(lowerPane.getBoundingClientRect().height));
+            var h = Math.round(lowerPane.getBoundingClientRect().height);
+            localStorage.setItem(STORAGE_KEY, h);
+            if (window.meshcomMonitor) window.meshcomMonitor.setHeight(h);
             document.removeEventListener('mousemove', onMove);
             document.removeEventListener('mouseup',   onUp);
             document.removeEventListener('touchmove', onMove);
@@ -78,7 +79,7 @@ window.meshcomChat = (function () {
         }
 
         function onDown(e) {
-            if (lowerPane.classList.contains('lower-pane-collapsed')) return;
+            if (document.documentElement.getAttribute('data-monitor') === '0') return;
             startY = e.touches ? e.touches[0].clientY : e.clientY;
             startH = lowerPane.getBoundingClientRect().height;
             document.addEventListener('mousemove', onMove);
@@ -307,8 +308,10 @@ window.meshcomChat = (function () {
             if (v === null && document.documentElement.getAttribute('data-display') === 'compact') return false;
             return v === null ? null : v === '1';
         },
-        setMonitorVisible: (visible) =>
-            localStorage.setItem('meshcom-monitor-visible', visible ? '1' : '0'),
+        setMonitorVisible: (visible) => {
+            localStorage.setItem('meshcom-monitor-visible', visible ? '1' : '0');
+            if (window.meshcomMonitor) window.meshcomMonitor.setVisible(visible, true);
+        },
         getVoiceEnabled: () => {
             var v = localStorage.getItem('meshcom-voice-enabled');
             return v === null ? null : v === '1';

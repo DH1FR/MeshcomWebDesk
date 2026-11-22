@@ -35,6 +35,7 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 - **"N new messages" button in the chat** – while you read older messages (scrolled up) and new ones arrive, a *↓ N New Messages* button appears at the bottom of the list; one click jumps to the end, scrolling down yourself dismisses it.
 
 ### 🔧 Bug Fixes
+- **Chat and monitor jumped when switching pages** – going from e.g. MH back to Chat built the page with default sizes and only afterwards applied the saved monitor height / visibility, so the monitor and the message input visibly jumped (twice on a big screen, once in compact mode with the monitor open). The saved size and visibility are now applied before the first paint, and the resize animation only runs when you toggle the monitor yourself.
 - **Setup assistant asked although a node was set up** – a saved single-node connection (no node profile) with your own callsign was treated as "not set up" as long as the node had not delivered data yet, so the first-start prompt and banner reappeared on every start. They now only appear for the placeholder callsigns (`NOCALL…`, `DH1FR-2`) and not at all once messages from the node exist.
 - **Chat jumped to the end on every new message** – the message list was forced to the bottom on each refresh, so scrolling up to read was constantly interrupted. It now only follows the end while you are at the end; switching tabs and sending your own message still scroll to the end.
 

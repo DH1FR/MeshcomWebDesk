@@ -845,7 +845,7 @@ h1:focus {
 .pane-divider:hover::after {
     background: #79b8ff;
 }
-.pane-divider-collapsed {
+html[data-monitor="0"] .pane-divider {
     cursor: default;
     pointer-events: none;
     opacity: 0.5;
@@ -889,6 +889,17 @@ h1:focus {
     flex-direction: column;
     min-height: 0;
     background: var(--bg-deep);
+}
+
+/* Saved monitor height: --monitor-h / data-mon-h are set on <html> before the first paint (App.razor),
+   so the pane starts at its final size instead of jumping when chat.js restores it later. */
+html[data-mon-h] .lower-pane {
+    height: var(--monitor-h);
+    flex: none;
+}
+
+/* Animate only when the user toggles the monitor (class set briefly by chat.js), never on page build. */
+html.mon-animate .lower-pane {
     transition: height 0.15s ease, flex 0.15s ease;
 }
 
@@ -1978,11 +1989,11 @@ h1:focus {
     }
 
     /* Monitor pane: collapse to header-only on phones by default (user can expand) */
-    .lower-pane-collapsed .mon-list {
+    html[data-monitor="0"] .lower-pane .mon-list {
         display: none;
     }
 
-    .lower-pane-collapsed {
+    html[data-monitor="0"] .lower-pane {
         flex: 0 !important;
     }
 
@@ -4197,15 +4208,15 @@ html[data-display="compact"] .char-counter {
 }
 
 /* Monitor: collapsed to its header by default, expandable via toggle */
-html[data-display="compact"] .lower-pane-collapsed .mon-list {
+html[data-display="compact"][data-monitor="0"] .lower-pane .mon-list {
     display: none;
 }
-html[data-display="compact"] .lower-pane-collapsed {
+html[data-display="compact"][data-monitor="0"] .lower-pane {
     /* keep the title bar (with the ▲ toggle) visible, otherwise the monitor cannot be reopened */
     flex: 0 0 auto !important;
     height: auto !important;   /* ignore the pane height saved on a big screen (inline style) */
 }
-html[data-display="compact"] .lower-pane-collapsed .mon-filter-wrap {
+html[data-display="compact"][data-monitor="0"] .lower-pane .mon-filter-wrap {
     display: none;
 }
 html[data-display="compact"] .mon-toggle-btn {
@@ -4247,7 +4258,7 @@ html[data-display="compact"] .message {
 html[data-display="compact"] .upper-pane {
     flex: 3 1 0 !important;
 }
-html[data-display="compact"] .lower-pane:not(.lower-pane-collapsed) {
+html[data-display="compact"]:not([data-monitor="0"]) .lower-pane {
     flex: 2 1 0 !important;
     height: auto !important;
 }
