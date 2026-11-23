@@ -9,6 +9,7 @@
 - **Setup wizard** – it starts with *MeshCom node on WiFi/LAN*; the node search shows a spinner, a progress bar and a highlighted frame while it runs; buttons and selection list have one height; the node's fields are hidden while the wizard runs, and after *Apply to form* the wizard closes and the card reminds you to save. A node that still has its default name ("Node 2") is named after its callsign.
 
 ### Bugfixes
+- **Docker update waits for the new image** – the update page reported a newer dev build as soon as the commit was on GitHub, but the image is only published by the CI about three minutes later; updating in that window pulled the old image again and changed nothing. The check now also asks the registry which commit the published image carries: while it lags behind, the page says the image is still being built, the *Update now* button is disabled and the banner stays hidden. If the registry cannot be read, nothing is blocked.
 - **Backup restore lost settings** – restoring a backup reset the appearance (themes and custom themes), the quick texts, the frequency and the system margin to their defaults. They are restored now.
 - **"Max. messages per tab" was not saved** – the value never reached the settings file and fell back to 500 after a restart.
 
