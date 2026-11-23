@@ -769,6 +769,9 @@ h1:focus {
     min-height: 36px;
     max-height: 36px;
     font-family: inherit;
+    /* A flex item never shrinks below its intrinsic width by default; a textarea (cols=20) is ~200px wide at 16px,
+       which pushed the counter and the Send button off the screen on a phone. */
+    min-width: 0;
 }
 
 .send-bar input:focus,
