@@ -170,8 +170,8 @@ public sealed partial class ConnectionCheckService
                     TF("Gemeinsamer UDP-Socket ist offen auf {0}", "Shared UDP socket is open on {0}", _udp.Status.BoundListenEndpoint))
                 : new(CheckSeverity.Error,
                     T("Gemeinsamer UDP-Socket ist nicht offen (roter UDP-Status)", "Shared UDP socket is not open (red UDP status)"),
-                    T("Alle Nodes nutzen den Socket des Primär-Node. Prüfen Sie Listen IP / Listen Port im Abschnitt Verbindung.",
-                      "All nodes use the primary node's socket. Check Listen IP / Listen Port in the Connection section.")));
+                    T("Alle Nodes nutzen den Socket des Primär-Node. Prüfen Sie Listen IP / Listen Port unter Verbindung → Nodes (Empfang (UDP)).",
+                      "All nodes use the primary node's socket. Check Listen IP / Listen Port under Connection → Nodes (Receiving (UDP)).")));
 
         // ── 3. Listen IP ─────────────────────────────────────────────────
         if (input.IsPrimary && listenOk)
@@ -543,8 +543,8 @@ public sealed partial class ConnectionCheckService
             }
             results.Add(new(CheckSeverity.Error,
                 T("Rufzeichen weicht vom Node ab", "Callsign differs from the node"),
-                TF("Der Node meldet {0}, in WebDesk steht {1}. Ändern Sie in WebDesk unter Einstellungen → Verbindung das \"Eigene Rufzeichen\" auf {0} (oder ändern Sie das Rufzeichen am Node).",
-                   "The node reports {0}, WebDesk has {1}. In WebDesk under Settings → Connection change \"Own Callsign\" to {0} (or change the callsign on the node).",
+                TF("Der Node meldet {0}, in WebDesk steht {1}. Ändern Sie in WebDesk unter Einstellungen → Verbindung → Nodes das \"Rufzeichen\" auf {0} (oder ändern Sie das Rufzeichen am Node).",
+                   "The node reports {0}, WebDesk has {1}. In WebDesk under Settings → Connection → Nodes change \"Callsign\" to {0} (or change the callsign on the node).",
                    consoleCall, raw),
                 Commands: [$"--setcall {raw.ToUpperInvariant()}"],
                 SuggestCallsign: consoleCall));
@@ -556,8 +556,8 @@ public sealed partial class ConnectionCheckService
         {
             results.Add(new(CheckSeverity.Error,
                 T("Rufzeichen weicht vom Node ab", "Callsign differs from the node"),
-                TF("Der Node hat eine soeben gesendete Nachricht als {0} zurückgemeldet, in WebDesk steht {1}. Ändern Sie in WebDesk unter Einstellungen → Verbindung das \"Eigene Rufzeichen\" auf {0} (oder ändern Sie das Rufzeichen am Node). Sonst erkennt WebDesk eigene Nachrichten nicht.",
-                   "The node returned a message that was just sent as {0}, WebDesk has {1}. In WebDesk under Settings → Connection change \"Own Callsign\" to {0} (or change the callsign on the node). Otherwise WebDesk does not recognise its own messages.",
+                TF("Der Node hat eine soeben gesendete Nachricht als {0} zurückgemeldet, in WebDesk steht {1}. Ändern Sie in WebDesk unter Einstellungen → Verbindung → Nodes das \"Rufzeichen\" auf {0} (oder ändern Sie das Rufzeichen am Node). Sonst erkennt WebDesk eigene Nachrichten nicht.",
+                   "The node returned a message that was just sent as {0}, WebDesk has {1}. In WebDesk under Settings → Connection → Nodes change \"Callsign\" to {0} (or change the callsign on the node). Otherwise WebDesk does not recognise its own messages.",
                    echo, raw),
                 Commands: [$"--setcall {raw.ToUpperInvariant()}"],
                 SuggestCallsign: echo));
@@ -581,8 +581,8 @@ public sealed partial class ConnectionCheckService
         {
             results.Add(new(CheckSeverity.Warning,
                 T("SSID passt vermutlich nicht zum Node", "SSID probably does not match the node"),
-                TF("Der Node sendet als {0}, in WebDesk steht {1}. Ist {0} Ihr Node, ändern Sie in WebDesk unter Einstellungen → Verbindung das \"Eigene Rufzeichen\" auf {0} (oder die SSID am Node). Sonst erkennt WebDesk eigene Nachrichten nicht.",
-                   "The node sends as {0}, WebDesk has {1}. If {0} is your node, change \"Own Callsign\" in WebDesk under Settings → Connection to {0} (or the SSID on the node). Otherwise WebDesk does not recognise its own messages.",
+                TF("Der Node sendet als {0}, in WebDesk steht {1}. Ist {0} Ihr Node, ändern Sie in WebDesk unter Einstellungen → Verbindung → Nodes das \"Rufzeichen\" auf {0} (oder die SSID am Node). Sonst erkennt WebDesk eigene Nachrichten nicht.",
+                   "The node sends as {0}, WebDesk has {1}. If {0} is your node, change \"Callsign\" in WebDesk under Settings → Connection → Nodes to {0} (or the SSID on the node). Otherwise WebDesk does not recognise its own messages.",
                    sameBase, raw)));
             return;
         }
