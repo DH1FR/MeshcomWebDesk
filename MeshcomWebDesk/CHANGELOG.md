@@ -1,6 +1,6 @@
 ﻿# Changelog
 
-## [1.18.2] – unreleased
+## [1.18.2] – released
 
 ### Improvements
 - **Optimized license key request** – the coffee dialog and the About page now have a small form (name, callsign, *PayPal already donated* or *request payment via Wero*, *Request a license key*) that opens a prefilled e-mail to the author in the interface language, followed by the German text. The e-mail is only offered once name and payment option are filled in; for a license key the callsign is required as well. Wero and PayPal only – the bank transfer option is gone. Texts in German, English, Spanish, French and Italian.
@@ -12,9 +12,11 @@
 - **Docker update waits for the new image** – the update page reported a newer dev build as soon as the commit was on GitHub, but the image is only published by the CI about three minutes later; updating in that window pulled the old image again and changed nothing. The check now also asks the registry which commit the published image carries: while it lags behind, the page says the image is still being built, the *Update now* button is disabled and the banner stays hidden. If the registry cannot be read, nothing is blocked.
 - **Backup restore lost settings** – restoring a backup reset the appearance (themes and custom themes), the quick texts, the frequency and the system margin to their defaults. They are restored now.
 - **"Max. messages per tab" was not saved** – the value never reached the settings file and fell back to 500 after a restart.
+- **Connection check texts named a field that no longer exists** – three messages told you to change *Own Callsign* under Settings → Connection, and one to look in the *Connection section*. They now point to **Connection → Nodes** and the card's *Callsign* field (*Receiving (UDP)* for Listen IP / Listen Port).
 
 ### Docs
 - **Current screenshots** – the README screenshots show WebDesk v1.18.2 instead of v1.11.1: chat with monitor, MH list, live map (a 274 KB JPEG instead of a 5.7 MB PNG), the phone view with the one-row tab bar, the Console Command Helper and the AI search dialog. Names and places from QRZ, positions and locators are blurred or masked. The outdated terminal banner screenshot (v1.6.11) is gone; the *Startup* section still describes the banner.
+- **Node connection and Docker update guides** – the node guides (de/en/es/it) and the README describe the merged *Nodes* section, the wizard and the card layout; the Docker update guides explain the *image is still being built* check.
 
 ---
 
