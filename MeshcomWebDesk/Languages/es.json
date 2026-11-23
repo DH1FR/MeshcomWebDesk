@@ -1491,6 +1491,9 @@
     "Add node with wizard": "Añadir nodo con asistente",
     "Add node manually": "Añadir nodo manualmente",
     "Adds a new node card and starts the setup wizard for it right away.": "Añade una tarjeta de nodo nueva e inicia enseguida el asistente de configuración para ella.",
-    "Adds an empty node card that you fill in yourself.": "Añade una tarjeta de nodo vacía que rellenas tú mismo."
+    "Adds an empty node card that you fill in yourself.": "Añade una tarjeta de nodo vacía que rellenas tú mismo.",
+    "Do you like my work? Support me.": "¿Te gusta mi trabajo? Apóyame.",
+    "Via PayPal": "Por PayPal",
+    "Send me an e-mail": "Envíame un correo"
   }
 }

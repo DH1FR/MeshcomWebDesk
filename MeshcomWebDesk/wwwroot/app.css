@@ -1742,6 +1742,37 @@ html.mon-animate .lower-pane {
     text-align: center;
 }
 
+/* Support block: framed, with a heading and two clearly labelled ways (PayPal / e-mail) */
+.about-support {
+    text-align: center;
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    background: rgba(88, 166, 255, 0.05);
+    padding: 1rem 1rem 0.25rem;
+}
+.about-support-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--link-soft);
+    margin: 0 0 0.9rem;
+}
+.about-support-block {
+    padding: 0.85rem 0 1rem;
+    border-top: 1px solid var(--accent);
+}
+.about-support-sub {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--text-soft);
+    margin: 0 0 0.6rem;
+}
+.about-support-text {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.45;
+    margin: 0 0 0.5rem;
+}
+
 .about-coffee-text {
     color: var(--text-muted);
     font-size: 0.9rem;
