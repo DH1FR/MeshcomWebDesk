@@ -33,6 +33,33 @@
             <h1 class="settings-title">@Loc.T("Einstellungen", "Settings")</h1>
         </div>
 
+        <div class="settings-toolbar">
+            <input type="search" class="settings-search" @bind="_filter" @bind:event="oninput"
+                   placeholder="🔍 @Loc.T("Einstellung suchen …", "Search settings …")"
+                   aria-label="@Loc.T("Einstellung suchen", "Search settings")" />
+            @if (!Filtering)
+            {
+                <div class="settings-tabs" role="tablist">
+                    @foreach (var c in Cats)
+                    {
+                        var cid = c.Id;
+                        <button type="button" role="tab" aria-selected="@(_cat == cid)"
+                                class="settings-tab@(_cat == cid ? " settings-tab-active" : "")"
+                                @onclick="() => _cat = cid">
+                            <span class="settings-tab-icon">@c.Icon</span> <span>@Loc.T(c.De, c.En)</span>
+                        </button>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="settings-tabs-info">
+                    @HitsText()
+                    ·<a href="javascript:void(0)" @onclick="ClearFilter">@Loc.T("Suche beenden", "Clear search")</a>
+                </div>
+            }
+        </div>
+
         <div class="settings-notice">
             ℹ️ @Loc.T("Die meisten Einstellungen werden", "Most settings are applied")
             <strong>@Loc.T("sofort", "immediately")</strong>
@@ -53,81 +80,15 @@
             <div class="settings-warning">⚠️ @w</div>
         }
 
-        <!-- Verbindung / Connection -->
-        <div class="settings-section @(IsOpen("conn") ? "" : "settings-section-collapsed")">
-            <h2 class="settings-section-title" @onclick='() => Toggle("conn")'>🔌 @Loc.T("Verbindung", "Connection") <span class="section-chevron">@(IsOpen("conn") ? "▲" : "▼")</span></h2>
-            @if (IsOpen("conn")) {
-            <div class="settings-grid">
-                <label>Listen IP</label>
-                <input type="text" @bind="_model.ListenIp" />
-
-                <label>
-                    Listen Port<br />
-                    <small>@Loc.T("Standard: 1799. Muss ein anderer Port sein als der des Hubs auf demselben PC.", "Default: 1799. Must differ from the hub's port when it runs on the same PC.")</small>
-                </label>
-                <input type="number" min="1" max="65535" @bind="_model.ListenPort" />
-
-                <label>Device IP</label>
-                <input type="text" @bind="_model.DeviceIp" />
-
-                <label>
-                    Device Port<br />
-                    <small>@Loc.T("Standard: 1799. Bei Bluetooth-UDP-Hub auf demselben PC: 1798.", "Default: 1799. With a Bluetooth UDP hub on the same PC: 1798.")</small>
-                </label>
-                <input type="number" min="1" max="65535" @bind="_model.DevicePort" />
-
-                <label>@Loc.T("Eigenes Rufzeichen", "Own Callsign")</label>
-                <input type="text" @bind="_model.MyCallsign" />
-
-                @* KISS/TCP for the primary node – works without configuring further nodes *@
-                <label>
-                    @Loc.T("KISS/TCP", "KISS/TCP")<br />
-                    <small>@Loc.T("Zusätzlich zur ext-udp-Basis", "On top of the ext-udp base")</small>
-                </label>
-                <div>
-                    <label class="settings-toggle" title="@Loc.T("KISS/TCP-Verbindung zu diesem Node zusätzlich aufbauen", "Additionally open a KISS/TCP connection to this node")">
-                        <input type="checkbox"
-                               @bind:get="PrimaryKissEnabled"
-                               @bind:set="SetPrimaryKiss" />
-                        <span>@(PrimaryKissEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
-                    </label>
-                    @if (PrimaryKissEnabled && _model.Nodes.FirstOrDefault(n => n.IsPrimary) is { } kissNode)
-                    {
-                        var pks = KissService.GetStatus(kissNode.Id);
-                        <span class="kiss-status kiss-status-@pks.State.ToString().ToLowerInvariant()">@KissStatusLabel(pks)</span>
-                        <br />
-                        <small style="color:#8b949e">@Loc.T(
-                            "Nur ESP32-Nodes. TX/RxMeta am Node mit --kiss tx on / --kiss meta on freischalten. ext-udp bleibt aktiv – am Node „--extudp on“ lassen.",
-                            "ESP32 nodes only. Enable TX / RxMeta on the node with --kiss tx on / --kiss meta on. ext-udp stays active – keep \"--extudp on\" on the node.")</small>
-                        @if (KissSsidTooHigh(_model.MyCallsign))
-                        {
-                            <br />
-                            <small style="color:#f85149">⚠️ @Loc.T(
-                                "Rufzeichen-SSID > 15: KISS-Empfang funktioniert, aber Senden nicht – AX.25 kennt nur SSID 0–15.",
-                                "Callsign SSID > 15: KISS receive works, but sending does not – AX.25 only has SSID 0–15.")</small>
-                        }
-                        <div style="margin-top:.4rem">
-                            <button type="button" class="btn-small" @onclick="() => ToggleKissNodeBox(kissNode.Id)"
-                                    title="@Loc.T("Schaltet KISS/TCP (und TX/RxMeta) am Node über die Net-Console ein – erst nach Ihrer Bestätigung.", "Switches KISS/TCP (and TX/RxMeta) on at the node over the net console – only after your confirmation.")">
-                                🔌 @Loc.T("KISS am Node über die Net-Console aktivieren", "Activate KISS on the node via the net console")
-                            </button>
-                        </div>
-                        @if (_kissNodeBoxOpen.Contains(kissNode.Id))
-                        {
-                            <NodeConsoleBox Focus="kiss" Compact="true" AutoRead="true"
-                                            InputProvider="PrimaryCheckInput" PasswordProvider="PrimaryNodePassword" />
-                        }
-                    }
-                </div>
-                @if (PrimaryKissEnabled && _model.Nodes.FirstOrDefault(n => n.IsPrimary) is { } pwNode)
-                {
-                    <label>
-                        @Loc.T("Node-Passwort", "Node password")<br />
-                        <small>@Loc.T("--passwd am Node · für KISS (bei --kiss auth on) und NET-Console (HMAC)", "--passwd on the node · for KISS (with --kiss auth on) and the NET console (HMAC)")</small>
-                    </label>
-                    <input type="password" @bind="pwNode.TelnetPassword" placeholder="••••••••" autocomplete="new-password" />
-                }
-            </div>
+        <!-- Nodes: Verbindung (Primär-Node) + weitere Nodes in einem Abschnitt -->
+        <div id="sec-nodes" class="settings-section @SecClass("nodes")" style="order:@SecOrder("nodes")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("nodes")'>🔌 @Loc.T("Nodes", "Nodes") <span class="section-chevron">@(IsOpen("nodes") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("nodes")) {
+            <p class="settings-node-intro">
+                @Loc.T(
+                    "Der Primär-Node treibt alle globalen Funktionen (Karte, MH, Bot, Telemetrie …). Weitere Nodes sind im Chat auswählbar.",
+                    "The primary node drives all global features (map, MH, bot, telemetry …). Additional nodes are selectable in the chat view.")
+            </p>
             <a class="settings-help-banner"
                href="@($"https://github.com/DH1FR/MeshcomWebDesk/blob/master/docs/node-connection-{Loc.DocsLanguage}.md")"
                target="_blank" rel="noopener">
@@ -136,223 +97,248 @@
                     "How do I configure my MeshCom node for WebDesk?")
                 <span class="settings-help-banner-arrow">→</span>
             </a>
-            <div class="settings-conn-actions">
-                <button type="button" class="btn-secondary" @onclick="ToggleConnCheck"
-                        title="@Loc.T("Prüft die Verbindungseinstellungen und erklärt, was zu ändern ist – ändert selbst nichts.", "Checks the connection settings and explains what to change – changes nothing itself.")">
-                    🔍 @Loc.T("Einstellungen prüfen", "Check settings")
-                </button>
-                <button type="button" class="btn-secondary" @onclick="ToggleWizard"
-                        title="@Loc.T("Führt Schritt für Schritt durch die Einrichtung von Node/Hub und WebDesk.", "Guides you step by step through setting up node/hub and WebDesk.")">
-                    🧙 @Loc.T("Einrichtungs-Assistent", "Setup wizard")
-                </button>
-            </div>
-            @if (_connCheckOpen)
-            {
-                <ConnectionCheckPanel Id="conn-check" InputProvider="PrimaryCheckInput" AutoRun="true" ScrollIntoView="_connCheckScroll"
-                                      PasswordProvider="PrimaryNodePassword" OnUseCallsign="UsePrimaryCallsign" />
-            }
-            @if (_wizardOpen)
-            {
-                <ConnectionWizard Initial="@(new WizardValues(_model.MyCallsign, _model.DeviceIp, _model.DevicePort, _model.ListenIp, _model.ListenPort))"
-                                  IsPrimary="true"
-                                  NodeId="PrimaryProfile?.Id"
-                                  NodeLabel="@PrimaryProfile?.Name"
-                                  OthersProvider="() => OtherNodes(PrimaryProfile)"
-                                  OnApply="ApplyPrimaryWizard"
-                                  OnClose="CloseWizard" />
-            }
-            }
-        </div>
 
-        <!-- Multi-Node -->
-        <div class="settings-section @(IsOpen("nodes") ? "" : "settings-section-collapsed")">
-            <h2 class="settings-section-title" @onclick='() => Toggle("nodes")'>🖧 @Loc.T("Weitere Nodes", "Additional Nodes") <span class="section-chevron">@(IsOpen("nodes") ? "▲" : "▼")</span></h2>
-            @if (IsOpen("nodes")) {
-            <p style="color:#8b949e;font-size:.85em;margin:0 0 .5rem 0">
-                @Loc.T(
-                    "Konfiguriere mehrere MeshCom-Nodes. Der Primär-Node treibt alle globalen Funktionen (Karte, MH, Bot, Telemetrie …). Weitere Nodes sind im Chat auswählbar.",
-                    "Configure multiple MeshCom nodes. The primary node drives all global features (map, MH, bot, telemetry …). Additional nodes are selectable in the chat view.")
-            </p>
-            @if (_model.Nodes.Count == 0) {
-                <p style="color:#8b949e;font-size:.85em">
-                    @Loc.T(
-                        "Kein weiterer Node konfiguriert. Die Verbindungseinstellungen oben gelten für den einzigen (Primär-)Node.",
-                        "No additional nodes configured. The connection settings above apply to the single (primary) node.")
+            @* ── Shared UDP socket: one for all nodes ── *@
+            <div class="settings-node-shared">
+                <h3 class="settings-subtitle">@Loc.T("Empfang (UDP)", "Receiving (UDP)")</h3>
+                <p class="settings-node-intro">
+                    @Loc.T("Für alle Nodes gemeinsam: WebDesk empfängt auf diesem einen UDP-Socket.", "Shared by all nodes: WebDesk receives on this one UDP socket.")
                 </p>
-            }
-            @foreach (var node in _model.Nodes) {
-                <div class="settings-node-card@(node.Enabled ? "" : " settings-node-card-disabled")">
+                <div class="settings-grid">
+                    <label>Listen IP</label>
+                    <input type="text" @bind="_model.ListenIp" />
+
+                    <label>
+                        Listen Port<br />
+                        <small>@Loc.T("Standard: 1799. Muss ein anderer Port sein als der des Hubs auf demselben PC.", "Default: 1799. Must differ from the hub's port when it runs on the same PC.")</small>
+                    </label>
+                    <input type="number" min="1" max="65535" @bind="_model.ListenPort" />
+                </div>
+            </div>
+
+            @* ── One card per node, the primary node first; same layout for all ── *@
+            @foreach (var card in NodeCards())
+            {
+                var node    = card.Node;           // null = primary node without a profile yet (single-node setup)
+                var isP     = card.Primary;
+                var enabled = node?.Enabled ?? true;
+                var callsign = isP ? _model.MyCallsign : node!.Callsign;
+                var deviceIp = isP ? _model.DeviceIp : node!.DeviceIp;
+                var devicePort = isP ? _model.DevicePort : node!.DevicePort;
+                var kissOn  = isP ? PrimaryKissEnabled : node!.Transport == NodeTransport.Kiss;
+                Func<ConnectionCheckInput> inputFn = isP ? PrimaryCheckInput : () => NodeCheckInput(node!);
+                Func<string?> passwordFn = isP ? PrimaryNodePassword : () => node!.TelnetPassword;
+                var checkOpen  = isP ? _connCheckOpen : _nodeCheckOpen.Contains(node!.Id);
+                var wizardOpen = isP ? _wizardOpen : _nodeWizardOpen.Contains(node!.Id);
+
+                <div class="settings-node-card@(enabled ? "" : " settings-node-card-disabled")">
                     <div class="settings-node-header">
-                        <label class="settings-toggle" title="@(node.IsPrimary ? Loc.T("Der Primär-Node kann nicht deaktiviert werden – zuerst einen anderen Node als Primär festlegen.", "The primary node cannot be disabled – set another node as primary first.") : Loc.T("Node vorübergehend deaktivieren, ohne die Konfiguration zu löschen.", "Temporarily disable this node without deleting its configuration."))">
-                            <input type="checkbox" @bind="node.Enabled" disabled="@node.IsPrimary" />
-                        </label>
-                        <strong>@node.Name</strong>
-                        @if (node.IsPrimary) {
+                        @if (node is not null)
+                        {
+                            <label class="settings-toggle" title="@(isP ? Loc.T("Der Primär-Node kann nicht deaktiviert werden – zuerst einen anderen Node als Primär festlegen.", "The primary node cannot be disabled – set another node as primary first.") : Loc.T("Node vorübergehend deaktivieren, ohne die Konfiguration zu löschen.", "Temporarily disable this node without deleting its configuration."))">
+                                <input type="checkbox" @bind="node.Enabled" disabled="@isP" />
+                            </label>
+                        }
+                        <strong>@(node?.Name ?? Loc.T("Primär", "Primary"))</strong>
+                        @if (isP) {
                             <span class="settings-node-primary-badge">★ @Loc.T("Primär", "Primary")</span>
                         }
-                        @if (!node.Enabled) {
+                        @if (IsBluetoothHub(deviceIp, devicePort)) {
+                            <span class="settings-node-primary-badge settings-node-hub-badge" title="@Loc.T("Lokaler UDP-Hub (Port 1798) – z. B. der MeshCom UDP Bluetooth Hub", "Local UDP hub (port 1798) – e.g. the MeshCom UDP Bluetooth Hub")">🔵 @Loc.T("Bluetooth-Hub", "Bluetooth hub")</span>
+                        }
+                        @if (!enabled) {
                             <span class="settings-node-primary-badge" style="background:#30363d;color:#8b949e">@Loc.T("Deaktiviert", "Disabled")</span>
                         }
                         <div class="settings-node-actions">
-                            @if (!node.IsPrimary) {
-                                <button class="btn-small" @onclick="() => ToggleNodeCheck(node.Id)" title="@Loc.T("Verbindung dieses Nodes prüfen", "Check this node's connection")">🔍 @Loc.T("Prüfen", "Check")</button>
-                                <button class="btn-small" @onclick="() => ToggleNodeWizard(node.Id)" title="@Loc.T("Einrichtungs-Assistent für diesen Node", "Setup wizard for this node")">🧙</button>
-                                <button class="btn-small" @onclick="() => SetPrimaryNode(node)">@Loc.T("Als Primär", "Set Primary")</button>
+                            <button type="button" class="btn-small" @onclick="() => ToggleCardCheck(node)" title="@Loc.T("Verbindung dieses Nodes prüfen – ändert selbst nichts.", "Check this node's connection – changes nothing itself.")">🔍 @Loc.T("Prüfen", "Check")</button>
+                            <button type="button" class="btn-small" @onclick="() => ToggleCardWizard(node)" title="@Loc.T("Führt Schritt für Schritt durch die Einrichtung von Node/Hub und WebDesk.", "Guides you step by step through setting up node/hub and WebDesk.")">🧙 @Loc.T("Assistent", "Wizard")</button>
+                            @if (node is not null && !isP) {
+                                <button type="button" class="btn-small" @onclick="() => SetPrimaryNode(node)">@Loc.T("Als Primär", "Set Primary")</button>
                             }
-                            <button class="btn-small btn-danger" @onclick="() => RemoveNode(node)">✕</button>
+                            @if (node is not null) {
+                                <button type="button" class="btn-small btn-danger" @onclick="() => RemoveNode(node)" title="@Loc.T("Node entfernen", "Remove node")">✕</button>
+                            }
                         </div>
                     </div>
-                    @if (!node.IsPrimary && _nodeCheckOpen.Contains(node.Id))
+
+                    @if (checkOpen)
                     {
-                        <ConnectionCheckPanel Id="@($"node-check-{node.Id}")" InputProvider="() => NodeCheckInput(node)" AutoRun="true"
-                                              PasswordProvider="() => node.TelnetPassword" OnUseCallsign="(string c) => UseNodeCallsign(node, c)" />
+                        <ConnectionCheckPanel Id="@(isP ? "conn-check" : $"node-check-{node!.Id}")" InputProvider="inputFn" AutoRun="true"
+                                              ScrollIntoView="@(isP && _connCheckScroll)"
+                                              PasswordProvider="passwordFn"
+                                              OnUseCallsign="(string c) => UseCardCallsign(node, c)" />
                     }
-                    @if (!node.IsPrimary && _nodeWizardOpen.Contains(node.Id))
+                    @if (wizardOpen)
                     {
-                        <ConnectionWizard Initial="@(new WizardValues(node.Callsign, node.DeviceIp, node.DevicePort, node.ListenIp, node.ListenPort))"
-                                          IsPrimary="false"
-                                          NodeId="node.Id"
-                                          NodeLabel="@node.Name"
-                                          PrimaryListen="() => (_model.ListenIp, _model.ListenPort)"
+                        <ConnectionWizard Initial="@(isP
+                                              ? new WizardValues(_model.MyCallsign, _model.DeviceIp, _model.DevicePort, _model.ListenIp, _model.ListenPort)
+                                              : new WizardValues(node!.Callsign, node.DeviceIp, node.DevicePort, node.ListenIp, node.ListenPort))"
+                                          IsPrimary="isP"
+                                          NodeId="node?.Id"
+                                          NodeLabel="@node?.Name"
+                                          PrimaryListen="PrimaryListenFor(isP)"
                                           OthersProvider="() => OtherNodes(node)"
-                                          OnApply="(WizardValues v) => ApplyNodeWizard(node, v)"
-                                          OnClose="() => CloseNodeWizard(node.Id)" />
+                                          OnApply="(WizardValues v) => ApplyCardWizard(node, v)"
+                                          OnClose="() => CloseCardWizard(node)" />
                     }
+
+                    @if (_wizardApplied.Contains(WizKey(node)))
+                    {
+                        <div class="conn-check-summary conn-check-good">
+                            @Loc.T("Werte sind im Formular. Jetzt unten auf Speichern klicken.", "Values are in the form. Now click Save below.")
+                            @if (isP)
+                            {
+                                <br />@Loc.T("Listen IP / Listen Port wirken erst nach einem Neustart von WebDesk. Danach zeigt der UDP-Status in der Statusleiste 🟢, sobald der Node Pakete sendet.", "Listen IP / Listen Port only take effect after restarting WebDesk. Afterwards the UDP status in the status bar turns 🟢 as soon as the node sends packets.")
+                            }
+                        </div>
+                    }
+                    @if (wizardOpen)
+                    {
+                        @* The fields below would still show the old values while the wizard collects new ones;
+                           the wizard closes itself after "Apply to form". *@
+                        <p class="settings-node-intro" style="margin-top:.5rem">ℹ️ @Loc.T(
+                            "Die Felder dieses Nodes sind ausgeblendet, solange der Assistent läuft – die Werte werden erst im letzten Schritt übernommen.",
+                            "This node's fields are hidden while the wizard is running – the values are only transferred in the last step.")</p>
+                    }
+                    else
+                    {
                     <div class="settings-grid" style="margin-top:.5rem">
-                        <label>@Loc.T("Name", "Name")</label>
-                        <input type="text" @bind="node.Name" />
-                        @if (node.IsPrimary) {
-                        <label>@Loc.T("Rufzeichen", "Callsign")</label>
-                        <input type="text" value="@_model.MyCallsign" readonly style="opacity:0.6;cursor:not-allowed;text-transform:uppercase"
-                               title="@Loc.T("Wird im Abschnitt Verbindung oben verwaltet.", "Managed in the Connection section above.")" />
-                        <label>Device IP</label>
-                        <input type="text" value="@_model.DeviceIp" readonly style="opacity:0.6;cursor:not-allowed;"
-                               title="@Loc.T("Wird im Abschnitt Verbindung oben verwaltet.", "Managed in the Connection section above.")" />
-                        <label>
-                            Device Port<br />
-                            <small>@Loc.T("Fest: 1799 (gerätefixiert)", "Fixed: 1799 (device-fixed)")</small>
-                        </label>
-                        <input type="number" value="@_model.DevicePort" readonly style="opacity:0.6;cursor:not-allowed;" />
-                        <label>Listen IP</label>
-                        <input type="text" value="@_model.ListenIp" readonly style="opacity:0.6;cursor:not-allowed;"
-                               title="@Loc.T("Wird im Abschnitt Verbindung oben verwaltet.", "Managed in the Connection section above.")" />
-                        <label>
-                            Listen Port<br />
-                            <small>@Loc.T("Fest: 1799 (gerätefixiert)", "Fixed: 1799 (device-fixed)")</small>
-                        </label>
-                        <input type="number" value="@_model.ListenPort" readonly style="opacity:0.6;cursor:not-allowed;" />
-                        <span></span>
-                        <small style="color:#8b949e">ℹ️ @Loc.T(
-                            "Rufzeichen und Verbindungsdaten des Primär-Node werden im Abschnitt Verbindung oben gepflegt.",
-                            "The primary node's callsign and connection data are maintained in the Connection section above.")</small>
-                        } else {
+                        @if (node is not null)
+                        {
+                            <label>@Loc.T("Name", "Name")</label>
+                            <input type="text" @bind="node.Name" />
+                        }
                         <label>@Loc.T("Rufzeichen", "Callsign")</label>
                         <div>
-                            <input type="text" @bind="node.Callsign" placeholder="OE1ABC-2" style="text-transform:uppercase;width:100%" />
-                            @if (string.IsNullOrWhiteSpace(node.Callsign))
+                            @if (isP)
                             {
-                                <small style="color:#f85149">⚠️ @Loc.T("Rufzeichen darf nicht leer sein.", "Callsign must not be empty.")</small>
+                                <input type="text" @bind="_model.MyCallsign" style="text-transform:uppercase;width:100%" />
                             }
-                            else if (_model.Nodes.Count(n => string.Equals(n.Callsign, node.Callsign, StringComparison.OrdinalIgnoreCase)) > 1)
+                            else
                             {
-                                <small style="color:#f85149">⚠️ @Loc.T("Rufzeichen wird von mehreren Nodes verwendet – Echo-Erkennung schlägt fehl!", "Callsign used by multiple nodes – echo detection will fail!")</small>
+                                <input type="text" @bind="node!.Callsign" placeholder="OE1ABC-2" style="text-transform:uppercase;width:100%" />
+                                @if (string.IsNullOrWhiteSpace(node.Callsign))
+                                {
+                                    <small style="color:#f85149">⚠️ @Loc.T("Rufzeichen darf nicht leer sein.", "Callsign must not be empty.")</small>
+                                }
+                                else if (_model.Nodes.Count(n => string.Equals(n.Callsign, node.Callsign, StringComparison.OrdinalIgnoreCase)) > 1)
+                                {
+                                    <small style="color:#f85149">⚠️ @Loc.T("Rufzeichen wird von mehreren Nodes verwendet – Echo-Erkennung schlägt fehl!", "Callsign used by multiple nodes – echo detection will fail!")</small>
+                                }
                             }
                         </div>
                         <label>Device IP</label>
-                        <input type="text" @bind="node.DeviceIp" />
+                        @if (isP) { <input type="text" @bind="_model.DeviceIp" /> } else { <input type="text" @bind="node!.DeviceIp" /> }
                         <label>
                             Device Port<br />
                             <small>@Loc.T("Standard: 1799. Bei Bluetooth-UDP-Hub auf demselben PC: 1798.", "Default: 1799. With a Bluetooth UDP hub on the same PC: 1798.")</small>
                         </label>
-                        <input type="number" min="1" max="65535" @bind="node.DevicePort" />
-                        <label>Listen IP</label>
-                        <input type="text" @bind="node.ListenIp" />
-                        <label>
-                            Listen Port<br />
-                            <small>@Loc.T("Standard: 1799. Muss ein anderer Port sein als der des Hubs auf demselben PC.", "Default: 1799. Must differ from the hub's port when it runs on the same PC.")</small>
-                        </label>
-                        <input type="number" min="1" max="65535" @bind="node.ListenPort" />
-                        }
-                        @* ── KISS/TCP (add-on to the ext-udp base) ── *@
-                        <label>
-                            @Loc.T("KISS/TCP", "KISS/TCP")<br />
-                            <small>@Loc.T("Zusätzlich zur ext-udp-Basis – roher Monitor, Sendequittung, KISS-Hub", "On top of the ext-udp base – raw monitor, TX result, KISS hub")</small>
-                        </label>
-                        <div>
-                            <label class="settings-toggle" title="@Loc.T("KISS/TCP-Verbindung zu diesem Node zusätzlich aufbauen", "Additionally open a KISS/TCP connection to this node")">
-                                <input type="checkbox"
-                                       @bind:get="node.Transport == NodeTransport.Kiss"
-                                       @bind:set="v => node.Transport = v ? NodeTransport.Kiss : NodeTransport.ExtUdp" />
-                                <span>@(node.Transport == NodeTransport.Kiss ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
+                        @if (isP) { <input type="number" min="1" max="65535" @bind="_model.DevicePort" /> } else { <input type="number" min="1" max="65535" @bind="node!.DevicePort" /> }
+                    </div>
+
+                    @* ── Advanced: KISS/TCP, node password, console log ── *@
+                    <details class="settings-adv" open="@(kissOn)">
+                        <summary>⚙️ @Loc.T("Erweitert", "Advanced") <small>(@Loc.T("KISS/TCP, Node-Passwort, Console-Log", "KISS/TCP, node password, console log"))</small></summary>
+                        <div class="settings-grid">
+                            <label>
+                                @Loc.T("KISS/TCP", "KISS/TCP")<br />
+                                <small>@Loc.T("Zusätzlich zur ext-udp-Basis", "On top of the ext-udp base")</small>
                             </label>
-                            @if (node.Transport == NodeTransport.Kiss)
-                            {
-                                <div style="margin-top:.4rem;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                                    <span>@Loc.T("KISS-Port", "KISS port")</span>
-                                    <input type="number" value="@node.KissPort" readonly style="width:80px;opacity:0.6;cursor:not-allowed"
-                                           title="@Loc.T("Fest 8001 – vom Node vorgegeben", "Fixed at 8001 – set by the node")" />
-                                    @{ var ks = KissService.GetStatus(node.Id); }
+                            <div>
+                                <label class="settings-toggle" title="@Loc.T("KISS/TCP-Verbindung zu diesem Node zusätzlich aufbauen", "Additionally open a KISS/TCP connection to this node")">
+                                    <input type="checkbox" checked="@kissOn" @onchange="e => SetCardKiss(node, isP, (bool)(e.Value ?? false))" />
+                                    <span>@(kissOn ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
+                                </label>
+                                @if (kissOn && node is not null)
+                                {
+                                    var ks = KissService.GetStatus(node.Id);
                                     <span class="kiss-status kiss-status-@ks.State.ToString().ToLowerInvariant()">@KissStatusLabel(ks)</span>
-                                </div>
-                                <small style="color:#8b949e">ℹ️ @Loc.T(
-                                    "ext-udp bleibt aktiv – KISS kommt nur obendrauf. Nur ESP32-Nodes. Solange WebDesk per KISS verbunden ist, kann kein weiteres KISS-Programm denselben Node nutzen (dafür der KISS-Hub). TX/RxMeta am Node mit --kiss tx on / --kiss meta on freischalten. Bei --kiss auth on wird das Node-Passwort auch für KISS verwendet.",
-                                    "ext-udp stays active – KISS is added on top. ESP32 nodes only. While WebDesk is connected via KISS no other KISS program can use this node directly (use the KISS hub for that). Enable TX / RxMeta on the node with --kiss tx on / --kiss meta on. With --kiss auth on the node password is also used for KISS.")</small>
-                                <small style="color:#8b949e;display:block;margin-top:.3rem">@Loc.T(
-                                    "KISS liefert Fremdstationen (Monitor/Chat), Sendequittung und RSSI/SNR pro Frame. Die eigene Position des Nodes, das Telemetrie-Panel und Firmware/HW kommen weiterhin über ext-udp – am Node „--extudp on“ lassen.",
-                                    "KISS carries foreign stations (monitor/chat), the TX result and per-frame RSSI/SNR. The node's own position, the telemetry panel and its firmware/HW keep coming from ext-udp – keep \"--extudp on\" on the node.")</small>
-                                @if (ExtUdpMissing(node))
-                                {
-                                    <small style="color:#d29922;display:block;margin-top:.3rem">⚠️ @Loc.T(
-                                        "Seit über 5 min kein ext-udp-Paket von diesem Node. Eigene Position / Telemetrie / Firmware fehlen. Am Node prüfen: „--extudp on“ und ext-udp-Ziel-IP = dieser Rechner (Port 1799).",
-                                        "No ext-udp packet from this node for over 5 min. Own position / telemetry / firmware are missing. Check on the node: \"--extudp on\" and the ext-udp target IP = this host (port 1799).")</small>
-                                }
-                                @if (KissSsidTooHigh(node.IsPrimary ? _model.MyCallsign : node.Callsign))
-                                {
-                                    <small style="color:#f85149;display:block;margin-top:.3rem">⚠️ @Loc.T(
-                                        "Rufzeichen-SSID > 15: KISS-Empfang funktioniert, aber Senden nicht – AX.25 kennt nur SSID 0–15. Für KISS-TX eine SSID ≤ 15 verwenden.",
-                                        "Callsign SSID > 15: KISS receive works, but sending does not – AX.25 only has SSID 0–15. Use an SSID ≤ 15 for KISS TX.")</small>
-                                }
-                                @if (!node.IsPrimary)
-                                {
-                                    <div style="margin-top:.4rem">
-                                        <button type="button" class="btn-small" @onclick="() => ToggleKissNodeBox(node.Id)"
-                                                title="@Loc.T("Schaltet KISS/TCP (und TX/RxMeta) am Node über die Net-Console ein – erst nach Ihrer Bestätigung.", "Switches KISS/TCP (and TX/RxMeta) on at the node over the net console – only after your confirmation.")">
-                                            🔌 @Loc.T("KISS am Node über die Net-Console aktivieren", "Activate KISS on the node via the net console")
-                                        </button>
-                                    </div>
-                                    @if (_kissNodeBoxOpen.Contains(node.Id))
+                                    @if (!isP)
                                     {
-                                        <NodeConsoleBox Focus="kiss" Compact="true" AutoRead="true"
-                                                        InputProvider="() => NodeCheckInput(node)" PasswordProvider="() => node.TelnetPassword" />
+                                        <div style="margin-top:.4rem;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                                            <span>@Loc.T("KISS-Port", "KISS port")</span>
+                                            <input type="number" value="@node.KissPort" readonly style="width:80px;opacity:0.6;cursor:not-allowed"
+                                                   title="@Loc.T("Fest 8001 – vom Node vorgegeben", "Fixed at 8001 – set by the node")" />
+                                        </div>
                                     }
                                 }
+                                @if (kissOn)
+                                {
+                                    <small style="color:#8b949e;display:block;margin-top:.3rem">ℹ️ @Loc.T(
+                                        "Nur ESP32-Nodes. ext-udp bleibt aktiv („--extudp on“ am Node lassen) – KISS kommt obendrauf und liefert Fremdstationen, Sendequittung und RSSI/SNR pro Frame; Eigenposition, Telemetrie und Firmware/HW kommen weiter über ext-udp. TX/RxMeta am Node mit --kiss tx on / --kiss meta on freischalten.",
+                                        "ESP32 nodes only. ext-udp stays active (keep \"--extudp on\" on the node) – KISS is added on top and carries foreign stations, the TX result and per-frame RSSI/SNR; own position, telemetry and firmware/HW keep coming from ext-udp. Enable TX / RxMeta on the node with --kiss tx on / --kiss meta on.")</small>
+                                    <small style="color:#8b949e;display:block;margin-top:.3rem">@Loc.T(
+                                        "Solange WebDesk per KISS verbunden ist, kann kein weiteres KISS-Programm denselben Node nutzen – dafür der KISS-Hub.",
+                                        "While WebDesk is connected via KISS no other KISS program can use this node directly – use the KISS hub for that.")</small>
+                                    @if (node is not null && ExtUdpMissing(node))
+                                    {
+                                        <small style="color:#d29922;display:block;margin-top:.3rem">⚠️ @Loc.T(
+                                            "Seit über 5 min kein ext-udp-Paket von diesem Node. Eigene Position / Telemetrie / Firmware fehlen. Am Node prüfen: „--extudp on“ und ext-udp-Ziel-IP = dieser Rechner (Port 1799).",
+                                            "No ext-udp packet from this node for over 5 min. Own position / telemetry / firmware are missing. Check on the node: \"--extudp on\" and the ext-udp target IP = this host (port 1799).")</small>
+                                    }
+                                    @if (KissSsidTooHigh(callsign))
+                                    {
+                                        <small style="color:#f85149;display:block;margin-top:.3rem">⚠️ @Loc.T(
+                                            "Rufzeichen-SSID > 15: KISS-Empfang funktioniert, aber Senden nicht – AX.25 kennt nur SSID 0–15. Für KISS-TX eine SSID ≤ 15 verwenden.",
+                                            "Callsign SSID > 15: KISS receive works, but sending does not – AX.25 only has SSID 0–15. Use an SSID ≤ 15 for KISS TX.")</small>
+                                    }
+                                    @if (node is not null)
+                                    {
+                                        <div style="margin-top:.4rem">
+                                            <button type="button" class="btn-small" @onclick="() => ToggleKissNodeBox(node.Id)"
+                                                    title="@Loc.T("Schaltet KISS/TCP (und TX/RxMeta) am Node über die Net-Console ein – erst nach Ihrer Bestätigung.", "Switches KISS/TCP (and TX/RxMeta) on at the node over the net console – only after your confirmation.")">
+                                                🔌 @Loc.T("KISS am Node über die Net-Console aktivieren", "Activate KISS on the node via the net console")
+                                            </button>
+                                        </div>
+                                        @if (_kissNodeBoxOpen.Contains(node.Id))
+                                        {
+                                            <NodeConsoleBox Focus="kiss" Compact="true" AutoRead="true"
+                                                            InputProvider="inputFn" PasswordProvider="passwordFn" />
+                                        }
+                                    }
+                                }
+                            </div>
+
+                            @if (node is not null)
+                            {
+                                <label>
+                                    @Loc.T("Node-Passwort", "Node password")<br />
+                                    <small>@Loc.T("--passwd am Node · für NET-Console (HMAC) und (bei --kiss auth on) für KISS", "--passwd on the node · for the NET console (HMAC) and (with --kiss auth on) for KISS")</small>
+                                </label>
+                                <input type="password" @bind="node.TelnetPassword" placeholder="••••••••" autocomplete="new-password" />
+
+                                <label>
+                                    @Loc.T("Console-Log", "Console Log")<br />
+                                    <small>@Loc.T("Konsolenausgabe dieses Nodes in Datei sichern (console-{IP}-{datum}.log)", "Save this node's console output to file (console-{IP}-{date}.log)")</small>
+                                </label>
+                                <label class="settings-toggle">
+                                    <input type="checkbox" @bind="node.ConsoleLogEnabled" />
+                                    <span>@(node.ConsoleLogEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
+                                </label>
+                            }
+                            else
+                            {
+                                <span></span>
+                                <small style="color:#8b949e">@Loc.T(
+                                    "Node-Passwort und Console-Log des Primär-Nodes stehen im Abschnitt Console.",
+                                    "The primary node's password and console log are in the Console section.")</small>
                             }
                         </div>
-                        @* ── TLS Console ── *@
-                        <label>
-                            @Loc.T("Node-Passwort", "Node password")<br />
-                            <small>@Loc.T("--passwd am Node · für NET-Console (HMAC) und (bei --kiss auth on) für KISS", "--passwd on the node · for the NET console (HMAC) and (with --kiss auth on) for KISS")</small>
-                        </label>
-                        <input type="password" @bind="node.TelnetPassword" placeholder="••••••••" autocomplete="new-password" />
-
-                        @* ── Console Log ── *@
-                        <label>
-                            @Loc.T("Console-Log", "Console Log")<br />
-                            <small>@Loc.T("Konsolenausgabe dieses Nodes in Datei sichern (console-{IP}-{datum}.log)", "Save this node's console output to file (console-{IP}-{date}.log)")</small>
-                        </label>
-                        <label class="settings-toggle">
-                            <input type="checkbox" @bind="node.ConsoleLogEnabled" />
-                            <span>@(node.ConsoleLogEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
-                        </label>
-                    </div>
+                    </details>
+                    }
                 </div>
             }
-            <button class="btn-secondary" style="margin-top:.5rem" @onclick="AddNode">+ @Loc.T("Node hinzufügen", "Add Node")</button>
+            <div class="settings-conn-actions" style="margin-top:.5rem">
+                <button type="button" class="btn-secondary" @onclick="() => AddAdditionalNode(true)"
+                        title="@Loc.T("Legt eine neue Node-Karte an und startet gleich den Einrichtungs-Assistenten dafür.", "Adds a new node card and starts the setup wizard for it right away.")">+ @Loc.T("Node mit Assistent hinzufügen", "Add node with wizard")</button>
+                <button type="button" class="btn-secondary" @onclick="() => AddAdditionalNode(false)"
+                        title="@Loc.T("Legt eine leere Node-Karte an, die Sie selbst ausfüllen.", "Adds an empty node card that you fill in yourself.")">+ @Loc.T("Node manuell hinzufügen", "Add node manually")</button>
+            </div>
             }
         </div>
 
         <!-- KISS Hub -->
-        <div class="settings-section @(IsOpen("kisshub") ? "" : "settings-section-collapsed")">
+        <div id="sec-kisshub" class="settings-section @SecClass("kisshub")" style="order:@SecOrder("kisshub")">
             <h2 class="settings-section-title" @onclick='() => Toggle("kisshub")'>🔀 @Loc.T("KISS-Hub", "KISS Hub") <span class="section-chevron">@(IsOpen("kisshub") ? "▲" : "▼")</span></h2>
             @if (IsOpen("kisshub")) {
             var hub = KissHub.GetStatus();
@@ -412,7 +398,7 @@
         </div>
 
         <!-- Station / RF -->
-        <div class="settings-section @(IsOpen("station") ? "" : "settings-section-collapsed")">
+        <div id="sec-station" class="settings-section @SecClass("station")" style="order:@SecOrder("station")">
             <h2 class="settings-section-title" @onclick='() => Toggle("station")'>📻 @Loc.T("Station / HF-Parameter", "Station / RF Parameters") <span class="section-chevron">@(IsOpen("station") ? "▲" : "▼")</span></h2>
             @if (IsOpen("station")) {
             var cableLossMap = new Dictionary<string, double> { ["none"]=0.0,["rg174"]=5.0,["rg58"]=2.5,["rg8x"]=3.0,["rg8"]=1.8,["rg213"]=1.2,["h155"]=0.8,["aircell7"]=0.6,["lmr200"]=1.0,["lmr240"]=0.75,["lmr400"]=0.4,["lmr600"]=0.25,["ecoflex10"]=0.55,["ecoflex15"]=0.37,["h2000flex"]=0.33,["cfd400"]=0.45,["custom"]=_model.CustomCableLossDbPer10m };
@@ -502,7 +488,7 @@
         </div>
 
         <!-- Logging -->
-        <div class="settings-section @(IsOpen("log") ? "" : "settings-section-collapsed")">
+        <div id="sec-log" class="settings-section @SecClass("log")" style="order:@SecOrder("log")">
             <h2 class="settings-section-title" @onclick='() => Toggle("log")'>📝 Logging <span class="section-chevron">@(IsOpen("log") ? "▲" : "▼")</span></h2>
             @if (IsOpen("log")) {
             <div class="settings-grid">
@@ -553,7 +539,7 @@
         </div>
 
         <!-- Chat & Monitor -->
-        <div class="settings-section @(IsOpen("chat") ? "" : "settings-section-collapsed")">
+        <div id="sec-chat" class="settings-section @SecClass("chat")" style="order:@SecOrder("chat")">
             <h2 class="settings-section-title" @onclick='() => Toggle("chat")'>💬 Chat &amp; Monitor <span class="section-chevron">@(IsOpen("chat") ? "▲" : "▼")</span></h2>
             @if (IsOpen("chat")) {
             <div class="settings-grid">
@@ -685,7 +671,7 @@
         </div>
 
         <!-- Access from other devices -->
-        <div class="settings-section @(IsOpen("remote") ? "" : "settings-section-collapsed")">
+        <div id="sec-remote" class="settings-section @SecClass("remote")" style="order:@SecOrder("remote")">
             <h2 class="settings-section-title" @onclick='() => Toggle("remote")'>📱 @Loc.T("Zugriff von anderen Geräten", "Access from other devices") <span class="section-chevron">@(IsOpen("remote") ? "▲" : "▼")</span></h2>
             @if (IsOpen("remote")) {
             <div class="settings-grid">
@@ -706,7 +692,7 @@
         </div>
 
         <!-- Web -->
-        <div class="settings-section @(IsOpen("web") ? "" : "settings-section-collapsed")">
+        <div id="sec-web" class="settings-section @SecClass("web")" style="order:@SecOrder("web")">
             <h2 class="settings-section-title" @onclick='() => Toggle("web")'>🌐 Web <span class="section-chevron">@(IsOpen("web") ? "▲" : "▼")</span></h2>
             @if (IsOpen("web")) {
             <div class="settings-grid">
@@ -745,7 +731,7 @@
         </div>
 
         <!-- Datenspeicherung / Data Storage -->
-        <div class="settings-section @(IsOpen("data") ? "" : "settings-section-collapsed")">
+        <div id="sec-data" class="settings-section @SecClass("data")" style="order:@SecOrder("data")">
             <h2 class="settings-section-title" @onclick='() => Toggle("data")'>💾 @Loc.T("Datenspeicherung", "Data Storage") <span class="section-chevron">@(IsOpen("data") ? "▲" : "▼")</span></h2>
             @if (IsOpen("data")) {
             <div class="settings-grid">
@@ -776,7 +762,7 @@
         </div>
 
         <!-- Console -->
-        <div class="settings-section @(IsOpen("telnet") ? "" : "settings-section-collapsed")">
+        <div id="sec-telnet" class="settings-section @SecClass("telnet")" style="order:@SecOrder("telnet")">
             <h2 class="settings-section-title" @onclick='() => Toggle("telnet")'>🖥️ @Loc.T("Console", "Console") <span class="section-chevron">@(IsOpen("telnet") ? "▲" : "▼")</span></h2>
             @if (IsOpen("telnet")) {
             <div class="settings-grid">
@@ -848,7 +834,7 @@
 
 
         <!-- Auto-Reply -->
-        <div class="settings-section @(IsOpen("autoreply") ? "" : "settings-section-collapsed")">
+        <div id="sec-autoreply" class="settings-section @SecClass("autoreply")" style="order:@SecOrder("autoreply")">
             <h2 class="settings-section-title" @onclick='() => Toggle("autoreply")'>↩️ Auto-Reply <span class="section-chevron">@(IsOpen("autoreply") ? "▲" : "▼")</span></h2>
             @if (IsOpen("autoreply")) {
             <div class="settings-grid">
@@ -951,7 +937,7 @@
                         </div>
 
                         <!-- Bot-Befehle / Bot Commands -->
-                        <div class="settings-section @(IsOpen("bot") ? "" : "settings-section-collapsed")">
+                        <div id="sec-bot" class="settings-section @SecClass("bot")" style="order:@SecOrder("bot")">
                             <h2 class="settings-section-title" @onclick='() => Toggle("bot")'>🤖 Bot <span class="section-chevron">@(IsOpen("bot") ? "▲" : "▼")</span></h2>
                             @if (IsOpen("bot")) {
                             <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
@@ -1132,7 +1118,7 @@
                         </div>
 
                         <!-- Bake / Beacon -->
-        <div class="settings-section @(IsOpen("beacon") ? "" : "settings-section-collapsed")">
+        <div id="sec-beacon" class="settings-section @SecClass("beacon")" style="order:@SecOrder("beacon")">
             <h2 class="settings-section-title" @onclick='() => Toggle("beacon")'>📡 @Loc.T("Bake (Beacon)", "Beacon") <span class="section-chevron">@(IsOpen("beacon") ? "▲" : "▼")</span></h2>
             @if (IsOpen("beacon")) {
             <div class="settings-grid">
@@ -1196,7 +1182,7 @@
         </div>
 
         <!-- Termin-Bake / Calendar Beacon -->
-        <div class="settings-section @(IsOpen("calbeacon") ? "" : "settings-section-collapsed")">
+        <div id="sec-calbeacon" class="settings-section @SecClass("calbeacon")" style="order:@SecOrder("calbeacon")">
             <h2 class="settings-section-title" @onclick='() => Toggle("calbeacon")'>📅 @Loc.T("Termin-Bake", "Calendar Beacon") <span class="section-chevron">@(IsOpen("calbeacon") ? "▲" : "▼")</span></h2>
             @if (IsOpen("calbeacon")) {
             <div style="margin-bottom:.5rem;font-size:.85rem;color:var(--text-secondary)">
@@ -1395,7 +1381,7 @@
         </div>
 
         <!-- Telemetrie / Telemetry -->
-        <div class="settings-section @(IsOpen("tele") ? "" : "settings-section-collapsed")">
+        <div id="sec-tele" class="settings-section @SecClass("tele")" style="order:@SecOrder("tele")">
             <h2 class="settings-section-title" @onclick='() => Toggle("tele")'>📊 @Loc.T("Telemetrie", "Telemetry") <span class="section-chevron">@(IsOpen("tele") ? "▲" : "▼")</span></h2>
             @if (IsOpen("tele")) {
             <div class="settings-grid">
@@ -1645,7 +1631,7 @@
         </div>
 
         <!-- Wetter-API -->
-        <div class="settings-section @(IsOpen("weatherapi") ? "" : "settings-section-collapsed")">
+        <div id="sec-weatherapi" class="settings-section @SecClass("weatherapi")" style="order:@SecOrder("weatherapi")">
             <h2 class="settings-section-title" @onclick='() => Toggle("weatherapi")'>🌤️ @Loc.T("Wetter-API", "Weather API") <span class="section-chevron">@(IsOpen("weatherapi") ? "▲" : "▼")</span></h2>
             @if (IsOpen("weatherapi")) {
 
@@ -1750,7 +1736,7 @@
         </div>
 
         <!-- Watchlist -->
-        <div class="settings-section @(IsOpen("watch") ? "" : "settings-section-collapsed")">
+        <div id="sec-watch" class="settings-section @SecClass("watch")" style="order:@SecOrder("watch")">
             <h2 class="settings-section-title" @onclick='() => Toggle("watch")'>📻 @Loc.T("Watchlist", "Watchlist") <span class="section-chevron">@(IsOpen("watch") ? "▲" : "▼")</span></h2>
             @if (IsOpen("watch")) {
             <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
@@ -1804,7 +1790,7 @@
         </div>
 
         <!-- Blacklist -->
-        <div class="settings-section @(IsOpen("blacklist") ? "" : "settings-section-collapsed")">
+        <div id="sec-blacklist" class="settings-section @SecClass("blacklist")" style="order:@SecOrder("blacklist")">
             <h2 class="settings-section-title" @onclick='() => Toggle("blacklist")'>🚫 @Loc.T("Blacklist", "Blacklist") <span class="section-chevron">@(IsOpen("blacklist") ? "▲" : "▼")</span></h2>
             @if (IsOpen("blacklist")) {
             <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
@@ -1823,7 +1809,7 @@
         </div>
 
         <!-- Lizenz / License -->
-        <div class="settings-section @(IsOpen("license") ? "" : "settings-section-collapsed")">
+        <div id="sec-license" class="settings-section @SecClass("license")" style="order:@SecOrder("license")">
             <h2 class="settings-section-title" @onclick='() => Toggle("license")'>🔑 @Loc.T("Lizenz", "License") <span class="section-chevron">@(IsOpen("license") ? "▲" : "▼")</span></h2>
             @if (IsOpen("license")) {
             <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
@@ -1856,7 +1842,7 @@
         </div>
 
         <!-- Sprache / Language -->
-        <div class="settings-section @(IsOpen("lang") ? "" : "settings-section-collapsed")">
+        <div id="sec-lang" class="settings-section @SecClass("lang")" style="order:@SecOrder("lang")">
             <h2 class="settings-section-title" @onclick='() => Toggle("lang")'>🌐 @Loc.T("Sprache", "Language") <span class="section-chevron">@(IsOpen("lang") ? "▲" : "▼")</span></h2>
             @if (IsOpen("lang")) {
             <div class="settings-grid">
@@ -1878,7 +1864,7 @@
         </div>
 
         <!-- Erscheinungsbild / Appearance -->
-        <div class="settings-section @(IsOpen("appearance") ? "" : "settings-section-collapsed")">
+        <div id="sec-appearance" class="settings-section @SecClass("appearance")" style="order:@SecOrder("appearance")">
             <h2 class="settings-section-title" @onclick='() => Toggle("appearance")'>🎨 @Loc.T("Erscheinungsbild", "Appearance") <span class="section-chevron">@(IsOpen("appearance") ? "▲" : "▼")</span></h2>
             @if (IsOpen("appearance")) {
             <div class="settings-grid" style="margin-bottom:.9rem">
@@ -1996,7 +1982,7 @@
         </div>
 
         <!-- Datenbank / Database -->
-        <div class="settings-section @(IsOpen("db") ? "" : "settings-section-collapsed")">
+        <div id="sec-db" class="settings-section @SecClass("db")" style="order:@SecOrder("db")">
             <h2 class="settings-section-title" @onclick='() => Toggle("db")'>🗄️ @Loc.T("Datenbank", "Database") <span class="section-chevron">@(IsOpen("db") ? "▲" : "▼")</span></h2>
             @if (IsOpen("db")) {
             <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
@@ -2131,7 +2117,7 @@
         </div>
 
         <!-- Webhook -->
-        <div class="settings-section @(IsOpen("webhook") ? "" : "settings-section-collapsed")">
+        <div id="sec-webhook" class="settings-section @SecClass("webhook")" style="order:@SecOrder("webhook")">
             <h2 class="settings-section-title" @onclick='() => Toggle("webhook")'>🔗 Webhook <span class="section-chevron">@(IsOpen("webhook") ? "▲" : "▼")</span></h2>
             @if (IsOpen("webhook")) {
             <div class="settings-grid">
@@ -2167,7 +2153,7 @@
         </div>
 
         <!-- MQTT -->
-        <div class="settings-section @(IsOpen("mqtt") ? "" : "settings-section-collapsed")">
+        <div id="sec-mqtt" class="settings-section @SecClass("mqtt")" style="order:@SecOrder("mqtt")">
             <h2 class="settings-section-title" @onclick='() => Toggle("mqtt")'>📡 MQTT <span class="section-chevron">@(IsOpen("mqtt") ? "▲" : "▼")</span></h2>
             @if (IsOpen("mqtt")) {
             <div class="settings-grid">
@@ -2297,7 +2283,7 @@
         </div>
 
         <!-- QRZ.com -->
-        <div class="settings-section @(IsOpen("qrz") ? "" : "settings-section-collapsed")">
+        <div id="sec-qrz" class="settings-section @SecClass("qrz")" style="order:@SecOrder("qrz")">
             <h2 class="settings-section-title" @onclick='() => Toggle("qrz")'>🔍 QRZ.com <span class="section-chevron">@(IsOpen("qrz") ? "▲" : "▼")</span></h2>
             @if (IsOpen("qrz")) {
             <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
@@ -2363,7 +2349,7 @@
         </div>
 
         <!-- Schnelltexte / Quick Texts -->
-        <div class="settings-section @(IsOpen("quicktexts") ? "" : "settings-section-collapsed")">
+        <div id="sec-quicktexts" class="settings-section @SecClass("quicktexts")" style="order:@SecOrder("quicktexts")">
             <h2 class="settings-section-title" @onclick='() => Toggle("quicktexts")'>
                 ⚡ @Loc.T("Schnelltexte", "Quick Texts")
                 <span class="section-chevron">@(IsOpen("quicktexts") ? "▲" : "▼")</span>
@@ -2472,7 +2458,7 @@
         </div>
 
         <!-- Gruppen-Labels -->
-        <div class="settings-section @(IsOpen("grouplabels") ? "" : "settings-section-collapsed")">
+        <div id="sec-grouplabels" class="settings-section @SecClass("grouplabels")" style="order:@SecOrder("grouplabels")">
             <h2 class="settings-section-title" @onclick='() => Toggle("grouplabels")'>
                 🏷️ @Loc.T("Gruppen-Labels", "Group Labels")
                 <span class="section-chevron">@(IsOpen("grouplabels") ? "▲" : "▼")</span>
@@ -2543,7 +2529,7 @@
         </div>
 
         <!-- KI / QSO-Zusammenfassung -->
-        <div class="settings-section @(IsOpen("ai") ? "" : "settings-section-collapsed")">
+        <div id="sec-ai" class="settings-section @SecClass("ai")" style="order:@SecOrder("ai")">
             <h2 class="settings-section-title" @onclick='() => Toggle("ai")'>
                 🤖 @Loc.T("KI / QSO-Zusammenfassung", "AI / QSO Summary")
                 <span class="section-chevron">@(IsOpen("ai") ? "▲" : "▼")</span>
@@ -2728,7 +2714,7 @@
         </div>
 
         <!-- Datensicherung / Backup & Restore -->
-        <div class="settings-section @(IsOpen("backup") ? "" : "settings-section-collapsed")">
+        <div id="sec-backup" class="settings-section @SecClass("backup")" style="order:@SecOrder("backup")">
             <h2 class="settings-section-title" @onclick='() => Toggle("backup")'>
                 🔐 @Loc.T("Datensicherung", "Backup & Restore")
                 <span class="section-chevron">@(IsOpen("backup") ? "▲" : "▼")</span>
@@ -2879,6 +2865,86 @@
     private string? _aiBalanceResult;
     private AiUsageStats? _aiUsageStats;
 
+    // ── Section grouping / navigation / search ─────────────────────────────
+    // The sections stay in one page (one form, one Save); the toolbar only decides which ones are shown.
+    private sealed record SecDef(string Id, string Cat, string De, string En, string Keywords);
+
+    private static readonly (string Id, string Icon, string De, string En)[] Cats =
+    [
+        ("nodes",  "🔌", "Verbindung",         "Connection"),
+        ("send",   "📡", "Senden & Automatik", "Sending & automation"),
+        ("chat",   "💬", "Chat & Anzeige",     "Chat & display"),
+        ("integr", "🔗", "Integrationen",      "Integrations"),
+        ("system", "🛠️", "System",             "System"),
+    ];
+
+    // Order in this array = display order inside a category (and in the search result).
+    private static readonly SecDef[] Secs =
+    [
+        new("nodes",      "nodes",  "Nodes",                    "Nodes",                   "verbindung connection weitere additional listen device ip port rufzeichen callsign node mehrere multi primär primary kiss udp passwort password hub bluetooth assistent wizard prüfen check"),
+        new("kisshub",    "nodes",  "KISS-Hub",                 "KISS Hub",                "kiss tcp hub port"),
+        new("station",    "nodes",  "Station / HF-Parameter",   "Station / RF Parameters", "hf rf leistung power kabel cable antenne antenna frequenz frequency reichweite"),
+        new("telnet",     "nodes",  "Console",                  "Console",                 "console telnet serial seriell net hmac log"),
+        new("autoreply",  "send",   "Auto-Reply",               "Auto-Reply",              "autoantwort antwort reply"),
+        new("bot",        "send",   "Bot",                      "Bot",                     "befehle commands extern external"),
+        new("beacon",     "send",   "Bake (Beacon)",            "Beacon",                  "bake beacon intervall interval gruppe group"),
+        new("calbeacon",  "send",   "Termin-Bake",              "Calendar Beacon",         "kalender calendar termin event bake beacon"),
+        new("tele",       "send",   "Telemetrie",               "Telemetry",               "telemetry messwerte sensor api home assistant"),
+        new("quicktexts", "send",   "Schnelltexte",             "Quick texts",             "quick texte textbausteine buttons"),
+        new("chat",       "chat",   "Chat & Monitor",           "Chat & Monitor",          "tab nachrichten messages monitor mh heard gruppen groups cooldown"),
+        new("watch",      "chat",   "Watchlist",                "Watchlist",               "beobachten alarm toast"),
+        new("blacklist",  "chat",   "Blacklist",                "Blacklist",               "sperren ignorieren"),
+        new("grouplabels","chat",   "Gruppen-Namen",            "Group labels",            "gruppen group labels namen"),
+        new("lang",       "chat",   "Sprache",                  "Language",                "language deutsch english español français italiano"),
+        new("appearance", "chat",   "Erscheinungsbild",         "Appearance",              "theme design farben colors dark hell light"),
+        new("web",        "chat",   "Web",                      "Web",                     "links webseiten gateway dashboard"),
+        new("weatherapi", "integr", "Wetter-API",               "Weather API",             "weather wetter awekas wunderground"),
+        new("mqtt",       "integr", "MQTT",                     "MQTT",                    "broker topic"),
+        new("webhook",    "integr", "Webhook",                  "Webhook",                 "http post"),
+        new("qrz",        "integr", "QRZ.com",                  "QRZ.com",                 "qrz lookup rufzeichen"),
+        new("ai",         "integr", "KI",                       "AI",                      "openai azure zusammenfassung summary"),
+        new("db",         "integr", "Datenbank",                "Database",                "mysql influx influxdb"),
+        new("log",        "system", "Logging",                  "Logging",                 "log protokoll pfad path aufbewahrung retention"),
+        new("data",       "system", "Datenspeicherung",         "Data Storage",            "datapath speicher persist"),
+        new("remote",     "system", "Zugriff von anderen Geräten", "Access from other devices", "handy phone qr remote url public"),
+        new("backup",     "system", "Datensicherung",           "Backup & Restore",        "backup sicherung export import wiederherstellen restore"),
+        new("license",    "system", "Lizenz",                   "License",                 "lizenz license spende donation key"),
+    ];
+
+    private string _cat = "nodes";
+    private string _filter = string.Empty;
+    private bool Filtering => !string.IsNullOrWhiteSpace(_filter);
+    private void ClearFilter() => _filter = string.Empty;
+
+    private string SecClass(string id) =>
+        (IsOpen(id) ? "" : "settings-section-collapsed") + (SecVisible(id) ? "" : " settings-section-hidden");
+
+    private string HitsText()
+    {
+        var hits = Secs.Count(s => SecVisible(s.Id));
+        return hits > 0 ? Loc.TF("{0} Treffer", "{0} results", hits) : Loc.T("Keine Treffer", "No results");
+    }
+
+    private int SecOrder(string id) => 10 + Array.FindIndex(Secs, s => s.Id == id);
+
+    private bool SecVisible(string id)
+    {
+        var def = Array.Find(Secs, s => s.Id == id);
+        if (def is null) return true;
+        if (!Filtering) return def.Cat == _cat;
+        var hay = $"{def.De} {def.En} {def.Keywords}".ToLowerInvariant();
+        return _filter.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                      .All(t => hay.Contains(t.ToLowerInvariant()));
+    }
+
+    /// <summary>Jumps to the category that holds <paramref name="sectionId"/> and opens it.</summary>
+    private void ShowSection(string sectionId)
+    {
+        var def = Array.Find(Secs, s => s.Id == sectionId);
+        if (def is not null) { _cat = def.Cat; _filter = string.Empty; }
+        _openSections.Add(sectionId);
+    }
+
     private HashSet<string> _openSections = [];
     private bool IsOpen(string id) => _openSections.Contains(id);
     private void Toggle(string id)
@@ -2956,13 +3022,86 @@
 
     private void ApplyNodeWizard(NodeProfile node, WizardValues v)
     {
+        // A node that still has its default name ("Node 2") is named after its callsign.
+        if (node.Name.StartsWith("Node ", StringComparison.Ordinal) && int.TryParse(node.Name.AsSpan(5), out _)
+            && !string.IsNullOrWhiteSpace(v.Callsign))
+            node.Name = v.Callsign;
         node.Callsign   = v.Callsign;
         node.DeviceIp   = v.DeviceIp;
         node.DevicePort = v.DevicePort;
     }
     // ──────────────────────────────────────────────────────────────────────
 
+    // ── Node cards (primary node + additional nodes share one layout) ───────
+    /// <summary>The primary node first (Node = null while it has no profile), then the additional nodes.</summary>
+    private IReadOnlyList<(NodeProfile? Node, bool Primary)> NodeCards()
+    {
+        var list = new List<(NodeProfile?, bool)> { (PrimaryProfile, true) };
+        list.AddRange(_model.Nodes.Where(n => !n.IsPrimary).Select(n => ((NodeProfile?)n, false)));
+        return list;
+    }
+
+    private Func<(string Ip, int Port)>? PrimaryListenFor(bool isPrimary) =>
+        isPrimary ? null : () => (_model.ListenIp, _model.ListenPort);
+
+    /// <summary>A hub on this PC (typically the Bluetooth hub, UDP port 1798).</summary>
+    private static bool IsBluetoothHub(string? deviceIp, int devicePort) =>
+        devicePort == 1798 && (deviceIp?.Trim() is "127.0.0.1" or "localhost" or "::1");
+
+    private void ToggleCardCheck(NodeProfile? node)
+    {
+        if (node is null || node.IsPrimary) ToggleConnCheck(); else ToggleNodeCheck(node.Id);
+    }
+
+    /// <summary>Nodes whose wizard applied its values to the form but which are not saved yet (shows a "now save" note).</summary>
+    private readonly HashSet<Guid> _wizardApplied = [];
+    private static Guid WizKey(NodeProfile? node) => node is null || node.IsPrimary ? Guid.Empty : node.Id;
+
+    private void ToggleCardWizard(NodeProfile? node)
+    {
+        _wizardApplied.Remove(WizKey(node));   // a freshly opened wizard starts without applied values
+        if (node is null || node.IsPrimary) ToggleWizard(); else ToggleNodeWizard(node.Id);
+    }
+
+    private void CloseCardWizard(NodeProfile? node)
+    {
+        if (node is null || node.IsPrimary) CloseWizard(); else CloseNodeWizard(node.Id);
+    }
+
+    private void UseCardCallsign(NodeProfile? node, string callsign)
+    {
+        if (node is null || node.IsPrimary) UsePrimaryCallsign(callsign); else UseNodeCallsign(node, callsign);
+    }
+
+    /// <summary>Takes the wizard's values into the form and closes the wizard (step 5 of 5 is done).</summary>
+    private void ApplyCardWizard(NodeProfile? node, WizardValues v)
+    {
+        if (node is null || node.IsPrimary) ApplyPrimaryWizard(v); else ApplyNodeWizard(node, v);
+        _wizardApplied.Add(WizKey(node));
+        CloseCardWizard(node);
+    }
+
+    private void SetCardKiss(NodeProfile? node, bool isPrimary, bool enabled)
+    {
+        if (isPrimary) SetPrimaryKiss(enabled);
+        else if (node is not null) node.Transport = enabled ? NodeTransport.Kiss : NodeTransport.ExtUdp;
+    }
+    // ──────────────────────────────────────────────────────────────────────
+
     // ── Multi-node helpers ─────────────────────────────────────────────────
+    /// <summary>"Add node" always adds an additional node: a primary profile is created first if there is none yet.</summary>
+    private void AddAdditionalNode(bool withWizard)
+    {
+        if (_model.Nodes.Count == 0) AddNode();   // creates the primary profile from the Connection values
+        AddNode();
+        if (!withWizard) return;
+
+        // Wizard variant: start with an empty callsign (the wizard asks for it) and open the wizard on the new card.
+        var node = _model.Nodes[^1];
+        node.Callsign = string.Empty;
+        _nodeWizardOpen.Add(node.Id);
+    }
+
     private void AddNode()
     {
         var isFirst = _model.Nodes.Count == 0;
@@ -3068,11 +3207,12 @@
             }
         }
         catch (JSException) { }
+        if (_openSections.Remove("conn")) _openSections.Add("nodes");   // "Verbindung" and "Weitere Nodes" were merged
 
         // Arrived via the red UDP badge in the status bar: open the Connection section and run the check.
         if (_checkRequested)
         {
-            _openSections.Add("conn");
+            _openSections.Add("nodes");
             _connCheckOpen   = true;
             _connCheckScroll = true;
         }
@@ -3080,7 +3220,7 @@
         // Arrived via the first-run banner: open the Connection section with the setup wizard.
         if (_wizardRequested)
         {
-            _openSections.Add("conn");
+            _openSections.Add("nodes");
             _wizardOpen = true;
         }
 
@@ -3673,7 +3813,7 @@
         _restored = query["restored"] == "1";
         _checkRequested = query["check"] == "conn";
         _wizardRequested = query["wizard"] == "1";
-        if (_restored) _openSections.Add("backup");
+        if (_restored) ShowSection("backup");
         _model = new FormModel
         {
             ListenIp            = s.ListenIp,
@@ -3953,6 +4093,7 @@
             if (saved.MhMaxAgeHours > 0)
                 ChatService.PurgeMhListByAge();
             _saved = true;
+            _wizardApplied.Clear();
             await RefreshPathWarningsAsync();
         }
         catch (Exception ex)
@@ -4533,6 +4674,8 @@
             imported.Mqtt             ??= new();
             imported.Qrz              ??= new();
             imported.Ai               ??= new();
+            imported.Appearance       ??= new();
+            imported.Appearance.CustomThemes ??= [];
             imported.WeatherApi       ??= new();
 
             // Load imported settings into form model (same mapping as OnInitialized)
@@ -4627,6 +4770,23 @@
                 TelemetryExtUdpEnabled            = s.TelemetryExtUdpEnabled,
                 TelemetryExtUdpMinIntervalMinutes = s.TelemetryExtUdpMinIntervalMinutes,
                 Language            = s.Language,
+                Appearance          = new AppearanceSettings
+                {
+                    ActiveTheme  = (s.Appearance ?? new()).ActiveTheme,
+                    CustomThemes = (s.Appearance ?? new()).CustomThemes
+                        .Select(t => new CustomTheme
+                        {
+                            Name    = t.Name,
+                            BasedOn = t.BasedOn,
+                            Colors  = new Dictionary<string, string>(t.Colors ?? [])
+                        })
+                        .ToList()
+                },
+                QuickTexts              = s.QuickTexts
+                    .Select(q => new QuickTextEntry { Label = q.Label, Text = q.Text })
+                    .ToList(),
+                FrequencyMhz            = s.FrequencyMhz,
+                SystemMarginDb          = s.SystemMarginDb,
                 DbProvider              = s.Database.Provider,
                 DbMySqlConnectionString = s.Database.MySqlConnectionString,
                 DbMySqlTableName        = s.Database.MySqlTableName,

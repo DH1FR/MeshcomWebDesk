@@ -193,6 +193,7 @@ public class SettingsService
                 ["LogRetainDays"]       = s.LogRetainDays,
                 ["LogUdpTraffic"]       = s.LogUdpTraffic,
                 ["MonitorMaxMessages"]  = s.MonitorMaxMessages,
+                ["TabMaxMessages"]      = s.TabMaxMessages,
                 ["GroupFilterEnabled"]  = s.GroupFilterEnabled,
                 ["Groups"]              = new JsonArray(s.Groups.Select(g => (JsonNode?)JsonValue.Create(g)).ToArray()),
                 ["WatchCallsigns"]      = new JsonArray(s.WatchCallsigns.Select(c => (JsonNode?)JsonValue.Create(c)).ToArray()),
