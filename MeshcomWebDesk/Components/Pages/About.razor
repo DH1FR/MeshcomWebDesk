@@ -46,24 +46,28 @@
 
         <div class="about-divider"></div>
 
-        <div class="about-coffee">
-            <p class="about-coffee-text">
-                💛 @Loc.T(
-                    "Gefällt dir meine Arbeit? Unterstütze mich per PayPal!",
-                    "Do you like my work? Support me via PayPal!")
-            </p>
-            <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap">
+        <section class="about-support" aria-labelledby="about-support-title">
+            <h2 id="about-support-title" class="about-support-title">
+                💛 @Loc.T("Gefällt dir meine Arbeit? Unterstütze mich.", "Do you like my work? Support me.")
+            </h2>
+
+            <div class="about-support-block">
+                <h3 class="about-support-sub">💳 @Loc.T("Per PayPal", "Via PayPal")</h3>
                 <a class="about-coffee-btn" href="https://paypal.me/DH1FR" target="_blank" rel="noopener" style="background:#003087;border-color:#003087">
-                    💳 PayPal · paypal.me/DH1FR
+                    PayPal · paypal.me/DH1FR
                 </a>
             </div>
-            <p style="font-size:.85em;opacity:.85;margin:.75rem 0 0">
-                @Loc.T(
-                    "Lieber per Wero oder Banküberweisung? Schreib mir eine kurze E-Mail – ich schicke dir meine Bankverbindung oder fordere den Betrag per Wero an (dafür bitte die Telefonnummer oder E-Mail deines Wero-Kontos nennen). Wenn du eine Lizenz möchtest, nenne bitte dein Rufzeichen.",
-                    "Prefer Wero or a bank transfer? Send me a short e-mail – I will send you my bank details or request the amount via Wero (please include the phone number or e-mail of your Wero account). If you would like a license, please include your callsign.")
-                <a class="about-link" href="mailto:dh1fr@darc.de?subject=MeshCom%20WebDesk%20-%20Coffee%20donation%20(Wero%20%2F%20bank%20transfer)">✉️ dh1fr@darc.de</a>
-            </p>
-        </div>
+
+            <div class="about-support-block">
+                <h3 class="about-support-sub">✉️ @Loc.T("Sende mir eine E-Mail", "Send me an e-mail")</h3>
+                <p class="about-support-text">
+                    @Loc.T(
+                        "Lieber per Wero? Schreib mir eine kurze E-Mail – ich fordere den Betrag per Wero an (dafür bitte die Telefonnummer oder E-Mail deines Wero-Kontos nennen). Wenn du eine Lizenz möchtest, nenne bitte dein Rufzeichen.",
+                        "Prefer Wero? Send me a short e-mail – I will request the amount via Wero (please include the phone number or e-mail of your Wero account). If you would like a license, please include your callsign.")
+                </p>
+                <DonationMailForm Version="@_version" />
+            </div>
+        </section>
     </div>
 </div>
 

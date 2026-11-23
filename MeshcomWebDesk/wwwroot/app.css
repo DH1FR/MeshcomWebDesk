@@ -1742,6 +1742,37 @@ html.mon-animate .lower-pane {
     text-align: center;
 }
 
+/* Support block: framed, with a heading and two clearly labelled ways (PayPal / e-mail) */
+.about-support {
+    text-align: center;
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    background: rgba(88, 166, 255, 0.05);
+    padding: 1rem 1rem 0.25rem;
+}
+.about-support-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--link-soft);
+    margin: 0 0 0.9rem;
+}
+.about-support-block {
+    padding: 0.85rem 0 1rem;
+    border-top: 1px solid var(--accent);
+}
+.about-support-sub {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--text-soft);
+    margin: 0 0 0.6rem;
+}
+.about-support-text {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    line-height: 1.45;
+    margin: 0 0 0.5rem;
+}
+
 .about-coffee-text {
     color: var(--text-muted);
     font-size: 0.9rem;
@@ -2331,7 +2362,77 @@ html.mon-animate .lower-pane {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    padding-top: 0.25rem;
+    padding: 0.6rem 0 0.25rem;
+    /* Save stays reachable without scrolling to the end; order keeps it after all sections */
+    order: 9999;
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    background: linear-gradient(to bottom, transparent, var(--bg-base) 35%);
+}
+
+/* ── Settings navigation: category tabs + search ── */
+.settings-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 6;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    background: var(--bg-base);
+    border-bottom: 1px solid var(--accent);
+}
+.settings-search {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 12px;
+    font-size: 14px;
+    border-radius: 6px;
+    border: 1px solid var(--accent);
+    background: var(--bg-input);
+    color: inherit;
+}
+.settings-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+.settings-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 6px 12px;
+    font-size: 0.88rem;
+    border-radius: 999px;
+    border: 1px solid var(--accent);
+    background: var(--bg-panel);
+    color: var(--link-soft);
+    cursor: pointer;
+}
+.settings-tab:hover { background: var(--bg-hover); }
+.settings-tab-active {
+    background: var(--primary);
+    color: var(--text-on-accent);
+    border-color: var(--primary);
+    font-weight: 600;
+}
+.settings-tabs-info { font-size: 0.85rem; opacity: 0.85; }
+.settings-tabs-info a { color: var(--link); cursor: pointer; }
+.settings-section-hidden { display: none; }
+
+/* ── Nodes section ── */
+.settings-subtitle { font-size: 0.95rem; margin: 0.75rem 0 0.25rem; color: var(--link-soft); }
+.settings-node-intro { color: #8b949e; font-size: 0.85em; margin: 0 0 0.5rem; }
+.settings-node-shared { margin: 0.75rem 0; }
+.settings-node-hub-badge { background: #1f3b63; color: #9ecbff; }
+.settings-adv { margin-top: 0.6rem; }
+.settings-adv > summary { cursor: pointer; font-size: 0.9rem; color: var(--link-soft); padding: 0.25rem 0; }
+.settings-adv > summary small { opacity: 0.7; }
+.settings-adv[open] > summary { margin-bottom: 0.4rem; }
+@media (max-width: 600px) {
+    .settings-tabs { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
+    .settings-tab { white-space: nowrap; flex-shrink: 0; }
 }
 
 .settings-actions .btn-save {
@@ -3010,6 +3111,27 @@ html.mon-animate .lower-pane {
     background: #2d333b;
     color: var(--text-soft);
 }
+
+.donation-mail { width: 100%; margin-top: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.donation-mail-fields { display: flex; gap: 0.5rem; }
+.donation-mail-input {
+    flex: 2; min-width: 0;
+    background: var(--surface-alt); color: var(--text-soft);
+    border: 1px solid var(--border-strong); border-radius: 6px;
+    padding: 0.45rem 0.6rem; font-size: 0.85rem;
+}
+.donation-mail-input.donation-mail-call { flex: 1; text-transform: uppercase; }
+.donation-mail-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.donation-mail-btn {
+    flex: 1 1 auto; text-align: center; text-decoration: none; cursor: pointer;
+    background: var(--surface-alt); color: var(--link-soft);
+    border: 1px solid var(--border-strong); border-radius: 6px;
+    padding: 0.45rem 0.7rem; font-size: 0.85rem;
+}
+.donation-mail-btn:hover { background: #2d333b; }
+.donation-mail-check { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--link-soft); cursor: pointer; text-align: left; }
+.donation-mail-hint { font-size: 0.8rem; color: var(--text-muted); text-align: left; }
+.donation-mail-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .map-info-sep { color: var(--surface-alt); }
 .settings-section-collapsed > div,
@@ -4623,6 +4745,47 @@ html[data-display="compact"] .settings-header {
     font-size: .85rem;
 }
 .conn-discovery-select:disabled { opacity: .6; }
+
+/* ── Node search: spinner + progress so a running search is hard to miss ── */
+.conn-spinner {
+    width: 1.1rem; height: 1.1rem; flex: 0 0 auto;
+    border: 2px solid var(--border-strong);
+    border-top-color: var(--link);
+    border-radius: 50%;
+    animation: conn-spin .8s linear infinite;
+}
+@keyframes conn-spin { to { transform: rotate(360deg); } }
+.conn-discovery-searching {
+    padding: .5rem .6rem;
+    border: 1px solid var(--link);
+    border-radius: 6px;
+    animation: conn-pulse 1.6s ease-in-out infinite;
+}
+@keyframes conn-pulse { 0%, 100% { box-shadow: 0 0 0 0 transparent; } 50% { box-shadow: 0 0 0 3px rgba(88, 166, 255, .25); } }
+.conn-discovery-searching .conn-discovery-status { color: var(--link); font-weight: 600; }
+.conn-progress { height: 4px; border-radius: 2px; background: var(--border-strong); overflow: hidden; }
+.conn-progress-bar { height: 100%; background: var(--link); transition: width .25s ease; }
+.conn-progress-indeterminate .conn-progress-bar { width: 35%; animation: conn-slide 1.2s ease-in-out infinite; }
+@keyframes conn-slide { 0% { margin-left: -35%; } 100% { margin-left: 100%; } }
+@media (prefers-reduced-motion: reduce) {
+    .conn-spinner, .conn-discovery-searching, .conn-progress-indeterminate .conn-progress-bar { animation: none; }
+}
+
+/* ── One button height in the wizard, the check panel and the node cards ── */
+.conn-wizard .btn-small, .conn-wizard .btn-secondary,
+.conn-check .btn-small, .conn-check .btn-secondary,
+.settings-node-actions .btn-small, .settings-conn-actions .btn-secondary {
+    box-sizing: border-box;
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .3rem;
+    padding: 0 .9rem;
+    font-size: .85rem;
+    line-height: 1.2;
+}
+.conn-discovery-select { box-sizing: border-box; min-height: 32px; }
 .conn-discovery-note { color: var(--text-muted); line-height: 1.4; }
 .conn-discovery-hint { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; font-size: .82rem; color: var(--warn); }
 

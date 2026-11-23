@@ -45,6 +45,9 @@ public static class UpdateEndpoints
             if (!DockerUpdateService.InContainer) return Results.Json(new { ok = false, message = "not-docker" }, statusCode: 404);
             if (!ctx.Request.Headers.ContainsKey(RequiredHeader))
                 return Results.Json(new { ok = false, message = "forbidden" }, statusCode: 403);
+            // The commit is known before its image is published; Watchtower would just pull the old image again.
+            if ((await docker.GetInfoAsync(CancellationToken.None, force: true)).ImageBuilding)
+                return Results.Json(new { ok = false, message = "building" });
             var (ok, message) = await docker.TriggerAsync(CancellationToken.None);
             return Results.Json(new { ok, message });
         }).DisableAntiforgery();

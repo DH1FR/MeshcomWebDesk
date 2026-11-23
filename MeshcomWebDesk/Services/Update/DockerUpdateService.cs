@@ -8,6 +8,10 @@ namespace MeshcomWebDesk.Services.Update;
 /// <param name="Available">A newer image/build than the running one is known.</param>
 /// <param name="Latest">Version tag (release channel) or short commit id (dev channel) of the newest build.</param>
 /// <param name="CheckFailed">The newest build could not be determined (offline, rate limit).</param>
+/// <param name="ImageBuilding">
+/// A newer commit exists, but the published image still carries an older one – the CI is still building it. Updating
+/// now would only pull the old image again.
+/// </param>
 public sealed record DockerUpdateInfo(
     string Channel,
     string Version,
@@ -15,7 +19,8 @@ public sealed record DockerUpdateInfo(
     bool WatchtowerConfigured,
     bool Available,
     string? Latest,
-    bool CheckFailed);
+    bool CheckFailed,
+    bool ImageBuilding = false);
 
 /// <summary>
 /// Updating a Docker installation: the container cannot replace itself, so a Watchtower container (which owns the
@@ -82,7 +87,122 @@ public sealed class DockerUpdateService
         var head = await GetDevHeadAsync(ct, force);
         var running = RunningCommit;
         var available = head is not null && running is not null && !SameCommit(head, running);
-        return new(channel, Version, running, WatchtowerConfigured, available, head is null ? null : Short(head), head is null && _devHeadFailed);
+
+        // The commit is on GitHub as soon as it is pushed, but the image only about three minutes later (CI build).
+        var building = false;
+        if (available && head is not null)
+        {
+            var published = await GetPublishedRevisionAsync(head, ct, force);
+            building = published is not null && !SameCommit(head, published);   // unknown (null): do not block
+        }
+        return new(channel, Version, running, WatchtowerConfigured, available, head is null ? null : Short(head), head is null && _devHeadFailed, building);
+    }
+
+    // ── Is the image for the newest commit published yet? ─────────────────
+    private readonly SemaphoreSlim _imageGate = new(1, 1);
+    private string? _publishedRevision;
+    private DateTime _publishedAtUtc;
+    private static readonly TimeSpan PublishedRecheck = TimeSpan.FromSeconds(45);
+
+    /// <summary>
+    /// The commit the published dev image was built from (<c>null</c> = could not be determined, e.g. offline or a
+    /// registry other than ghcr.io). Once the image carries the head commit nothing changes until the head moves on;
+    /// while it still lags behind it is looked at again after 45 seconds.
+    /// </summary>
+    private async Task<string?> GetPublishedRevisionAsync(string head, CancellationToken ct, bool force)
+    {
+        await _imageGate.WaitAsync(ct);
+        try
+        {
+            if (!force && _publishedRevision is not null && SameCommit(head, _publishedRevision)) return _publishedRevision;
+            if (!force && _publishedAtUtc != default && DateTime.UtcNow - _publishedAtUtc < PublishedRecheck) return _publishedRevision;
+
+            _publishedRevision = await FetchPublishedRevisionAsync(Env("WEBDESK_IMAGE") ?? DefaultImage, "dev", ct, _logger);
+            _publishedAtUtc = DateTime.UtcNow;
+            return _publishedRevision;
+        }
+        finally
+        {
+            _imageGate.Release();
+        }
+    }
+
+    /// <summary>
+    /// Reads the build commit of <c>ghcr.io/&lt;repo&gt;:&lt;tag&gt;</c> from the registry (anonymous pull token → manifest →
+    /// image config: <c>WEBDESK_COMMIT</c> or the OCI revision label). Returns <c>null</c> on any problem.
+    /// </summary>
+    public static async Task<string?> FetchPublishedRevisionAsync(string image, string tag, CancellationToken ct, ILogger? logger = null)
+    {
+        const string host = "ghcr.io/";
+        if (!image.StartsWith(host, StringComparison.OrdinalIgnoreCase)) return null;   // only GHCR is known
+        var repo = image[host.Length..];
+        var colon = repo.IndexOf(':');
+        if (colon > 0) repo = repo[..colon];
+        var at = repo.IndexOf('@');
+        if (at > 0) repo = repo[..at];
+
+        try
+        {
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("MeshcomWebDesk/" + Version);
+
+            using (var tokenDoc = System.Text.Json.JsonDocument.Parse(
+                       await http.GetStringAsync($"https://ghcr.io/token?service=ghcr.io&scope=repository:{repo}:pull", ct)))
+            {
+                var token = tokenDoc.RootElement.GetProperty("token").GetString();
+                http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            }
+
+            async Task<System.Text.Json.JsonDocument> GetJson(string path, string accept)
+            {
+                using var req = new HttpRequestMessage(HttpMethod.Get, $"https://ghcr.io/v2/{repo}/{path}");
+                req.Headers.TryAddWithoutValidation("Accept", accept);
+                using var resp = await http.SendAsync(req, ct);
+                resp.EnsureSuccessStatusCode();
+                return System.Text.Json.JsonDocument.Parse(await resp.Content.ReadAsStringAsync(ct));
+            }
+
+            const string manifestTypes =
+                "application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, " +
+                "application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json";
+
+            var doc = await GetJson($"manifests/{tag}", manifestTypes);
+            try
+            {
+                // Multi-arch: take the first real platform (attestation manifests report architecture "unknown").
+                if (doc.RootElement.TryGetProperty("manifests", out var list))
+                {
+                    string? digest = null;
+                    foreach (var m in list.EnumerateArray())
+                    {
+                        var arch = m.TryGetProperty("platform", out var p) && p.TryGetProperty("architecture", out var a) ? a.GetString() : null;
+                        if (arch is not null && arch != "unknown") { digest = m.GetProperty("digest").GetString(); break; }
+                    }
+                    if (digest is null) return null;
+                    doc.Dispose();
+                    doc = await GetJson($"manifests/{digest}", manifestTypes);
+                }
+
+                var configDigest = doc.RootElement.GetProperty("config").GetProperty("digest").GetString();
+                using var cfg = await GetJson($"blobs/{configDigest}", "application/json");
+                if (!cfg.RootElement.TryGetProperty("config", out var c)) return null;
+
+                if (c.TryGetProperty("Env", out var env))
+                    foreach (var e in env.EnumerateArray())
+                        if (e.GetString() is { } s && s.StartsWith("WEBDESK_COMMIT=", StringComparison.Ordinal))
+                            return s["WEBDESK_COMMIT=".Length..].Trim() is { Length: >= 7 } v ? v : null;
+                if (c.TryGetProperty("Labels", out var labels) && labels.ValueKind == System.Text.Json.JsonValueKind.Object
+                    && labels.TryGetProperty("org.opencontainers.image.revision", out var rev) && rev.GetString() is { Length: >= 7 } r)
+                    return r;
+                return null;
+            }
+            finally { doc.Dispose(); }
+        }
+        catch (Exception ex)
+        {
+            logger?.LogDebug(ex, "Could not read the published image revision from GHCR.");
+            return null;
+        }
     }
 
     private static bool SameCommit(string a, string b)

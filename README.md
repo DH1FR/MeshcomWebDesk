@@ -31,6 +31,26 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
+## 🆕 What's New in v1.18.2
+
+### ✨ Improvements
+- **Optimized license key request** – the coffee dialog and the About page now have a small form (name, callsign, *PayPal already donated* or *request payment via Wero*, *Request a license key*) that opens a prefilled e-mail to the author in the interface language, followed by the German text. The e-mail is only offered once name and payment option are filled in; for a license key the callsign is required as well. Wero and PayPal only – the bank transfer option is gone. Texts in German, English, Spanish, French and Italian.
+- **Settings: category tabs, search and a fixed Save bar** – the 29 sections are grouped into five tabs (*Connection*, *Sending & automation*, *Chat & display*, *Integrations*, *System*). A search field filters the sections by title and keywords, and the *Save* button stays at the bottom edge of the window instead of at the very end of the page.
+- **One "Nodes" section** – *Connection* and *Additional Nodes* are merged. The shared UDP receive settings (*Listen IP* / *Listen Port*) appear once, followed by one card per node with the same layout, the primary node first. KISS/TCP, node password and console log sit under *Advanced*. The *Listen IP/Port* fields of the additional nodes are gone – the UDP socket is opened once from the global values. A local hub on port 1798 gets a *Bluetooth hub* badge. Nodes can be added with the setup wizard or manually.
+- **Setup wizard** – it starts with *MeshCom node on WiFi/LAN*; the node search shows a spinner, a progress bar and a highlighted frame while it runs; buttons and selection list have one height; the node's fields are hidden while the wizard runs, and after *Apply to form* the wizard closes and the card reminds you to save. A node that still has its default name ("Node 2") is named after its callsign.
+
+### 🔧 Bug Fixes
+- **Docker update waits for the new image** – the update page reported a newer dev build as soon as the commit was on GitHub, but the image is only published by the CI about three minutes later; updating in that window pulled the old image again and changed nothing. The check now also asks the registry which commit the published image carries: while it lags behind, the page says the image is still being built, the *Update now* button is disabled and the banner stays hidden. If the registry cannot be read, nothing is blocked.
+- **Backup restore lost settings** – restoring a backup reset the appearance (themes and custom themes), the quick texts, the frequency and the system margin to their defaults. They are restored now.
+- **"Max. messages per tab" was not saved** – the value never reached the settings file and fell back to 500 after a restart.
+- **Connection check texts named a field that no longer exists** – three messages told you to change *Own Callsign* under Settings → Connection, and one to look in the *Connection section*. They now point to **Connection → Nodes** and the card's *Callsign* field (*Receiving (UDP)* for Listen IP / Listen Port).
+
+### 📚 Docs
+- **Current screenshots** – the README screenshots show WebDesk v1.18.2 instead of v1.11.1: chat with monitor, MH list, live map (a 274 KB JPEG instead of a 5.7 MB PNG), the phone view with the one-row tab bar, the Console Command Helper and the AI search dialog. Names and places from QRZ, positions and locators are blurred or masked. The outdated terminal banner screenshot (v1.6.11) is gone; the *Startup* section still describes the banner.
+- **Node connection and Docker update guides** – the node guides (de/en/es/it) and the README describe the merged *Nodes* section, the wizard and the card layout; the Docker update guides explain the *image is still being built* check.
+
+---
+
 ## 🆕 What's New in v1.18.1
 
 ### ✨ Features
@@ -216,7 +236,7 @@ Built with **.NET 10** and **Blazor Interactive Server**.
   <a href="https://paypal.me/DH1FR">
     <img src="https://img.shields.io/badge/Donate%20via%20PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="Donate via PayPal" />
   </a><br><br>
-  <sub>Prefer <strong>Wero</strong> or a <strong>bank transfer</strong>? Send me a short <a href="mailto:dh1fr@darc.de?subject=MeshCom%20WebDesk%20-%20Coffee%20donation%20(Wero%20%2F%20bank%20transfer)">e-mail</a> – I will send you my bank details or request the amount via Wero.</sub>
+  <sub>Prefer <strong>Wero</strong>? Use the form in the coffee dialog or on the About page, or send me a short <a href="mailto:dh1fr@darc.de?subject=MeshCom%20WebDesk%20-%20Coffee%20donation%20(Wero%20request)">e-mail</a> – I will request the amount via Wero.</sub>
 </p>
 
 ---
@@ -235,15 +255,17 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 
 <video src="docs/MeshComWebDesk.mp4" controls width="100%"></video>
 
-![MeshCom Web Client](docs/screenshot.png?v=3)
+![MeshCom Web Client](docs/screenshot.png?v=4)
+
+![MeshCom MH list](docs/Screenshot_MH.png)
 
 ![MeshCom AI Search](docs/Screenshot-AI-Search.png)
 
-![MeshCom Live Map](docs/Screenshot_Map.png)
+![MeshCom Live Map](docs/Screenshot_Map.jpg)
 
-![Terminal Startup Banner](docs/Screenshot_shell.png)
+<img src="docs/Screenshot_Mobile.png" alt="MeshCom WebDesk on a phone: one-row tab bar" width="300">
 
-![Console Command Helper mit Spektrum-Scan](docs/Console_Command_Helper.png)
+![Console Command Helper](docs/Console_Command_Helper.png)
 
 ---
 
@@ -291,29 +313,29 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 MeshCom WebDesk can connect to **multiple MeshCom nodes simultaneously**.
 Each node has its own UDP connection, callsign, chat tabs, monitor feed and console credentials.
 
-#### Node profiles (Settings → Further Nodes)
+#### Node profiles (Settings → Connection → Nodes)
 
-Each node profile contains:
+The **Nodes** section shows the shared **Receiving (UDP)** values (*Listen IP* / *Listen Port*) once at the top, followed by **one card per node**, the primary node first. All cards have the same layout. *Add node with wizard* opens the setup wizard for the new card right away, *Add node manually* adds an empty card. Each node profile contains:
 
 | Field | Description |
 |---|---|
 | **Enabled** | Checkbox to take a node out of active use (registration, sending, chat switcher, telnet console) temporarily without deleting its configuration. The primary node cannot be disabled. |
 | **Name** | Display name shown in the node switcher (e.g. `Balkon`, `Auto`) |
-| **Callsign** | Own callsign used for outgoing messages on this node (e.g. `OE1ABC-2`). For the primary node this is read-only and mirrors **Settings → Connection** (see below). |
-| **Device IP** | IP address of the MeshCom node. For the primary node this is read-only and mirrors **Settings → Connection**. |
+| **Callsign** | Own callsign used for outgoing messages on this node (e.g. `OE1ABC-2`). |
+| **Device IP** | IP address of the MeshCom node. |
 | **Device Port** | UDP port on the node (default `1799`; adjustable, e.g. for a UDP hub) |
-| **Listen IP** | Local bind address (`0.0.0.0` = all interfaces). For the primary node this is read-only and mirrors **Settings → Connection**. |
-| **Listen Port** | Local UDP port to receive packets from this node (default `1799`; adjustable, e.g. for a UDP hub) |
 | **Primary** | Exactly one node must be marked primary – only the primary node drives MH list, Live Map, beacons, telemetry, bot and OTA/reboot |
-| **KISS/TCP** | Checkbox – additionally connect to this node over KISS/TCP, on top of the always-on ext-udp base (see [KISS/TCP Transport](#-kisstcp-transport)) |
+| **KISS/TCP** | Under *Advanced* – checkbox – additionally connect to this node over KISS/TCP, on top of the always-on ext-udp base (see [KISS/TCP Transport](#-kisstcp-transport)) |
 | **KISS Port** | TCP port of the node's KISS interface (fixed at `8001` by the node), shown only when KISS/TCP is enabled |
-| **Node Password** | `--passwd` on the node – used for the NET Console (HMAC) and, with `--kiss auth on`, for KISS authentication. Encrypted at rest (DPAPI / AES). |
+| **Node Password** | Under *Advanced* – `--passwd` on the node – used for the NET Console (HMAC) and, with `--kiss auth on`, for KISS authentication. Encrypted at rest (DPAPI / AES). |
 
-> 🔵 **Bluetooth UDP hub:** the UDP ports are adjustable (Settings → Connection / per node) so WebDesk can talk to a hub that runs on a different port than `1799` – e.g. **[MeshComUDPBluetoothHub](https://github.com/DH1FR/MeshComUDPBluetoothHub)**, which connects a MeshCom node over Bluetooth and exposes it as a UDP endpoint.
+> **Listen IP / Listen Port** are not per node: all nodes share one UDP socket, so they are entered once under *Receiving (UDP)* above the cards (default `0.0.0.0` / `1799`; changes need a restart). The per-node Listen fields of earlier versions are gone.
+
+> 🔵 **Bluetooth UDP hub:** the UDP ports are adjustable (Settings → Connection → Nodes) so WebDesk can talk to a hub that runs on a different port than `1799` – e.g. **[MeshComUDPBluetoothHub](https://github.com/DH1FR/MeshComUDPBluetoothHub)**, which connects a MeshCom node over Bluetooth and exposes it as a UDP endpoint.
 
 > 💡 When multiple nodes share the same UDP port (`1799`), incoming packets are routed to the correct node by the **sender's IP address** – no port forwarding required.
 
-> 💡 The primary node's connection data (callsign, device/listen IP + port) lives in **Settings → Connection**, not in its Additional Nodes card, so it's never entered twice. Promoting a different node to primary (**Set Primary**) moves that node's connection data up into the Connection section instead, and the previous primary becomes a regular, editable secondary node.
+> 💡 The primary node is a card like the others: its callsign and device IP/port are edited right there (it cannot be disabled; removing it promotes the next node to primary). **Set Primary** on another card makes that node the primary one, and the previous primary becomes a regular secondary node. A local hub on port `1798` (e.g. the Bluetooth hub) carries a *Bluetooth hub* badge on its card.
 
 #### Node behaviour
 
@@ -341,7 +363,7 @@ interface (TCP port 8001), provided the node runs a MeshCom firmware that
 includes KISS/TCP. It is an **add-on, not a replacement**: enabling KISS opens a
 second connection to the node; ext-udp keeps running alongside it.
 
-Enable it in **Settings → Connection → *KISS/TCP*** (for a single node – no further nodes needed; the node password for `--kiss auth on` is entered right below) or per node in **Settings → Additional Nodes → the node's card → *KISS/TCP***.
+Enable it in **Settings → Connection → Nodes → the node's card → *Advanced* → *KISS/TCP*** (also for the primary node on its own – no further nodes needed; the node password for `--kiss auth on` is entered right below).
 
 📘 Full reference: [`docs/kiss-tcp-guide-en.md`](docs/kiss-tcp-guide-en.md)
 

@@ -17,7 +17,8 @@
     </div>
 }
 
-@if (!UpdateCheck.Dismissed && _dockerDev is { Available: true })
+@* Only once the image is published; while the CI still builds it, the update page explains the wait. *@
+@if (!UpdateCheck.Dismissed && _dockerDev is { Available: true, ImageBuilding: false })
 {
     <div class="update-banner">
         <span>🚀 @Loc.TF("Neuer Dev-Build verfügbar: {0}", "New dev build available: {0}", _dockerDev.Latest)</span>

@@ -33,7 +33,7 @@ Edit your device settings (`Meshcom__DeviceIp`, `Meshcom__MyCallsign`, …) in `
 
 ### Update channels (`WEBDESK_CHANNEL`)
 - **`latest`** – the newest **release**. Recommended.
-- **`dev`** – every push to the dev branch (image `:dev`, tagged with its commit). For testers; may be unstable. The update page then compares the build id of the running image with the head of the dev branch.
+- **`dev`** – every push to the dev branch (image `:dev`, tagged with its commit). For testers; may be unstable. The update page then compares the build id of the running image with the head of the dev branch. Before it offers the update it also checks whether the image for the newest commit is already published: while the GitHub build is still running (about 3 minutes) it says *The Docker image for … is still being built*, the *Update now* button is disabled and the banner stays hidden. Then click *Check now* again.
 
 ### Good to know
 - The update page and the banner show a new version only for the channel you use.
@@ -67,4 +67,5 @@ Does `git pull --ff-only`, rebuilds and restarts. It stops if you have local cha
 | "Watchtower rejected the token" | `WATCHTOWER_TOKEN` in `.env` must be identical for both containers; recreate them after changing it |
 | "Watchtower is not reachable" | `sudo docker ps` – is `meshcom-watchtower` running? If port 8080 is taken (e.g. phpMyAdmin) set `WATCHTOWER_PORT=18080` in `.env` and recreate |
 | Dev channel says "does not know its build" | the container was not started from the `:dev` image (e.g. built from source) |
-| No new version although one was pushed | the dev image is built by GitHub after the push (a few minutes); the release image after the release |
+| No new version although one was pushed | the dev image is built by GitHub after the push (a few minutes); the release image after the release. Until then the update page says *still being built* (then click *Check now*) |
+| The page says *Updating …* but the version stays the same | the update was started before the image was published (older versions do not check this): click *Check now*, wait until the image is built and update again |

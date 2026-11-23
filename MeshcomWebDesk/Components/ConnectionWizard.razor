@@ -90,7 +90,7 @@
             @if (_kind != Kind.HubLocal)
             {
                 <span></span>
-                <div class="conn-discovery">
+                <div class="conn-discovery@(_searching ? " conn-discovery-searching" : "")">
                     <div class="conn-discovery-actions">
                         <select class="conn-discovery-select" @onchange="OnPickChanged"
                                 disabled="@(_searching || _found is null || _found.Count == 0)">
@@ -110,9 +110,17 @@
                         </button>
                         @if (_searching)
                         {
+                            <span class="conn-spinner" role="status" aria-label="@_searchStatus"></span>
                             <span class="conn-discovery-status">@_searchStatus</span>
                         }
                     </div>
+                    @if (_searching)
+                    {
+                        @* Indeterminate while looking by name/packets, determinate during the network scan. *@
+                        <div class="conn-progress@(_scanTotal > 0 ? "" : " conn-progress-indeterminate")">
+                            <div class="conn-progress-bar" style="@(_scanTotal > 0 ? $"width:{_scanDone * 100 / _scanTotal}%" : "")"></div>
+                        </div>
+                    }
                     <small class="conn-discovery-note">@Loc.T(
                         "Das lokale Netz wird nach MeshCom-Nodes durchsucht (es werden nur normale Webseiten auf Port 80 abgefragt).",
                         "Your local network is searched for MeshCom nodes (only normal web pages on port 80 are requested).")</small>
@@ -348,7 +356,7 @@
     /// <summary>Other enabled nodes of the form, for the clash checks.</summary>
     [Parameter] public Func<IReadOnlyList<OtherNodeInfo>>? OthersProvider { get; set; }
 
-    /// <summary>Raised when the user clicks "Apply to form".</summary>
+    /// <summary>Raised when the user clicks "Apply to form" (the page then closes the wizard).</summary>
     [Parameter] public EventCallback<WizardValues> OnApply { get; set; }
 
     /// <summary>Raised when the wizard is closed.</summary>
@@ -386,9 +394,8 @@
         _listenPort = Initial.ListenPort;
         _pcIps      = NetworkHelper.GetLocalIpv4Addresses();
 
-        _kind = IPAddress.TryParse(_deviceIp, out var ip) && NetworkHelper.IsLocalAddress(ip) ? Kind.HubLocal
-              : _devicePort == 1798 ? Kind.HubRemote
-              : Kind.Node;
+        // Default: a MeshCom node on WiFi/LAN – the usual case. (Hub setups pick one of the other options in step 1.)
+        SetKind(Kind.Node);
     }
 
     private bool CanContinue => _step switch
@@ -425,6 +432,7 @@
     private List<DiscoveredNode>? _found;
     private bool _searching;
     private string _searchStatus = "";
+    private int _scanDone, _scanTotal;
     private CancellationTokenSource? _searchCts;
 
     private static string SourceIcon(DiscoverySource s) => s switch
@@ -492,6 +500,7 @@
         var ct = _searchCts.Token;
         _searching = true;
         _found = [];
+        _scanDone = _scanTotal = 0;
         _searchStatus = Loc.T("Suche …", "Searching …");
         await InvokeAsync(StateHasChanged);
         try
@@ -505,6 +514,8 @@
             {
                 if (done % 16 == 0 || done == total)
                 {
+                    _scanDone = done;
+                    _scanTotal = total;
                     _searchStatus = Loc.TF("Netzwerk wird durchsucht … {0} von {1}", "Scanning network … {0} of {1}", done, total);
                     _ = InvokeAsync(StateHasChanged);
                 }

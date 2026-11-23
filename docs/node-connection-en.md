@@ -37,15 +37,17 @@ WebDesk communicates via the **EXTUDP JSON protocol**. This must be enabled on t
 
 ---
 
-## Step 2 – WebDesk Settings (`/settings` → 🔌 Connection)
+## Step 2 – WebDesk Settings (`/settings` → 🔌 Connection → **Nodes**)
 
-| Field | Recommended Value | Meaning |
-|-------|------------------|---------|
-| **Listen IP** | `0.0.0.0` | Listens on all network interfaces |
-| **Listen Port** | `1799` | UDP port on which WebDesk receives incoming messages |
-| **Device IP** | `192.168.1.60` | IP address of the MeshCom node |
-| **Device Port** | `1799` | UDP port of the node for outgoing messages |
-| **Own Callsign** | e.g. `G0XYZ-2` | Your callsign including SSID |
+The **Nodes** section has two parts: the shared **Receiving (UDP)** values at the top, which apply to all nodes, and below them **one card per node** (the primary node first).
+
+| Field | Where | Recommended Value | Meaning |
+|-------|-------|------------------|---------|
+| **Listen IP** | Receiving (UDP) | `0.0.0.0` | Listens on all network interfaces |
+| **Listen Port** | Receiving (UDP) | `1799` | UDP port on which WebDesk receives incoming messages |
+| **Device IP** | node card | `192.168.1.60` | IP address of the MeshCom node |
+| **Device Port** | node card | `1799` | UDP port of the node for outgoing messages |
+| **Callsign** | node card | e.g. `G0XYZ-2` | Your callsign including SSID |
 
 > ⚠️ **Listen Port** and **Device Port** must match the EXTUDP configuration of the node (default: `1799`).
 
@@ -69,12 +71,12 @@ sudo ufw allow 1799/udp
 
 ## Connection Check and Setup Wizard
 
-**Settings → 🔌 Connection** has two buttons:
+Every node card under **Settings → 🔌 Connection → Nodes** has two buttons:
 
 - **🔍 Check settings** checks the current values (unsaved ones too) and tells you what does not fit and what to change: format of IP addresses and ports, whether the **Listen IP** belongs to this PC (a frequent mistake: the node's IP instead of `0.0.0.0`), whether the UDP socket is open, whether the node is reachable, whether packets arrive and whether **callsign and SSID** match the node.
-- **🧙 Setup wizard** guides you step by step (WiFi node, Bluetooth hub on this PC or on another machine) Right in the first step you choose *Configure node automatically* (preselected; WebDesk sets ext UDP and the target IP over the net console; if it is switched off the wizard guides you to switch it on in the node's web interface) or *Configure node manually* (commands to copy). Values are only entered after you click *Apply to form*; you still have to save afterwards.
+- **🧙 Setup wizard** guides you step by step (WiFi/LAN node – preselected –, Bluetooth hub on this PC or on another machine) Right in the first step you choose *Configure node automatically* (preselected; WebDesk sets ext UDP and the target IP over the net console; if it is switched off the wizard guides you to switch it on in the node's web interface) or *Configure node manually* (commands to copy). Values are only entered after you click *Apply to form*; you still have to save afterwards.
 
-Neither changes **anything automatically** and neither sends **anything to the node**. Under **Additional Nodes** every node has its own check button (🔍) and wizard (🧙).
+Neither changes **anything automatically** and neither sends **anything to the node**. New nodes are added at the bottom of the section with **+ Add node with wizard** (opens the wizard for the new card right away) or **+ Add node manually** (an empty card you fill in yourself). While the wizard runs, that card's fields are hidden; after *Apply to form* the wizard closes and the card reminds you to save.
 
 If the **UDP status in the status bar is red** or yellow, clicking it opens the check (red: straight to the settings with the concrete error reason).
 
@@ -86,7 +88,7 @@ If the **UDP status in the status bar is red** or yellow, clicking it opens the 
 
 **Automatic comparison of all node settings:** If the net console is reachable and the node password is known, the check reads the node by itself on every run (read-only, `--info`) and compares what WebDesk is configured for: **callsign/SSID**, **ext UDP** (on) and **target IP** (this PC's IP), the **node's IP address** (against the Device IP) and, when KISS is enabled, **KISS/TCP, TX, RxMeta and Auth**. It also shows whether `--nopmother` withholds foreign direct messages. The section below the check shows everything as a table (*On the node* / *Expected*). The correction only offers `--extudp on`, `--extudpip`, `--kiss on`, `--kiss tx on` and `--kiss meta on`.
 
-**Activating KISS on the node:** If KISS/TCP is switched on under *Connection* (or for an additional node), the button *Activate KISS on the node via the net console* appears there. It reads the node and offers `--kiss on`, `--kiss tx on` and `--kiss meta on` – nothing is sent until you confirm. Only ESP32 nodes with suitable firmware offer KISS.
+**Activating KISS on the node:** If KISS/TCP is switched on under *Advanced* in a node's card, the button *Activate KISS on the node via the net console* appears there. It reads the node and offers `--kiss on`, `--kiss tx on` and `--kiss meta on` – nothing is sent until you confirm. Only ESP32 nodes with suitable firmware offer KISS.
 
 **Taking over the callsign on either side:** If the callsign differs there are two buttons. *Use callsign … in WebDesk* enters the node's value into the form (then save). *Change callsign on the node to …* sets the node to the callsign from WebDesk (`--setcall`, over the net console). This only happens after a click and confirmation; the warning points out that the node's identity in the mesh changes and that the node may restart. Only this one command is sent.
 

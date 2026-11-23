@@ -33,7 +33,7 @@ Los ajustes del dispositivo (`Meshcom__DeviceIp`, `Meshcom__MyCallsign`, …) se
 
 ### Canales de actualización (`WEBDESK_CHANNEL`)
 - **`latest`** – el **release** más reciente. Recomendado.
-- **`dev`** – cada push a la rama dev (imagen `:dev`, marcada con su commit). Para probadores; puede ser inestable.
+- **`dev`** – cada push a la rama dev (imagen `:dev`, marcada con su commit). Para probadores; puede ser inestable. Antes de ofrecer la actualización, la página comprueba además si la imagen del commit más reciente ya está publicada: mientras la compilación de GitHub sigue en marcha (unos 3 minutos) dice *La imagen de Docker para … aún se está construyendo*, el botón *Actualizar ahora* está desactivado y el aviso no aparece. Después vuelve a pulsar *Comprobar ahora*.
 
 ### Conviene saber
 - La página de actualización y el aviso solo muestran una versión nueva del canal que usas.
@@ -65,3 +65,5 @@ Hace `git pull --ff-only`, recompila y reinicia. Se detiene si tienes cambios lo
 | La versión no cambia tras actualizar | `git log -1 --oneline`, `sudo docker ps`, `sudo docker logs meshcom-webdesk \| head` |
 | «Watchtower rechazó el token» | `WATCHTOWER_TOKEN` en `.env` debe ser igual para ambos contenedores |
 | «Watchtower no es accesible» | ¿Está en marcha `meshcom-watchtower`? Si el puerto 8080 está ocupado, define `WATCHTOWER_PORT=18080` en `.env` y recrea |
+| No aparece una versión nueva aunque se hizo push | GitHub construye la imagen dev tras el push (unos minutos), la de release tras el release; hasta entonces la página dice «aún se está construyendo» (después, *Comprobar ahora*) |
+| La página dice «Actualizando …» pero la versión no cambia | la actualización se inició antes de que la imagen estuviera publicada (las versiones anteriores no lo comprueban): pulsa *Comprobar ahora*, espera a que se construya la imagen y actualiza de nuevo |
