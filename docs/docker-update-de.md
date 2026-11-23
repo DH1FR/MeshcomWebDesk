@@ -33,7 +33,7 @@ Geräteeinstellungen (`Meshcom__DeviceIp`, `Meshcom__MyCallsign`, …) tragen Si
 
 ### Update-Kanäle (`WEBDESK_CHANNEL`)
 - **`latest`** – das neueste **Release**. Empfohlen.
-- **`dev`** – jeder Push auf den dev-Zweig (Image `:dev`, mit seinem Commit versehen). Für Tester, kann instabil sein. Die Update-Seite vergleicht dann die Build-ID des laufenden Images mit dem Kopf von dev.
+- **`dev`** – jeder Push auf den dev-Zweig (Image `:dev`, mit seinem Commit versehen). Für Tester, kann instabil sein. Die Update-Seite vergleicht dann die Build-ID des laufenden Images mit dem Kopf von dev. Bevor sie das Update anbietet, prüft sie außerdem, ob das Image für den neuesten Commit schon veröffentlicht ist: Solange der GitHub-Build noch läuft (etwa 3 Minuten), steht dort *Das Docker-Image für … wird noch gebaut*, der Knopf *Jetzt aktualisieren* ist gesperrt und das Banner bleibt aus. Danach erneut auf *Jetzt prüfen* klicken.
 
 ### Gut zu wissen
 - Update-Seite und Banner zeigen eine neue Version nur für den Kanal, den Sie nutzen.
@@ -67,4 +67,5 @@ Macht `git pull --ff-only`, baut neu und startet neu. Bei lokalen Änderungen an
 | „Watchtower hat das Token abgelehnt“ | `WATCHTOWER_TOKEN` in `.env` muss für beide Container gleich sein; nach einer Änderung neu erstellen |
 | „Watchtower ist nicht erreichbar“ | `sudo docker ps` – läuft `meshcom-watchtower`? Ist Port 8080 belegt (z. B. phpMyAdmin), `WATCHTOWER_PORT=18080` in `.env` setzen und neu erstellen |
 | Dev-Kanal meldet „kennt seinen Build nicht“ | der Container wurde nicht aus dem `:dev`-Image gestartet (z. B. aus dem Quellcode gebaut) |
-| Keine neue Version, obwohl gepusht | das dev-Image baut GitHub nach dem Push (einige Minuten); das Release-Image nach dem Release |
+| Keine neue Version, obwohl gepusht | das dev-Image baut GitHub nach dem Push (einige Minuten); das Release-Image nach dem Release. Bis dahin zeigt die Update-Seite „wird noch gebaut“ (danach *Jetzt prüfen*) |
+| Die Seite zeigt „Aktualisierung läuft …“, die Version bleibt gleich | das Update wurde gestartet, bevor das Image veröffentlicht war (ältere Versionen prüfen das nicht): *Jetzt prüfen* klicken, warten bis das Image gebaut ist und erneut aktualisieren |
