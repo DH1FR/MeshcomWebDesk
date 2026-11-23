@@ -37,15 +37,17 @@ WebDesk kommuniziert über das **EXTUDP JSON-Protokoll**. Dieses muss im Node ak
 
 ---
 
-## Schritt 2 – WebDesk Einstellungen (`/settings` → 🔌 Verbindung)
+## Schritt 2 – WebDesk Einstellungen (`/settings` → 🔌 Verbindung → **Nodes**)
 
-| Feld | Empfohlener Wert | Bedeutung |
-|------|-----------------|-----------|
-| **Listen IP** | `0.0.0.0` | Lauscht auf allen Netzwerkschnittstellen |
-| **Listen Port** | `1799` | UDP-Port, auf dem WebDesk eingehende Nachrichten empfängt |
-| **Device IP** | `192.168.1.60` | IP-Adresse des MeshCom-Nodes |
-| **Device Port** | `1799` | UDP-Port des Nodes für ausgehende Nachrichten |
-| **Eigenes Rufzeichen** | z. B. `OE1XYZ-2` | Dein Rufzeichen inkl. SSID |
+Der Abschnitt **Nodes** hat zwei Teile: oben die gemeinsamen **Empfang (UDP)**-Werte, die für alle Nodes gelten, darunter **eine Karte pro Node** (zuerst der Primär-Node).
+
+| Feld | Wo | Empfohlener Wert | Bedeutung |
+|------|----|-----------------|-----------|
+| **Listen IP** | Empfang (UDP) | `0.0.0.0` | Lauscht auf allen Netzwerkschnittstellen |
+| **Listen Port** | Empfang (UDP) | `1799` | UDP-Port, auf dem WebDesk eingehende Nachrichten empfängt |
+| **Device IP** | Node-Karte | `192.168.1.60` | IP-Adresse des MeshCom-Nodes |
+| **Device Port** | Node-Karte | `1799` | UDP-Port des Nodes für ausgehende Nachrichten |
+| **Rufzeichen** | Node-Karte | z. B. `OE1XYZ-2` | Dein Rufzeichen inkl. SSID |
 
 > ⚠️ **Listen Port** und **Device Port** müssen mit der EXTUDP-Konfiguration des Nodes übereinstimmen (Standard: `1799`).
 
@@ -69,12 +71,12 @@ sudo ufw allow 1799/udp
 
 ## Verbindungsprüfung und Einrichtungs-Assistent
 
-In **Einstellungen → 🔌 Verbindung** gibt es zwei Schaltflächen:
+Jede Node-Karte unter **Einstellungen → 🔌 Verbindung → Nodes** hat zwei Schaltflächen:
 
 - **🔍 Einstellungen prüfen** prüft die aktuellen Werte (auch ungespeicherte) und sagt, was nicht passt und was zu ändern ist: Format von IP-Adressen und Ports, ob die **Listen IP** zu diesem PC gehört (häufiger Fehler: die IP des Nodes statt `0.0.0.0`), ob der UDP-Socket offen ist, ob der Node erreichbar ist, ob Pakete ankommen und ob **Rufzeichen und SSID** zum Node passen.
-- **🧙 Einrichtungs-Assistent** führt Schritt für Schritt durch die Einrichtung (WLAN-Node, Bluetooth-Hub auf diesem PC oder auf einem anderen Rechner) Gleich im ersten Schritt wählen Sie *Node automatisch konfigurieren* (voreingestellt; WebDesk stellt ext UDP und die Ziel-IP über die Net-Console ein; ist sie ausgeschaltet, führt der Assistent über die Weboberfläche des Nodes zum Einschalten) oder *Node manuell konfigurieren* (Befehle zum Kopieren). Die Werte werden erst nach Klick auf *In Formular übernehmen* eingetragen; danach müssen Sie noch speichern.
+- **🧙 Einrichtungs-Assistent** führt Schritt für Schritt durch die Einrichtung (WLAN-/LAN-Node – voreingestellt –, Bluetooth-Hub auf diesem PC oder auf einem anderen Rechner) Gleich im ersten Schritt wählen Sie *Node automatisch konfigurieren* (voreingestellt; WebDesk stellt ext UDP und die Ziel-IP über die Net-Console ein; ist sie ausgeschaltet, führt der Assistent über die Weboberfläche des Nodes zum Einschalten) oder *Node manuell konfigurieren* (Befehle zum Kopieren). Die Werte werden erst nach Klick auf *In Formular übernehmen* eingetragen; danach müssen Sie noch speichern.
 
-Beide ändern **nichts automatisch** und senden **nichts an den Node**. Auch bei **Weiteren Nodes** gibt es pro Node einen Prüfen-Knopf (🔍) und einen Assistenten (🧙).
+Beide ändern **nichts automatisch** und senden **nichts an den Node**. Neue Nodes legen Sie unten im Abschnitt an: mit **+ Node mit Assistent hinzufügen** (öffnet den Assistenten gleich für die neue Karte) oder mit **+ Node manuell hinzufügen** (leere Karte zum Selbstausfüllen). Solange der Assistent läuft, sind die Felder dieser Karte ausgeblendet; nach *In Formular übernehmen* schließt er sich, und die Karte erinnert ans Speichern.
 
 Ist der **UDP-Status in der Statusleiste rot** oder gelb, öffnet ein Klick darauf die Prüfung (rot: direkt in den Einstellungen mit dem konkreten Fehlergrund).
 
@@ -86,7 +88,7 @@ Ist der **UDP-Status in der Statusleiste rot** oder gelb, öffnet ein Klick dara
 
 **Automatischer Abgleich aller Node-Einstellungen:** Ist die Net-Console erreichbar und das Node-Passwort bekannt, liest die Prüfung den Node bei jedem Lauf selbst aus (nur lesend, `--info`) und vergleicht, was WebDesk dazu konfiguriert hat: **Rufzeichen/SSID**, **ext UDP** (an) und **Ziel-IP** (diese PC-IP), die **IP-Adresse des Nodes** (gegen die Device IP) sowie bei aktivem KISS **KISS/TCP, TX, RxMeta und Auth**. Zusätzlich zeigt sie, ob `--nopmother` fremde Direktnachrichten zurückhält. Der Bereich unter der Prüfung zeigt alles als Tabelle (*Am Node* / *Erwartet*). Die Korrektur bietet nur `--extudp on`, `--extudpip`, `--kiss on`, `--kiss tx on` und `--kiss meta on` an.
 
-**KISS am Node aktivieren:** Ist unter *Verbindung* (oder bei einem weiteren Node) KISS/TCP eingeschaltet, erscheint dort der Knopf *KISS am Node über die Net-Console aktivieren*. Er liest den Node aus und bietet `--kiss on`, `--kiss tx on` und `--kiss meta on` an – gesendet wird erst nach Ihrer Bestätigung. Nur ESP32-Nodes mit passender Firmware bieten KISS.
+**KISS am Node aktivieren:** Ist in der Node-Karte unter *Erweitert* KISS/TCP eingeschaltet, erscheint dort der Knopf *KISS am Node über die Net-Console aktivieren*. Er liest den Node aus und bietet `--kiss on`, `--kiss tx on` und `--kiss meta on` an – gesendet wird erst nach Ihrer Bestätigung. Nur ESP32-Nodes mit passender Firmware bieten KISS.
 
 **Rufzeichen auf beiden Seiten übernehmen:** Weicht das Rufzeichen ab, gibt es zwei Knöpfe. *Rufzeichen … in WebDesk übernehmen* trägt den Wert des Nodes ins Formular ein (danach speichern). *Rufzeichen am Node auf … ändern …* setzt es am Node auf das Rufzeichen aus WebDesk (`--setcall`, über die Net-Console). Das geschieht nur nach Klick und Bestätigung; die Warnung weist darauf hin, dass sich die Identität des Nodes im Mesh ändert und der Node neu starten kann. Es wird immer nur dieser eine Befehl gesendet.
 

@@ -37,15 +37,17 @@ WebDesk comunica tramite il **protocollo EXTUDP JSON**. Questo deve essere abili
 
 ---
 
-## Passo 2 – Impostazioni WebDesk (`/settings` → 🔌 Connessione)
+## Passo 2 – Impostazioni WebDesk (`/settings` → 🔌 Connessione → **Nodi**)
 
-| Campo | Valore consigliato | Significato |
-|-------|-------------------|-------------|
-| **Listen IP** | `0.0.0.0` | Ascolta su tutte le interfacce di rete |
-| **Listen Port** | `1799` | Porta UDP su cui WebDesk riceve i messaggi in arrivo |
-| **Device IP** | `192.168.1.60` | Indirizzo IP del nodo MeshCom |
-| **Device Port** | `1799` | Porta UDP del nodo per i messaggi in uscita |
-| **Nominativo** | es. `IZ0XYZ-2` | Il tuo nominativo con SSID |
+La sezione **Nodi** ha due parti: in alto i valori comuni di **Ricezione (UDP)**, validi per tutti i nodi, e sotto **una scheda per nodo** (prima il nodo principale).
+
+| Campo | Dove | Valore consigliato | Significato |
+|-------|------|-------------------|-------------|
+| **Listen IP** | Ricezione (UDP) | `0.0.0.0` | Ascolta su tutte le interfacce di rete |
+| **Listen Port** | Ricezione (UDP) | `1799` | Porta UDP su cui WebDesk riceve i messaggi in arrivo |
+| **Device IP** | scheda del nodo | `192.168.1.60` | Indirizzo IP del nodo MeshCom |
+| **Device Port** | scheda del nodo | `1799` | Porta UDP del nodo per i messaggi in uscita |
+| **Nominativo** | scheda del nodo | es. `IZ0XYZ-2` | Il tuo nominativo con SSID |
 
 > ⚠️ **Listen Port** e **Device Port** devono corrispondere alla configurazione EXTUDP del nodo (default: `1799`).
 
@@ -69,12 +71,12 @@ sudo ufw allow 1799/udp
 
 ## Controllo della connessione e assistente di configurazione
 
-In **Impostazioni → 🔌 Connessione** ci sono due pulsanti:
+Ogni scheda nodo in **Impostazioni → 🔌 Connessione → Nodi** ha due pulsanti:
 
 - **🔍 Controlla impostazioni** controlla i valori attuali (anche quelli non salvati) e indica cosa non va e cosa modificare: formato di indirizzi IP e porte, se **Listen IP** appartiene a questo PC (errore frequente: l'IP del nodo invece di `0.0.0.0`), se il socket UDP è aperto, se il nodo è raggiungibile, se arrivano pacchetti e se **nominativo e SSID** corrispondono al nodo.
-- **🧙 Assistente di configurazione** ti guida passo per passo (nodo WiFi, hub Bluetooth su questo PC o su un altro computer) Già nel primo passo scegli *Configura il nodo automaticamente* (preselezionato; WebDesk imposta ext UDP e l'IP di destinazione tramite la console di rete; se è disattivata, l'assistente ti guida ad attivarla nell'interfaccia web del nodo) oppure *Configura il nodo manualmente* (comandi da copiare). I valori vengono inseriti solo dopo il clic su *Applica al modulo*; poi devi ancora salvare.
+- **🧙 Assistente di configurazione** ti guida passo per passo (nodo WiFi/LAN – preselezionato –, hub Bluetooth su questo PC o su un altro computer) Già nel primo passo scegli *Configura il nodo automaticamente* (preselezionato; WebDesk imposta ext UDP e l'IP di destinazione tramite la console di rete; se è disattivata, l'assistente ti guida ad attivarla nell'interfaccia web del nodo) oppure *Configura il nodo manualmente* (comandi da copiare). I valori vengono inseriti solo dopo il clic su *Applica al modulo*; poi devi ancora salvare.
 
-Nessuno dei due cambia **nulla automaticamente** né invia **nulla al nodo**. Sotto **Nodi aggiuntivi** ogni nodo ha il proprio pulsante di controllo (🔍) e il proprio assistente (🧙).
+Nessuno dei due cambia **nulla automaticamente** né invia **nulla al nodo**. I nuovi nodi si aggiungono in fondo alla sezione con **+ Aggiungi nodo con assistente** (apre subito l'assistente per la nuova scheda) oppure **+ Aggiungi nodo manualmente** (una scheda vuota da compilare da te). Mentre l'assistente è in esecuzione, i campi di quella scheda sono nascosti; dopo *Applica al modulo* l'assistente si chiude e la scheda ti ricorda di salvare.
 
 Se lo **stato UDP nella barra di stato è rosso** o giallo, un clic apre il controllo (rosso: direttamente nelle impostazioni con il motivo concreto dell'errore).
 
@@ -86,7 +88,7 @@ Se lo **stato UDP nella barra di stato è rosso** o giallo, un clic apre il cont
 
 **Confronto automatico di tutte le impostazioni del nodo:** Se la console di rete è raggiungibile e la password del nodo è nota, il controllo legge il nodo da sé a ogni esecuzione (solo lettura, `--info`) e confronta ciò che WebDesk ha configurato: **nominativo/SSID**, **ext UDP** (attivo) e **IP di destinazione** (l'IP di questo PC), l'**indirizzo IP del nodo** (rispetto alla Device IP) e, con KISS attivo, **KISS/TCP, TX, RxMeta e Auth**. Mostra inoltre se `--nopmother` trattiene i messaggi diretti altrui. La sezione sotto il controllo mostra tutto in una tabella (*Sul nodo* / *Atteso*). La correzione propone solo `--extudp on`, `--extudpip`, `--kiss on`, `--kiss tx on` e `--kiss meta on`.
 
-**Attivare KISS sul nodo:** Se KISS/TCP è attivato in *Connessione* (o in un nodo aggiuntivo), lì compare il pulsante *Attiva KISS sul nodo tramite la console di rete*. Legge il nodo e propone `--kiss on`, `--kiss tx on` e `--kiss meta on` – non viene inviato nulla finché non confermi. Solo i nodi ESP32 con firmware adatto offrono KISS.
+**Attivare KISS sul nodo:** Se KISS/TCP è attivato nella scheda del nodo, in *Avanzate*, lì compare il pulsante *Attiva KISS sul nodo tramite la console di rete*. Legge il nodo e propone `--kiss on`, `--kiss tx on` e `--kiss meta on` – non viene inviato nulla finché non confermi. Solo i nodi ESP32 con firmware adatto offrono KISS.
 
 **Adottare il nominativo da entrambi i lati:** Se il nominativo differisce ci sono due pulsanti. *Usa il nominativo … in WebDesk* inserisce il valore del nodo nel modulo (poi salva). *Cambia il nominativo sul nodo in …* imposta il nodo sul nominativo di WebDesk (`--setcall`, tramite la console di rete). Succede solo dopo un clic e una conferma; l'avviso segnala che cambia l'identità del nodo nella mesh e che il nodo può riavviarsi. Viene inviato solo questo comando.
 
