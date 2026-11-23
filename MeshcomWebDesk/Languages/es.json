@@ -1494,6 +1494,8 @@
     "Adds an empty node card that you fill in yourself.": "Añade una tarjeta de nodo vacía que rellenas tú mismo.",
     "Do you like my work? Support me.": "¿Te gusta mi trabajo? Apóyame.",
     "Via PayPal": "Por PayPal",
-    "Send me an e-mail": "Envíame un correo"
+    "Send me an e-mail": "Envíame un correo",
+    "The Docker image for {0} is still being built (about 3 minutes). Then click “Check now” and update.": "La imagen de Docker para {0} aún se está construyendo (unos 3 minutos). Después pulsa «Comprobar ahora» y actualiza.",
+    "The new image is not ready yet – please try again in a few minutes.": "La nueva imagen aún no está lista; inténtalo de nuevo en unos minutos."
   }
 }

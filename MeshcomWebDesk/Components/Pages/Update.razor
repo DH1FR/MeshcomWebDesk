@@ -64,6 +64,12 @@
                 {
                     <p>@Loc.T("Prüfe …", "Checking …")</p>
                 }
+                else if (_docker.Available && _docker.ImageBuilding)
+                {
+                    <p>🚀 @Loc.TF("Neuere Version verfügbar: {0}", "Newer version available: {0}", _docker.Latest)</p>
+                    <p>⏳ @Loc.TF("Das Docker-Image für {0} wird noch gebaut (ca. 3 Minuten). Danach auf „Jetzt prüfen“ klicken und aktualisieren.",
+                                  "The Docker image for {0} is still being built (about 3 minutes). Then click “Check now” and update.", _docker.Latest)</p>
+                }
                 else if (_docker.Available)
                 {
                     <p>🚀 @Loc.TF("Neuere Version verfügbar: {0}", "Newer version available: {0}", _docker.Latest)</p>
@@ -89,7 +95,7 @@
                 else if (_docker?.WatchtowerConfigured == true)
                 {
                     <p>
-                        <button class="btn btn-primary" disabled="@(_docker is not { Available: true } || _dockerBusy)" @onclick="StartDockerUpdate">
+                        <button class="btn btn-primary" disabled="@(_docker is not { Available: true, ImageBuilding: false } || _dockerBusy)" @onclick="StartDockerUpdate">
                             ⬆️ @Loc.T("Jetzt aktualisieren", "Update now")
                         </button>
                     </p>
@@ -284,6 +290,7 @@
             "unauthorized"   => Loc.T("Watchtower hat das Token abgelehnt – WATCHTOWER_TOKEN in der .env prüfen.", "Watchtower rejected the token – check WATCHTOWER_TOKEN in the .env."),
             "unreachable"    => Loc.T("Watchtower ist nicht erreichbar – läuft der Container und stimmt WEBDESK_WATCHTOWER_URL?", "Watchtower is not reachable – is the container running and is WEBDESK_WATCHTOWER_URL correct?"),
             "not-configured" => Loc.T("Watchtower ist nicht eingerichtet.", "Watchtower is not set up."),
+            "building"       => Loc.T("Das neue Image ist noch nicht fertig – bitte in ein paar Minuten erneut versuchen.", "The new image is not ready yet – please try again in a few minutes."),
             _                => Loc.TF("Das Update konnte nicht gestartet werden ({0}).", "The update could not be started ({0}).", result.Message ?? "?"),
         };
     }
