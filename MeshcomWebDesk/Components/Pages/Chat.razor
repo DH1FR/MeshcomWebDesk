@@ -1318,6 +1318,39 @@
     /// <summary>Identifies this circuit towards <see cref="AttentionService"/>.</summary>
     private readonly Guid _viewerId = Guid.NewGuid();
 
+    /// <summary>
+    /// Operating-system pop-up for an alert (only while nobody is looking at the page – otherwise the toast
+    /// is enough – and only if enabled in the settings and allowed by the browser).
+    /// </summary>
+    private void NotifyDesktop(bool kindEnabled, string title, string body, string tag, string? tabKey = null, Guid? nodeId = null)
+    {
+        var cfg = SettingsOptions.CurrentValue;
+        if (_disposed || !cfg.DesktopNotifyEnabled || !kindEnabled) return;
+        if (Attention.IsAttending(_viewerId)) return;
+        try
+        {
+            _ = JS.InvokeVoidAsync("meshcomChat.showNotification", title, body, tag, cfg.DesktopNotifySilent,
+                    tabKey ?? "", nodeId?.ToString() ?? "")
+                .AsTask().ContinueWith(t => { if (t.IsFaulted) Logger.LogDebug(t.Exception, "Desktop notification failed"); });
+        }
+        catch { /* circuit already gone */ }
+    }
+
+    /// <summary>Called by chat.js when a desktop notification is clicked: open the tab it is about.</summary>
+    [JSInvokable]
+    public void OpenTabFromNotification(string tabKey, string nodeId)
+    {
+        _ = InvokeAsync(() =>
+        {
+            if (_disposed) return;
+            if (Guid.TryParse(nodeId, out var nid) && nid != _activeNodeId && NodeManager.Nodes.Any(n => n.Id == nid))
+                NodeManager.SelectNode(nid);
+            if (_tabs.Any(t => t.Key == tabKey))
+                SelectTab(tabKey);
+            StateHasChanged();
+        });
+    }
+
     /// <summary>Called by chat.js: browser-tab visibility and ms since the last user activity.</summary>
     [JSInvokable]
     public void ReportAttention(bool visible, double idleMs) =>
@@ -1456,6 +1489,8 @@
 
             // From here on the server knows whether anybody is really looking at this page.
             try { await JS.InvokeVoidAsync("meshcomChat.attentionStart", _dotNetRef); }
+            catch (JSException) { }
+            try { await JS.InvokeVoidAsync("meshcomChat.setNotifyHandler", _dotNetRef); }
             catch (JSException) { }
 
             if (await LoadQrzDataAsync())
@@ -1783,8 +1818,19 @@
         await InvokeAsync(StateHasChanged);
     }
 
+    private void NotifyDirectMessage(string callsign, MeshcomMessage message)
+    {
+        if (MeshcomWebDesk.Services.Bot.BotCommandService.IsCommand(message.Text)) return;
+        var text = message.Text ?? "";
+        if (text.Length > 120) text = text[..120] + "…";
+        NotifyDesktop(SettingsOptions.CurrentValue.DesktopNotifyDirect,
+            Loc.TF("Nachricht von {0}", "Message from {0}", callsign), text,
+            "dm:" + callsign, callsign, message.NodeId);
+    }
+
     private void HandleNewDirectTab(string callsign, MeshcomMessage message)
     {
+        NotifyDirectMessage(callsign, message);
         if (message.NodeId != _activeNodeId) return;
         if (_voiceEnabled == true)
             SpeakDirectMessage(callsign);
@@ -1794,6 +1840,7 @@
     // Folgenachrichten ans eigene Rufzeichen (Tab bereits offen): TTS nur wenn Cooldown abgelaufen
     private void HandleDirectMessage(string callsign, MeshcomMessage message)
     {
+        NotifyDirectMessage(callsign, message);
         if (message.NodeId != _activeNodeId) return;
         if (_voiceEnabled != true) return;
         SpeakDirectMessage(callsign);
@@ -2410,6 +2457,14 @@
                 _watchlistAlerts.Insert(0, new WatchlistAlert(callsign, eventType, DateTime.Now));
                 if (_soundEnabled)
                     _playWatchlistSound = true;
+                // A direct message to us already gets its own pop-up (if switched on).
+                bool directToUs = eventType == "MSG"
+                    && string.Equals(message.To, _myCallsign, StringComparison.OrdinalIgnoreCase);
+                if (!(directToUs && SettingsOptions.CurrentValue.DesktopNotifyDirect))
+                    NotifyDesktop(SettingsOptions.CurrentValue.DesktopNotifyWatchlist,
+                        Loc.TF("Watchlist: {0}", "Watchlist: {0}", callsign),
+                        Loc.TF("{0} hat gesendet ({1})", "{0} transmitted ({1})", callsign, eventType),
+                        "watch:" + callsign);
                 if (_voiceEnabled == true)
                 {
                     // Wenn die Nachricht eine direkte MSG ans eigene Rufzeichen ist, hat die
@@ -2458,6 +2513,10 @@
                 _watchGroupAlerts.Insert(0, new WatchGroupAlert(group, callsign, DateTime.Now));
                 if (_soundEnabled)
                     _playWatchlistSound = true;
+                NotifyDesktop(SettingsOptions.CurrentValue.DesktopNotifyWatchGroup,
+                    Loc.TF("Neue Nachricht in Gruppe {0}", "New message in group {0}", group),
+                    Loc.TF("von {0}", "from {0}", callsign),
+                    "grp:" + group, "#" + group, message.NodeId);
                 // Ansage pro Gruppe höchstens alle 5 Min.; bei dichter Folge nur der Ton
                 var ttsKey = "#" + group;
                 bool ttsAllowed = !_watchlistLastTts.TryGetValue(ttsKey, out var lastTts)
@@ -2504,6 +2563,10 @@
                 _mentionAlerts.Insert(0, new MentionAlert(tabKey, message.NodeId, callsign, DateTime.Now));
                 if (_soundEnabled)
                     _playMentionSound = true;
+                NotifyDesktop(SettingsOptions.CurrentValue.DesktopNotifyMention,
+                    Loc.TF("{0} hat dich erwähnt", "{0} mentioned you", callsign),
+                    Loc.TF("in {0}", "in {0}", tabKey),
+                    "men:" + tabKey, tabKey, message.NodeId);
 
                 // Voice: at most once a minute per tab; a quick series of mentions only gets the tone
                 var ttsKey = "@" + tabKey;
@@ -2571,6 +2634,10 @@
                 _cqAlerts.Insert(0, new CqAlert(callsign, group, DateTime.Now));
                 if (_soundEnabled)
                     _playCqSound = true;
+                NotifyDesktop(SettingsOptions.CurrentValue.DesktopNotifyCq,
+                    Loc.TF("CQ von {0}", "CQ from {0}", callsign),
+                    Loc.TF("in Gruppe {0}", "in group {0}", group),
+                    "cq:" + callsign + ":" + group);
                 if (_voiceEnabled == true)
                 {
                     var phonetic = PhoneticAlphabetHelper.Spell(callsign, Loc.Current);

@@ -1807,6 +1807,59 @@
                     @Loc.T("Anzeigedauer (Minuten)", "Display duration (minutes)")
                 </label>
                 <input type="number" min="1" max="60" @bind="_model.WatchAlertMinutes" />
+
+                <label>
+                    @Loc.T("Desktop-Benachrichtigungen", "Desktop notifications")<br />
+                    <small>@Loc.T("Pop-up des Betriebssystems für diese Meldungen, nur wenn niemand auf WebDesk schaut. Der Browser fragt einmal nach der Erlaubnis.", "Operating-system pop-up for these alerts, only while nobody is looking at WebDesk. The browser asks for permission once.")</small>
+                </label>
+                <div style="display:flex;flex-direction:column;gap:4px">
+                    <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
+                        <input type="checkbox" checked="@_model.DesktopNotifyEnabled" @onchange="OnDesktopNotifyToggledAsync" />
+                        @Loc.T("Desktop-Benachrichtigungen aktivieren", "Enable desktop notifications")
+                    </label>
+                    @if (_notifyPermission == "denied")
+                    {
+                        <small style="color:#e8a020">⚠ @Loc.T("Der Browser blockiert Benachrichtigungen für diese Seite. Bitte in den Website-Einstellungen des Browsers erlauben.", "The browser blocks notifications for this site. Please allow them in the browser site settings.")</small>
+                    }
+                    else if (_notifyPermission == "unsupported")
+                    {
+                        <small style="color:#e8a020">⚠ @Loc.T("Dieser Browser unterstützt keine Benachrichtigungen.", "This browser does not support notifications.")</small>
+                    }
+                    else if (_notifyPermission == "granted")
+                    {
+                        <small>✓ @Loc.T("Erlaubnis erteilt", "Permission granted")</small>
+                    }
+                    @if (_model.DesktopNotifyEnabled)
+                    {
+                        <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
+                            <input type="checkbox" @bind="_model.DesktopNotifyDirect" />
+                            @Loc.T("Direktnachrichten", "Direct messages")
+                        </label>
+                        <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
+                            <input type="checkbox" @bind="_model.DesktopNotifyMention" />
+                            @Loc.T("Erwähnungen", "Mentions")
+                        </label>
+                        <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
+                            <input type="checkbox" @bind="_model.DesktopNotifyWatchlist" />
+                            @Loc.T("Watchlist-Rufzeichen", "Watchlist callsigns")
+                        </label>
+                        <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
+                            <input type="checkbox" @bind="_model.DesktopNotifyWatchGroup" />
+                            @Loc.T("Beobachtete Gruppen", "Watched groups")
+                        </label>
+                        <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
+                            <input type="checkbox" @bind="_model.DesktopNotifyCq" />
+                            @Loc.T("CQ-Rufe", "CQ calls")
+                        </label>
+                        <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
+                            <input type="checkbox" @bind="_model.DesktopNotifySilent" />
+                            @Loc.T("Ohne Systemton", "Without system sound")
+                        </label>
+                        <div>
+                            <button type="button" class="btn-small" @onclick="TestDesktopNotifyAsync">🔔 @Loc.T("Test-Benachrichtigung", "Test notification")</button>
+                        </div>
+                    }
+                </div>
             </div>
             }
         </div>
@@ -3577,6 +3630,32 @@
         }
     }
 
+    private string? _notifyPermission;
+
+    private async Task OnDesktopNotifyToggledAsync(ChangeEventArgs e)
+    {
+        _model.DesktopNotifyEnabled = e.Value is true;
+        if (!_model.DesktopNotifyEnabled) return;
+        try { _notifyPermission = await JS.InvokeAsync<string>("meshcomChat.requestNotificationPermission"); }
+        catch (JSException) { _notifyPermission = "unsupported"; }
+        // Without permission the switch stays off (a still undecided "default" keeps it on).
+        if (_notifyPermission != "granted" && _notifyPermission != "default")
+            _model.DesktopNotifyEnabled = false;
+    }
+
+    private async Task TestDesktopNotifyAsync()
+    {
+        try
+        {
+            _notifyPermission = await JS.InvokeAsync<string>("meshcomChat.requestNotificationPermission");
+            if (_notifyPermission == "granted")
+                await JS.InvokeVoidAsync("meshcomChat.showNotification", "MeshCom WebDesk",
+                    Loc.T("Test: So sieht eine Benachrichtigung aus.", "Test: this is what a notification looks like."),
+                    "mc-test", _model.DesktopNotifySilent, "", "");
+        }
+        catch (JSException) { _notifyPermission = "unsupported"; }
+    }
+
     private async Task TestQrzAsync()
     {
         _qrzTesting    = true;
@@ -3879,6 +3958,13 @@
             WatchOnAck          = s.WatchOnAck,
             MentionAlertEnabled = s.MentionAlertEnabled,
             TabTitleUnreadEnabled = s.TabTitleUnreadEnabled,
+            DesktopNotifyEnabled = s.DesktopNotifyEnabled,
+            DesktopNotifyWatchlist = s.DesktopNotifyWatchlist,
+            DesktopNotifyWatchGroup = s.DesktopNotifyWatchGroup,
+            DesktopNotifyCq = s.DesktopNotifyCq,
+            DesktopNotifyMention = s.DesktopNotifyMention,
+            DesktopNotifyDirect = s.DesktopNotifyDirect,
+            DesktopNotifySilent = s.DesktopNotifySilent,
             WatchAlertMinutes   = s.WatchAlertMinutes,
             DataPath            = s.DataPath,
             TimeOffsetHours     = s.TimeOffsetHours,
@@ -4747,6 +4833,13 @@
                 WatchOnAck          = s.WatchOnAck,
                 MentionAlertEnabled = s.MentionAlertEnabled,
                 TabTitleUnreadEnabled = s.TabTitleUnreadEnabled,
+                DesktopNotifyEnabled = s.DesktopNotifyEnabled,
+                DesktopNotifyWatchlist = s.DesktopNotifyWatchlist,
+                DesktopNotifyWatchGroup = s.DesktopNotifyWatchGroup,
+                DesktopNotifyCq = s.DesktopNotifyCq,
+                DesktopNotifyMention = s.DesktopNotifyMention,
+                DesktopNotifyDirect = s.DesktopNotifyDirect,
+                DesktopNotifySilent = s.DesktopNotifySilent,
                 WatchAlertMinutes   = s.WatchAlertMinutes,
                 DataPath            = s.DataPath,
                 TimeOffsetHours     = s.TimeOffsetHours,
@@ -4931,6 +5024,13 @@
         public bool   WatchOnAck          { get; set; } = false;
         public bool   MentionAlertEnabled { get; set; } = true;
         public bool   TabTitleUnreadEnabled { get; set; } = true;
+        public bool   DesktopNotifyEnabled { get; set; } = false;
+        public bool   DesktopNotifyWatchlist { get; set; } = true;
+        public bool   DesktopNotifyWatchGroup { get; set; } = true;
+        public bool   DesktopNotifyCq { get; set; } = true;
+        public bool   DesktopNotifyMention { get; set; } = true;
+        public bool   DesktopNotifyDirect { get; set; } = true;
+        public bool   DesktopNotifySilent { get; set; } = false;
         public int    WatchAlertMinutes    { get; set; } = 5;
         public string DataPath            { get; set; } = string.Empty;
         public double TimeOffsetHours     { get; set; } = 0;
@@ -5136,6 +5236,13 @@
             WatchOnAck          = WatchOnAck,
             MentionAlertEnabled = MentionAlertEnabled,
             TabTitleUnreadEnabled = TabTitleUnreadEnabled,
+            DesktopNotifyEnabled = DesktopNotifyEnabled,
+            DesktopNotifyWatchlist = DesktopNotifyWatchlist,
+            DesktopNotifyWatchGroup = DesktopNotifyWatchGroup,
+            DesktopNotifyCq = DesktopNotifyCq,
+            DesktopNotifyMention = DesktopNotifyMention,
+            DesktopNotifyDirect = DesktopNotifyDirect,
+            DesktopNotifySilent = DesktopNotifySilent,
             WatchAlertMinutes   = Math.Max(1, WatchAlertMinutes),
             DataPath            = DataPath,
             TimeOffsetHours     = TimeOffsetHours,

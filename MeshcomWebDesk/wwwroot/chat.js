@@ -314,6 +314,10 @@ window.meshcomChat = (function () {
             var wanted = n > 0 ? '(' + (n > 99 ? '99+' : n) + ') ' + baseTitle : baseTitle;
             if (document.title !== wanted) document.title = wanted;
         } catch (e) { }
+        try {
+            if (n > 0 && navigator.setAppBadge) navigator.setAppBadge(n).catch(function () { });
+            else if (n === 0 && navigator.clearAppBadge) navigator.clearAppBadge().catch(function () { });
+        } catch (e) { }
         if (n === favLastN) return;
         favLastN = n;
         try {
@@ -349,10 +353,71 @@ window.meshcomChat = (function () {
         } catch (e) { /* cosmetic only */ }
     }
 
+    // ── Desktop notifications (browser Notification API) ───────────────────
+    var notifyRef = null;
+
+    function getNotificationPermission() {
+        return ('Notification' in window) ? Notification.permission : 'unsupported';
+    }
+
+    function requestNotificationPermission() {
+        if (!('Notification' in window)) return Promise.resolve('unsupported');
+        if (Notification.permission !== 'default') return Promise.resolve(Notification.permission);
+        try {
+            return Promise.resolve(Notification.requestPermission()).then(function (r) { return r || Notification.permission; });
+        } catch (e) { return Promise.resolve(Notification.permission); }
+    }
+
+    // Chrome on Android does not allow `new Notification()` – there it only works through the service worker.
+    // So the service worker is preferred everywhere; the page constructor is the fallback. A click is handled by
+    // the service worker (focus the window) which then tells the page which tab to open.
+    function setNotifyHandler(dotNetRef) {
+        notifyRef = dotNetRef;
+        if (!('serviceWorker' in navigator) || window.__mcNotifyMsg) return;
+        window.__mcNotifyMsg = true;
+        navigator.serviceWorker.addEventListener('message', function (ev) {
+            var d = ev.data;
+            if (d && d.type === 'mc-open-tab' && notifyRef && d.tabKey)
+                notifyRef.invokeMethodAsync('OpenTabFromNotification', d.tabKey, d.nodeId || '').catch(function () { });
+        });
+    }
+
+    // Same tag = replaces an older pop-up (also across several open WebDesk tabs) instead of piling up.
+    function showNotification(title, body, tag, silent, tabKey, nodeId) {
+        if (!('Notification' in window) || Notification.permission !== 'granted') return false;
+        var opts = {
+            body: body, tag: tag || undefined, renotify: !!tag, silent: !!silent, icon: 'favicon.png',
+            data: { tabKey: tabKey || '', nodeId: nodeId || '' }
+        };
+        function viaPage() {
+            try {
+                var n = new Notification(title, opts);
+                n.onclick = function () {
+                    try { window.focus(); } catch (e) { }
+                    n.close();
+                    if (notifyRef && tabKey) notifyRef.invokeMethodAsync('OpenTabFromNotification', tabKey, nodeId || '').catch(function () { });
+                };
+                setTimeout(function () { try { n.close(); } catch (e) { } }, 20000);
+                return true;
+            } catch (e) { return false; }
+        }
+        if ('serviceWorker' in navigator && navigator.serviceWorker.getRegistration) {
+            return navigator.serviceWorker.getRegistration().then(function (reg) {
+                if (reg && reg.showNotification) return reg.showNotification(title, opts).then(function () { return true; });
+                return viaPage();
+            }).catch(function () { return viaPage(); });
+        }
+        return viaPage();
+    }
+
     return {
         initResizer,
         initTabDrag,
         setTabBadge,
+        getNotificationPermission,
+        requestNotificationPermission,
+        setNotifyHandler,
+        showNotification,
         initQuickTextDrag,
         attentionStart,
         attentionStop,

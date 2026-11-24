@@ -112,6 +112,30 @@ public class MeshcomSettings
     public bool TabTitleUnreadEnabled { get; set; } = true;
 
     /// <summary>
+    /// Show operating-system pop-ups (browser Notification API) for the alerts that also appear as toasts
+    /// at the top right – only while nobody is looking at the page (default: false, the browser must grant permission).
+    /// </summary>
+    public bool DesktopNotifyEnabled { get; set; } = false;
+
+    /// <summary>Desktop notification for watchlist callsign hits (needs <see cref="DesktopNotifyEnabled"/>).</summary>
+    public bool DesktopNotifyWatchlist { get; set; } = true;
+
+    /// <summary>Desktop notification for watched group hits.</summary>
+    public bool DesktopNotifyWatchGroup { get; set; } = true;
+
+    /// <summary>Desktop notification for CQ calls.</summary>
+    public bool DesktopNotifyCq { get; set; } = true;
+
+    /// <summary>Desktop notification for "@callsign" mentions in groups.</summary>
+    public bool DesktopNotifyMention { get; set; } = true;
+
+    /// <summary>Desktop notification for direct messages to us.</summary>
+    public bool DesktopNotifyDirect { get; set; } = true;
+
+    /// <summary>Desktop notifications without the system sound.</summary>
+    public bool DesktopNotifySilent { get; set; } = false;
+
+    /// <summary>
     /// How long (in minutes) the watchlist toast stays visible before auto-dismissing.
     /// Minimum 1, default 5.
     /// </summary>
