@@ -724,14 +724,19 @@ public class ChatService
     }
 
     /// <summary>
-    /// Total unread messages over all tabs of all nodes (direct, group and "All"). Tabs are only cleared while
-    /// somebody really looks at them, so this is what is still waiting – shown in the browser tab title.
+    /// Total unread messages over all tabs of all nodes that exist right now (direct, group and "All"). Tabs are only
+    /// cleared while somebody really looks at them, so this is what is still waiting – shown in the browser tab title.
+    /// Only the state of the configured nodes counts: a bucket left over from a deleted or re-created node profile has
+    /// no tab on screen, so its unread messages could never be looked at and the number would never drop to 0.
     /// </summary>
     public int GetUnreadTotal()
     {
+        var ids = _nodeManager?.Nodes.Select(n => (Guid?)n.Id).ToList() ?? [];
+        if (ids.Count == 0) ids.Add(null);   // legacy single-node mode
+        var states = ids.Select(ResolveState).Distinct().ToList();
         lock (_lock)
         {
-            return _nodeState.Values.Sum(st => st.Tabs.Values.Sum(t => t.UnreadCount));
+            return states.Sum(st => st.Tabs.Values.Sum(t => t.UnreadCount));
         }
     }
 
