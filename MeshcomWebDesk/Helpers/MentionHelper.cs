@@ -31,20 +31,44 @@ public static class MentionHelper
     {
         if (string.IsNullOrEmpty(text) || text.IndexOf('@') < 0) return false;
 
-        List<(string Base, int? Ssid)>? own = null;
+        var own = ownCallsigns.Select(Split).Where(c => c.Base.Length > 0).ToList();
+        if (own.Count == 0) return false;
+        foreach (Match m in MentionRx.Matches(text))
+            if (IsOwn(m, own)) return true;
+        return false;
+    }
+
+    /// <summary>
+    /// HTML for <paramref name="text"/> with every mention of our callsigns wrapped in
+    /// <c>&lt;span class="mention-token"&gt;</c>. <paramref name="encode"/> HTML-encodes the text around and
+    /// inside the marks (the caller's encoder, so the result is safe to render as markup).
+    /// </summary>
+    public static string MarkOwn(string text, IReadOnlyCollection<string> ownCallsigns, Func<string, string> encode)
+    {
+        if (string.IsNullOrEmpty(text) || text.IndexOf('@') < 0 || ownCallsigns.Count == 0) return encode(text);
+        var own = ownCallsigns.Select(Split).Where(c => c.Base.Length > 0).ToList();
+
+        var sb = new System.Text.StringBuilder();
+        var last = 0;
         foreach (Match m in MentionRx.Matches(text))
         {
-            own ??= ownCallsigns.Select(Split).Where(c => c.Base.Length > 0).ToList();
-            if (own.Count == 0) return false;
+            if (!IsOwn(m, own)) continue;
+            sb.Append(encode(text[last..m.Index]));
+            sb.Append("<span class=\"mention-token\">").Append(encode(m.Value)).Append("</span>");
+            last = m.Index + m.Length;
+        }
+        sb.Append(encode(text[last..]));
+        return sb.ToString();
+    }
 
-            var mentionBase = m.Groups[1].Value;
-            int? mentionSsid = m.Groups[2].Success && int.TryParse(m.Groups[2].Value, out var s) ? s : null;
-
-            foreach (var (ownBase, ownSsid) in own)
-            {
-                if (!string.Equals(ownBase, mentionBase, StringComparison.OrdinalIgnoreCase)) continue;
-                if (mentionSsid is null || mentionSsid == ownSsid) return true;
-            }
+    private static bool IsOwn(Match m, List<(string Base, int? Ssid)> own)
+    {
+        var mentionBase = m.Groups[1].Value;
+        int? mentionSsid = m.Groups[2].Success && int.TryParse(m.Groups[2].Value, out var s) ? s : null;
+        foreach (var (ownBase, ownSsid) in own)
+        {
+            if (!string.Equals(ownBase, mentionBase, StringComparison.OrdinalIgnoreCase)) continue;
+            if (mentionSsid is null || mentionSsid == ownSsid) return true;
         }
         return false;
     }

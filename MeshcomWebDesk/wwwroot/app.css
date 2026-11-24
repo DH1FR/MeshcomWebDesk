@@ -221,10 +221,53 @@ h1:focus {
     margin-left: 3px;
 }
 
-/* A message that addresses us: stands out while the tab is open, ordinary again after leaving it */
+/* A message that addresses us: stands out while the tab is open, ordinary again after leaving it.
+   Colours are mixed from the theme's --warn and --bg-panel, so every theme stays readable. */
 .message.msg-mention {
-    background: rgba(227, 179, 65, 0.16);
-    border-left-color: var(--warn);
+    background: color-mix(in srgb, var(--warn) 30%, var(--bg-panel));
+    border-left: 5px solid var(--warn);
+    box-shadow: 0 0 0 0 transparent, 0 0 0 1px color-mix(in srgb, var(--warn) 60%, transparent);
+    animation: mention-arrive 1.4s ease-out 1;
+}
+
+/* Lights up once when the row appears: brighter fill and a ring that fades out */
+@keyframes mention-arrive {
+    0% {
+        background: color-mix(in srgb, var(--warn) 65%, var(--bg-panel));
+        box-shadow: 0 0 0 0 color-mix(in srgb, var(--warn) 90%, transparent), 0 0 0 1px color-mix(in srgb, var(--warn) 60%, transparent);
+    }
+    60% {
+        box-shadow: 0 0 0 12px transparent, 0 0 0 1px color-mix(in srgb, var(--warn) 60%, transparent);
+    }
+    100% {
+        background: color-mix(in srgb, var(--warn) 30%, var(--bg-panel));
+        box-shadow: 0 0 0 0 transparent, 0 0 0 1px color-mix(in srgb, var(--warn) 60%, transparent);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .message.msg-mention { animation: none; }
+}
+
+/* "@DH1FR-4" inside the text, and the pill at the end of the row */
+.mention-token {
+    background: color-mix(in srgb, var(--warn) 55%, transparent);
+    border-radius: 3px;
+    padding: 0 3px;
+    font-weight: 700;
+}
+.mention-pill {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 0 7px;
+    border-radius: 9px;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 16px;
+    vertical-align: middle;
+    white-space: nowrap;
+    background: var(--warn);
+    color: var(--bg-deep);   /* same pairing as the unread badge */
 }
 
 .tab-new {

@@ -649,7 +649,7 @@ public class ChatService
     // ── Mentions of our own callsign ──────────────────────────────────────
 
     /// <summary>All callsigns we answer to: the configured one and the callsign of every enabled node.</summary>
-    private List<string> OwnCallsigns()
+    public List<string> GetOwnCallsigns()
     {
         var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (!string.IsNullOrWhiteSpace(_settings.MyCallsign)) set.Add(_settings.MyCallsign.Trim());
@@ -670,7 +670,7 @@ public class ChatService
     {
         if (message.IsOutgoing || message.IsAck || message.IsPositionBeacon || message.IsTelemetry) return false;
         if (string.IsNullOrEmpty(message.Text) || message.Text.IndexOf('@') < 0) return false;
-        var own = OwnCallsigns();
+        var own = GetOwnCallsigns();
         if (own.Contains(message.From, StringComparer.OrdinalIgnoreCase)) return false;   // an echo of our own message
         return MentionHelper.MentionsAny(message.Text, own);
     }

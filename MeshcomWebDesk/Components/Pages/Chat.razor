@@ -210,7 +210,11 @@
                                     <button class="btn-mention" @onclick="() => InsertMentionAsync(msg.From)" title="@MentionTitle(msg.From)">&#64;</button>
                                 </span>
                             }
-                            <span class="msg-text">@FormatMessageWithLinks(msg.Text)</span>
+                            <span class="msg-text">@FormatMessageWithLinks(msg.Text, msg.MentionedUs)</span>
+                            @if (msg.MentionedUs)
+                            {
+                                <span class="mention-pill" title="@Loc.T("Dein Rufzeichen wurde erwähnt", "Your callsign was mentioned")">@Loc.T("@ an dich", "@ for you")</span>
+                            }
                             @if (msg.PingRoundTrip.HasValue)
                             {
                                 <span class="msg-ping-rtt" title="@Loc.T("Laufzeit (Pong-Antwort)", "Round-trip time (Pong reply)")">⏱ @FormatPingRtt(msg.PingRoundTrip.Value)</span>
@@ -2597,12 +2601,18 @@
         + @"|(?<![A-Za-z0-9])(?<loc>[A-Ra-r]{2}\d{2}[A-Xa-x]{2}(?:\d{2})?)(?![A-Za-z0-9])",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-    private MarkupString FormatMessageWithLinks(string text)
+    /// <param name="markMentions">Wrap mentions of our own callsign ("@DH1FR-4") in a highlighted span.</param>
+    private MarkupString FormatMessageWithLinks(string text, bool markMentions = false)
     {
         if (string.IsNullOrEmpty(text))
             return new MarkupString(string.Empty);
+        var own = markMentions ? ChatService.GetOwnCallsigns() : null;
+        string Enc(string s) => own is null
+            ? System.Net.WebUtility.HtmlEncode(s)
+            : MeshcomWebDesk.Helpers.MentionHelper.MarkOwn(s, own, System.Net.WebUtility.HtmlEncode);
+
         if (!UrlRegex.IsMatch(text))
-            return new MarkupString(System.Net.WebUtility.HtmlEncode(text));
+            return new MarkupString(Enc(text));
 
         var confirmMsg = System.Net.WebUtility.HtmlEncode(Loc.T(
             "Externer Link – diese Seite wird außerhalb von MeshCom WebDesk geöffnet.\nFortfahren?",
@@ -2612,7 +2622,7 @@
         var lastIndex = 0;
         foreach (Match match in UrlRegex.Matches(text))
         {
-            sb.Append(System.Net.WebUtility.HtmlEncode(text[lastIndex..match.Index]));
+            sb.Append(Enc(text[lastIndex..match.Index]));
             if (match.Groups["loc"].Success)
             {
                 var loc = match.Value;
@@ -2631,7 +2641,7 @@
                 sb.Append($"<a class=\"msg-url\" href=\"{href}\" data-ext-url=\"{href}\" data-ext-msg=\"{confirmMsg}\" target=\"_blank\" rel=\"noopener noreferrer\">{display}</a>");
             lastIndex = match.Index + match.Length;
         }
-        sb.Append(System.Net.WebUtility.HtmlEncode(text[lastIndex..]));
+        sb.Append(Enc(text[lastIndex..]));
         return new MarkupString(sb.ToString());
     }
 

@@ -1497,6 +1497,8 @@
     "Send me an e-mail": "Inviami un'e-mail",
     "The Docker image for {0} is still being built (about 3 minutes). Then click “Check now” and update.": "L'immagine Docker per {0} è ancora in costruzione (circa 3 minuti). Poi fai clic su «Controlla ora» e aggiorna.",
     "The new image is not ready yet – please try again in a few minutes.": "La nuova immagine non è ancora pronta: riprova tra qualche minuto.",
-    "{0} new mention(s) of your callsign": "{0} nuova/e menzione/i del tuo nominativo"
+    "{0} new mention(s) of your callsign": "{0} nuova/e menzione/i del tuo nominativo",
+    "@ for you": "@ per te",
+    "Your callsign was mentioned": "Il tuo nominativo è stato menzionato"
   }
 }
