@@ -210,7 +210,7 @@
                                     <button class="btn-mention" @onclick="() => InsertMentionAsync(msg.From)" title="@MentionTitle(msg.From)">&#64;</button>
                                 </span>
                             }
-                            <span class="msg-text">@FormatMessageWithLinks(msg.Text, msg.MentionedUs)</span>
+                            <span class="msg-text">@FormatMessageWithLinks(msg.Text, !msg.IsOutgoing)</span>
                             @if (msg.MentionedUs)
                             {
                                 <span class="mention-pill" title="@Loc.T("Dein Rufzeichen wurde erwähnt", "Your callsign was mentioned")">@Loc.T("@ an dich", "@ for you")</span>
@@ -2698,12 +2698,29 @@
         + @"|(?<![A-Za-z0-9])(?<loc>[A-Ra-r]{2}\d{2}[A-Xa-x]{2}(?:\d{2})?)(?![A-Za-z0-9])",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-    /// <param name="markMentions">Wrap mentions of our own callsign ("@DH1FR-4") in a highlighted span.</param>
+    // Our own callsigns for the "@DH1FR-4" text marks. Looked up at most every 5 seconds, not once per message row.
+    private List<string>? _ownCalls;
+    private DateTime _ownCallsAt;
+    private List<string> OwnCalls()
+    {
+        if (_ownCalls is null || (DateTime.UtcNow - _ownCallsAt).TotalSeconds > 5)
+        {
+            _ownCalls = ChatService.GetOwnCallsigns();
+            _ownCallsAt = DateTime.UtcNow;
+        }
+        return _ownCalls;
+    }
+
+    /// <param name="markMentions">
+    /// Wrap every mention of our own callsign ("@DH1FR-4") in a highlighted span. Worked out while the text is shown:
+    /// it also applies to old messages and after a restart. The row mark, the pill and the counters are separate and
+    /// only exist for mentions that arrived as new messages.
+    /// </param>
     private MarkupString FormatMessageWithLinks(string text, bool markMentions = false)
     {
         if (string.IsNullOrEmpty(text))
             return new MarkupString(string.Empty);
-        var own = markMentions ? ChatService.GetOwnCallsigns() : null;
+        var own = markMentions ? OwnCalls() : null;
         string Enc(string s) => own is null
             ? System.Net.WebUtility.HtmlEncode(s)
             : MeshcomWebDesk.Helpers.MentionHelper.MarkOwn(s, own, System.Net.WebUtility.HtmlEncode);
