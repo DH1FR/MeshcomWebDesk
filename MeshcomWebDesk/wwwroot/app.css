@@ -252,11 +252,12 @@ h1:focus {
     .message.msg-mention { animation: none; }
 }
 
-/* "@DH1FR-4" inside the text (old messages too): the same background as a marked row, nothing else, so a mention
-   looks the same wherever it shows; the pill sits at the end of the row */
+/* "@DH1FR-4" inside the text (old messages too): only a background in the theme's warn colour, no bold type. 50%
+   (30% was a dark brown on the dark panel, about 1.9:1, and disappeared on a phone in daylight); it also stands out
+   from the 30% tint of a marked row. The pill sits at the end of the row. */
 .mention-token {
-    background: rgba(227, 179, 65, 0.30);
-    background: color-mix(in srgb, var(--warn) 30%, var(--bg-panel));
+    background: rgba(227, 179, 65, 0.50);
+    background: color-mix(in srgb, var(--warn) 50%, var(--bg-panel));
     border-radius: 3px;
     padding: 0 3px;
 }
