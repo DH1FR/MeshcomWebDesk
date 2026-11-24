@@ -31,6 +31,14 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
+## 🆕 What's New in v1.18.3 *(unreleased – `dev` branch)*
+
+### ✨ Features
+- **Unread count in the browser tab** – with the sound off you still see that something happened: the tab title becomes `(3) MeshCom WebDesk` and the favicon gets a red dot while messages are unread. It uses the same criterion as the unread alert: a tab only counts as read while somebody is *really looking* at it (browser tab visible, window focused, recent mouse/keyboard activity), so with WebDesk in the background the number keeps growing and drops to 0 as soon as you look. Direct, group and *All* tabs of all nodes are counted. On an installed web app (PWA) the number is also shown on the app icon (taskbar on Windows, Dock on macOS; Chrome/Edge on Linux and Firefox have no app badge – title and favicon work everywhere). Switch: **Settings → Chat & display → Show unread count in browser tab** (default on).
+- **Desktop notifications** – operating-system pop-ups for the alerts that also appear as toasts at the top right, plus direct messages: *direct messages* (with the message text, shortened), *mentions* (`@callsign` in a group), *watchlist callsigns*, *watched groups* and *CQ calls*. They appear **only while nobody is looking at WebDesk**, so there is no double signal. A click brings the window to the front and opens the matching tab (on the right node). Off by default – **Settings → Chat & display → Watchlist → Desktop notifications**: enable it (the browser asks for permission once), choose which kinds you want, optionally *Without system sound*, and try it with the test button. Shown through the service worker, so it also works on Android Chrome while the page is open. Needs a secure context (HTTPS or `localhost`); a phone that has locked the screen or closed the app receives nothing – for that use the MQTT unread alert (Home Assistant).
+
+---
+
 ## 🆕 What's New in v1.18.2
 
 ### ✨ Improvements
@@ -293,6 +301,8 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 - **`@`-Mention in chat messages** – the same `@` button appears next to every incoming callsign in the group/broadcast message list; clicking it inserts `@CALLSIGN` at the cursor position in the send bar
 - **QRZ.com tooltips** – when enabled, hovering over any callsign (tab buttons, chat messages, monitor From/To) shows the operator's first name and home QTH (e.g. `Chat mit DH1FR-2 öffnen · Max, Berlin`); concurrent lookups for the same callsign share a single HTTP request (in-flight deduplication)
 - **Audio notification** 🔔 when a new direct message to your own callsign arrives (Web Audio API, no audio file required); mute toggle in the status bar
+- **Unread count in the tab title / on the app icon** – `(3) MeshCom WebDesk`, red dot on the favicon, number on the installed app's icon; counts only what nobody has really looked at yet (switchable in Settings)
+- **Desktop notifications** – OS pop-ups for direct messages, mentions, watchlist, watched groups and CQ, only while nobody is looking; click opens the tab (off by default, per-kind switches in Settings → Watchlist)
 - **🔊 Voice announcements** – incoming direct messages are read aloud using the browser's built-in **Web Speech API** (no plugin or audio file required); toggle with the 🔊/🔇 button in the status bar; state is saved in `localStorage` and restored on reload; language passed to the speech synthesiser matches the current UI language
 - **⚡ Quick Texts** – configurable one-click text buttons in the send bar; clicking a button loads the predefined text into the input field for review before sending; supports all `{variable}` placeholders (`{mycall}`, `{mylocator}`, `{callsign}`, `{locator}`, `{rssi}`, `{time}`, `{date}`, `{telemetry}`, …); buttons can be **reordered by drag & drop** in the flyout; new order is saved immediately; configured in **Settings → ⚡ Quick Texts**
 - **Variable expansion in the send bar** – type any `{variable}` directly in the message input field (e.g. `{telemetry}`, `{mycall}`, `{date}`); press **Tab** to expand as a live preview; variables are always expanded automatically on send
@@ -754,6 +764,7 @@ Automatically announces recurring events (e.g. club meetings) to a configured gr
 - Respects the global 🔕 mute toggle in the status bar – no sound when muted
 - **Watched groups** – a separate *Group List* (e.g. `26261`) raises a 👥 toast (sender + group), the alert tone and a voice announcement for every new text message in that group; own callsigns (any SSID) are ignored, the announcement is throttled to once per 5 min per group (otherwise tone only)
 - Configured in **Settings → 📻 Watchlist**; changes apply **live without restart**
+- **Desktop notification** (optional) – the same hits can also raise an operating-system pop-up while nobody is looking at WebDesk (**Settings → Watchlist → Desktop notifications**)
 
 ### 📢 CQ Detection
 - Incoming **group messages** are scanned for CQ calls (case-insensitive regex; no false positives on words like "FREQUENCY")

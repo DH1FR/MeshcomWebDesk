@@ -1,5 +1,13 @@
 ﻿# Changelog
 
+## [1.18.3] – unreleased
+
+### Features
+- **Unread count in the browser tab** – with the sound off you still see that something happened: the tab title becomes `(3) MeshCom WebDesk` and the favicon gets a red dot while messages are unread. It uses the same criterion as the unread alert: a tab only counts as read while somebody is *really looking* at it (browser tab visible, window focused, recent mouse/keyboard activity), so with WebDesk in the background the number keeps growing and drops to 0 as soon as you look. Direct, group and *All* tabs of all nodes are counted. On an installed web app (PWA) the number is also shown on the app icon (taskbar on Windows, Dock on macOS; Chrome/Edge on Linux and Firefox have no app badge – title and favicon work everywhere). Switch: **Settings → Chat & display → Show unread count in browser tab** (default on).
+- **Desktop notifications** – operating-system pop-ups for the alerts that also appear as toasts at the top right, plus direct messages: *direct messages* (with the message text, shortened), *mentions* (`@callsign` in a group), *watchlist callsigns*, *watched groups* and *CQ calls*. They appear **only while nobody is looking at WebDesk**, so there is no double signal. A click brings the window to the front and opens the matching tab (on the right node). Off by default – **Settings → Chat & display → Watchlist → Desktop notifications**: enable it (the browser asks for permission once), choose which kinds you want, optionally *Without system sound*, and try it with the test button. Shown through the service worker, so it also works on Android Chrome while the page is open. Needs a secure context (HTTPS or `localhost`); a phone that has locked the screen or closed the app receives nothing – for that use the MQTT unread alert (Home Assistant).
+
+---
+
 ## [1.18.2] – 2026-11-23
 
 ### Improvements
