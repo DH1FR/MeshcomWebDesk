@@ -224,6 +224,9 @@ h1:focus {
 /* A message that addresses us: stands out while the tab is open, ordinary again after leaving it.
    Colours are mixed from the theme's --warn and --bg-panel, so every theme stays readable. */
 .message.msg-mention {
+    /* plain colours first for browsers without color-mix() (iOS before 16.2: the declaration would be dropped) */
+    background: rgba(227, 179, 65, 0.30);
+    box-shadow: 0 0 0 1px rgba(227, 179, 65, 0.6);
     background: color-mix(in srgb, var(--warn) 30%, var(--bg-panel));
     border-left: 5px solid var(--warn);
     box-shadow: 0 0 0 0 transparent, 0 0 0 1px color-mix(in srgb, var(--warn) 60%, transparent);
@@ -251,6 +254,7 @@ h1:focus {
 
 /* "@DH1FR-4" inside the text, and the pill at the end of the row */
 .mention-token {
+    background: rgba(227, 179, 65, 0.55);
     background: color-mix(in srgb, var(--warn) 55%, transparent);
     border-radius: 3px;
     padding: 0 3px;
@@ -3221,12 +3225,27 @@ html.mon-animate .lower-pane {
 .alert-toast-stack {
     position: fixed;
     top: 1rem;
-    right: 1rem;
+    right: calc(1rem + env(safe-area-inset-right, 0px));   /* not under the notch of a phone held sideways */
     z-index: 9999;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
     align-items: flex-end;
+}
+
+/* Small screens: the alerts stay up for minutes, so they must not cover the navigation in the header. They sit below
+   the header, node switcher and tab bar instead, over the older messages at the top of the chat. */
+@media (max-width: 600px) {
+    .alert-toast-stack {
+        top: calc(env(safe-area-inset-top, 0px) + 112px);
+        right: calc(8px + env(safe-area-inset-right, 0px));
+    }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+    .alert-toast-stack {
+        top: calc(env(safe-area-inset-top, 0px) + 72px);
+        right: calc(8px + env(safe-area-inset-right, 0px));
+    }
 }
 
 .watchlist-toast {

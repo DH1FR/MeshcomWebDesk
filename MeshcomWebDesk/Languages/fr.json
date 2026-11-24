@@ -1523,6 +1523,10 @@
     "The new image is not ready yet – please try again in a few minutes.": "La nouvelle image n'est pas encore prête – réessayez dans quelques minutes.",
     "{0} new mention(s) of your callsign": "{0} nouvelle(s) mention(s) de votre indicatif",
     "@ for you": "@ pour toi",
-    "Your callsign was mentioned": "Votre indicatif a été mentionné"
+    "Your callsign was mentioned": "Votre indicatif a été mentionné",
+    "Mention": "Mention",
+    "Someone writes @ and your callsign in a group, e. g. @DH1FR-4 or @DH1FR": "Quelqu'un écrit @ et votre indicatif dans un groupe, p. ex. @DH1FR-4 ou @DH1FR",
+    "Alert, tone and voice announcement on a mention": "Alerte, signal sonore et annonce vocale en cas de mention",
+    "You were mentioned": "Vous avez été mentionné"
   }
 }

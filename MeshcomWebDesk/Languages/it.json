@@ -1499,6 +1499,10 @@
     "The new image is not ready yet – please try again in a few minutes.": "La nuova immagine non è ancora pronta: riprova tra qualche minuto.",
     "{0} new mention(s) of your callsign": "{0} nuova/e menzione/i del tuo nominativo",
     "@ for you": "@ per te",
-    "Your callsign was mentioned": "Il tuo nominativo è stato menzionato"
+    "Your callsign was mentioned": "Il tuo nominativo è stato menzionato",
+    "Mention": "Menzione",
+    "Someone writes @ and your callsign in a group, e. g. @DH1FR-4 or @DH1FR": "Qualcuno scrive @ e il tuo nominativo in un gruppo, es. @DH1FR-4 o @DH1FR",
+    "Alert, tone and voice announcement on a mention": "Avviso, segnale acustico e annuncio vocale in caso di menzione",
+    "You were mentioned": "Sei stato menzionato"
   }
 }

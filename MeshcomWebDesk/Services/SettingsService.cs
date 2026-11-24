@@ -203,6 +203,7 @@ public class SettingsService
                 ["WatchOnPosition"]     = s.WatchOnPosition,
                 ["WatchOnTelemetry"]    = s.WatchOnTelemetry,
                 ["WatchOnAck"]          = s.WatchOnAck,
+                ["MentionAlertEnabled"] = s.MentionAlertEnabled,
                 ["WatchAlertMinutes"]   = s.WatchAlertMinutes,
                 ["DataPath"]            = s.DataPath,
                 ["PublicBaseUrl"]       = s.PublicBaseUrl,

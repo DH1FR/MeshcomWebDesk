@@ -1782,6 +1782,15 @@
                 </div>
 
                 <label>
+                    @Loc.T("Erwähnung", "Mention")<br />
+                    <small>@Loc.T("Jemand schreibt in einer Gruppe @ und dein Rufzeichen, z. B. @DH1FR-4 oder @DH1FR", "Someone writes @ and your callsign in a group, e. g. @DH1FR-4 or @DH1FR")</small>
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
+                    <input type="checkbox" @bind="_model.MentionAlertEnabled" />
+                    @Loc.T("Meldung, Signalton und Sprachansage bei Erwähnung", "Alert, tone and voice announcement on a mention")
+                </label>
+
+                <label>
                     @Loc.T("Anzeigedauer (Minuten)", "Display duration (minutes)")
                 </label>
                 <input type="number" min="1" max="60" @bind="_model.WatchAlertMinutes" />
@@ -2892,7 +2901,7 @@
         new("tele",       "send",   "Telemetrie",               "Telemetry",               "telemetry messwerte sensor api home assistant"),
         new("quicktexts", "send",   "Schnelltexte",             "Quick texts",             "quick texte textbausteine buttons"),
         new("chat",       "chat",   "Chat & Monitor",           "Chat & Monitor",          "tab nachrichten messages monitor mh heard gruppen groups cooldown"),
-        new("watch",      "chat",   "Watchlist",                "Watchlist",               "beobachten alarm toast"),
+        new("watch",      "chat",   "Watchlist",                "Watchlist",               "beobachten alarm toast erwähnung mention @ rufzeichen"),
         new("blacklist",  "chat",   "Blacklist",                "Blacklist",               "sperren ignorieren"),
         new("grouplabels","chat",   "Gruppen-Namen",            "Group labels",            "gruppen group labels namen"),
         new("lang",       "chat",   "Sprache",                  "Language",                "language deutsch english español français italiano"),
@@ -3855,6 +3864,7 @@
             WatchOnPosition     = s.WatchOnPosition,
             WatchOnTelemetry    = s.WatchOnTelemetry,
             WatchOnAck          = s.WatchOnAck,
+            MentionAlertEnabled = s.MentionAlertEnabled,
             WatchAlertMinutes   = s.WatchAlertMinutes,
             DataPath            = s.DataPath,
             TimeOffsetHours     = s.TimeOffsetHours,
@@ -4721,6 +4731,7 @@
                 WatchOnPosition     = s.WatchOnPosition,
                 WatchOnTelemetry    = s.WatchOnTelemetry,
                 WatchOnAck          = s.WatchOnAck,
+                MentionAlertEnabled = s.MentionAlertEnabled,
                 WatchAlertMinutes   = s.WatchAlertMinutes,
                 DataPath            = s.DataPath,
                 TimeOffsetHours     = s.TimeOffsetHours,
@@ -4903,6 +4914,7 @@
         public bool   WatchOnPosition     { get; set; } = true;
         public bool   WatchOnTelemetry    { get; set; } = false;
         public bool   WatchOnAck          { get; set; } = false;
+        public bool   MentionAlertEnabled { get; set; } = true;
         public int    WatchAlertMinutes    { get; set; } = 5;
         public string DataPath            { get; set; } = string.Empty;
         public double TimeOffsetHours     { get; set; } = 0;
@@ -5106,6 +5118,7 @@
             WatchOnPosition     = WatchOnPosition,
             WatchOnTelemetry    = WatchOnTelemetry,
             WatchOnAck          = WatchOnAck,
+            MentionAlertEnabled = MentionAlertEnabled,
             WatchAlertMinutes   = Math.Max(1, WatchAlertMinutes),
             DataPath            = DataPath,
             TimeOffsetHours     = TimeOffsetHours,

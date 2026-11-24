@@ -100,6 +100,12 @@ public class MeshcomSettings
     public bool WatchOnAck { get; set; } = false;
 
     /// <summary>
+    /// Alert (toast, tone and voice announcement) when somebody addresses us in a group with "@" and our
+    /// callsign, e.g. "@DH1FR-4" (default: true). The message is marked in the chat either way.
+    /// </summary>
+    public bool MentionAlertEnabled { get; set; } = true;
+
+    /// <summary>
     /// How long (in minutes) the watchlist toast stays visible before auto-dismissing.
     /// Minimum 1, default 5.
     /// </summary>

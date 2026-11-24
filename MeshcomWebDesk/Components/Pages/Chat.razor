@@ -484,9 +484,26 @@
     </div>
 
     @* ===== ALERT TOASTS (Watchlist + CQ) ===== *@
-    @if (_watchlistAlerts.Count > 0 || _watchGroupAlerts.Count > 0 || _cqAlerts.Count > 0)
+    @if (_watchlistAlerts.Count > 0 || _watchGroupAlerts.Count > 0 || _cqAlerts.Count > 0 || _mentionAlerts.Count > 0)
     {
         <div class="alert-toast-stack">
+            @if (_mentionAlerts.Count > 0)
+            {
+                <div class="watchlist-toast mention-toast">
+                    <div class="watchlist-toast-header mention-toast-header">
+                        <span>&#64; @Loc.T("Du wurdest erwähnt", "You were mentioned")</span>
+                        <button class="watchlist-toast-close" @onclick="() => _mentionAlerts.Clear()">✕</button>
+                    </div>
+                    @foreach (var ma in _mentionAlerts)
+                    {
+                        <div class="watchlist-toast-row@(ma.NodeId == _activeNodeId ? " mention-toast-row-link" : "")" @onclick="() => OpenMentionAlert(ma)">
+                            <span class="watchlist-callsign">@ma.Callsign</span>
+                            <span class="watchlist-badge">@(ma.TabKey == "*" ? Loc.T("Alle", "All") : ma.TabKey)</span>
+                            <span class="watchlist-age">@FormatAlertAge(ma.Time)</span>
+                        </div>
+                    }
+                </div>
+            }
             @if (_watchGroupAlerts.Count > 0)
             {
                 <div class="watchlist-toast">
@@ -1221,6 +1238,11 @@
     private List<CqAlert> _cqAlerts = [];
     private bool _playCqSound;
 
+    // "@DH1FR-4" in a group: somebody addressed us
+    private record MentionAlert(string TabKey, Guid? NodeId, string Callsign, DateTime Time);
+    private List<MentionAlert> _mentionAlerts = [];
+    private bool _playMentionSound;
+
     // ── Welcome / donation dialog ───────────────────────────────────────────
     private static readonly string _appVersion =
         typeof(Chat).Assembly.GetName().Version is { } v
@@ -1314,6 +1336,7 @@
         KissService.OnStatusChange += OnStatusChanged;
         ChatService.OnWatchlistHit += HandleWatchlistHit;
         ChatService.OnWatchGroupHit += HandleWatchGroupHit;
+        ChatService.OnMentionHit += HandleMentionHit;
         ChatService.OnCqHeard += HandleCqHeard;
         ChatService.OnNewDirectTab += HandleNewDirectTab;
         ChatService.OnDirectMessage += HandleDirectMessage;
@@ -1527,6 +1550,12 @@
             _playCqSound = false;
             try { await JS.InvokeVoidAsync("playCqBeep"); }
             catch (Exception) { }
+        }
+        if (_playMentionSound)
+        {
+            _playMentionSound = false;
+            try { await JS.InvokeVoidAsync("playMentionBeep"); }
+            catch (JSException) { }
         }
         if (_playWatchlistSound)
         {
@@ -2023,6 +2052,7 @@
         KissService.OnStatusChange -= OnStatusChanged;
         ChatService.OnWatchlistHit -= HandleWatchlistHit;
         ChatService.OnWatchGroupHit -= HandleWatchGroupHit;
+        ChatService.OnMentionHit -= HandleMentionHit;
         ChatService.OnCqHeard -= HandleCqHeard;
         ChatService.OnNewDirectTab -= HandleNewDirectTab;
         ChatService.OnDirectMessage -= HandleDirectMessage;
@@ -2450,6 +2480,73 @@
                 });
         }
         catch (Exception) { }
+    }
+
+    private async void HandleMentionHit(string tabKey, string callsign, MeshcomMessage message)
+    {
+        if (_disposed) return;
+        try
+        {
+            await InvokeAsync(() =>
+            {
+                if (_disposed) return;
+                // Somebody is looking at exactly this tab right now: the highlighted row is alert enough.
+                if (_activeTabKey == tabKey && message.NodeId == _activeNodeId && Attention.IsAttending(_viewerId))
+                    return;
+
+                _mentionAlerts.RemoveAll(a => a.TabKey == tabKey && string.Equals(a.Callsign, callsign, StringComparison.OrdinalIgnoreCase));
+                _mentionAlerts.Insert(0, new MentionAlert(tabKey, message.NodeId, callsign, DateTime.Now));
+                if (_soundEnabled)
+                    _playMentionSound = true;
+
+                // Voice: at most once a minute per tab; a quick series of mentions only gets the tone
+                var ttsKey = "@" + tabKey;
+                bool ttsAllowed = !_watchlistLastTts.TryGetValue(ttsKey, out var lastTts)
+                    || (DateTime.Now - lastTts).TotalSeconds >= 60;
+                if (_voiceEnabled == true && ttsAllowed)
+                {
+                    _watchlistLastTts[ttsKey] = DateTime.Now;
+                    var phonetic = PhoneticAlphabetHelper.Spell(callsign, Loc.Current);
+                    if (tabKey.StartsWith('#'))
+                    {
+                        var groupSpelled = string.Join(" ", tabKey[1..].ToCharArray());
+                        _pendingSpeech.Enqueue(Loc.TtsT(
+                            $"Erwähnung in Gruppe {groupSpelled} von {phonetic}",
+                            $"Mention in group {groupSpelled} from {phonetic}",
+                            $"Mention dans le groupe {groupSpelled} de {phonetic}",
+                            $"Menzione nel gruppo {groupSpelled} da {phonetic}",
+                            $"Mención en el grupo {groupSpelled} de {phonetic}"));
+                    }
+                    else
+                    {
+                        _pendingSpeech.Enqueue(Loc.TtsT(
+                            $"Erwähnung von {phonetic}",
+                            $"Mention from {phonetic}",
+                            $"Mention de {phonetic}",
+                            $"Menzione da {phonetic}",
+                            $"Mención de {phonetic}"));
+                    }
+                }
+                StateHasChanged();
+            });
+            await Task.Delay(TimeSpan.FromSeconds(Math.Max(1, SettingsOptions.CurrentValue.WatchAlertMinutes) * 60 + 2));
+            if (!_disposed)
+                await InvokeAsync(() =>
+                {
+                    var limit = Math.Max(1, SettingsOptions.CurrentValue.WatchAlertMinutes);
+                    _mentionAlerts.RemoveAll(a => (DateTime.Now - a.Time).TotalMinutes > limit);
+                    StateHasChanged();
+                });
+        }
+        catch (Exception) { }
+    }
+
+    /// <summary>A click on a mention alert opens its tab (only on the node that is shown right now).</summary>
+    private void OpenMentionAlert(MentionAlert alert)
+    {
+        if (alert.NodeId != _activeNodeId) return;
+        _mentionAlerts.Remove(alert);
+        SelectTab(alert.TabKey);
     }
 
     private async void HandleCqHeard(string callsign, string group, string text)

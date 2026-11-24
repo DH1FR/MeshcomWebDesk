@@ -220,6 +220,12 @@ public class ChatService
     public event Action<string, string, MeshcomMessage>? OnWatchGroupHit;
 
     /// <summary>
+    /// Raised once per incoming group message that mentions one of our callsigns ("@DH1FR-4"), when
+    /// <see cref="MeshcomSettings.MentionAlertEnabled"/> is on. Arguments: tab key (e.g. "#262"), sender, message.
+    /// </summary>
+    public event Action<string, string, MeshcomMessage>? OnMentionHit;
+
+    /// <summary>
     /// Raised when a group message is detected as a CQ call (own callsign excluded).
     /// Arguments: sender callsign, group number (e.g. "262"), the raw message text.
     /// </summary>
@@ -543,6 +549,12 @@ public class ChatService
             CheckWatchlist(message);
             CheckWatchGroups(message, tabKey, myCallsign);
             CheckCq(message, tabKey, myCallsign);
+
+            if (mentionsUs && _settings.MentionAlertEnabled)
+            {
+                _logger.LogInformation("Mention of our callsign: From={From} Tab={Tab}", message.From, tabKey);
+                OnMentionHit?.Invoke(tabKey, message.From, message);
+            }
         }
 
         if (!message.IsBroadcast &&
