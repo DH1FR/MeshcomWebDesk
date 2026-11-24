@@ -11,6 +11,12 @@ USER=meshcom
 
 echo "=== MeshCom WebDesk Installer ==="
 
+# Stop a running service first (update case), otherwise cp fails with "Text file busy"
+if systemctl is-active --quiet $SERVICE_NAME; then
+    systemctl stop $SERVICE_NAME
+    echo "[+] Running service '$SERVICE_NAME' stopped"
+fi
+
 # Create user
 if ! id "$USER" &>/dev/null; then
     useradd -r -s /bin/false $USER
