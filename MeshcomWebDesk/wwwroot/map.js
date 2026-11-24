@@ -55,6 +55,34 @@ window.meshcomMap = (function () {
         return _i18n.dAgo.replace('{n}', Math.round(mins / 1440));
     }
 
+    // Stations at the very same position would hide each other (only the top marker
+    // is clickable). Place such markers on a small pixel circle around the real spot;
+    // recomputed on every update and zoom, so the offset stays constant on screen.
+    function spreadOverlapping() {
+        if (!_map) return;
+        var all = Object.keys(_stationMarkers).map(function (k) { return _stationMarkers[k]; });
+        if (_ownMarker) all.push(_ownMarker);
+
+        var groups = {};
+        all.forEach(function (m) {
+            if (!m._real) return;
+            var key = m._real[0].toFixed(5) + ',' + m._real[1].toFixed(5);
+            (groups[key] = groups[key] || []).push(m);
+        });
+
+        Object.keys(groups).forEach(function (key) {
+            var g = groups[key];
+            if (g.length === 1) { g[0].setLatLng(g[0]._real); return; }
+            var c  = _map.latLngToContainerPoint(g[0]._real);
+            var r  = g.length <= 6 ? 20 : 20 + (g.length - 6) * 4;
+            g.forEach(function (m, i) {
+                var ang = 2 * Math.PI * i / g.length - Math.PI / 2;
+                m.setLatLng(_map.containerPointToLatLng(
+                    L.point(c.x + r * Math.cos(ang), c.y + r * Math.sin(ang))));
+            });
+        });
+    }
+
     function saveView() {
         if (!_map || !_readyToSave) return;
         try {
@@ -299,6 +327,7 @@ window.meshcomMap = (function () {
             }
 
             _map.on('moveend zoomend', saveView);
+            _map.on('zoomend', spreadOverlapping);
         },
 
         updateMarkers: function (stations, ownCallsign, ownLat, ownLon, segments, showRelays, ownInfo) {
@@ -406,13 +435,14 @@ window.meshcomMap = (function () {
                 seen[key] = true;
                 var m = _stationMarkers[key];
                 if (m) {
-                    m.setLatLng([s.lat, s.lon]);
+                    m._real = [s.lat, s.lon];
                     m.setIcon(icon);
                     m.setPopupContent(popup);
                 } else {
                     m = L.marker([s.lat, s.lon], { icon: icon })
                         .bindPopup(popup)
                         .addTo(_stationLayer);
+                    m._real = [s.lat, s.lon];
                     attachFocusHandlers(m, key);
                     _stationMarkers[key] = m;
                 }
@@ -435,13 +465,14 @@ window.meshcomMap = (function () {
                 _ownKey     = ownCallsign ? ownCallsign.toUpperCase() : null;
 
                 if (_ownMarker) {
-                    _ownMarker.setLatLng([ownLat, ownLon]);
+                    _ownMarker._real = [ownLat, ownLon];
                     _ownMarker.setIcon(oIcon);
                     _ownMarker.setPopupContent(oPopup);
                 } else {
                     _ownMarker = L.marker([ownLat, ownLon], { icon: oIcon })
                         .bindPopup(oPopup)
                         .addTo(_ownLayer);
+                    _ownMarker._real = [ownLat, ownLon];
                     if (_ownKey) attachFocusHandlers(_ownMarker, _ownKey);
                 }
                 bounds.push([ownLat, ownLon]);
@@ -450,6 +481,8 @@ window.meshcomMap = (function () {
                 _ownMarker = null;
                 _ownKey    = null;
             }
+
+            spreadOverlapping();
 
             // Re-apply focus dimming after the relay layer was rebuilt
             if (_focusCall) applyFocus();

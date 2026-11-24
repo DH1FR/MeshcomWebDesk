@@ -1510,6 +1510,17 @@ public class ChatService
                     RecordRelayPath(s, message.RelayPath, message.Timestamp);
                     mhChanged = true;
                 }
+                else if (!string.Equals(message.SrcType, "udp", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Heard directly over RF (no relay, not via a gateway/UDP bridge):
+                    // the station is reachable directly *now*, so drop the stale routing.
+                    // Without this, a previously seen relayed path stayed shown for ever.
+                    if (s.HopCount != 0 || s.LastRelayPath is not null) mhChanged = true;
+                    s.HopCount       = 0;
+                    s.LastRelayPath  = null;
+                    s.RelayPathCount = 0;
+                    PruneStaleRelayPaths(s, message.Timestamp);
+                }
                 if (message.Latitude.HasValue)
                 {
                     s.Latitude         = message.Latitude;
@@ -1577,6 +1588,20 @@ public class ChatService
             stat.Count++;
             stat.LastSeen = timestamp;
         }
+    }
+
+    /// <summary>Relay paths not seen for this long before a direct reception are considered superseded.</summary>
+    private static readonly TimeSpan RelayPathSupersededAfter = TimeSpan.FromHours(1);
+
+    /// <summary>
+    /// Removes relay paths that were last seen long before a direct reception.
+    /// Paths seen shortly before are kept, so a station that alternates between
+    /// direct and relayed reception does not lose its map lines.
+    /// </summary>
+    private static void PruneStaleRelayPaths(HeardStation s, DateTime timestamp)
+    {
+        lock (s.RelayPathHistory)
+            s.RelayPathHistory.RemoveAll(p => timestamp - p.LastSeen > RelayPathSupersededAfter);
     }
 
     private void AppendToMonitor(MeshcomMessage message, NodeState state)
