@@ -1527,6 +1527,7 @@
     "Mention": "Mention",
     "Someone writes @ and your callsign in a group, e. g. @DH1FR-4 or @DH1FR": "Quelqu'un écrit @ et votre indicatif dans un groupe, p. ex. @DH1FR-4 ou @DH1FR",
     "Alert, tone and voice announcement on a mention": "Alerte, signal sonore et annonce vocale en cas de mention",
-    "You were mentioned": "Vous avez été mentionné"
+    "You were mentioned": "Vous avez été mentionné",
+    "Leave empty to send native telemetry (extudp) only – then no text message is sent, not even via \"Send Telemetry Now\".": "Laisser vide pour n'envoyer que la télémétrie native (extudp) : aucun message texte n'est alors envoyé, même via « Envoyer la télémétrie maintenant »."
   }
 }

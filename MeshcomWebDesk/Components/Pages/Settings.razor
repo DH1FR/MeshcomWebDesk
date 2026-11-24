@@ -1399,6 +1399,10 @@
                     <small>@Loc.T("(Gruppe z.\u00a0B. #262, * für Alle, oder Rufzeichen)", "(Group e.\u00a0g. #262, * for all, or callsign)")</small>
                 </label>
                 <input type="text" @bind="_model.TelemetryGroup" placeholder="#262 / * / OE1KBC-1" />
+                <div style="grid-column:1/-1;font-size:.8rem;color:#8b949e;margin-top:.2rem">
+                    @Loc.T("Leer lassen, wenn nur native Telemetrie (extudp) gesendet werden soll – dann wird keine Textnachricht verschickt, auch nicht über \"Telemetrie jetzt senden\".",
+                           "Leave empty to send native telemetry (extudp) only – then no text message is sent, not even via \"Send Telemetry Now\".")
+                </div>
 
                 <label>
                     @Loc.T("Sendezeiten (Stunden 0\u201323)", "Send times (hours 0\u201323)")<br />
