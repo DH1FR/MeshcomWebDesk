@@ -106,6 +106,12 @@ public class MeshcomSettings
     public bool MentionAlertEnabled { get; set; } = true;
 
     /// <summary>
+    /// Show the number of unread messages in the browser tab: "(3) MeshCom WebDesk" plus a badge on the
+    /// favicon (default: true). Counts only what nobody has really looked at yet.
+    /// </summary>
+    public bool TabTitleUnreadEnabled { get; set; } = true;
+
+    /// <summary>
     /// How long (in minutes) the watchlist toast stays visible before auto-dismissing.
     /// Minimum 1, default 5.
     /// </summary>

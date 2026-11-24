@@ -564,6 +564,15 @@
                 </label>
                 <input type="number" step="0.5" @bind="_model.TimeOffsetHours" />
 
+                <label>
+                    @Loc.T("Ungelesene im Browser-Tab anzeigen", "Show unread count in browser tab")<br />
+                    <small>@Loc.T("Zahl im Tab-Titel, z. B. (3), und Punkt am Symbol – praktisch, wenn der Ton aus ist", "Number in the tab title, e. g. (3), and a dot on the icon – handy when the sound is off")</small>
+                </label>
+                <label class="settings-toggle">
+                    <input type="checkbox" @bind="_model.TabTitleUnreadEnabled" />
+                    <span>@(_model.TabTitleUnreadEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
+                </label>
+
                 <label>@Loc.T("Gruppenfilter aktiv", "Group Filter Active")</label>
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.GroupFilterEnabled" />
@@ -3869,6 +3878,7 @@
             WatchOnTelemetry    = s.WatchOnTelemetry,
             WatchOnAck          = s.WatchOnAck,
             MentionAlertEnabled = s.MentionAlertEnabled,
+            TabTitleUnreadEnabled = s.TabTitleUnreadEnabled,
             WatchAlertMinutes   = s.WatchAlertMinutes,
             DataPath            = s.DataPath,
             TimeOffsetHours     = s.TimeOffsetHours,
@@ -4736,6 +4746,7 @@
                 WatchOnTelemetry    = s.WatchOnTelemetry,
                 WatchOnAck          = s.WatchOnAck,
                 MentionAlertEnabled = s.MentionAlertEnabled,
+                TabTitleUnreadEnabled = s.TabTitleUnreadEnabled,
                 WatchAlertMinutes   = s.WatchAlertMinutes,
                 DataPath            = s.DataPath,
                 TimeOffsetHours     = s.TimeOffsetHours,
@@ -4919,6 +4930,7 @@
         public bool   WatchOnTelemetry    { get; set; } = false;
         public bool   WatchOnAck          { get; set; } = false;
         public bool   MentionAlertEnabled { get; set; } = true;
+        public bool   TabTitleUnreadEnabled { get; set; } = true;
         public int    WatchAlertMinutes    { get; set; } = 5;
         public string DataPath            { get; set; } = string.Empty;
         public double TimeOffsetHours     { get; set; } = 0;
@@ -5123,6 +5135,7 @@
             WatchOnTelemetry    = WatchOnTelemetry,
             WatchOnAck          = WatchOnAck,
             MentionAlertEnabled = MentionAlertEnabled,
+            TabTitleUnreadEnabled = TabTitleUnreadEnabled,
             WatchAlertMinutes   = Math.Max(1, WatchAlertMinutes),
             DataPath            = DataPath,
             TimeOffsetHours     = TimeOffsetHours,

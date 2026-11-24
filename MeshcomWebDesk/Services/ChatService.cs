@@ -724,6 +724,18 @@ public class ChatService
     }
 
     /// <summary>
+    /// Total unread messages over all tabs of all nodes (direct, group and "All"). Tabs are only cleared while
+    /// somebody really looks at them, so this is what is still waiting – shown in the browser tab title.
+    /// </summary>
+    public int GetUnreadTotal()
+    {
+        lock (_lock)
+        {
+            return _nodeState.Values.Sum(st => st.Tabs.Values.Sum(t => t.UnreadCount));
+        }
+    }
+
+    /// <summary>
     /// Marks a tab as actually seen by a person: resets the unread counter and the alert state.
     /// If an unread alert had already been published, a matching "read" message is published.
     /// </summary>

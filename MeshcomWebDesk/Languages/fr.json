@@ -1528,6 +1528,8 @@
     "Someone writes @ and your callsign in a group, e. g. @DH1FR-4 or @DH1FR": "Quelqu'un écrit @ et votre indicatif dans un groupe, p. ex. @DH1FR-4 ou @DH1FR",
     "Alert, tone and voice announcement on a mention": "Alerte, signal sonore et annonce vocale en cas de mention",
     "You were mentioned": "Vous avez été mentionné",
-    "Leave empty to send native telemetry (extudp) only – then no text message is sent, not even via \"Send Telemetry Now\".": "Laisser vide pour n'envoyer que la télémétrie native (extudp) : aucun message texte n'est alors envoyé, même via « Envoyer la télémétrie maintenant »."
+    "Leave empty to send native telemetry (extudp) only – then no text message is sent, not even via \"Send Telemetry Now\".": "Laisser vide pour n'envoyer que la télémétrie native (extudp) : aucun message texte n'est alors envoyé, même via « Envoyer la télémétrie maintenant ».",
+    "Show unread count in browser tab": "Afficher les messages non lus dans l'onglet du navigateur",
+    "Number in the tab title, e. g. (3), and a dot on the icon – handy when the sound is off": "Nombre dans le titre de l'onglet, p. ex. (3), et un point sur l'icône – pratique quand le son est coupé"
   }
 }

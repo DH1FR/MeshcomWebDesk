@@ -300,9 +300,59 @@ window.meshcomChat = (function () {
         if (attention) { attention.stop(); attention = null; }
     }
 
+    // ── Unread badge in the browser tab ───────────────────────────────────
+    // Prefixes the page title with "(n) " and puts a red dot on the favicon. Blazor's <PageTitle> sets the
+    // title itself (already including the number); this only re-applies it if something overwrote it and
+    // draws the favicon. n = 0 removes the dot again.
+    var favImg = null, favLink = null, favLastN = -1;
+
+    function setTabBadge(n) {
+        n = n > 0 ? n : 0;
+        // <PageTitle> is not updated interactively here, so the title is set directly.
+        try {
+            var baseTitle = document.title.replace(/^\(\d+\+?\) /, '');
+            var wanted = n > 0 ? '(' + (n > 99 ? '99+' : n) + ') ' + baseTitle : baseTitle;
+            if (document.title !== wanted) document.title = wanted;
+        } catch (e) { }
+        if (n === favLastN) return;
+        favLastN = n;
+        try {
+            if (!favLink) {
+                favLink = document.createElement('link');
+                favLink.rel = 'icon';
+                favLink.id  = 'mc-unread-favicon';
+                favLink.type = 'image/png';
+            }
+            if (n === 0) {
+                if (favLink.parentNode) favLink.parentNode.removeChild(favLink);
+                return;
+            }
+            function draw() {
+                var c = document.createElement('canvas');
+                c.width = c.height = 64;
+                var g = c.getContext('2d');
+                if (favImg && favImg.complete && favImg.naturalWidth) g.drawImage(favImg, 0, 0, 64, 64);
+                g.beginPath(); g.arc(46, 18, 16, 0, Math.PI * 2);
+                g.fillStyle = '#e53935'; g.fill();
+                g.lineWidth = 4; g.strokeStyle = '#ffffff'; g.stroke();
+                favLink.href = c.toDataURL('image/png');
+                if (!favLink.parentNode) document.head.appendChild(favLink);
+            }
+            if (!favImg) {
+                favImg = new Image();
+                favImg.onload  = function () { if (favLastN > 0) draw(); };
+                favImg.onerror = function () { if (favLastN > 0) draw(); };
+                favImg.src = 'favicon.png';
+            } else {
+                draw();
+            }
+        } catch (e) { /* cosmetic only */ }
+    }
+
     return {
         initResizer,
         initTabDrag,
+        setTabBadge,
         initQuickTextDrag,
         attentionStart,
         attentionStop,

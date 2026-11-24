@@ -1357,11 +1357,15 @@
         _isInitialized = true;
     }
 
+    /// <summary>Unread messages still waiting (nobody has really looked at them) – for the browser tab title.</summary>
+    private int TabUnread => SettingsOptions.CurrentValue.TabTitleUnreadEnabled ? ChatService.GetUnreadTotal() : 0;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         try
         {
             await OnAfterRenderCoreAsync(firstRender);
+            await JS.InvokeVoidAsync("meshcomChat.setTabBadge", TabUnread);
         }
         catch (Exception ex) when (ex is TaskCanceledException or OperationCanceledException or JSDisconnectedException)
         {
@@ -2043,6 +2047,8 @@
         _udpStaleTimer?.Dispose();
         Attention.Remove(_viewerId);
         try { _ = JS.InvokeVoidAsync("meshcomChat.attentionStop").AsTask().ContinueWith(_ => { }); }
+        catch { /* circuit already gone */ }
+        try { _ = JS.InvokeVoidAsync("meshcomChat.setTabBadge", 0).AsTask().ContinueWith(_ => { }); }
         catch { /* circuit already gone */ }
         _dotNetRef?.Dispose();
         Loc.OnChange -= OnLocChange;

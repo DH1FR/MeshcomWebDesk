@@ -1504,6 +1504,8 @@
     "Someone writes @ and your callsign in a group, e. g. @DH1FR-4 or @DH1FR": "Qualcuno scrive @ e il tuo nominativo in un gruppo, es. @DH1FR-4 o @DH1FR",
     "Alert, tone and voice announcement on a mention": "Avviso, segnale acustico e annuncio vocale in caso di menzione",
     "You were mentioned": "Sei stato menzionato",
-    "Leave empty to send native telemetry (extudp) only – then no text message is sent, not even via \"Send Telemetry Now\".": "Lasciare vuoto per inviare solo la telemetria nativa (extudp): in tal caso non viene inviato alcun messaggio di testo, nemmeno con \"Invia telemetria ora\"."
+    "Leave empty to send native telemetry (extudp) only – then no text message is sent, not even via \"Send Telemetry Now\".": "Lasciare vuoto per inviare solo la telemetria nativa (extudp): in tal caso non viene inviato alcun messaggio di testo, nemmeno con \"Invia telemetria ora\".",
+    "Show unread count in browser tab": "Mostra i messaggi non letti nella scheda del browser",
+    "Number in the tab title, e. g. (3), and a dot on the icon – handy when the sound is off": "Numero nel titolo della scheda, ad es. (3), e un punto sull'icona – utile quando l'audio è spento"
   }
 }
