@@ -4809,6 +4809,44 @@ html[data-display="compact"] .app-nav-qr { display: none !important; }
 .remote-note { margin: .4rem 0; font-size: .78rem; color: var(--text-muted); line-height: 1.4; text-align: left; }
 .remote-warn { color: var(--warn); }
 
+/* ===== Low screens (a phone held sideways is only ~375-430px high) =====
+   Whatever the display mode: the tabs stay one swipeable row. Wrapped onto several rows (15 tabs: 4-5 rows,
+   about 150px) they used up more than a third of the height and left no room for the chat. Up to 600px wide the
+   phone rules above already do this; "+" and the search buttons stay in reach (sticky) like there. */
+@media (max-height: 500px) and (orientation: landscape) and (min-width: 601px) {
+    .tab-bar {
+        flex-wrap: nowrap;
+        padding: 2px 4px 0;
+        scrollbar-width: none;
+    }
+    .tab-bar::-webkit-scrollbar {
+        display: none;
+    }
+    .tab-bar .tab-button {
+        flex-shrink: 0;
+    }
+    .tab-label-wrap {
+        flex-direction: row;
+        align-items: baseline;
+        gap: 4px;
+    }
+    .tab-qrz-name {
+        max-width: 64px;
+    }
+    .tab-bar > .tab-new-wrap:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        background: var(--bg-panel);
+    }
+    .tab-bar > .tab-new-wrap:last-child {
+        position: sticky;
+        right: 0;
+        z-index: 2;
+        background: var(--bg-panel);
+    }
+}
+
 /* ===== Touch devices (iPhone/iPad/Android): no unwanted zoom =====
    iOS Safari zooms into a focused text field whose font is smaller than 16px and does not zoom back out, which
    leaves the page enlarged and wider than the screen. So text fields get at least 16px on touch devices
