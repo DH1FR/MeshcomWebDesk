@@ -126,6 +126,10 @@
                     {
                         <span class="tab-unread">@(tab.UnreadCount > 99 ? "99+" : tab.UnreadCount.ToString())</span>
                     }
+                    @if (tab.MentionUnread > 0)
+                    {
+                        <span class="tab-mention" title="@Loc.TF("{0} neue Erwähnung(en) deines Rufzeichens", "{0} new mention(s) of your callsign", tab.MentionUnread)">&#64;@(tab.MentionUnread > 99 ? "99+" : tab.MentionUnread.ToString())</span>
+                    }
                     @if (QsoSummaryService.IsDbReady && tab.Key != "*" && !tab.Key.StartsWith('#'))
                     {
                         <span class="tab-ai-icon" title="@(tab.HasQsoSummary ? Loc.T("QSO-Zusammenfassung verfügbar", "QSO summary available") : Loc.T("QSO-Verlauf & Suche", "QSO History & Search"))"
@@ -189,7 +193,7 @@
                             </div>
                         }
                         msgIdx++;
-                        <div class="message @(msg.IsOutgoing ? (_settings.OwnMessagesAlignLeft ? "msg-out-left" : "msg-out") : "msg-in")" @key="msg">
+                        <div class="message @((msg.IsOutgoing ? (_settings.OwnMessagesAlignLeft ? "msg-out-left" : "msg-out") : "msg-in") + (msg.MentionedUs ? " msg-mention" : ""))" @key="msg">
                             <span class="msg-time">
                                 @{ var msgTs = LT(msg.Timestamp); var msgDate = TsDate(msgTs); }
                                 @msgTs.ToString("HH:mm:ss")
@@ -1793,6 +1797,10 @@
     {
         // Reset divider for the previously active tab
         _newMessagesFromIndex = -1;
+
+        // Leaving a tab: its new "@mention" marks have done their job, the messages become ordinary again.
+        if (_activeTabKey is { } leftKey && leftKey != key)
+            ChatService.ClearMentionMarks(_activeNodeId, leftKey);
 
         _activeTabKey = key;
         _activeTab = ChatService.GetTab(key, _activeNodeId);

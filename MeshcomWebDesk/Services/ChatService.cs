@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
+using MeshcomWebDesk.Helpers;
 using MeshcomWebDesk.Models;
 using MeshcomWebDesk.Services.Database;
 
@@ -495,11 +496,16 @@ public class ChatService
         bool wasNewDirect = false;
         if (tabAllowed)
             tab = GetOrCreateTab(state, tabKey, nodeId, out wasNewDirect);
+
+        // Somebody addressed us in a group ("@DH1FR-4 …"): decided only now, as the message arrives, so old
+        // messages and the history loaded at start never count.
+        bool mentionsUs = tab != null && (isGroup || tabKey == "*") && IsMentionOfUs(message);
         lock (_lock)
         {
             AppendToMonitor(message, state);
             if (tab != null)
             {
+                if (mentionsUs) { message.MentionedUs = true; tab.MentionUnread++; }
                 AppendToTab(tab, message);
                 tab.UnreadCount++;
             }
@@ -637,7 +643,50 @@ public class ChatService
     public void ClearUnread(string key, Guid? nodeId)
     {
         if (ResolveState(nodeId).Tabs.TryGetValue(key, out var tab))
-            lock (_lock) { tab.UnreadCount = 0; }
+            lock (_lock) { tab.UnreadCount = 0; tab.MentionUnread = 0; }
+    }
+
+    // ── Mentions of our own callsign ──────────────────────────────────────
+
+    /// <summary>All callsigns we answer to: the configured one and the callsign of every enabled node.</summary>
+    private List<string> OwnCallsigns()
+    {
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (!string.IsNullOrWhiteSpace(_settings.MyCallsign)) set.Add(_settings.MyCallsign.Trim());
+        if (_nodeManager is not null)
+            foreach (var n in _nodeManager.Nodes)
+            {
+                var c = n.IsPrimary ? _settings.MyCallsign : n.Callsign;
+                if (!string.IsNullOrWhiteSpace(c)) set.Add(c.Trim());
+            }
+        return set.ToList();
+    }
+
+    /// <summary>
+    /// An incoming message from somebody else that carries "@<own callsign>" (see <see cref="MentionHelper"/>).
+    /// Acks, positions and telemetry are never mentions.
+    /// </summary>
+    private bool IsMentionOfUs(MeshcomMessage message)
+    {
+        if (message.IsOutgoing || message.IsAck || message.IsPositionBeacon || message.IsTelemetry) return false;
+        if (string.IsNullOrEmpty(message.Text) || message.Text.IndexOf('@') < 0) return false;
+        var own = OwnCallsigns();
+        if (own.Contains(message.From, StringComparer.OrdinalIgnoreCase)) return false;   // an echo of our own message
+        return MentionHelper.MentionsAny(message.Text, own);
+    }
+
+    /// <summary>
+    /// Removes the mention marks from the messages of a tab. Called when the user leaves the tab: while reading it
+    /// the new mentions stand out, afterwards they are ordinary messages again.
+    /// </summary>
+    public void ClearMentionMarks(Guid? nodeId, string key)
+    {
+        if (!ResolveState(nodeId).Tabs.TryGetValue(key, out var tab)) return;
+        lock (_lock)
+        {
+            foreach (var m in tab.Messages)
+                if (m.MentionedUs) m.MentionedUs = false;
+        }
     }
 
     // ── Unread tracking / MQTT unread alert ───────────────────────────────
@@ -674,9 +723,10 @@ public class ChatService
         bool changed, sendRead;
         lock (_lock)
         {
-            changed  = tab.UnreadCount != 0 || tab.AlertUnread != 0 || tab.AlertPublished;
+            changed  = tab.UnreadCount != 0 || tab.MentionUnread != 0 || tab.AlertUnread != 0 || tab.AlertPublished;
             sendRead = tab.AlertPublished;
             tab.UnreadCount      = 0;
+            tab.MentionUnread    = 0;
             tab.AlertUnread      = 0;
             tab.AlertLastMessage = null;
             tab.AlertPublished   = false;

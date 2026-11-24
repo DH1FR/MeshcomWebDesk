@@ -1496,6 +1496,7 @@
     "Via PayPal": "Por PayPal",
     "Send me an e-mail": "Envíame un correo",
     "The Docker image for {0} is still being built (about 3 minutes). Then click “Check now” and update.": "La imagen de Docker para {0} aún se está construyendo (unos 3 minutos). Después pulsa «Comprobar ahora» y actualiza.",
-    "The new image is not ready yet – please try again in a few minutes.": "La nueva imagen aún no está lista; inténtalo de nuevo en unos minutos."
+    "The new image is not ready yet – please try again in a few minutes.": "La nueva imagen aún no está lista; inténtalo de nuevo en unos minutos.",
+    "{0} new mention(s) of your callsign": "{0} nueva(s) mención(es) de tu indicativo"
   }
 }

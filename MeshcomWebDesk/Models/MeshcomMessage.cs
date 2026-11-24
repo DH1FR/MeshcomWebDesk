@@ -22,6 +22,14 @@ public class MeshcomMessage
     /// <summary>True if this message was sent by us.</summary>
     public bool IsOutgoing { get; set; }
 
+    /// <summary>
+    /// True when this incoming group message addresses one of our callsigns ("@DH1FR-4", see
+    /// <see cref="MeshcomWebDesk.Helpers.MentionHelper"/>). Marks the row in the chat. Set only when the message
+    /// arrives and cleared when the tab is left; never persisted, so old messages are never re-evaluated.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool MentionedUs { get; set; }
+
     /// <summary>Raw UDP data as received.</summary>
     public string RawData { get; set; } = string.Empty;
 

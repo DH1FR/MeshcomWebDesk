@@ -207,6 +207,26 @@ h1:focus {
     line-height: 1.6;
 }
 
+/* Someone addressed us ("@DH1FR-4") in this group while we were not looking */
+.tab-mention {
+    background: var(--primary);
+    color: var(--text-on-accent);
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 10px;
+    padding: 1px 6px;
+    min-width: 18px;
+    text-align: center;
+    line-height: 1.6;
+    margin-left: 3px;
+}
+
+/* A message that addresses us: stands out while the tab is open, ordinary again after leaving it */
+.message.msg-mention {
+    background: rgba(227, 179, 65, 0.16);
+    border-left-color: var(--warn);
+}
+
 .tab-new {
     background: var(--primary);
     color: #b7e4c7;
