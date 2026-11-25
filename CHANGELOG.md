@@ -1,6 +1,6 @@
 ﻿# Changelog
 
-## [1.18.3] – unreleased
+## [1.18.3] – 2026-11-25
 
 ### Features
 - **Alert when somebody mentions you in a group** – a group (or broadcast) message from somebody else that contains `@<your callsign>` (e.g. `@DH1FR-4`) is recognised when it arrives. The row gets a strong tint with a coloured edge, a pill *@ for you* and a short glow, the callsign in the text is highlighted, and the tab gets an *@N* badge next to the unread counter. On top of that you get a toast *You were mentioned* (a click opens the tab), its own two-pair tone (follows the 🔔 button) and a voice announcement in the five languages, at most once a minute per tab (follows the 🔊 button). No alert while you are looking at exactly that tab. Matching is case-insensitive and for the whole callsign: `@DH1FR-4` counts for your DH1FR-4, `@DH1FR` without SSID for every callsign with that base; other SSIDs, `/P`, e-mail addresses and foreign callsigns do not. The callsigns of all enabled nodes count; ACKs, positions, telemetry and your own messages never do. Switch for the alert: **Settings → Chat & display → Watchlist → Mention** (default on); the row mark and the tab badge stay on either way.
