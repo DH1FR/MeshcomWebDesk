@@ -699,6 +699,17 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                 }
             }
 
+            // KISS delivers RSSI/SNR in a separate RxMeta frame that arrives just AFTER the data frame
+            // (which already triggered this command). Give it a moment before answering "rx",
+            // otherwise the first reply says "signal unknown".
+            if (message.Rssi is null && !string.Equals(message.SrcType, "udp", StringComparison.OrdinalIgnoreCase)
+                && MeshcomWebDesk.Services.Bot.BotCommandService.StripPrefix(message.Text?.Trim() ?? string.Empty)
+                       .Split(' ', 2)[0].Equals("rx", StringComparison.OrdinalIgnoreCase))
+            {
+                for (var i = 0; i < 20 && message.Rssi is null; i++)
+                    await Task.Delay(50);
+            }
+
             var reply = await _botCommandService.ExecuteAsync(message.Text!, message.From, message);
             reply = await ExpandVariablesAsync(reply, message.From, before: message.Timestamp);
 

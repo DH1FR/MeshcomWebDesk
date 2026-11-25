@@ -8,6 +8,10 @@
 ### Improvements
 - **Bot commands work with `--` again** – besides `>` the bot answers direct messages that start with `--` (two hyphens) or `—` (em dash, as typed by many mobile keyboards) and a letter: `--ping` and `>ping` are the same, likewise `--version`, `--help`, `--time`, … Reason: some devices, e.g. the LilyGo T-Deck, have no `>` key. `---===` style decoration and a bare `ping` are still ordinary chat text. The ping round-trip time works for both forms.
 
+
+### Bugfixes
+- **`>rx` over KISS no longer answers "signal unknown" on the first try** – with a KISS/TCP node the signal values (RSSI/SNR) arrive in a separate frame just after the message, but the bot had already built its reply by then. It now waits up to 1 s for them before answering `rx`.
+
 ---
 
 ## [1.18.3] – released
