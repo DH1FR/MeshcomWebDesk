@@ -1465,7 +1465,7 @@ dotnet run --launch-profile lan-https
 WebDesk is open to everybody who can reach it. To keep other people in the network out, set a shared password under **Settings → System → Access protection** (modes: *Off*, *Only from other devices* – recommended, *Always*). Details: see *What's New in v1.18.4*.
 
 - **Use https** where you can (`lan-https` profile / Docker https overlay, see above): over plain http the password crosses the network in clear text. When https is available, WebDesk redirects protected requests from other devices to it. Behind a reverse proxy let the proxy do https and set `X-Forwarded-Proto`.
-- **Docker:** from the container's point of view every browser is "another device" (it sees the Docker network address, not `localhost`), so the PC running Docker needs the password too.
+- **Docker:** with `network_mode: host` (as in `docker-compose.image.yml`) a browser on the Docker host itself counts as `localhost`, other devices need the password. With a published port in bridge mode (`ports: "5162:5162"`) every browser – the Docker host included – arrives with the Docker network address and has to log in. The password hash lives in `./data/access.json`, so it survives updates.
 - **Forgot the password?** On the machine running WebDesk: `MeshcomWebDesk --reset-password` (protection off) or `MeshcomWebDesk --reset-password NEWPASSWORD` (new password; note that a password on the command line ends up in the shell history). Docker: `docker exec <container> ./MeshcomWebDesk --reset-password`. No shell available: start the container once with the environment variable `MESHCOM_RESET_ACCESS=1` and remove it again. Last resort: delete `access.json` in the data folder. Nothing in the browser or over the network can reset the password.
 
 ---
