@@ -20,6 +20,7 @@
 - **MySQL monitor storage no longer floods the log** – with an unreachable database every incoming message started its own connect attempt (about 15 s) and logged a full error. After a failed write the storage now pauses for 60 seconds: the first failure is logged once (and says that messages in the pause are not stored), repeated failures only as a short warning, the first success logs how many messages were skipped. Saving the settings (e.g. a corrected connection string) ends the pause at once.
 - **`install.sh` update over a running service** – copying the binary failed with *Text file busy*; the service is stopped first if it is active (#18).
 - **No scary error at every start** – a browser carrying an antiforgery cookie from another instance (the cookie is shared by every port on `localhost`) made WebDesk log *key was not found in the key ring* with a long stack trace right after the start, although the request succeeded. That one harmless message is hidden now.
+- **Monitor could not be collapsed or resized in some Firefox browsers** – where Firefox blocks site storage (blocked cookies/site data, strict tracking or fingerprinting protection, *delete cookies on close*), reading or writing `localStorage` threw an error: the ▼/▲ toggle did nothing and the divider could not be dragged. All storage access in `chat.js` is now guarded and falls back to memory, so both work; the setting is just not kept after a reload in such a browser.
 
 ---
 

@@ -3,6 +3,22 @@
 window.meshcomChat = (function () {
     const STORAGE_KEY = 'meshcom-monitor-height';
 
+    // localStorage can throw (SecurityError) in Firefox when site data is blocked, with strict tracking /
+    // fingerprinting protection or "delete cookies on close". Never let that break the UI: fall back to
+    // an in-memory copy so toggles and the pane resizer keep working for the current page lifetime.
+    var memStore = {};
+    function lsGet(key) {
+        try { return localStorage.getItem(key); } catch (e) { return key in memStore ? memStore[key] : null; }
+    }
+    function lsSet(key, value) {
+        memStore[key] = String(value);
+        try { localStorage.setItem(key, value); } catch (e) { }
+    }
+    function lsRemove(key) {
+        delete memStore[key];
+        try { localStorage.removeItem(key); } catch (e) { }
+    }
+
     // Berechnet die JSON-kodierten Bytes des msg-Werts, so wie C# JsonSerializer sie sendet.
     // ASCII-Zeichen: 1 Byte. BMP-Non-ASCII (z.B. °, ü): \uXXXX = 6 Bytes.
     // Emojis (surrogate pairs): \uXXXX\uXXXX = 12 Bytes.
@@ -50,7 +66,7 @@ window.meshcomChat = (function () {
         divider.dataset.resizerInit = '1';
 
         // Restore previously saved height
-        const saved = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
+        const saved = parseInt(lsGet(STORAGE_KEY) || '0', 10);
         if (saved > 0) {
             lowerPane.style.height = saved + 'px';
             lowerPane.style.flex   = 'none';
@@ -70,7 +86,7 @@ window.meshcomChat = (function () {
 
         function onUp() {
             var h = Math.round(lowerPane.getBoundingClientRect().height);
-            localStorage.setItem(STORAGE_KEY, h);
+            lsSet(STORAGE_KEY, h);
             if (window.meshcomMonitor) window.meshcomMonitor.setHeight(h);
             document.removeEventListener('mousemove', onMove);
             document.removeEventListener('mouseup',   onUp);
@@ -428,44 +444,44 @@ window.meshcomChat = (function () {
             if (!bar || !btn || bar.scrollWidth <= bar.clientWidth + 1) return;
             bar.scrollTo({ left: btn.offsetLeft - (bar.clientWidth - btn.offsetWidth) / 2, behavior: 'smooth' });
         },
-        getActiveTab:      () => localStorage.getItem('meshcom-active-tab') || '',
+        getActiveTab:      () => lsGet('meshcom-active-tab') || '',
         setActiveTab:      (key) => {
-            if (key) localStorage.setItem('meshcom-active-tab', key);
-            else     localStorage.removeItem('meshcom-active-tab');
+            if (key) lsSet('meshcom-active-tab', key);
+            else     lsRemove('meshcom-active-tab');
         },
         getMonitorVisible: () => {
-            var v = localStorage.getItem('meshcom-monitor-visible-v2');
+            var v = lsGet('meshcom-monitor-visible-v2');
             // First visit on a compact (tiny) display: start with the monitor hidden
             if (v === null && document.documentElement.getAttribute('data-display') === 'compact') return false;
             return v === null ? null : v === '1';
         },
         setMonitorVisible: (visible) => {
-            localStorage.setItem('meshcom-monitor-visible-v2', visible ? '1' : '0');
+            lsSet('meshcom-monitor-visible-v2', visible ? '1' : '0');
             if (window.meshcomMonitor) window.meshcomMonitor.setVisible(visible, true);
         },
         getVoiceEnabled: () => {
-            var v = localStorage.getItem('meshcom-voice-enabled');
+            var v = lsGet('meshcom-voice-enabled');
             return v === null ? null : v === '1';
         },
         setVoiceEnabled: (enabled) =>
-            localStorage.setItem('meshcom-voice-enabled', enabled ? '1' : '0'),
+            lsSet('meshcom-voice-enabled', enabled ? '1' : '0'),
         getTabOrder: () => {
-            var v = localStorage.getItem('meshcom-tab-order');
+            var v = lsGet('meshcom-tab-order');
             try { return v ? JSON.parse(v) : []; } catch (e) { return []; }
         },
         setTabOrder: (keys) =>
-            localStorage.setItem('meshcom-tab-order', JSON.stringify(keys || [])),
+            lsSet('meshcom-tab-order', JSON.stringify(keys || [])),
         getSetupHintDismissed: () => { try { return localStorage.getItem('meshcom-setup-hint-dismissed') === '1'; } catch (e) { return false; } },
         setSetupHintDismissed: () => { try { localStorage.setItem('meshcom-setup-hint-dismissed', '1'); } catch (e) { } },
         getSetupPromptSeen: () => { try { return sessionStorage.getItem('meshcom-setup-prompt-seen') === '1'; } catch (e) { return false; } },
         setSetupPromptSeen: () => { try { sessionStorage.setItem('meshcom-setup-prompt-seen', '1'); } catch (e) { } },
         scrollToId: (id) => { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); },
-        getSettingsSections: () => localStorage.getItem('meshcom-settings-sections'),
-        setSettingsSections: (csv) => localStorage.setItem('meshcom-settings-sections', csv ?? ''),
-        getLoraHighlight:    () => localStorage.getItem('meshcom-lora-highlight') === '1',
-        setLoraHighlight:    (v) => localStorage.setItem('meshcom-lora-highlight', v ? '1' : '0'),
-        getWelcomedMinorVersion: () => localStorage.getItem('meshcom-welcomed-minor-version') || '',
-        setWelcomedMinorVersion: (v) => localStorage.setItem('meshcom-welcomed-minor-version', v || ''),
+        getSettingsSections: () => lsGet('meshcom-settings-sections'),
+        setSettingsSections: (csv) => lsSet('meshcom-settings-sections', csv ?? ''),
+        getLoraHighlight:    () => lsGet('meshcom-lora-highlight') === '1',
+        setLoraHighlight:    (v) => lsSet('meshcom-lora-highlight', v ? '1' : '0'),
+        getWelcomedMinorVersion: () => lsGet('meshcom-welcomed-minor-version') || '',
+        setWelcomedMinorVersion: (v) => lsSet('meshcom-welcomed-minor-version', v || ''),
 
         // ── Nachricht in Zwischenablage kopieren ──
         copyToClipboard: (text) => {
