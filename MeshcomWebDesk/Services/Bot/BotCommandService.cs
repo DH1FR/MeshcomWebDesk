@@ -38,16 +38,30 @@ public class BotCommandService
     }
 
     /// <summary>
-    /// Returns true when <paramref name="text"/> is a bot command: it starts with <c>&gt;</c> and a letter
-    /// follows immediately (<c>&gt;ping</c>, <c>&gt;version</c>).
-    /// <c>--cmd</c> (the node firmware's own console commands), the em dash variant and a bare <c>ping</c>
-    /// are ordinary chat text and are NOT answered: the node firmware owns the <c>--</c> namespace.
+    /// Returns true when <paramref name="text"/> is a bot command: it starts with <c>&gt;</c>, <c>--</c> (two hyphens)
+    /// or <c>—</c> (em dash, typed by some mobile keyboards instead of <c>--</c>) and a letter follows
+    /// immediately (<c>&gt;ping</c>, <c>--ping</c>, <c>&gt;version</c>). <c>--</c> is needed because some devices (e.g. the
+    /// LilyGo T-Deck) have no <c>&gt;</c> key.
+    /// The letter requirement keeps decoration strings like <c>---===</c> from being mistaken for commands.
+    /// A bare <c>ping</c> is ordinary chat text and is NOT answered.
     /// </summary>
-    public static bool IsCommand(string? text) =>
-        text != null &&
-        text.Length > 1 &&
-        text[0] == '>' &&
-        char.IsLetter(text[1]);
+    public static bool IsCommand(string? text) => PrefixLength(text) > 0;
+
+    /// <summary>Length of the command prefix (<c>&gt;</c> = 1, <c>--</c> = 2, em dash = 1), 0 when it is no command.</summary>
+    private static int PrefixLength(string? text)
+    {
+        if (text is null) return 0;
+        if (text.Length > 2 && text.StartsWith("--", StringComparison.Ordinal) && char.IsLetter(text[2])) return 2;
+        if (text.Length > 1 && (text[0] == '>' || text[0] == '—') && char.IsLetter(text[1])) return 1;
+        return 0;
+    }
+
+    /// <summary>The text without its command prefix (<c>&gt;ping x</c>, <c>--ping x</c> and <c>—ping x</c> all give <c>ping x</c>).</summary>
+    public static string StripPrefix(string text) => text[PrefixLength(text)..];
+
+    /// <summary>True for the bare ping command in any accepted form (<c>&gt;ping</c>, <c>--ping</c>, em dash).</summary>
+    public static bool IsPing(string? text) =>
+        text != null && IsCommand(text.Trim()) && StripPrefix(text.Trim()).Equals("ping", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// All currently active commands: built-in (DI-registered) plus user-defined (from config).
@@ -67,10 +81,9 @@ public class BotCommandService
     /// </summary>
     public async Task<string> ExecuteAsync(string text, string senderCallsign, MeshcomMessage? context = null)
     {
-        // Strip the leading ">" (the Settings test box also accepts a bare command name)
-        var body = text.Length > 0 && text[0] == '>'
-            ? (text.Length > 1 ? text[1..] : string.Empty)
-            : text;
+        // Strip the leading ">", "--" or em dash (the Settings test box also accepts a bare command name,
+        // and a lone prefix without a letter is answered with the help)
+        var body = IsCommand(text) ? StripPrefix(text) : text.TrimStart('>', '—', '-');
 
         var parts = body.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var name  = parts.Length > 0 ? parts[0].ToLowerInvariant() : string.Empty;

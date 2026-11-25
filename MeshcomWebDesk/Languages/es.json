@@ -434,7 +434,7 @@
     "Import theme file (.mctheme.json)": "Importar archivo de tema (.mctheme.json)",
     "Inactive": "Inactivo",
     "inactive": "inactivo",
-    "Incoming direct messages starting with > are interpreted as commands. Built-in: >version, >time, >mh, >ping, >rx, >echo, >help.": "Los mensajes directos entrantes que empiezan por > se interpretan como comandos. Integrados: >version, >time, >mh, >ping, >rx, >echo, >help.",
+    "Incoming direct messages starting with > or -- are interpreted as commands. Built-in: >version, >time, >mh, >ping, >rx, >echo, >help (also with -- instead of >).": "Los mensajes directos entrantes que empiezan por > o -- se interpretan como comandos. Integrados: >version, >time, >mh, >ping, >rx, >echo, >help (también con -- en lugar de >).",
     "InfluxDB bucket": "Bucket InfluxDB",
     "InfluxDB token": "Token InfluxDB",
     "InfluxDB URL": "URL InfluxDB",

@@ -951,8 +951,8 @@
                             @if (IsOpen("bot")) {
                             <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
                                 ℹ️ @Loc.T(
-                                    "Eingehende Direkt-Nachrichten, die mit > beginnen, werden als Befehle interpretiert. Eingebaut: >version, >time, >mh, >ping, >rx, >echo, >help.",
-                                    "Incoming direct messages starting with > are interpreted as commands. Built-in: >version, >time, >mh, >ping, >rx, >echo, >help.")
+                                    "Eingehende Direkt-Nachrichten, die mit > oder -- beginnen, werden als Befehle interpretiert. Eingebaut: >version, >time, >mh, >ping, >rx, >echo, >help (auch mit -- statt >).",
+                                    "Incoming direct messages starting with > or -- are interpreted as commands. Built-in: >version, >time, >mh, >ping, >rx, >echo, >help (also with -- instead of >).")
                             </div>
                             <div class="settings-grid">
                                 <label>@Loc.T("Bot aktiv", "Bot Active")</label>

@@ -31,6 +31,13 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
+## 🆕 What's New in v1.18.4 *(unreleased – `dev` branch)*
+
+### ✨ Improvements
+- **Bot commands work with `--` again** – besides `>` the bot answers direct messages that start with `--` (two hyphens) or `—` (em dash, as typed by many mobile keyboards) and a letter: `--ping` and `>ping` are the same, likewise `--version`, `--help`, `--time`, … Reason: some devices, e.g. the LilyGo T-Deck, have no `>` key. `---===` style decoration and a bare `ping` are still ordinary chat text. The ping round-trip time works for both forms.
+
+---
+
 ## 🆕 What's New in v1.18.3
 
 ### ✨ Features
@@ -695,7 +702,7 @@ Automatically announces recurring events (e.g. club meetings) to a configured gr
 
 ### 🤖 Bot – Remote commands via direct message
 - **Command-based auto-responses** for incoming direct messages
-- Trigger: any direct message starting with `>` **immediately followed by a letter** (`>ping`, `>version` …). `--…` is left to the node firmware's own console commands, so it (and a bare `ping`) is ordinary chat text and is not answered
+- Trigger: any direct message starting with `>`, `--` (two hyphens) or `—` (em dash, as typed by many mobile keyboards) **immediately followed by a letter** (`>ping` or `--ping`, `>version` …). Both forms work, because some devices – e.g. the LilyGo T-Deck – have no `>` key. Decoration strings like `---===` are ignored; a bare `ping` is ordinary chat text and is not answered
 - **Built-in commands:**
 
   | Command | Response |

@@ -161,9 +161,8 @@ public class ChatService
 
     private static string PendingPingKey(Guid bucketId, string partner) => $"{bucketId}:{partner.Trim()}";
 
-    /// <summary>True for the bare bot ping command ">ping"; a plain "ping" or "--ping" is ordinary text now.</summary>
-    private static bool IsPingText(string text) =>
-        text.Trim().Equals(">ping", StringComparison.OrdinalIgnoreCase);
+    /// <summary>True for the bare bot ping command (">ping" or "--ping"); a plain "ping" is ordinary text.</summary>
+    private static bool IsPingText(string text) => MeshcomWebDesk.Services.Bot.BotCommandService.IsPing(text);
 
     /// <summary>Raised when a message is added or a tab changes.</summary>
     public event Action? OnChange;

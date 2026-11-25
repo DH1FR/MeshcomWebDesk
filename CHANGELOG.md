@@ -1,5 +1,12 @@
 ﻿# Changelog
 
+## [1.18.4] – unreleased
+
+### Improvements
+- **Bot commands work with `--` again** – besides `>` the bot answers direct messages that start with `--` (two hyphens) or `—` (em dash, as typed by many mobile keyboards) and a letter: `--ping` and `>ping` are the same, likewise `--version`, `--help`, `--time`, … Reason: some devices, e.g. the LilyGo T-Deck, have no `>` key. `---===` style decoration and a bare `ping` are still ordinary chat text. The ping round-trip time works for both forms.
+
+---
+
 ## [1.18.3] – 2026-11-25
 
 ### Features
