@@ -42,3 +42,6 @@ installer/output/
 ## License generation tools (privat – NIEMALS committen!)
 ## Gesamter tools/-Ordner bleibt lokal und wird nicht in Git aufgenommen.
 tools/
+
+## Local GitHub statistics history (scripts/github-stats.ps1)
+scripts/stats-history/
