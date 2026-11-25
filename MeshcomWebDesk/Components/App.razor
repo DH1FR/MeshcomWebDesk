@@ -21,7 +21,9 @@
        Runs before first paint. ?display=compact|normal|auto only applies to this browser tab
        (sessionStorage, so a test URL never leaks into other windows or the installed app);
        the choice in Settings -> Appearance is kept permanently (localStorage).
-       "auto" picks compact for very small viewports. CSS keys off html[data-display="compact"]. *@
+       "auto" picks compact for very small viewports: up to 500px high in landscape (a phone held sideways is only
+       about 375-430px high; with the normal layout the header, tabs, send bar and status bar left no room for the
+       chat) and up to 340px wide in portrait. CSS keys off html[data-display="compact"]. *@
     <script>
         (function () {
             var KEY = 'meshcom.display';
@@ -31,7 +33,7 @@
                 if (q === 'compact' || q === 'normal' || q === 'auto') sessionStorage.setItem(KEY, q);
                 mode = sessionStorage.getItem(KEY) || localStorage.getItem(KEY) || 'auto';
             } catch (e) { /* storage blocked: stay on auto */ }
-            var mq = window.matchMedia('(max-height: 340px) and (orientation: landscape), (max-width: 340px) and (orientation: portrait)');
+            var mq = window.matchMedia('(max-height: 500px) and (orientation: landscape), (max-width: 340px) and (orientation: portrait)');
             function apply() {
                 var compact = mode === 'compact' || (mode !== 'normal' && mq.matches);
                 document.documentElement.setAttribute('data-display', compact ? 'compact' : 'normal');
@@ -255,6 +257,32 @@
                     }
                 } catch (e) {
                     console.warn('Watchlist audio notification failed:', e);
+                }
+            };
+
+            // Two "ding-dong" pairs (988 -> 1319 Hz, twice) when somebody mentions our callsign (at-sign + callsign)
+            window.playMentionBeep = function () {
+                try {
+                    var ctx = getAudioContext();
+                    function doPlay() {
+                        var now = ctx.currentTime;
+                        [0, 0.16, 0.45, 0.61].forEach(function (offset, i) {
+                            var osc  = ctx.createOscillator();
+                            var gain = ctx.createGain();
+                            osc.connect(gain);
+                            gain.connect(ctx.destination);
+                            osc.type = 'triangle';
+                            osc.frequency.value = [988, 1319, 988, 1319][i];
+                            gain.gain.setValueAtTime(0.0, now + offset);
+                            gain.gain.linearRampToValueAtTime(0.32, now + offset + 0.02);
+                            gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.15);
+                            osc.start(now + offset);
+                            osc.stop(now + offset + 0.15);
+                        });
+                    }
+                    if (ctx.state === 'suspended') { ctx.resume().then(doPlay); } else { doPlay(); }
+                } catch (e) {
+                    console.warn('Mention audio notification failed:', e);
                 }
             };
         })();

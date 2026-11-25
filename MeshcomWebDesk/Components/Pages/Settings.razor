@@ -564,6 +564,15 @@
                 </label>
                 <input type="number" step="0.5" @bind="_model.TimeOffsetHours" />
 
+                <label>
+                    @Loc.T("Ungelesene im Browser-Tab anzeigen", "Show unread count in browser tab")<br />
+                    <small>@Loc.T("Zahl im Tab-Titel, z. B. (3), und Punkt am Symbol – praktisch, wenn der Ton aus ist", "Number in the tab title, e. g. (3), and a dot on the icon – handy when the sound is off")</small>
+                </label>
+                <label class="settings-toggle">
+                    <input type="checkbox" @bind="_model.TabTitleUnreadEnabled" />
+                    <span>@(_model.TabTitleUnreadEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
+                </label>
+
                 <label>@Loc.T("Gruppenfilter aktiv", "Group Filter Active")</label>
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.GroupFilterEnabled" />
@@ -1399,6 +1408,10 @@
                     <small>@Loc.T("(Gruppe z.\u00a0B. #262, * für Alle, oder Rufzeichen)", "(Group e.\u00a0g. #262, * for all, or callsign)")</small>
                 </label>
                 <input type="text" @bind="_model.TelemetryGroup" placeholder="#262 / * / OE1KBC-1" />
+                <div style="grid-column:1/-1;font-size:.8rem;color:#8b949e;margin-top:.2rem">
+                    @Loc.T("Leer lassen, wenn nur native Telemetrie (extudp) gesendet werden soll – dann wird keine Textnachricht verschickt, auch nicht über \"Telemetrie jetzt senden\".",
+                           "Leave empty to send native telemetry (extudp) only – then no text message is sent, not even via \"Send Telemetry Now\".")
+                </div>
 
                 <label>
                     @Loc.T("Sendezeiten (Stunden 0\u201323)", "Send times (hours 0\u201323)")<br />
@@ -1782,9 +1795,80 @@
                 </div>
 
                 <label>
+                    @Loc.T("Erwähnung", "Mention")<br />
+                    <small>@Loc.T("Jemand schreibt in einer Gruppe @ und dein Rufzeichen, z. B. @DH1FR-4 oder @DH1FR", "Someone writes @ and your callsign in a group, e. g. @DH1FR-4 or @DH1FR")</small>
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
+                    <input type="checkbox" @bind="_model.MentionAlertEnabled" />
+                    @Loc.T("Meldung, Signalton und Sprachansage bei Erwähnung", "Alert, tone and voice announcement on a mention")
+                </label>
+
+                <label>
+                    @Loc.T("CQ-Rufe an Alle", "CQ calls to everybody")<br />
+                    <small>@Loc.T("Ein CQ im Tab „Alle“ (nicht an eine Gruppe) löst auch die CQ-Meldung aus – Toast, Signalton, Sprachansage", "A CQ in the \"All\" tab (not sent to a group) also raises the CQ alert – toast, tone, voice announcement")</small>
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
+                    <input type="checkbox" @bind="_model.CqOnBroadcastEnabled" />
+                    @Loc.T("CQ-Meldung auch für „Alle“", "CQ alert for \"All\" as well")
+                </label>
+
+                <label>
                     @Loc.T("Anzeigedauer (Minuten)", "Display duration (minutes)")
                 </label>
                 <input type="number" min="1" max="60" @bind="_model.WatchAlertMinutes" />
+
+                <label>
+                    @Loc.T("Desktop-Benachrichtigungen", "Desktop notifications")<br />
+                    <small>@Loc.T("Pop-up des Betriebssystems für diese Meldungen, nur wenn niemand auf WebDesk schaut. Der Browser fragt einmal nach der Erlaubnis.", "Operating-system pop-up for these alerts, only while nobody is looking at WebDesk. The browser asks for permission once.")</small>
+                </label>
+                <div style="display:flex;flex-direction:column;gap:4px">
+                    <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
+                        <input type="checkbox" checked="@_model.DesktopNotifyEnabled" @onchange="OnDesktopNotifyToggledAsync" />
+                        @Loc.T("Desktop-Benachrichtigungen aktivieren", "Enable desktop notifications")
+                    </label>
+                    @if (_notifyPermission == "denied")
+                    {
+                        <small style="color:#e8a020">⚠ @Loc.T("Der Browser blockiert Benachrichtigungen für diese Seite. Bitte in den Website-Einstellungen des Browsers erlauben.", "The browser blocks notifications for this site. Please allow them in the browser site settings.")</small>
+                    }
+                    else if (_notifyPermission == "unsupported")
+                    {
+                        <small style="color:#e8a020">⚠ @Loc.T("Dieser Browser unterstützt keine Benachrichtigungen.", "This browser does not support notifications.")</small>
+                    }
+                    else if (_notifyPermission == "granted")
+                    {
+                        <small>✓ @Loc.T("Erlaubnis erteilt", "Permission granted")</small>
+                    }
+                    @if (_model.DesktopNotifyEnabled)
+                    {
+                        <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
+                            <input type="checkbox" @bind="_model.DesktopNotifyDirect" />
+                            @Loc.T("Direktnachrichten", "Direct messages")
+                        </label>
+                        <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
+                            <input type="checkbox" @bind="_model.DesktopNotifyMention" />
+                            @Loc.T("Erwähnungen", "Mentions")
+                        </label>
+                        <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
+                            <input type="checkbox" @bind="_model.DesktopNotifyWatchlist" />
+                            @Loc.T("Watchlist-Rufzeichen", "Watchlist callsigns")
+                        </label>
+                        <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
+                            <input type="checkbox" @bind="_model.DesktopNotifyWatchGroup" />
+                            @Loc.T("Beobachtete Gruppen", "Watched groups")
+                        </label>
+                        <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
+                            <input type="checkbox" @bind="_model.DesktopNotifyCq" />
+                            @Loc.T("CQ-Rufe", "CQ calls")
+                        </label>
+                        <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
+                            <input type="checkbox" @bind="_model.DesktopNotifySilent" />
+                            @Loc.T("Ohne Systemton", "Without system sound")
+                        </label>
+                        <div>
+                            <button type="button" class="btn-small" @onclick="TestDesktopNotifyAsync">🔔 @Loc.T("Test-Benachrichtigung", "Test notification")</button>
+                        </div>
+                    }
+                </div>
             </div>
             }
         </div>
@@ -2892,7 +2976,7 @@
         new("tele",       "send",   "Telemetrie",               "Telemetry",               "telemetry messwerte sensor api home assistant"),
         new("quicktexts", "send",   "Schnelltexte",             "Quick texts",             "quick texte textbausteine buttons"),
         new("chat",       "chat",   "Chat & Monitor",           "Chat & Monitor",          "tab nachrichten messages monitor mh heard gruppen groups cooldown"),
-        new("watch",      "chat",   "Watchlist",                "Watchlist",               "beobachten alarm toast"),
+        new("watch",      "chat",   "Watchlist",                "Watchlist",               "beobachten alarm toast erwähnung mention @ rufzeichen"),
         new("blacklist",  "chat",   "Blacklist",                "Blacklist",               "sperren ignorieren"),
         new("grouplabels","chat",   "Gruppen-Namen",            "Group labels",            "gruppen group labels namen"),
         new("lang",       "chat",   "Sprache",                  "Language",                "language deutsch english español français italiano"),
@@ -3555,6 +3639,32 @@
         }
     }
 
+    private string? _notifyPermission;
+
+    private async Task OnDesktopNotifyToggledAsync(ChangeEventArgs e)
+    {
+        _model.DesktopNotifyEnabled = e.Value is true;
+        if (!_model.DesktopNotifyEnabled) return;
+        try { _notifyPermission = await JS.InvokeAsync<string>("meshcomChat.requestNotificationPermission"); }
+        catch (JSException) { _notifyPermission = "unsupported"; }
+        // Without permission the switch stays off (a still undecided "default" keeps it on).
+        if (_notifyPermission != "granted" && _notifyPermission != "default")
+            _model.DesktopNotifyEnabled = false;
+    }
+
+    private async Task TestDesktopNotifyAsync()
+    {
+        try
+        {
+            _notifyPermission = await JS.InvokeAsync<string>("meshcomChat.requestNotificationPermission");
+            if (_notifyPermission == "granted")
+                await JS.InvokeVoidAsync("meshcomChat.showNotification", "MeshCom WebDesk",
+                    Loc.T("Test: So sieht eine Benachrichtigung aus.", "Test: this is what a notification looks like."),
+                    "mc-test", _model.DesktopNotifySilent, "", "");
+        }
+        catch (JSException) { _notifyPermission = "unsupported"; }
+    }
+
     private async Task TestQrzAsync()
     {
         _qrzTesting    = true;
@@ -3855,6 +3965,16 @@
             WatchOnPosition     = s.WatchOnPosition,
             WatchOnTelemetry    = s.WatchOnTelemetry,
             WatchOnAck          = s.WatchOnAck,
+            MentionAlertEnabled = s.MentionAlertEnabled,
+            TabTitleUnreadEnabled = s.TabTitleUnreadEnabled,
+            CqOnBroadcastEnabled = s.CqOnBroadcastEnabled,
+            DesktopNotifyEnabled = s.DesktopNotifyEnabled,
+            DesktopNotifyWatchlist = s.DesktopNotifyWatchlist,
+            DesktopNotifyWatchGroup = s.DesktopNotifyWatchGroup,
+            DesktopNotifyCq = s.DesktopNotifyCq,
+            DesktopNotifyMention = s.DesktopNotifyMention,
+            DesktopNotifyDirect = s.DesktopNotifyDirect,
+            DesktopNotifySilent = s.DesktopNotifySilent,
             WatchAlertMinutes   = s.WatchAlertMinutes,
             DataPath            = s.DataPath,
             TimeOffsetHours     = s.TimeOffsetHours,
@@ -4721,6 +4841,16 @@
                 WatchOnPosition     = s.WatchOnPosition,
                 WatchOnTelemetry    = s.WatchOnTelemetry,
                 WatchOnAck          = s.WatchOnAck,
+                MentionAlertEnabled = s.MentionAlertEnabled,
+                TabTitleUnreadEnabled = s.TabTitleUnreadEnabled,
+                CqOnBroadcastEnabled = s.CqOnBroadcastEnabled,
+                DesktopNotifyEnabled = s.DesktopNotifyEnabled,
+                DesktopNotifyWatchlist = s.DesktopNotifyWatchlist,
+                DesktopNotifyWatchGroup = s.DesktopNotifyWatchGroup,
+                DesktopNotifyCq = s.DesktopNotifyCq,
+                DesktopNotifyMention = s.DesktopNotifyMention,
+                DesktopNotifyDirect = s.DesktopNotifyDirect,
+                DesktopNotifySilent = s.DesktopNotifySilent,
                 WatchAlertMinutes   = s.WatchAlertMinutes,
                 DataPath            = s.DataPath,
                 TimeOffsetHours     = s.TimeOffsetHours,
@@ -4903,6 +5033,16 @@
         public bool   WatchOnPosition     { get; set; } = true;
         public bool   WatchOnTelemetry    { get; set; } = false;
         public bool   WatchOnAck          { get; set; } = false;
+        public bool   MentionAlertEnabled { get; set; } = true;
+        public bool   TabTitleUnreadEnabled { get; set; } = true;
+        public bool   CqOnBroadcastEnabled { get; set; } = true;
+        public bool   DesktopNotifyEnabled { get; set; } = false;
+        public bool   DesktopNotifyWatchlist { get; set; } = true;
+        public bool   DesktopNotifyWatchGroup { get; set; } = true;
+        public bool   DesktopNotifyCq { get; set; } = true;
+        public bool   DesktopNotifyMention { get; set; } = true;
+        public bool   DesktopNotifyDirect { get; set; } = true;
+        public bool   DesktopNotifySilent { get; set; } = false;
         public int    WatchAlertMinutes    { get; set; } = 5;
         public string DataPath            { get; set; } = string.Empty;
         public double TimeOffsetHours     { get; set; } = 0;
@@ -5106,6 +5246,16 @@
             WatchOnPosition     = WatchOnPosition,
             WatchOnTelemetry    = WatchOnTelemetry,
             WatchOnAck          = WatchOnAck,
+            MentionAlertEnabled = MentionAlertEnabled,
+            TabTitleUnreadEnabled = TabTitleUnreadEnabled,
+            CqOnBroadcastEnabled = CqOnBroadcastEnabled,
+            DesktopNotifyEnabled = DesktopNotifyEnabled,
+            DesktopNotifyWatchlist = DesktopNotifyWatchlist,
+            DesktopNotifyWatchGroup = DesktopNotifyWatchGroup,
+            DesktopNotifyCq = DesktopNotifyCq,
+            DesktopNotifyMention = DesktopNotifyMention,
+            DesktopNotifyDirect = DesktopNotifyDirect,
+            DesktopNotifySilent = DesktopNotifySilent,
             WatchAlertMinutes   = Math.Max(1, WatchAlertMinutes),
             DataPath            = DataPath,
             TimeOffsetHours     = TimeOffsetHours,

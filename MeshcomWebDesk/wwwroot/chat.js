@@ -3,6 +3,22 @@
 window.meshcomChat = (function () {
     const STORAGE_KEY = 'meshcom-monitor-height';
 
+    // localStorage can throw (SecurityError) in Firefox when site data is blocked, with strict tracking /
+    // fingerprinting protection or "delete cookies on close". Never let that break the UI: fall back to
+    // an in-memory copy so toggles and the pane resizer keep working for the current page lifetime.
+    var memStore = {};
+    function lsGet(key) {
+        try { return localStorage.getItem(key); } catch (e) { return key in memStore ? memStore[key] : null; }
+    }
+    function lsSet(key, value) {
+        memStore[key] = String(value);
+        try { localStorage.setItem(key, value); } catch (e) { }
+    }
+    function lsRemove(key) {
+        delete memStore[key];
+        try { localStorage.removeItem(key); } catch (e) { }
+    }
+
     // Berechnet die JSON-kodierten Bytes des msg-Werts, so wie C# JsonSerializer sie sendet.
     // ASCII-Zeichen: 1 Byte. BMP-Non-ASCII (z.B. °, ü): \uXXXX = 6 Bytes.
     // Emojis (surrogate pairs): \uXXXX\uXXXX = 12 Bytes.
@@ -50,7 +66,7 @@ window.meshcomChat = (function () {
         divider.dataset.resizerInit = '1';
 
         // Restore previously saved height
-        const saved = parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10);
+        const saved = parseInt(lsGet(STORAGE_KEY) || '0', 10);
         if (saved > 0) {
             lowerPane.style.height = saved + 'px';
             lowerPane.style.flex   = 'none';
@@ -70,7 +86,7 @@ window.meshcomChat = (function () {
 
         function onUp() {
             var h = Math.round(lowerPane.getBoundingClientRect().height);
-            localStorage.setItem(STORAGE_KEY, h);
+            lsSet(STORAGE_KEY, h);
             if (window.meshcomMonitor) window.meshcomMonitor.setHeight(h);
             document.removeEventListener('mousemove', onMove);
             document.removeEventListener('mouseup',   onUp);
@@ -300,9 +316,124 @@ window.meshcomChat = (function () {
         if (attention) { attention.stop(); attention = null; }
     }
 
+    // ── Unread badge in the browser tab ───────────────────────────────────
+    // Prefixes the page title with "(n) " and puts a red dot on the favicon. Blazor's <PageTitle> sets the
+    // title itself (already including the number); this only re-applies it if something overwrote it and
+    // draws the favicon. n = 0 removes the dot again.
+    var favImg = null, favLink = null, favLastN = -1;
+
+    function setTabBadge(n) {
+        n = n > 0 ? n : 0;
+        // <PageTitle> is not updated interactively here, so the title is set directly.
+        try {
+            var baseTitle = document.title.replace(/^\(\d+\+?\) /, '');
+            var wanted = n > 0 ? '(' + (n > 99 ? '99+' : n) + ') ' + baseTitle : baseTitle;
+            if (document.title !== wanted) document.title = wanted;
+        } catch (e) { }
+        try {
+            if (n > 0 && navigator.setAppBadge) navigator.setAppBadge(n).catch(function () { });
+            else if (n === 0 && navigator.clearAppBadge) navigator.clearAppBadge().catch(function () { });
+        } catch (e) { }
+        if (n === favLastN) return;
+        favLastN = n;
+        try {
+            if (!favLink) {
+                favLink = document.createElement('link');
+                favLink.rel = 'icon';
+                favLink.id  = 'mc-unread-favicon';
+                favLink.type = 'image/png';
+            }
+            if (n === 0) {
+                if (favLink.parentNode) favLink.parentNode.removeChild(favLink);
+                return;
+            }
+            function draw() {
+                var c = document.createElement('canvas');
+                c.width = c.height = 64;
+                var g = c.getContext('2d');
+                if (favImg && favImg.complete && favImg.naturalWidth) g.drawImage(favImg, 0, 0, 64, 64);
+                g.beginPath(); g.arc(46, 18, 16, 0, Math.PI * 2);
+                g.fillStyle = '#e53935'; g.fill();
+                g.lineWidth = 4; g.strokeStyle = '#ffffff'; g.stroke();
+                favLink.href = c.toDataURL('image/png');
+                if (!favLink.parentNode) document.head.appendChild(favLink);
+            }
+            if (!favImg) {
+                favImg = new Image();
+                favImg.onload  = function () { if (favLastN > 0) draw(); };
+                favImg.onerror = function () { if (favLastN > 0) draw(); };
+                favImg.src = 'favicon.png';
+            } else {
+                draw();
+            }
+        } catch (e) { /* cosmetic only */ }
+    }
+
+    // ── Desktop notifications (browser Notification API) ───────────────────
+    var notifyRef = null;
+
+    function getNotificationPermission() {
+        return ('Notification' in window) ? Notification.permission : 'unsupported';
+    }
+
+    function requestNotificationPermission() {
+        if (!('Notification' in window)) return Promise.resolve('unsupported');
+        if (Notification.permission !== 'default') return Promise.resolve(Notification.permission);
+        try {
+            return Promise.resolve(Notification.requestPermission()).then(function (r) { return r || Notification.permission; });
+        } catch (e) { return Promise.resolve(Notification.permission); }
+    }
+
+    // Chrome on Android does not allow `new Notification()` – there it only works through the service worker.
+    // So the service worker is preferred everywhere; the page constructor is the fallback. A click is handled by
+    // the service worker (focus the window) which then tells the page which tab to open.
+    function setNotifyHandler(dotNetRef) {
+        notifyRef = dotNetRef;
+        if (!('serviceWorker' in navigator) || window.__mcNotifyMsg) return;
+        window.__mcNotifyMsg = true;
+        navigator.serviceWorker.addEventListener('message', function (ev) {
+            var d = ev.data;
+            if (d && d.type === 'mc-open-tab' && notifyRef && d.tabKey)
+                notifyRef.invokeMethodAsync('OpenTabFromNotification', d.tabKey, d.nodeId || '').catch(function () { });
+        });
+    }
+
+    // Same tag = replaces an older pop-up (also across several open WebDesk tabs) instead of piling up.
+    function showNotification(title, body, tag, silent, tabKey, nodeId) {
+        if (!('Notification' in window) || Notification.permission !== 'granted') return false;
+        var opts = {
+            body: body, tag: tag || undefined, renotify: !!tag, silent: !!silent, icon: 'favicon.png',
+            data: { tabKey: tabKey || '', nodeId: nodeId || '' }
+        };
+        function viaPage() {
+            try {
+                var n = new Notification(title, opts);
+                n.onclick = function () {
+                    try { window.focus(); } catch (e) { }
+                    n.close();
+                    if (notifyRef && tabKey) notifyRef.invokeMethodAsync('OpenTabFromNotification', tabKey, nodeId || '').catch(function () { });
+                };
+                setTimeout(function () { try { n.close(); } catch (e) { } }, 20000);
+                return true;
+            } catch (e) { return false; }
+        }
+        if ('serviceWorker' in navigator && navigator.serviceWorker.getRegistration) {
+            return navigator.serviceWorker.getRegistration().then(function (reg) {
+                if (reg && reg.showNotification) return reg.showNotification(title, opts).then(function () { return true; });
+                return viaPage();
+            }).catch(function () { return viaPage(); });
+        }
+        return viaPage();
+    }
+
     return {
         initResizer,
         initTabDrag,
+        setTabBadge,
+        getNotificationPermission,
+        requestNotificationPermission,
+        setNotifyHandler,
+        showNotification,
         initQuickTextDrag,
         attentionStart,
         attentionStop,
@@ -313,44 +444,44 @@ window.meshcomChat = (function () {
             if (!bar || !btn || bar.scrollWidth <= bar.clientWidth + 1) return;
             bar.scrollTo({ left: btn.offsetLeft - (bar.clientWidth - btn.offsetWidth) / 2, behavior: 'smooth' });
         },
-        getActiveTab:      () => localStorage.getItem('meshcom-active-tab') || '',
+        getActiveTab:      () => lsGet('meshcom-active-tab') || '',
         setActiveTab:      (key) => {
-            if (key) localStorage.setItem('meshcom-active-tab', key);
-            else     localStorage.removeItem('meshcom-active-tab');
+            if (key) lsSet('meshcom-active-tab', key);
+            else     lsRemove('meshcom-active-tab');
         },
         getMonitorVisible: () => {
-            var v = localStorage.getItem('meshcom-monitor-visible-v2');
+            var v = lsGet('meshcom-monitor-visible-v2');
             // First visit on a compact (tiny) display: start with the monitor hidden
             if (v === null && document.documentElement.getAttribute('data-display') === 'compact') return false;
             return v === null ? null : v === '1';
         },
         setMonitorVisible: (visible) => {
-            localStorage.setItem('meshcom-monitor-visible-v2', visible ? '1' : '0');
+            lsSet('meshcom-monitor-visible-v2', visible ? '1' : '0');
             if (window.meshcomMonitor) window.meshcomMonitor.setVisible(visible, true);
         },
         getVoiceEnabled: () => {
-            var v = localStorage.getItem('meshcom-voice-enabled');
+            var v = lsGet('meshcom-voice-enabled');
             return v === null ? null : v === '1';
         },
         setVoiceEnabled: (enabled) =>
-            localStorage.setItem('meshcom-voice-enabled', enabled ? '1' : '0'),
+            lsSet('meshcom-voice-enabled', enabled ? '1' : '0'),
         getTabOrder: () => {
-            var v = localStorage.getItem('meshcom-tab-order');
+            var v = lsGet('meshcom-tab-order');
             try { return v ? JSON.parse(v) : []; } catch (e) { return []; }
         },
         setTabOrder: (keys) =>
-            localStorage.setItem('meshcom-tab-order', JSON.stringify(keys || [])),
+            lsSet('meshcom-tab-order', JSON.stringify(keys || [])),
         getSetupHintDismissed: () => { try { return localStorage.getItem('meshcom-setup-hint-dismissed') === '1'; } catch (e) { return false; } },
         setSetupHintDismissed: () => { try { localStorage.setItem('meshcom-setup-hint-dismissed', '1'); } catch (e) { } },
         getSetupPromptSeen: () => { try { return sessionStorage.getItem('meshcom-setup-prompt-seen') === '1'; } catch (e) { return false; } },
         setSetupPromptSeen: () => { try { sessionStorage.setItem('meshcom-setup-prompt-seen', '1'); } catch (e) { } },
         scrollToId: (id) => { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); },
-        getSettingsSections: () => localStorage.getItem('meshcom-settings-sections'),
-        setSettingsSections: (csv) => localStorage.setItem('meshcom-settings-sections', csv ?? ''),
-        getLoraHighlight:    () => localStorage.getItem('meshcom-lora-highlight') === '1',
-        setLoraHighlight:    (v) => localStorage.setItem('meshcom-lora-highlight', v ? '1' : '0'),
-        getWelcomedMinorVersion: () => localStorage.getItem('meshcom-welcomed-minor-version') || '',
-        setWelcomedMinorVersion: (v) => localStorage.setItem('meshcom-welcomed-minor-version', v || ''),
+        getSettingsSections: () => lsGet('meshcom-settings-sections'),
+        setSettingsSections: (csv) => lsSet('meshcom-settings-sections', csv ?? ''),
+        getLoraHighlight:    () => lsGet('meshcom-lora-highlight') === '1',
+        setLoraHighlight:    (v) => lsSet('meshcom-lora-highlight', v ? '1' : '0'),
+        getWelcomedMinorVersion: () => lsGet('meshcom-welcomed-minor-version') || '',
+        setWelcomedMinorVersion: (v) => lsSet('meshcom-welcomed-minor-version', v || ''),
 
         // ── Nachricht in Zwischenablage kopieren ──
         copyToClipboard: (text) => {

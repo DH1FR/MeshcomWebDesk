@@ -100,6 +100,48 @@ public class MeshcomSettings
     public bool WatchOnAck { get; set; } = false;
 
     /// <summary>
+    /// Alert (toast, tone and voice announcement) when somebody addresses us in a group with "@" and our
+    /// callsign, e.g. "@DH1FR-4" (default: true). The message is marked in the chat either way.
+    /// </summary>
+    public bool MentionAlertEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Show the number of unread messages in the browser tab: "(3) MeshCom WebDesk" plus a badge on the
+    /// favicon (default: true). Counts only what nobody has really looked at yet.
+    /// </summary>
+    public bool TabTitleUnreadEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Also detect CQ calls that are sent to everybody (the "All" tab), not only CQ in groups (default: true).
+    /// Raises the same CQ alert (toast, tone, voice, desktop notification).
+    /// </summary>
+    public bool CqOnBroadcastEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Show operating-system pop-ups (browser Notification API) for the alerts that also appear as toasts
+    /// at the top right – only while nobody is looking at the page (default: false, the browser must grant permission).
+    /// </summary>
+    public bool DesktopNotifyEnabled { get; set; } = false;
+
+    /// <summary>Desktop notification for watchlist callsign hits (needs <see cref="DesktopNotifyEnabled"/>).</summary>
+    public bool DesktopNotifyWatchlist { get; set; } = true;
+
+    /// <summary>Desktop notification for watched group hits.</summary>
+    public bool DesktopNotifyWatchGroup { get; set; } = true;
+
+    /// <summary>Desktop notification for CQ calls.</summary>
+    public bool DesktopNotifyCq { get; set; } = true;
+
+    /// <summary>Desktop notification for "@callsign" mentions in groups.</summary>
+    public bool DesktopNotifyMention { get; set; } = true;
+
+    /// <summary>Desktop notification for direct messages to us.</summary>
+    public bool DesktopNotifyDirect { get; set; } = true;
+
+    /// <summary>Desktop notifications without the system sound.</summary>
+    public bool DesktopNotifySilent { get; set; } = false;
+
+    /// <summary>
     /// How long (in minutes) the watchlist toast stays visible before auto-dismissing.
     /// Minimum 1, default 5.
     /// </summary>

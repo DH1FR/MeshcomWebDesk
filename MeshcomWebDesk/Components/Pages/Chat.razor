@@ -126,6 +126,10 @@
                     {
                         <span class="tab-unread">@(tab.UnreadCount > 99 ? "99+" : tab.UnreadCount.ToString())</span>
                     }
+                    @if (tab.MentionUnread > 0)
+                    {
+                        <span class="tab-mention" title="@Loc.TF("{0} neue Erwähnung(en) deines Rufzeichens", "{0} new mention(s) of your callsign", tab.MentionUnread)">&#64;@(tab.MentionUnread > 99 ? "99+" : tab.MentionUnread.ToString())</span>
+                    }
                     @if (QsoSummaryService.IsDbReady && tab.Key != "*" && !tab.Key.StartsWith('#'))
                     {
                         <span class="tab-ai-icon" title="@(tab.HasQsoSummary ? Loc.T("QSO-Zusammenfassung verfügbar", "QSO summary available") : Loc.T("QSO-Verlauf & Suche", "QSO History & Search"))"
@@ -189,7 +193,7 @@
                             </div>
                         }
                         msgIdx++;
-                        <div class="message @(msg.IsOutgoing ? (_settings.OwnMessagesAlignLeft ? "msg-out-left" : "msg-out") : "msg-in")" @key="msg">
+                        <div class="message @((msg.IsOutgoing ? (_settings.OwnMessagesAlignLeft ? "msg-out-left" : "msg-out") : "msg-in") + (msg.MentionedUs ? " msg-mention" : ""))" @key="msg">
                             <span class="msg-time">
                                 @{ var msgTs = LT(msg.Timestamp); var msgDate = TsDate(msgTs); }
                                 @msgTs.ToString("HH:mm:ss")
@@ -206,7 +210,11 @@
                                     <button class="btn-mention" @onclick="() => InsertMentionAsync(msg.From)" title="@MentionTitle(msg.From)">&#64;</button>
                                 </span>
                             }
-                            <span class="msg-text">@FormatMessageWithLinks(msg.Text)</span>
+                            <span class="msg-text">@FormatMessageWithLinks(msg.Text, !msg.IsOutgoing)</span>
+                            @if (msg.MentionedUs)
+                            {
+                                <span class="mention-pill" title="@Loc.T("Dein Rufzeichen wurde erwähnt", "Your callsign was mentioned")">@Loc.T("@ an dich", "@ for you")</span>
+                            }
                             @if (msg.PingRoundTrip.HasValue)
                             {
                                 <span class="msg-ping-rtt" title="@Loc.T("Laufzeit (Pong-Antwort)", "Round-trip time (Pong reply)")">⏱ @FormatPingRtt(msg.PingRoundTrip.Value)</span>
@@ -476,9 +484,26 @@
     </div>
 
     @* ===== ALERT TOASTS (Watchlist + CQ) ===== *@
-    @if (_watchlistAlerts.Count > 0 || _watchGroupAlerts.Count > 0 || _cqAlerts.Count > 0)
+    @if (_watchlistAlerts.Count > 0 || _watchGroupAlerts.Count > 0 || _cqAlerts.Count > 0 || _mentionAlerts.Count > 0)
     {
         <div class="alert-toast-stack">
+            @if (_mentionAlerts.Count > 0)
+            {
+                <div class="watchlist-toast mention-toast">
+                    <div class="watchlist-toast-header mention-toast-header">
+                        <span>&#64; @Loc.T("Du wurdest erwähnt", "You were mentioned")</span>
+                        <button class="watchlist-toast-close" @onclick="() => _mentionAlerts.Clear()">✕</button>
+                    </div>
+                    @foreach (var ma in _mentionAlerts)
+                    {
+                        <div class="watchlist-toast-row@(ma.NodeId == _activeNodeId ? " mention-toast-row-link" : "")" @onclick="() => OpenMentionAlert(ma)">
+                            <span class="watchlist-callsign">@ma.Callsign</span>
+                            <span class="watchlist-badge">@(ma.TabKey == "*" ? Loc.T("Alle", "All") : ma.TabKey)</span>
+                            <span class="watchlist-age">@FormatAlertAge(ma.Time)</span>
+                        </div>
+                    }
+                </div>
+            }
             @if (_watchGroupAlerts.Count > 0)
             {
                 <div class="watchlist-toast">
@@ -524,7 +549,7 @@
                     {
                         <div class="watchlist-toast-row">
                             <span class="watchlist-callsign">@cq.Callsign</span>
-                            <span class="watchlist-badge" style="background:#e3b341;color:#000">CQ #@cq.Group</span>
+                            <span class="watchlist-badge" style="background:#e3b341;color:#000">CQ @(cq.Group == "*" ? Loc.T("Alle", "All") : "#" + cq.Group)</span>
                             <span class="watchlist-age">@FormatAlertAge(cq.Time)</span>
                         </div>
                     }
@@ -1213,6 +1238,11 @@
     private List<CqAlert> _cqAlerts = [];
     private bool _playCqSound;
 
+    // "@DH1FR-4" in a group: somebody addressed us
+    private record MentionAlert(string TabKey, Guid? NodeId, string Callsign, DateTime Time);
+    private List<MentionAlert> _mentionAlerts = [];
+    private bool _playMentionSound;
+
     // ── Welcome / donation dialog ───────────────────────────────────────────
     private static readonly string _appVersion =
         typeof(Chat).Assembly.GetName().Version is { } v
@@ -1288,6 +1318,39 @@
     /// <summary>Identifies this circuit towards <see cref="AttentionService"/>.</summary>
     private readonly Guid _viewerId = Guid.NewGuid();
 
+    /// <summary>
+    /// Operating-system pop-up for an alert (only while nobody is looking at the page – otherwise the toast
+    /// is enough – and only if enabled in the settings and allowed by the browser).
+    /// </summary>
+    private void NotifyDesktop(bool kindEnabled, string title, string body, string tag, string? tabKey = null, Guid? nodeId = null)
+    {
+        var cfg = SettingsOptions.CurrentValue;
+        if (_disposed || !cfg.DesktopNotifyEnabled || !kindEnabled) return;
+        if (Attention.IsAttending(_viewerId)) return;
+        try
+        {
+            _ = JS.InvokeVoidAsync("meshcomChat.showNotification", title, body, tag, cfg.DesktopNotifySilent,
+                    tabKey ?? "", nodeId?.ToString() ?? "")
+                .AsTask().ContinueWith(t => { if (t.IsFaulted) Logger.LogDebug(t.Exception, "Desktop notification failed"); });
+        }
+        catch { /* circuit already gone */ }
+    }
+
+    /// <summary>Called by chat.js when a desktop notification is clicked: open the tab it is about.</summary>
+    [JSInvokable]
+    public void OpenTabFromNotification(string tabKey, string nodeId)
+    {
+        _ = InvokeAsync(() =>
+        {
+            if (_disposed) return;
+            if (Guid.TryParse(nodeId, out var nid) && nid != _activeNodeId && NodeManager.Nodes.Any(n => n.Id == nid))
+                NodeManager.SelectNode(nid);
+            if (_tabs.Any(t => t.Key == tabKey))
+                SelectTab(tabKey);
+            StateHasChanged();
+        });
+    }
+
     /// <summary>Called by chat.js: browser-tab visibility and ms since the last user activity.</summary>
     [JSInvokable]
     public void ReportAttention(bool visible, double idleMs) =>
@@ -1306,6 +1369,7 @@
         KissService.OnStatusChange += OnStatusChanged;
         ChatService.OnWatchlistHit += HandleWatchlistHit;
         ChatService.OnWatchGroupHit += HandleWatchGroupHit;
+        ChatService.OnMentionHit += HandleMentionHit;
         ChatService.OnCqHeard += HandleCqHeard;
         ChatService.OnNewDirectTab += HandleNewDirectTab;
         ChatService.OnDirectMessage += HandleDirectMessage;
@@ -1326,11 +1390,15 @@
         _isInitialized = true;
     }
 
+    /// <summary>Unread messages still waiting (nobody has really looked at them) – for the browser tab title.</summary>
+    private int TabUnread => SettingsOptions.CurrentValue.TabTitleUnreadEnabled ? ChatService.GetUnreadTotal() : 0;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         try
         {
             await OnAfterRenderCoreAsync(firstRender);
+            await JS.InvokeVoidAsync("meshcomChat.setTabBadge", TabUnread);
         }
         catch (Exception ex) when (ex is TaskCanceledException or OperationCanceledException or JSDisconnectedException)
         {
@@ -1421,6 +1489,8 @@
 
             // From here on the server knows whether anybody is really looking at this page.
             try { await JS.InvokeVoidAsync("meshcomChat.attentionStart", _dotNetRef); }
+            catch (JSException) { }
+            try { await JS.InvokeVoidAsync("meshcomChat.setNotifyHandler", _dotNetRef); }
             catch (JSException) { }
 
             if (await LoadQrzDataAsync())
@@ -1519,6 +1589,12 @@
             _playCqSound = false;
             try { await JS.InvokeVoidAsync("playCqBeep"); }
             catch (Exception) { }
+        }
+        if (_playMentionSound)
+        {
+            _playMentionSound = false;
+            try { await JS.InvokeVoidAsync("playMentionBeep"); }
+            catch (JSException) { }
         }
         if (_playWatchlistSound)
         {
@@ -1742,8 +1818,19 @@
         await InvokeAsync(StateHasChanged);
     }
 
+    private void NotifyDirectMessage(string callsign, MeshcomMessage message)
+    {
+        if (MeshcomWebDesk.Services.Bot.BotCommandService.IsCommand(message.Text)) return;
+        var text = message.Text ?? "";
+        if (text.Length > 120) text = text[..120] + "…";
+        NotifyDesktop(SettingsOptions.CurrentValue.DesktopNotifyDirect,
+            Loc.TF("Nachricht von {0}", "Message from {0}", callsign), text,
+            "dm:" + callsign, callsign, message.NodeId);
+    }
+
     private void HandleNewDirectTab(string callsign, MeshcomMessage message)
     {
+        NotifyDirectMessage(callsign, message);
         if (message.NodeId != _activeNodeId) return;
         if (_voiceEnabled == true)
             SpeakDirectMessage(callsign);
@@ -1753,6 +1840,7 @@
     // Folgenachrichten ans eigene Rufzeichen (Tab bereits offen): TTS nur wenn Cooldown abgelaufen
     private void HandleDirectMessage(string callsign, MeshcomMessage message)
     {
+        NotifyDirectMessage(callsign, message);
         if (message.NodeId != _activeNodeId) return;
         if (_voiceEnabled != true) return;
         SpeakDirectMessage(callsign);
@@ -1793,6 +1881,10 @@
     {
         // Reset divider for the previously active tab
         _newMessagesFromIndex = -1;
+
+        // Leaving a tab: its new "@mention" marks have done their job, the messages become ordinary again.
+        if (_activeTabKey is { } leftKey && leftKey != key)
+            ChatService.ClearMentionMarks(_activeNodeId, leftKey);
 
         _activeTabKey = key;
         _activeTab = ChatService.GetTab(key, _activeNodeId);
@@ -2003,6 +2095,8 @@
         Attention.Remove(_viewerId);
         try { _ = JS.InvokeVoidAsync("meshcomChat.attentionStop").AsTask().ContinueWith(_ => { }); }
         catch { /* circuit already gone */ }
+        try { _ = JS.InvokeVoidAsync("meshcomChat.setTabBadge", 0).AsTask().ContinueWith(_ => { }); }
+        catch { /* circuit already gone */ }
         _dotNetRef?.Dispose();
         Loc.OnChange -= OnLocChange;
         ChatService.OnChange -= OnChatChanged;
@@ -2011,6 +2105,7 @@
         KissService.OnStatusChange -= OnStatusChanged;
         ChatService.OnWatchlistHit -= HandleWatchlistHit;
         ChatService.OnWatchGroupHit -= HandleWatchGroupHit;
+        ChatService.OnMentionHit -= HandleMentionHit;
         ChatService.OnCqHeard -= HandleCqHeard;
         ChatService.OnNewDirectTab -= HandleNewDirectTab;
         ChatService.OnDirectMessage -= HandleDirectMessage;
@@ -2362,6 +2457,14 @@
                 _watchlistAlerts.Insert(0, new WatchlistAlert(callsign, eventType, DateTime.Now));
                 if (_soundEnabled)
                     _playWatchlistSound = true;
+                // A direct message to us already gets its own pop-up (if switched on).
+                bool directToUs = eventType == "MSG"
+                    && string.Equals(message.To, _myCallsign, StringComparison.OrdinalIgnoreCase);
+                if (!(directToUs && SettingsOptions.CurrentValue.DesktopNotifyDirect))
+                    NotifyDesktop(SettingsOptions.CurrentValue.DesktopNotifyWatchlist,
+                        Loc.TF("Watchlist: {0}", "Watchlist: {0}", callsign),
+                        Loc.TF("{0} hat gesendet ({1})", "{0} transmitted ({1})", callsign, eventType),
+                        "watch:" + callsign);
                 if (_voiceEnabled == true)
                 {
                     // Wenn die Nachricht eine direkte MSG ans eigene Rufzeichen ist, hat die
@@ -2410,6 +2513,10 @@
                 _watchGroupAlerts.Insert(0, new WatchGroupAlert(group, callsign, DateTime.Now));
                 if (_soundEnabled)
                     _playWatchlistSound = true;
+                NotifyDesktop(SettingsOptions.CurrentValue.DesktopNotifyWatchGroup,
+                    Loc.TF("Neue Nachricht in Gruppe {0}", "New message in group {0}", group),
+                    Loc.TF("von {0}", "from {0}", callsign),
+                    "grp:" + group, "#" + group, message.NodeId);
                 // Ansage pro Gruppe höchstens alle 5 Min.; bei dichter Folge nur der Ton
                 var ttsKey = "#" + group;
                 bool ttsAllowed = !_watchlistLastTts.TryGetValue(ttsKey, out var lastTts)
@@ -2440,6 +2547,77 @@
         catch (Exception) { }
     }
 
+    private async void HandleMentionHit(string tabKey, string callsign, MeshcomMessage message)
+    {
+        if (_disposed) return;
+        try
+        {
+            await InvokeAsync(() =>
+            {
+                if (_disposed) return;
+                // Somebody is looking at exactly this tab right now: the highlighted row is alert enough.
+                if (_activeTabKey == tabKey && message.NodeId == _activeNodeId && Attention.IsAttending(_viewerId))
+                    return;
+
+                _mentionAlerts.RemoveAll(a => a.TabKey == tabKey && string.Equals(a.Callsign, callsign, StringComparison.OrdinalIgnoreCase));
+                _mentionAlerts.Insert(0, new MentionAlert(tabKey, message.NodeId, callsign, DateTime.Now));
+                if (_soundEnabled)
+                    _playMentionSound = true;
+                NotifyDesktop(SettingsOptions.CurrentValue.DesktopNotifyMention,
+                    Loc.TF("{0} hat dich erwähnt", "{0} mentioned you", callsign),
+                    Loc.TF("in {0}", "in {0}", tabKey == "*" ? Loc.T("Alle", "All") : tabKey),
+                    "men:" + tabKey, tabKey, message.NodeId);
+
+                // Voice: at most once a minute per tab; a quick series of mentions only gets the tone
+                var ttsKey = "@" + tabKey;
+                bool ttsAllowed = !_watchlistLastTts.TryGetValue(ttsKey, out var lastTts)
+                    || (DateTime.Now - lastTts).TotalSeconds >= 60;
+                if (_voiceEnabled == true && ttsAllowed)
+                {
+                    _watchlistLastTts[ttsKey] = DateTime.Now;
+                    var phonetic = PhoneticAlphabetHelper.Spell(callsign, Loc.Current);
+                    if (tabKey.StartsWith('#'))
+                    {
+                        var groupSpelled = string.Join(" ", tabKey[1..].ToCharArray());
+                        _pendingSpeech.Enqueue(Loc.TtsT(
+                            $"Erwähnung in Gruppe {groupSpelled} von {phonetic}",
+                            $"Mention in group {groupSpelled} from {phonetic}",
+                            $"Mention dans le groupe {groupSpelled} de {phonetic}",
+                            $"Menzione nel gruppo {groupSpelled} da {phonetic}",
+                            $"Mención en el grupo {groupSpelled} de {phonetic}"));
+                    }
+                    else
+                    {
+                        _pendingSpeech.Enqueue(Loc.TtsT(
+                            $"Erwähnung von {phonetic}",
+                            $"Mention from {phonetic}",
+                            $"Mention de {phonetic}",
+                            $"Menzione da {phonetic}",
+                            $"Mención de {phonetic}"));
+                    }
+                }
+                StateHasChanged();
+            });
+            await Task.Delay(TimeSpan.FromSeconds(Math.Max(1, SettingsOptions.CurrentValue.WatchAlertMinutes) * 60 + 2));
+            if (!_disposed)
+                await InvokeAsync(() =>
+                {
+                    var limit = Math.Max(1, SettingsOptions.CurrentValue.WatchAlertMinutes);
+                    _mentionAlerts.RemoveAll(a => (DateTime.Now - a.Time).TotalMinutes > limit);
+                    StateHasChanged();
+                });
+        }
+        catch (Exception) { }
+    }
+
+    /// <summary>A click on a mention alert opens its tab (only on the node that is shown right now).</summary>
+    private void OpenMentionAlert(MentionAlert alert)
+    {
+        if (alert.NodeId != _activeNodeId) return;
+        _mentionAlerts.Remove(alert);
+        SelectTab(alert.TabKey);
+    }
+
     private async void HandleCqHeard(string callsign, string group, string text)
     {
         if (_disposed) return;
@@ -2456,16 +2634,28 @@
                 _cqAlerts.Insert(0, new CqAlert(callsign, group, DateTime.Now));
                 if (_soundEnabled)
                     _playCqSound = true;
+                NotifyDesktop(SettingsOptions.CurrentValue.DesktopNotifyCq,
+                    Loc.TF("CQ von {0}", "CQ from {0}", callsign),
+                    group == "*" ? Loc.T("an Alle", "to everybody") : Loc.TF("in Gruppe {0}", "in group {0}", group),
+                    "cq:" + callsign + ":" + group);
                 if (_voiceEnabled == true)
                 {
                     var phonetic = PhoneticAlphabetHelper.Spell(callsign, Loc.Current);
                     var groupSpelled = string.Join(" ", group.ToCharArray());
-                    _pendingSpeech.Enqueue(Loc.TtsT(
-                        $"C Q C Q von {phonetic} in Gruppe {groupSpelled}",
-                        $"C Q C Q from {phonetic} in group {groupSpelled}",
-                        $"C Q C Q de {phonetic} dans le groupe {groupSpelled}",
-                        $"C Q C Q da {phonetic} nel gruppo {groupSpelled}",
-                        $"C Q C Q de {phonetic} en el grupo {groupSpelled}"));
+                    if (group == "*")
+                        _pendingSpeech.Enqueue(Loc.TtsT(
+                            $"C Q C Q von {phonetic} an alle",
+                            $"C Q C Q from {phonetic} to everybody",
+                            $"C Q C Q de {phonetic} à tous",
+                            $"C Q C Q da {phonetic} a tutti",
+                            $"C Q C Q de {phonetic} a todos"));
+                    else
+                        _pendingSpeech.Enqueue(Loc.TtsT(
+                            $"C Q C Q von {phonetic} in Gruppe {groupSpelled}",
+                            $"C Q C Q from {phonetic} in group {groupSpelled}",
+                            $"C Q C Q de {phonetic} dans le groupe {groupSpelled}",
+                            $"C Q C Q da {phonetic} nel gruppo {groupSpelled}",
+                            $"C Q C Q de {phonetic} en el grupo {groupSpelled}"));
                 }
                 StateHasChanged();
             });
@@ -2589,12 +2779,35 @@
         + @"|(?<![A-Za-z0-9])(?<loc>[A-Ra-r]{2}\d{2}[A-Xa-x]{2}(?:\d{2})?)(?![A-Za-z0-9])",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-    private MarkupString FormatMessageWithLinks(string text)
+    // Our own callsigns for the "@DH1FR-4" text marks. Looked up at most every 5 seconds, not once per message row.
+    private List<string>? _ownCalls;
+    private DateTime _ownCallsAt;
+    private List<string> OwnCalls()
+    {
+        if (_ownCalls is null || (DateTime.UtcNow - _ownCallsAt).TotalSeconds > 5)
+        {
+            _ownCalls = ChatService.GetOwnCallsigns();
+            _ownCallsAt = DateTime.UtcNow;
+        }
+        return _ownCalls;
+    }
+
+    /// <param name="markMentions">
+    /// Wrap every mention of our own callsign ("@DH1FR-4") in a highlighted span. Worked out while the text is shown:
+    /// it also applies to old messages and after a restart. The row mark, the pill and the counters are separate and
+    /// only exist for mentions that arrived as new messages.
+    /// </param>
+    private MarkupString FormatMessageWithLinks(string text, bool markMentions = false)
     {
         if (string.IsNullOrEmpty(text))
             return new MarkupString(string.Empty);
+        var own = markMentions ? OwnCalls() : null;
+        string Enc(string s) => own is null
+            ? System.Net.WebUtility.HtmlEncode(s)
+            : MeshcomWebDesk.Helpers.MentionHelper.MarkOwn(s, own, System.Net.WebUtility.HtmlEncode);
+
         if (!UrlRegex.IsMatch(text))
-            return new MarkupString(System.Net.WebUtility.HtmlEncode(text));
+            return new MarkupString(Enc(text));
 
         var confirmMsg = System.Net.WebUtility.HtmlEncode(Loc.T(
             "Externer Link – diese Seite wird außerhalb von MeshCom WebDesk geöffnet.\nFortfahren?",
@@ -2604,7 +2817,7 @@
         var lastIndex = 0;
         foreach (Match match in UrlRegex.Matches(text))
         {
-            sb.Append(System.Net.WebUtility.HtmlEncode(text[lastIndex..match.Index]));
+            sb.Append(Enc(text[lastIndex..match.Index]));
             if (match.Groups["loc"].Success)
             {
                 var loc = match.Value;
@@ -2623,7 +2836,7 @@
                 sb.Append($"<a class=\"msg-url\" href=\"{href}\" data-ext-url=\"{href}\" data-ext-msg=\"{confirmMsg}\" target=\"_blank\" rel=\"noopener noreferrer\">{display}</a>");
             lastIndex = match.Index + match.Length;
         }
-        sb.Append(System.Net.WebUtility.HtmlEncode(text[lastIndex..]));
+        sb.Append(Enc(text[lastIndex..]));
         return new MarkupString(sb.ToString());
     }
 

@@ -207,6 +207,74 @@ h1:focus {
     line-height: 1.6;
 }
 
+/* Someone addressed us ("@DH1FR-4") in this group while we were not looking */
+.tab-mention {
+    background: var(--primary);
+    color: var(--text-on-accent);
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 10px;
+    padding: 1px 6px;
+    min-width: 18px;
+    text-align: center;
+    line-height: 1.6;
+    margin-left: 3px;
+}
+
+/* A message that addresses us: stands out while the tab is open, ordinary again after leaving it.
+   Colours are mixed from the theme's --warn and --bg-panel, so every theme stays readable. */
+.message.msg-mention {
+    /* plain colours first for browsers without color-mix() (iOS before 16.2: the declaration would be dropped) */
+    background: rgba(227, 179, 65, 0.30);
+    box-shadow: 0 0 0 1px rgba(227, 179, 65, 0.6);
+    background: color-mix(in srgb, var(--warn) 30%, var(--bg-panel));
+    border-left: 5px solid var(--warn);
+    box-shadow: 0 0 0 0 transparent, 0 0 0 1px color-mix(in srgb, var(--warn) 60%, transparent);
+    animation: mention-arrive 1.4s ease-out 1;
+}
+
+/* Lights up once when the row appears: brighter fill and a ring that fades out */
+@keyframes mention-arrive {
+    0% {
+        background: color-mix(in srgb, var(--warn) 65%, var(--bg-panel));
+        box-shadow: 0 0 0 0 color-mix(in srgb, var(--warn) 90%, transparent), 0 0 0 1px color-mix(in srgb, var(--warn) 60%, transparent);
+    }
+    60% {
+        box-shadow: 0 0 0 12px transparent, 0 0 0 1px color-mix(in srgb, var(--warn) 60%, transparent);
+    }
+    100% {
+        background: color-mix(in srgb, var(--warn) 30%, var(--bg-panel));
+        box-shadow: 0 0 0 0 transparent, 0 0 0 1px color-mix(in srgb, var(--warn) 60%, transparent);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .message.msg-mention { animation: none; }
+}
+
+/* "@DH1FR-4" inside the text (old messages too): only a background in the theme's warn colour, no bold type. 50%
+   (30% was a dark brown on the dark panel, about 1.9:1, and disappeared on a phone in daylight); it also stands out
+   from the 30% tint of a marked row. The pill sits at the end of the row. */
+.mention-token {
+    background: rgba(227, 179, 65, 0.50);
+    background: color-mix(in srgb, var(--warn) 50%, var(--bg-panel));
+    border-radius: 3px;
+    padding: 0 3px;
+}
+.mention-pill {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 0 7px;
+    border-radius: 9px;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 16px;
+    vertical-align: middle;
+    white-space: nowrap;
+    background: var(--warn);
+    color: var(--bg-deep);   /* same pairing as the unread badge */
+}
+
 .tab-new {
     background: var(--primary);
     color: #b7e4c7;
@@ -769,6 +837,9 @@ h1:focus {
     min-height: 36px;
     max-height: 36px;
     font-family: inherit;
+    /* A flex item never shrinks below its intrinsic width by default; a textarea (cols=20) is ~200px wide at 16px,
+       which pushed the counter and the Send button off the screen on a phone. */
+    min-width: 0;
 }
 
 .send-bar input:focus,
@@ -3155,12 +3226,27 @@ html.mon-animate .lower-pane {
 .alert-toast-stack {
     position: fixed;
     top: 1rem;
-    right: 1rem;
+    right: calc(1rem + env(safe-area-inset-right, 0px));   /* not under the notch of a phone held sideways */
     z-index: 9999;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
     align-items: flex-end;
+}
+
+/* Small screens: the alerts stay up for minutes, so they must not cover the navigation in the header. They sit below
+   the header, node switcher and tab bar instead, over the older messages at the top of the chat. */
+@media (max-width: 600px) {
+    .alert-toast-stack {
+        top: calc(env(safe-area-inset-top, 0px) + 112px);
+        right: calc(8px + env(safe-area-inset-right, 0px));
+    }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+    .alert-toast-stack {
+        top: calc(env(safe-area-inset-top, 0px) + 72px);
+        right: calc(8px + env(safe-area-inset-right, 0px));
+    }
 }
 
 .watchlist-toast {
@@ -4805,6 +4891,44 @@ html[data-display="compact"] .app-nav-qr { display: none !important; }
 .remote-url code { word-break: break-all; }
 .remote-note { margin: .4rem 0; font-size: .78rem; color: var(--text-muted); line-height: 1.4; text-align: left; }
 .remote-warn { color: var(--warn); }
+
+/* ===== Low screens (a phone held sideways is only ~375-430px high) =====
+   Whatever the display mode: the tabs stay one swipeable row. Wrapped onto several rows (15 tabs: 4-5 rows,
+   about 150px) they used up more than a third of the height and left no room for the chat. Up to 600px wide the
+   phone rules above already do this; "+" and the search buttons stay in reach (sticky) like there. */
+@media (max-height: 500px) and (orientation: landscape) and (min-width: 601px) {
+    .tab-bar {
+        flex-wrap: nowrap;
+        padding: 2px 4px 0;
+        scrollbar-width: none;
+    }
+    .tab-bar::-webkit-scrollbar {
+        display: none;
+    }
+    .tab-bar .tab-button {
+        flex-shrink: 0;
+    }
+    .tab-label-wrap {
+        flex-direction: row;
+        align-items: baseline;
+        gap: 4px;
+    }
+    .tab-qrz-name {
+        max-width: 64px;
+    }
+    .tab-bar > .tab-new-wrap:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        background: var(--bg-panel);
+    }
+    .tab-bar > .tab-new-wrap:last-child {
+        position: sticky;
+        right: 0;
+        z-index: 2;
+        background: var(--bg-panel);
+    }
+}
 
 /* ===== Touch devices (iPhone/iPad/Android): no unwanted zoom =====
    iOS Safari zooms into a focused text field whose font is smaller than 16px and does not zoom back out, which

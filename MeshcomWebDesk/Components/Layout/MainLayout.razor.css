@@ -7,6 +7,12 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    /* The viewport has viewport-fit=cover, so on an iPhone held sideways the page also fills the area under the
+       notch and the rounded corners (about 47px on one or both sides). Without these paddings the right end of the
+       Send button and of the "+" tab button disappeared there. Portrait, Android, desktop: insets are 0, no effect. */
+    box-sizing: border-box;
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
 }
 
 /* update-banner styles are in app.css (global) because UpdateBanner is a child component */

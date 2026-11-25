@@ -92,8 +92,12 @@ public sealed partial class ConnectionCheckService
     {
         var results = new List<CheckResult>();
 
-        var listenOk = IPAddress.TryParse(input.ListenIp?.Trim(), out var listenIp) && listenIp.AddressFamily == AddressFamily.InterNetwork;
-        var deviceOk = IPAddress.TryParse(input.DeviceIp?.Trim(), out var deviceIp) && deviceIp.AddressFamily == AddressFamily.InterNetwork;
+        // A cleared form field can arrive as null: treat it as empty (and trimmed), so the rest of the check can rely
+        // on a string. The "?." that used to guard only the first use made the compiler distrust every later one.
+        input = input with { ListenIp = (input.ListenIp ?? string.Empty).Trim(), DeviceIp = (input.DeviceIp ?? string.Empty).Trim() };
+
+        var listenOk = IPAddress.TryParse(input.ListenIp, out var listenIp) && listenIp.AddressFamily == AddressFamily.InterNetwork;
+        var deviceOk = IPAddress.TryParse(input.DeviceIp, out var deviceIp) && deviceIp.AddressFamily == AddressFamily.InterNetwork;
         var listenPortOk = input.ListenPort is >= 1 and <= 65535;
         var devicePortOk = input.DevicePort is >= 1 and <= 65535;
 

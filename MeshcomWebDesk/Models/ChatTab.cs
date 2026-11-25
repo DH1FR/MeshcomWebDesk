@@ -31,6 +31,13 @@ public class ChatTab
     public int UnreadCount { get; set; }
 
     /// <summary>
+    /// Of those, the messages that mention one of our callsigns ("@DH1FR-4"). Reset together with
+    /// <see cref="UnreadCount"/> when somebody looks at the tab. Not persisted.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public int MentionUnread { get; set; }
+
+    /// <summary>
     /// Direct messages received since a viewer last actually looked at this tab
     /// (see <see cref="MeshcomWebDesk.Services.AttentionService"/>). Drives the MQTT unread alert. Not persisted.
     /// </summary>

@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
+using MeshcomWebDesk.Helpers;
 using MeshcomWebDesk.Models;
 using MeshcomWebDesk.Services.Database;
 
@@ -217,6 +218,12 @@ public class ChatService
 
     /// <summary>Raised when a text message arrives in a group listed in <see cref="MeshcomSettings.WatchGroups"/> (group, sender, message).</summary>
     public event Action<string, string, MeshcomMessage>? OnWatchGroupHit;
+
+    /// <summary>
+    /// Raised once per incoming group message that mentions one of our callsigns ("@DH1FR-4"), when
+    /// <see cref="MeshcomSettings.MentionAlertEnabled"/> is on. Arguments: tab key (e.g. "#262"), sender, message.
+    /// </summary>
+    public event Action<string, string, MeshcomMessage>? OnMentionHit;
 
     /// <summary>
     /// Raised when a group message is detected as a CQ call (own callsign excluded).
@@ -495,11 +502,16 @@ public class ChatService
         bool wasNewDirect = false;
         if (tabAllowed)
             tab = GetOrCreateTab(state, tabKey, nodeId, out wasNewDirect);
+
+        // Somebody addressed us in a group ("@DH1FR-4 …"): decided only now, as the message arrives, so old
+        // messages and the history loaded at start never count.
+        bool mentionsUs = tab != null && (isGroup || tabKey == "*") && IsMentionOfUs(message);
         lock (_lock)
         {
             AppendToMonitor(message, state);
             if (tab != null)
             {
+                if (mentionsUs) { message.MentionedUs = true; tab.MentionUnread++; }
                 AppendToTab(tab, message);
                 tab.UnreadCount++;
             }
@@ -537,6 +549,12 @@ public class ChatService
             CheckWatchlist(message);
             CheckWatchGroups(message, tabKey, myCallsign);
             CheckCq(message, tabKey, myCallsign);
+
+            if (mentionsUs && _settings.MentionAlertEnabled)
+            {
+                _logger.LogInformation("Mention of our callsign: From={From} Tab={Tab}", message.From, tabKey);
+                OnMentionHit?.Invoke(tabKey, message.From, message);
+            }
         }
 
         if (!message.IsBroadcast &&
@@ -637,7 +655,50 @@ public class ChatService
     public void ClearUnread(string key, Guid? nodeId)
     {
         if (ResolveState(nodeId).Tabs.TryGetValue(key, out var tab))
-            lock (_lock) { tab.UnreadCount = 0; }
+            lock (_lock) { tab.UnreadCount = 0; tab.MentionUnread = 0; }
+    }
+
+    // ── Mentions of our own callsign ──────────────────────────────────────
+
+    /// <summary>All callsigns we answer to: the configured one and the callsign of every enabled node.</summary>
+    public List<string> GetOwnCallsigns()
+    {
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (!string.IsNullOrWhiteSpace(_settings.MyCallsign)) set.Add(_settings.MyCallsign.Trim());
+        if (_nodeManager is not null)
+            foreach (var n in _nodeManager.Nodes)
+            {
+                var c = n.IsPrimary ? _settings.MyCallsign : n.Callsign;
+                if (!string.IsNullOrWhiteSpace(c)) set.Add(c.Trim());
+            }
+        return set.ToList();
+    }
+
+    /// <summary>
+    /// An incoming message from somebody else that carries "@<own callsign>" (see <see cref="MentionHelper"/>).
+    /// Acks, positions and telemetry are never mentions.
+    /// </summary>
+    private bool IsMentionOfUs(MeshcomMessage message)
+    {
+        if (message.IsOutgoing || message.IsAck || message.IsPositionBeacon || message.IsTelemetry) return false;
+        if (string.IsNullOrEmpty(message.Text) || message.Text.IndexOf('@') < 0) return false;
+        var own = GetOwnCallsigns();
+        if (own.Contains(message.From, StringComparer.OrdinalIgnoreCase)) return false;   // an echo of our own message
+        return MentionHelper.MentionsAny(message.Text, own);
+    }
+
+    /// <summary>
+    /// Removes the mention marks from the messages of a tab. Called when the user leaves the tab: while reading it
+    /// the new mentions stand out, afterwards they are ordinary messages again.
+    /// </summary>
+    public void ClearMentionMarks(Guid? nodeId, string key)
+    {
+        if (!ResolveState(nodeId).Tabs.TryGetValue(key, out var tab)) return;
+        lock (_lock)
+        {
+            foreach (var m in tab.Messages)
+                if (m.MentionedUs) m.MentionedUs = false;
+        }
     }
 
     // ── Unread tracking / MQTT unread alert ───────────────────────────────
@@ -663,6 +724,23 @@ public class ChatService
     }
 
     /// <summary>
+    /// Total unread messages over all tabs of all nodes that exist right now (direct, group and "All"). Tabs are only
+    /// cleared while somebody really looks at them, so this is what is still waiting – shown in the browser tab title.
+    /// Only the state of the configured nodes counts: a bucket left over from a deleted or re-created node profile has
+    /// no tab on screen, so its unread messages could never be looked at and the number would never drop to 0.
+    /// </summary>
+    public int GetUnreadTotal()
+    {
+        var ids = _nodeManager?.Nodes.Select(n => (Guid?)n.Id).ToList() ?? [];
+        if (ids.Count == 0) ids.Add(null);   // legacy single-node mode
+        var states = ids.Select(ResolveState).Distinct().ToList();
+        lock (_lock)
+        {
+            return states.Sum(st => st.Tabs.Values.Sum(t => t.UnreadCount));
+        }
+    }
+
+    /// <summary>
     /// Marks a tab as actually seen by a person: resets the unread counter and the alert state.
     /// If an unread alert had already been published, a matching "read" message is published.
     /// </summary>
@@ -674,9 +752,10 @@ public class ChatService
         bool changed, sendRead;
         lock (_lock)
         {
-            changed  = tab.UnreadCount != 0 || tab.AlertUnread != 0 || tab.AlertPublished;
+            changed  = tab.UnreadCount != 0 || tab.MentionUnread != 0 || tab.AlertUnread != 0 || tab.AlertPublished;
             sendRead = tab.AlertPublished;
             tab.UnreadCount      = 0;
+            tab.MentionUnread    = 0;
             tab.AlertUnread      = 0;
             tab.AlertLastMessage = null;
             tab.AlertPublished   = false;
@@ -1448,6 +1527,17 @@ public class ChatService
                     RecordRelayPath(s, message.RelayPath, message.Timestamp);
                     mhChanged = true;
                 }
+                else if (!string.Equals(message.SrcType, "udp", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Heard directly over RF (no relay, not via a gateway/UDP bridge):
+                    // the station is reachable directly *now*, so drop the stale routing.
+                    // Without this, a previously seen relayed path stayed shown for ever.
+                    if (s.HopCount != 0 || s.LastRelayPath is not null) mhChanged = true;
+                    s.HopCount       = 0;
+                    s.LastRelayPath  = null;
+                    s.RelayPathCount = 0;
+                    PruneStaleRelayPaths(s, message.Timestamp);
+                }
                 if (message.Latitude.HasValue)
                 {
                     s.Latitude         = message.Latitude;
@@ -1515,6 +1605,20 @@ public class ChatService
             stat.Count++;
             stat.LastSeen = timestamp;
         }
+    }
+
+    /// <summary>Relay paths not seen for this long before a direct reception are considered superseded.</summary>
+    private static readonly TimeSpan RelayPathSupersededAfter = TimeSpan.FromHours(1);
+
+    /// <summary>
+    /// Removes relay paths that were last seen long before a direct reception.
+    /// Paths seen shortly before are kept, so a station that alternates between
+    /// direct and relayed reception does not lose its map lines.
+    /// </summary>
+    private static void PruneStaleRelayPaths(HeardStation s, DateTime timestamp)
+    {
+        lock (s.RelayPathHistory)
+            s.RelayPathHistory.RemoveAll(p => timestamp - p.LastSeen > RelayPathSupersededAfter);
     }
 
     private void AppendToMonitor(MeshcomMessage message, NodeState state)
@@ -1654,9 +1758,11 @@ public class ChatService
     }
 
     /// <summary>
-    /// Detects CQ calls in group messages and fires <see cref="OnCqHeard"/>.
+    /// Detects CQ calls in group messages (and, if enabled, in messages to everybody) and fires <see cref="OnCqHeard"/>.
+    /// For a message to everybody the group argument is "*".
     /// Rules:
-    ///  - Only group messages (tabKey starts with '#') that pass the group filter.
+    ///  - Only group messages (tabKey starts with '#') that pass the group filter, or messages to everybody
+    ///    (tabKey "*", not ACK/position/telemetry) when <see cref="MeshcomSettings.CqOnBroadcastEnabled"/> is on.
     ///  - Message text must contain "CQ" as a standalone token (case-insensitive),
     ///    not glued to '/' or '-' (e.g. magazine "CQ/DL").
     ///  - Messages addressed to a station ("@CALL ...") are ignored.
@@ -1664,15 +1770,24 @@ public class ChatService
     /// </summary>
     private void CheckCq(MeshcomMessage message, string tabKey, string myCallsign)
     {
-        if (!tabKey.StartsWith('#')) return;
-        if (tabKey.Any(char.IsLetter)) return;   // "#DL6WAB" = direct message to a third station, not a group
+        bool toEverybody = tabKey == "*";
+        if (toEverybody)
+        {
+            if (!_settings.CqOnBroadcastEnabled) return;
+            if (message.IsAck || message.IsPositionBeacon || message.IsTelemetry) return;
+        }
+        else
+        {
+            if (!tabKey.StartsWith('#')) return;
+            if (tabKey.Any(char.IsLetter)) return;   // "#DL6WAB" = direct message to a third station, not a group
+        }
         if (string.IsNullOrWhiteSpace(message.Text)) return;
         if (string.IsNullOrWhiteSpace(message.From)) return;
         if (string.Equals(message.From, myCallsign, StringComparison.OrdinalIgnoreCase))
             return;
 
         // Group filter: only whitelisted groups (same logic as tab routing)
-        bool groupAllowed = !_settings.GroupFilterEnabled
+        bool groupAllowed = toEverybody || !_settings.GroupFilterEnabled
             || _settings.Groups.Contains(tabKey, StringComparer.OrdinalIgnoreCase);
         if (!groupAllowed) return;
 
@@ -1682,7 +1797,7 @@ public class ChatService
         if (!CqRegex.IsMatch(message.Text)) return;
 
         // Extract group number from tabKey (strip '#')
-        var group = tabKey.TrimStart('#');
+        var group = toEverybody ? "*" : tabKey.TrimStart('#');
         _logger.LogInformation("CQ detected: From={From} Group={Group} Text={Text}",
             message.From, group, message.Text);
         OnCqHeard?.Invoke(message.From, group, message.Text);

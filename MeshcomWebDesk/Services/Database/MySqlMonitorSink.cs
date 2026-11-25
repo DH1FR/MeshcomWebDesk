@@ -22,14 +22,29 @@ public sealed class MySqlMonitorSink
         ("pressure", "FLOAT"),
     ];
 
+    // After a failed write the sink pauses instead of trying (and waiting for the connect timeout, ~15 s) with every
+    // single message and logging an error each time. Messages arriving during the pause are not stored.
+    private static readonly TimeSpan PauseAfterFailure = TimeSpan.FromSeconds(60);
+    private long _pausedUntilTicks;   // UTC ticks, 0 = not paused
+    private int  _failedStreak;       // consecutive failed attempts
+    private int  _skipped;            // messages skipped during the pauses of the current streak
+
     public MySqlMonitorSink(IOptionsMonitor<MeshcomSettings> settings, ILogger<MySqlMonitorSink> logger)
     {
         _settings = settings;
         _logger   = logger;
+        // Changed settings (e.g. a corrected connection string): try again right away.
+        _settings.OnChange(_ => Interlocked.Exchange(ref _pausedUntilTicks, 0));
     }
 
     public async Task WriteAsync(MeshcomMessage msg, CancellationToken ct = default)
     {
+        if (DateTime.UtcNow.Ticks < Interlocked.Read(ref _pausedUntilTicks))
+        {
+            Interlocked.Increment(ref _skipped);
+            return;
+        }
+
         var db = _settings.CurrentValue.Database;
         try
         {
@@ -79,6 +94,13 @@ public sealed class MySqlMonitorSink
 
             await cmd.ExecuteNonQueryAsync(ct);
 
+            if (Volatile.Read(ref _failedStreak) > 0)
+            {
+                Interlocked.Exchange(ref _failedStreak, 0);
+                var skipped = Interlocked.Exchange(ref _skipped, 0);
+                _logger.LogInformation("MySQL: wieder erreichbar ({Skipped} Nachrichten wurden in der Pause nicht gespeichert)", skipped);
+            }
+
             if (db.LogInserts)
             {
                 var logSql = $"""
@@ -102,7 +124,14 @@ public sealed class MySqlMonitorSink
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "MySQL: Fehler beim Schreiben der Monitor-Daten");
+            var streak = Interlocked.Increment(ref _failedStreak);
+            Interlocked.Exchange(ref _pausedUntilTicks, (DateTime.UtcNow + PauseAfterFailure).Ticks);
+            if (streak == 1)
+                _logger.LogError(ex, "MySQL: Fehler beim Schreiben der Monitor-Daten – das Schreiben pausiert {Seconds} s, Nachrichten in dieser Zeit werden nicht gespeichert",
+                                 (int)PauseAfterFailure.TotalSeconds);
+            else
+                _logger.LogWarning("MySQL: weiterhin nicht erreichbar ({Message}) – nächster Versuch in {Seconds} s",
+                                   ex.Message, (int)PauseAfterFailure.TotalSeconds);
         }
     }
 
