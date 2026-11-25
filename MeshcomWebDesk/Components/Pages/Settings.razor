@@ -1804,6 +1804,15 @@
                 </label>
 
                 <label>
+                    @Loc.T("CQ-Rufe an Alle", "CQ calls to everybody")<br />
+                    <small>@Loc.T("Ein CQ im Tab „Alle“ (nicht an eine Gruppe) löst auch die CQ-Meldung aus – Toast, Signalton, Sprachansage", "A CQ in the \"All\" tab (not sent to a group) also raises the CQ alert – toast, tone, voice announcement")</small>
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;font-weight:normal">
+                    <input type="checkbox" @bind="_model.CqOnBroadcastEnabled" />
+                    @Loc.T("CQ-Meldung auch für „Alle“", "CQ alert for \"All\" as well")
+                </label>
+
+                <label>
                     @Loc.T("Anzeigedauer (Minuten)", "Display duration (minutes)")
                 </label>
                 <input type="number" min="1" max="60" @bind="_model.WatchAlertMinutes" />
@@ -3958,6 +3967,7 @@
             WatchOnAck          = s.WatchOnAck,
             MentionAlertEnabled = s.MentionAlertEnabled,
             TabTitleUnreadEnabled = s.TabTitleUnreadEnabled,
+            CqOnBroadcastEnabled = s.CqOnBroadcastEnabled,
             DesktopNotifyEnabled = s.DesktopNotifyEnabled,
             DesktopNotifyWatchlist = s.DesktopNotifyWatchlist,
             DesktopNotifyWatchGroup = s.DesktopNotifyWatchGroup,
@@ -4833,6 +4843,7 @@
                 WatchOnAck          = s.WatchOnAck,
                 MentionAlertEnabled = s.MentionAlertEnabled,
                 TabTitleUnreadEnabled = s.TabTitleUnreadEnabled,
+                CqOnBroadcastEnabled = s.CqOnBroadcastEnabled,
                 DesktopNotifyEnabled = s.DesktopNotifyEnabled,
                 DesktopNotifyWatchlist = s.DesktopNotifyWatchlist,
                 DesktopNotifyWatchGroup = s.DesktopNotifyWatchGroup,
@@ -5024,6 +5035,7 @@
         public bool   WatchOnAck          { get; set; } = false;
         public bool   MentionAlertEnabled { get; set; } = true;
         public bool   TabTitleUnreadEnabled { get; set; } = true;
+        public bool   CqOnBroadcastEnabled { get; set; } = true;
         public bool   DesktopNotifyEnabled { get; set; } = false;
         public bool   DesktopNotifyWatchlist { get; set; } = true;
         public bool   DesktopNotifyWatchGroup { get; set; } = true;
@@ -5236,6 +5248,7 @@
             WatchOnAck          = WatchOnAck,
             MentionAlertEnabled = MentionAlertEnabled,
             TabTitleUnreadEnabled = TabTitleUnreadEnabled,
+            CqOnBroadcastEnabled = CqOnBroadcastEnabled,
             DesktopNotifyEnabled = DesktopNotifyEnabled,
             DesktopNotifyWatchlist = DesktopNotifyWatchlist,
             DesktopNotifyWatchGroup = DesktopNotifyWatchGroup,

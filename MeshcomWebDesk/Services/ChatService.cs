@@ -1758,9 +1758,11 @@ public class ChatService
     }
 
     /// <summary>
-    /// Detects CQ calls in group messages and fires <see cref="OnCqHeard"/>.
+    /// Detects CQ calls in group messages (and, if enabled, in messages to everybody) and fires <see cref="OnCqHeard"/>.
+    /// For a message to everybody the group argument is "*".
     /// Rules:
-    ///  - Only group messages (tabKey starts with '#') that pass the group filter.
+    ///  - Only group messages (tabKey starts with '#') that pass the group filter, or messages to everybody
+    ///    (tabKey "*", not ACK/position/telemetry) when <see cref="MeshcomSettings.CqOnBroadcastEnabled"/> is on.
     ///  - Message text must contain "CQ" as a standalone token (case-insensitive),
     ///    not glued to '/' or '-' (e.g. magazine "CQ/DL").
     ///  - Messages addressed to a station ("@CALL ...") are ignored.
@@ -1768,15 +1770,24 @@ public class ChatService
     /// </summary>
     private void CheckCq(MeshcomMessage message, string tabKey, string myCallsign)
     {
-        if (!tabKey.StartsWith('#')) return;
-        if (tabKey.Any(char.IsLetter)) return;   // "#DL6WAB" = direct message to a third station, not a group
+        bool toEverybody = tabKey == "*";
+        if (toEverybody)
+        {
+            if (!_settings.CqOnBroadcastEnabled) return;
+            if (message.IsAck || message.IsPositionBeacon || message.IsTelemetry) return;
+        }
+        else
+        {
+            if (!tabKey.StartsWith('#')) return;
+            if (tabKey.Any(char.IsLetter)) return;   // "#DL6WAB" = direct message to a third station, not a group
+        }
         if (string.IsNullOrWhiteSpace(message.Text)) return;
         if (string.IsNullOrWhiteSpace(message.From)) return;
         if (string.Equals(message.From, myCallsign, StringComparison.OrdinalIgnoreCase))
             return;
 
         // Group filter: only whitelisted groups (same logic as tab routing)
-        bool groupAllowed = !_settings.GroupFilterEnabled
+        bool groupAllowed = toEverybody || !_settings.GroupFilterEnabled
             || _settings.Groups.Contains(tabKey, StringComparer.OrdinalIgnoreCase);
         if (!groupAllowed) return;
 
@@ -1786,7 +1797,7 @@ public class ChatService
         if (!CqRegex.IsMatch(message.Text)) return;
 
         // Extract group number from tabKey (strip '#')
-        var group = tabKey.TrimStart('#');
+        var group = toEverybody ? "*" : tabKey.TrimStart('#');
         _logger.LogInformation("CQ detected: From={From} Group={Group} Text={Text}",
             message.From, group, message.Text);
         OnCqHeard?.Invoke(message.From, group, message.Text);

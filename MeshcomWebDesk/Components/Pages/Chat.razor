@@ -549,7 +549,7 @@
                     {
                         <div class="watchlist-toast-row">
                             <span class="watchlist-callsign">@cq.Callsign</span>
-                            <span class="watchlist-badge" style="background:#e3b341;color:#000">CQ #@cq.Group</span>
+                            <span class="watchlist-badge" style="background:#e3b341;color:#000">CQ @(cq.Group == "*" ? Loc.T("Alle", "All") : "#" + cq.Group)</span>
                             <span class="watchlist-age">@FormatAlertAge(cq.Time)</span>
                         </div>
                     }
@@ -2565,7 +2565,7 @@
                     _playMentionSound = true;
                 NotifyDesktop(SettingsOptions.CurrentValue.DesktopNotifyMention,
                     Loc.TF("{0} hat dich erwähnt", "{0} mentioned you", callsign),
-                    Loc.TF("in {0}", "in {0}", tabKey),
+                    Loc.TF("in {0}", "in {0}", tabKey == "*" ? Loc.T("Alle", "All") : tabKey),
                     "men:" + tabKey, tabKey, message.NodeId);
 
                 // Voice: at most once a minute per tab; a quick series of mentions only gets the tone
@@ -2636,18 +2636,26 @@
                     _playCqSound = true;
                 NotifyDesktop(SettingsOptions.CurrentValue.DesktopNotifyCq,
                     Loc.TF("CQ von {0}", "CQ from {0}", callsign),
-                    Loc.TF("in Gruppe {0}", "in group {0}", group),
+                    group == "*" ? Loc.T("an Alle", "to everybody") : Loc.TF("in Gruppe {0}", "in group {0}", group),
                     "cq:" + callsign + ":" + group);
                 if (_voiceEnabled == true)
                 {
                     var phonetic = PhoneticAlphabetHelper.Spell(callsign, Loc.Current);
                     var groupSpelled = string.Join(" ", group.ToCharArray());
-                    _pendingSpeech.Enqueue(Loc.TtsT(
-                        $"C Q C Q von {phonetic} in Gruppe {groupSpelled}",
-                        $"C Q C Q from {phonetic} in group {groupSpelled}",
-                        $"C Q C Q de {phonetic} dans le groupe {groupSpelled}",
-                        $"C Q C Q da {phonetic} nel gruppo {groupSpelled}",
-                        $"C Q C Q de {phonetic} en el grupo {groupSpelled}"));
+                    if (group == "*")
+                        _pendingSpeech.Enqueue(Loc.TtsT(
+                            $"C Q C Q von {phonetic} an alle",
+                            $"C Q C Q from {phonetic} to everybody",
+                            $"C Q C Q de {phonetic} à tous",
+                            $"C Q C Q da {phonetic} a tutti",
+                            $"C Q C Q de {phonetic} a todos"));
+                    else
+                        _pendingSpeech.Enqueue(Loc.TtsT(
+                            $"C Q C Q von {phonetic} in Gruppe {groupSpelled}",
+                            $"C Q C Q from {phonetic} in group {groupSpelled}",
+                            $"C Q C Q de {phonetic} dans le groupe {groupSpelled}",
+                            $"C Q C Q da {phonetic} nel gruppo {groupSpelled}",
+                            $"C Q C Q de {phonetic} en el grupo {groupSpelled}"));
                 }
                 StateHasChanged();
             });

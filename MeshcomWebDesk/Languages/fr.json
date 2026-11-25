@@ -1553,6 +1553,10 @@
     "CQ calls": "Appels CQ",
     "Without system sound": "Sans son système",
     "Test notification": "Notification de test",
-    "Test: this is what a notification looks like.": "Test : voici à quoi ressemble une notification."
+    "Test: this is what a notification looks like.": "Test : voici à quoi ressemble une notification.",
+    "to everybody": "à tous",
+    "CQ calls to everybody": "Appels CQ à tous",
+    "A CQ in the \"All\" tab (not sent to a group) also raises the CQ alert – toast, tone, voice announcement": "Un CQ dans l'onglet « Tous » (non envoyé à un groupe) déclenche aussi l'alerte CQ – message, tonalité, annonce vocale",
+    "CQ alert for \"All\" as well": "Alerte CQ aussi pour « Tous »"
   }
 }

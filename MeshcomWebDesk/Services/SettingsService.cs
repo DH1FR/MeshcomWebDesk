@@ -205,6 +205,7 @@ public class SettingsService
                 ["WatchOnAck"]          = s.WatchOnAck,
                 ["MentionAlertEnabled"] = s.MentionAlertEnabled,
                 ["TabTitleUnreadEnabled"] = s.TabTitleUnreadEnabled,
+                ["CqOnBroadcastEnabled"] = s.CqOnBroadcastEnabled,
                 ["DesktopNotifyEnabled"] = s.DesktopNotifyEnabled,
                 ["DesktopNotifyWatchlist"] = s.DesktopNotifyWatchlist,
                 ["DesktopNotifyWatchGroup"] = s.DesktopNotifyWatchGroup,

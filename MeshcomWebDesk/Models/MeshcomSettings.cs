@@ -112,6 +112,12 @@ public class MeshcomSettings
     public bool TabTitleUnreadEnabled { get; set; } = true;
 
     /// <summary>
+    /// Also detect CQ calls that are sent to everybody (the "All" tab), not only CQ in groups (default: true).
+    /// Raises the same CQ alert (toast, tone, voice, desktop notification).
+    /// </summary>
+    public bool CqOnBroadcastEnabled { get; set; } = true;
+
+    /// <summary>
     /// Show operating-system pop-ups (browser Notification API) for the alerts that also appear as toasts
     /// at the top right – only while nobody is looking at the page (default: false, the browser must grant permission).
     /// </summary>

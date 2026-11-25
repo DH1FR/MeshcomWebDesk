@@ -1529,6 +1529,10 @@
     "CQ calls": "Chiamate CQ",
     "Without system sound": "Senza suono di sistema",
     "Test notification": "Notifica di prova",
-    "Test: this is what a notification looks like.": "Test: ecco come appare una notifica."
+    "Test: this is what a notification looks like.": "Test: ecco come appare una notifica.",
+    "to everybody": "a tutti",
+    "CQ calls to everybody": "Chiamate CQ a tutti",
+    "A CQ in the \"All\" tab (not sent to a group) also raises the CQ alert – toast, tone, voice announcement": "Un CQ nella scheda \"Tutti\" (non inviato a un gruppo) attiva anche l'avviso CQ – messaggio, tono, annuncio vocale",
+    "CQ alert for \"All\" as well": "Avviso CQ anche per \"Tutti\""
   }
 }
