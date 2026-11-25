@@ -33,6 +33,9 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ## 🆕 What's New in v1.18.4 *(unreleased – `dev` branch)*
 
+### ✨ Features
+- **Optional access protection (password)** – WebDesk can now ask for a shared password so that not everybody in the local network can open it. **Settings → System → Access protection**: choose *Only from other devices* (recommended – the PC running WebDesk gets in without a password, phones, tablets and other PCs log in once per device and stay logged in for 90 days), *Always* (this PC too) or *Off* (default, nothing changes for existing installations), enter the password twice and press *Apply* – it takes effect at once and this browser is signed in automatically. Also there: *Sign out all devices* and *Sign out this device*. The password is stored only as a salted PBKDF2 hash in `<DataPath>/access.json` (not part of the settings backup, not touched by *Save*); wrong passwords are throttled per address (5 tries, then 30 s doubling up to 5 min). A small standalone login page (`/login`) is shown in the interface language; everything else – pages, the live connection and the `/api/*` endpoints – needs the login. `POST /api/telemetry` keeps its own `X-Api-Key` and stays reachable for Home Assistant & co. If WebDesk also listens on https (profile `lan-https`, port `5163`), a protected request over plain http from another device is redirected there first so the password does not cross the network in clear text; otherwise the login page warns that the connection is not encrypted. **Forgot the password?** Start WebDesk once with `--reset-password` (switches the protection off; `--reset-password NEWPASSWORD` sets a new one), in Docker `docker exec <container> ./MeshcomWebDesk --reset-password`, or – without a shell – start the container once with `MESHCOM_RESET_ACCESS=1` (remove it afterwards). A running WebDesk picks the change up within seconds. The 📱 QR dialog now only warns about missing protection when none is set.
+
 ### ✨ Improvements
 - **Bot commands work with `--` again** – besides `>` the bot answers direct messages that start with `--` (two hyphens) or `—` (em dash, as typed by many mobile keyboards) and a letter: `--ping` and `>ping` are the same, likewise `--version`, `--help`, `--time`, … Reason: some devices, e.g. the LilyGo T-Deck, have no `>` key. `---===` style decoration and a bare `ping` are still ordinary chat text. The ping round-trip time works for both forms.
 
@@ -1456,6 +1459,14 @@ dotnet run --launch-profile lan-https
 
 > **Mobile trust:** Copy `certs/meshcom-lan.crt` to your phone and install it as a trusted root CA.
 > Then open `https://<your-ip>:5163` in the browser and install the PWA.
+
+### Access protection (optional password)
+
+WebDesk is open to everybody who can reach it. To keep other people in the network out, set a shared password under **Settings → System → Access protection** (modes: *Off*, *Only from other devices* – recommended, *Always*). Details: see *What's New in v1.18.4*.
+
+- **Use https** where you can (`lan-https` profile / Docker https overlay, see above): over plain http the password crosses the network in clear text. When https is available, WebDesk redirects protected requests from other devices to it. Behind a reverse proxy let the proxy do https and set `X-Forwarded-Proto`.
+- **Docker:** from the container's point of view every browser is "another device" (it sees the Docker network address, not `localhost`), so the PC running Docker needs the password too.
+- **Forgot the password?** On the machine running WebDesk: `MeshcomWebDesk --reset-password` (protection off) or `MeshcomWebDesk --reset-password NEWPASSWORD` (new password; note that a password on the command line ends up in the shell history). Docker: `docker exec <container> ./MeshcomWebDesk --reset-password`. No shell available: start the container once with the environment variable `MESHCOM_RESET_ACCESS=1` and remove it again. Last resort: delete `access.json` in the data folder. Nothing in the browser or over the network can reset the password.
 
 ---
 

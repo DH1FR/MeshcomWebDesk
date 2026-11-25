@@ -49,6 +49,24 @@ public sealed class RemoteAccessService
     public static bool InContainer =>
         string.Equals(Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER"), "true", StringComparison.OrdinalIgnoreCase);
 
+    private int? _httpsPort;
+    private bool _httpsPortKnown;
+
+    /// <summary>
+    /// The port of the https address WebDesk itself listens on (profile <c>lan-https</c> / the docker https overlay),
+    /// or null when it only speaks http. Used to send remote browsers there once a password is set.
+    /// </summary>
+    public int? FindHttpsPort()
+    {
+        if (_httpsPortKnown) return _httpsPort;
+        var addresses = ListeningAddresses().ToList();
+        // The server fills its address list once it has started; before that nothing can be told.
+        if (addresses.Count == 0) return null;
+        _httpsPort = addresses.Where(a => a.Scheme == Uri.UriSchemeHttps).Select(a => (int?)a.Port).FirstOrDefault();
+        _httpsPortKnown = true;
+        return _httpsPort;
+    }
+
     /// <summary>All addresses worth offering, https first, without duplicates.</summary>
     /// <param name="currentBaseUri">The base URI of the browser asking (<c>NavigationManager.BaseUri</c>).</param>
     public IReadOnlyList<RemoteUrl> GetCandidates(string currentBaseUri)

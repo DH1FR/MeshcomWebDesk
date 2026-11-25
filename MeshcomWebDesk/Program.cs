@@ -63,6 +63,29 @@ if (args.Contains("--version"))
     return;
 }
 
+// ── --reset-password [new password] ───────────────────────────────────────────
+// Emergency exit when the access password is forgotten (also: docker exec <container> ./MeshcomWebDesk --reset-password).
+// Without a value the protection is switched off; with one it stays on under the new password.
+// Changes only access.json in the data folder and exits – no web server is started.
+{
+    var resetIdx = Array.IndexOf(args, "--reset-password");
+    if (resetIdx >= 0)
+    {
+        var newPw = resetIdx + 1 < args.Length && !args[resetIdx + 1].StartsWith("--") ? args[resetIdx + 1] : null;
+        if (newPw is { Length: > 0 and < MeshcomWebDesk.Services.Access.AccessPassword.MinLength })
+        {
+            Console.Error.WriteLine($"The new password needs at least {MeshcomWebDesk.Services.Access.AccessPassword.MinLength} characters.");
+            Environment.Exit(1);
+        }
+        var resetDir = MeshcomWebDesk.Services.Access.AccessStore.ResolveDataPath(args);
+        MeshcomWebDesk.Services.Access.AccessStore.Reset(resetDir, newPw);
+        Console.WriteLine(newPw is null
+            ? $"Access protection is switched off and all devices are signed out ({MeshcomWebDesk.Services.Access.AccessStore.FilePath(resetDir)}). Set a new password in Settings > Access protection."
+            : $"New access password set, all devices are signed out ({MeshcomWebDesk.Services.Access.AccessStore.FilePath(resetDir)}).");
+        return;
+    }
+}
+
 static void TryCreateDirectory(string path, string label)
 {
     try
@@ -129,6 +152,12 @@ var retainDays = meshcomSection.GetValue<int?>("LogRetainDays") ?? 30;
 // It is layered on top of appsettings.json so a Docker read-only mount still works.
 var dataPath = meshcomSection.GetValue<string>("DataPath") ?? @"C:\Temp\MeshcomData";
 TryCreateDirectory(dataPath, "DataPath");
+// Docker without a shell: MESHCOM_RESET_ACCESS=1 switches the access protection off at this start
+// (remove the variable afterwards, otherwise a password set later is wiped at every restart).
+var accessResetByEnv = Environment.GetEnvironmentVariable("MESHCOM_RESET_ACCESS") is { } resetEnv
+    && (resetEnv == "1" || resetEnv.Equals("true", StringComparison.OrdinalIgnoreCase));
+if (accessResetByEnv)
+    MeshcomWebDesk.Services.Access.AccessStore.Reset(dataPath, null);
 // Self-update: may roll back a new version that keeps failing to start (does not return in that case).
 MeshcomWebDesk.Services.Update.FileSwap.ConfigureExcludes(dataPath, logPath);
 MeshcomWebDesk.Services.Update.UpdateRecovery.OnStartup(dataPath);
@@ -250,6 +279,9 @@ builder.Services.AddSingleton<NodePresenceService>();
 builder.Services.AddSingleton<NodeManager>();
 builder.Services.AddSingleton<NodeDiscoveryService>();
 builder.Services.AddSingleton<RemoteAccessService>();
+builder.Services.AddSingleton(sp => new MeshcomWebDesk.Services.Access.AccessService(
+    dataPath, sp.GetRequiredService<IDataProtectionProvider>(),
+    sp.GetRequiredService<ILogger<MeshcomWebDesk.Services.Access.AccessService>>()));
 builder.Services.AddSingleton<NodeConsoleFixService>();
 builder.Services.AddSingleton<ConnectionCheckService>();
 builder.Services.AddSingleton<CalendarBeaconService>();
@@ -304,11 +336,15 @@ if (app.Environment.IsEnvironment("LanHttps"))
     app.UseHttpsRedirection();
 }
 
+// Optional password protection (Settings → Access protection). Before the status-code pages so its 401 stays a 401.
+MeshcomWebDesk.Services.Access.AccessEndpoints.UseAccessProtection(app);
+
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 
 app.UseAntiforgery();
 
 app.MapStaticAssets();
+MeshcomWebDesk.Services.Access.AccessEndpoints.MapAccessEndpoints(app);
 MeshcomWebDesk.Services.Update.UpdateEndpoints.MapUpdateEndpoints(app);
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
@@ -366,6 +402,9 @@ app.MapPost("/api/telemetry", async (
 // Helpful to verify which settings are actually loaded (appsettings.json vs. env vars).
 var startupLog = app.Services.GetRequiredService<ILogger<Program>>();
 var cfg        = app.Services.GetRequiredService<IOptions<MeshcomSettings>>().Value;
+if (accessResetByEnv)
+    startupLog.LogWarning("MESHCOM_RESET_ACCESS is set: access protection was switched off at this start. " +
+                          "Remove the variable, otherwise a password set later is wiped at every restart.");
 startupLog.LogInformation(
     "MeshCom effective configuration: " +
     "Device={DeviceIp}:{DevicePort}  Listen={ListenIp}:{ListenPort}  " +
