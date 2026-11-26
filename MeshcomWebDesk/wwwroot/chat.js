@@ -450,7 +450,7 @@ window.meshcomChat = (function () {
     function showNotification(title, body, tag, silent, tabKey, nodeId) {
         if (!('Notification' in window) || Notification.permission !== 'granted') return false;
         var opts = {
-            body: body, tag: tag || undefined, renotify: !!tag, silent: !!silent, icon: 'favicon.png',
+            body: body, tag: tag || undefined, renotify: !!tag, silent: !!silent, icon: 'icons/notification-icon.png',
             data: { tabKey: tabKey || '', nodeId: nodeId || '' }
         };
         function viaPage() {

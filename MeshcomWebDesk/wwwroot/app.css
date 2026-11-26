@@ -3108,9 +3108,13 @@ html.mon-animate .lower-pane {
     align-items: center;
     justify-content: center;
     z-index: 9999;
+    overflow-y: auto;            /* low screens: the dialog must be scrollable */
+    -webkit-overflow-scrolling: touch;
 }
 
 .welcome-modal {
+    margin: auto;                /* centers, but never clips the top when taller than the viewport */
+    flex-shrink: 0;
     background: var(--bg-elevated);
     border: 1px solid var(--border-strong);
     border-radius: 12px;
