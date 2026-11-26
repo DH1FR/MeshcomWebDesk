@@ -114,6 +114,32 @@ window.meshcomChat = (function () {
         if (!tabBar || tabBar.dataset.dragInit) return;
         tabBar.dataset.dragInit = '1';
 
+        // Many open tabs: wrapped onto several rows they eat the chat area. When that happens (on any screen size,
+        // not only on phones) switch to the one-row swipeable layout (.tabs-scroll, same rules as on phones).
+        // The wrapped height is measured with the class removed, so the decision cannot flip-flop.
+        var fitQueued = false;
+        function fitTabs() {
+            fitQueued = false;
+            var pane = tabBar.closest('.upper-pane');
+            if (!pane) return;
+            var had = tabBar.classList.contains('tabs-scroll');
+            if (had) tabBar.classList.remove('tabs-scroll');
+            var barH  = tabBar.offsetHeight;
+            var paneH = pane.clientHeight;
+            var scroll = barH > 40 && (paneH - barH < 220 || barH > paneH * 0.3);
+            if (scroll) tabBar.classList.add('tabs-scroll');
+            if (scroll !== had && scroll && window.meshcomChat) window.meshcomChat.revealActiveTab();
+        }
+        function queueFit() {
+            if (fitQueued) return;
+            fitQueued = true;
+            requestAnimationFrame(fitTabs);
+        }
+        new MutationObserver(queueFit).observe(tabBar, { childList: true });
+        if (window.ResizeObserver && tabBar.closest('.upper-pane')) new ResizeObserver(queueFit).observe(tabBar.closest('.upper-pane'));
+        window.addEventListener('resize', queueFit);
+        queueFit();
+
         // Narrow screens (one swipeable row): bring a tapped tab to the middle right away, without waiting
         // for the server round trip that re-renders the bar.
         tabBar.addEventListener('click', function (e) {
