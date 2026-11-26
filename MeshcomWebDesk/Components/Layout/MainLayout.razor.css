@@ -87,10 +87,30 @@
     border-bottom-color: #ffd166;
 }
 
-@media (max-width: 600px) {
-    .app-license-text {
+/* Not enough room next to the nav links (the header is only 40-44px high): leave the license/donation hint out,
+   and below 700px show just "WebDesk" with the version small underneath. A licensed install keeps a green tint on the title. */
+@media (max-width: 900px) {
+    .app-license-text,
+    .app-license-badge--unlicensed {
         display: none;
     }
+    /* The name never wraps; the version sits small underneath (two lines in total, fits the header) */
+    .app-title {
+        line-height: 1.1;
+        white-space: nowrap;
+    }
+    .app-version {
+        display: block;
+        font-size: 9px;
+    }
+}
+@media (max-width: 700px) {
+    .app-title-prefix {
+        display: none;
+    }
+}
+
+@media (max-width: 900px) {
     .app-title--licensed {
         background: rgba(63, 185, 80, 0.18);
         border-radius: 4px;
@@ -149,7 +169,7 @@
         gap: 4px;
     }
     .app-version {
-        display: none;
+        font-size: 8px;   /* stays visible, small underneath the name */
     }
     .app-license-badge--unlicensed {
         display: none;
