@@ -596,6 +596,15 @@
                 </label>
 
                 <label>
+                    @Loc.T("Emoticons in Emojis umwandeln", "Convert emoticons to emoji")<br />
+                    <small>@Loc.T("Beim Schreiben wird z. B. ;-) nach dem Leerzeichen zu 😉, :-) zu 🙂, <3 zu ❤️. Der letzte Begriff einer Nachricht wird beim Senden umgewandelt.", "While typing, e.g. ;-) becomes 😉 after the space, :-) becomes 🙂, <3 becomes ❤️. The last word of a message is converted when it is sent.")</small>
+                </label>
+                <label class="settings-toggle">
+                    <input type="checkbox" @bind="_model.EmoticonsToEmoji" />
+                    <span>@(_model.EmoticonsToEmoji ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv (Standard)", "Inactive (default)"))</span>
+                </label>
+
+                <label>
                     @Loc.T("Sendepause (Sekunden)", "TX Cooldown (seconds)")<br />
                     <small>@Loc.T("Mindestwartezeit zwischen zwei Sendungen (5–60 Sek.).", "Minimum wait time between two transmissions (5–60 s).")</small>
                 </label>
@@ -4259,6 +4268,7 @@
             FrequencyMhz            = s.FrequencyMhz,
             SystemMarginDb          = s.SystemMarginDb,
             OwnMessagesAlignLeft    = s.OwnMessagesAlignLeft,
+            EmoticonsToEmoji        = s.EmoticonsToEmoji,
             TxCooldownSeconds       = s.TxCooldownSeconds,
             PresenceEnabled         = s.PresenceEnabled,
             PresenceFreshMinutes    = s.PresenceFreshMinutes,
@@ -5133,6 +5143,7 @@
                 AntennaType             = s.AntennaType,
                 AntennaHeightM          = s.AntennaHeightM,
                 OwnMessagesAlignLeft    = s.OwnMessagesAlignLeft,
+                EmoticonsToEmoji        = s.EmoticonsToEmoji,
                 TxCooldownSeconds       = s.TxCooldownSeconds,
                 PresenceEnabled         = s.PresenceEnabled,
                 PresenceFreshMinutes    = s.PresenceFreshMinutes,
@@ -5299,6 +5310,7 @@
         public double FrequencyMhz            { get; set; } = 433.175;
         public double SystemMarginDb          { get; set; } = 30.0;
         public bool   OwnMessagesAlignLeft    { get; set; } = false;
+        public bool   EmoticonsToEmoji        { get; set; } = false;
         public int    TxCooldownSeconds         { get; set; } = 5;
         public bool   PresenceEnabled          { get; set; } = true;
         public int    PresenceFreshMinutes     { get; set; } = 45;
@@ -5505,6 +5517,7 @@
             FrequencyMhz            = FrequencyMhz,
             SystemMarginDb          = SystemMarginDb,
             OwnMessagesAlignLeft    = OwnMessagesAlignLeft,
+            EmoticonsToEmoji        = EmoticonsToEmoji,
             TxCooldownSeconds       = TxCooldownSeconds,
             PresenceEnabled         = PresenceEnabled,
             PresenceFreshMinutes    = Math.Clamp(PresenceFreshMinutes, 5, 1440),

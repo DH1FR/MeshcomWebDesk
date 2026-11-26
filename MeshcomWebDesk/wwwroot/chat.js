@@ -38,6 +38,26 @@ window.meshcomChat = (function () {
         return bytes;
     }
 
+    // Optional emoticon → emoji conversion while typing (Settings → Chat & Monitor). The table comes from the server
+    // (EmoticonConverter.Map) via setEmoticons; null = off. Converts the whole word before the cursor when the user
+    // has just typed a space/line break after it – so "http://x", ":Dank" or "8)" are never touched. The last word of
+    // a message is converted on the server when it is sent.
+    var emoticonMap = null;
+    function convertEmoticonBeforeCursor(el, e) {
+        if (!emoticonMap || !e || e.inputType !== 'insertText' || !/^\s$/.test(e.data || '')) return;
+        var pos = el.selectionStart;
+        if (pos !== el.selectionEnd || pos < 2) return;
+        var before = el.value.slice(0, pos - 1);              // text up to (excluding) the space just typed
+        var m = /(^|\s)(\S+)$/.exec(before);
+        if (!m) return;
+        var emoji = Object.prototype.hasOwnProperty.call(emoticonMap, m[2]) ? emoticonMap[m[2]] : null;
+        if (!emoji) return;
+        var start = before.length - m[2].length;
+        el.setRangeText(emoji, start, before.length, 'preserve');
+        var caret = pos - m[2].length + emoji.length;
+        el.setSelectionRange(caret, caret);
+    }
+
     function updateSendCounter(counter, text) {
         var chars     = text.length;
         var jsonBytes = csharpJsonMsgBytes(text);
@@ -661,12 +681,14 @@ window.meshcomChat = (function () {
         },
 
         // ── SendBar: registriert oninput-Handler für Live-Counter ohne Blazor-Binding ──
+        setEmoticons: (map) => { emoticonMap = map || null; },
         initSendBarCounter: (id, dotNetRef) => {            var el = document.getElementById(id);
             if (!el || el.dataset.counterInit) return;
             el.dataset.counterInit = '1';
 
-            // Live-Counter
-            el.addEventListener('input', function () {
+            // Live-Counter (+ optional emoticon → emoji conversion, see setEmoticons)
+            el.addEventListener('input', function (e) {
+                convertEmoticonBeforeCursor(el, e);
                 var bar     = el.closest('.send-bar');
                 var counter = bar && bar.querySelector('.char-counter');
                 if (!counter) return;

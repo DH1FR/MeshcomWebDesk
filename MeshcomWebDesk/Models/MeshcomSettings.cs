@@ -400,6 +400,12 @@ public class MeshcomSettings
     public bool OwnMessagesAlignLeft { get; set; } = false;
 
     /// <summary>
+    /// When true, text emoticons typed into the message field (e.g. <c>;-)</c>) are converted to emoji
+    /// (see <see cref="Services.EmoticonConverter"/>). Off by default, so an update changes nothing.
+    /// </summary>
+    public bool EmoticonsToEmoji { get; set; } = false;
+
+    /// <summary>
     /// Minimum wait time between two transmissions in seconds.
     /// 0 = disabled. Valid range when enabled: 5–60 s.
     /// </summary>

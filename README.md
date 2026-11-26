@@ -1036,7 +1036,7 @@ Clicking it opens a modal dialog with **four tabs**:
   | **Multi-Node profiles** | All node profiles (`Name`, `Callsign`, `Device IP/Port`, `Listen IP/Port`, `Primary` flag, `Enabled` flag, TLS fingerprint, TLS password) |
   | **Connection** | Primary `ListenIp`, `ListenPort`, `DeviceIp`, `DevicePort`, `MyCallsign` |
   | **Console** | `TelnetEnabled`, `ConsoleMode`, `TelnetPort`, `TelnetPassword`, `TelnetCertThumbprint`, `SerialPortName`, `SerialBaudRate` |
-  | **Chat & Groups** | `Groups`, `WatchCallsigns`, `WatchGroups`, watch options, `GroupLabels`, `OwnMessagesAlignLeft`, `TxCooldownSeconds`, `GatewayHighlightEnabled` |
+  | **Chat & Groups** | `Groups`, `WatchCallsigns`, `WatchGroups`, watch options, `GroupLabels`, `OwnMessagesAlignLeft`, `EmoticonsToEmoji`, `TxCooldownSeconds`, `GatewayHighlightEnabled` |
   | **Auto-Reply** | `AutoReplyEnabled`, `AutoReplyText` |
   | **Bot** | `BotEnabled`, `BotExternalCommandsPath`, all user-defined bot commands (incl. external process fields) |
   | **Quick Texts** | All quick-text entries |

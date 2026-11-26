@@ -371,6 +371,7 @@ public class SettingsService
                 ["FrequencyMhz"]            = s.FrequencyMhz,
                 ["SystemMarginDb"]          = s.SystemMarginDb,
                 ["OwnMessagesAlignLeft"]    = s.OwnMessagesAlignLeft,
+                ["EmoticonsToEmoji"]        = s.EmoticonsToEmoji,
                 ["TxCooldownSeconds"]       = s.TxCooldownSeconds,
                 ["PresenceEnabled"]         = s.PresenceEnabled,
                 ["PresenceFreshMinutes"]    = s.PresenceFreshMinutes,

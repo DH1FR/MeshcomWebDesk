@@ -74,7 +74,26 @@
     {
         Loc.OnChange += OnLocChange;
         LoadQuickTextsFromSettings();
-        _settingsListener = SettingsMonitor.OnChange(_ => { LoadQuickTextsFromSettings(); InvokeAsync(ForceRerender); });
+        _settingsListener = SettingsMonitor.OnChange(changed =>
+        {
+            LoadQuickTextsFromSettings();
+            InvokeAsync(ForceRerender);
+            _ = InvokeAsync(PushEmoticonSettingAsync);
+        });
+    }
+
+    /// <summary>Tells chat.js whether (and with which table) to convert emoticons while typing; null = off.</summary>
+    private async Task PushEmoticonSettingAsync()
+    {
+        try
+        {
+            object? map = SettingsMonitor.CurrentValue.EmoticonsToEmoji ? EmoticonConverter.Map : null;
+            await JS.InvokeVoidAsync("meshcomChat.setEmoticons", map);
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException or JSDisconnectedException or TaskCanceledException)
+        {
+            // circuit not ready / already gone – the next settings change or page load pushes it again
+        }
     }
 
     private bool _rendered;
@@ -92,6 +111,7 @@
         {
             _dotNetRef ??= DotNetObjectReference.Create(this);
             await JS.InvokeVoidAsync("meshcomChat.initSendBarCounter", "send-bar-input", _dotNetRef);
+            await PushEmoticonSettingAsync();
         }
 
         if (_flyoutOpen && _quickTexts.Count > 0)
@@ -175,6 +195,8 @@
     {
         if (ChatService.TxCooldownRemaining > 0) return;
         _text = await JS.InvokeAsync<string>("meshcomChat.getSendBarValue", "send-bar-input");
+        // The last word has no trailing space yet, so the live conversion in chat.js did not see it
+        if (SettingsMonitor.CurrentValue.EmoticonsToEmoji) _text = EmoticonConverter.Convert(_text);
         if (string.IsNullOrWhiteSpace(_text) || _text.Length > MaxLength) return;
         var expanded = await UdpService.ExpandVariablesAsync(_text, Callsign);
         var text = expanded.Length > MaxLength ? expanded[..MaxLength] : expanded;
