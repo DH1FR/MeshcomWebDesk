@@ -920,7 +920,7 @@
     "Text too long": "Texte trop long",
     "The file on disk was also cleared.": "Le fichier sur disque a également été effacé.",
     "The node applies no throttling of its own – this minimum interval between two extudp sends protects against flooding the mesh when a value jitters.": "Le nœud n'applique aucune limitation propre : cet intervalle minimum entre deux envois extudp protège contre la saturation de la mesh lorsqu'une valeur fluctue.",
-    "The node did not confirm the sent values, so this was disabled automatically. Its firmware likely does not yet support the native \"tele\" telegram (or it has real sensor hardware installed).": "Le nœud n'a pas confirmé les valeurs envoyées, la fonction a donc été désactivée automatiquement. Son firmware ne prend probablement pas encore en charge la trame native « tele » (ou de vrais capteurs sont installés).",
+    "The node did not confirm the sent values – sending is suspended until the next restart (the setting stays on). Its firmware likely does not yet support the native \"tele\" telegram (or it has real sensor hardware installed).": "Le nœud n'a pas confirmé les valeurs envoyées : l'envoi est suspendu jusqu'au prochain redémarrage (le réglage reste activé). Son firmware ne prend probablement pas encore en charge la trame native « tele » (ou de vrais capteurs sont installés).",
     "The node is starting the OTA web server. Page opens in": "Le nœud démarre le serveur web OTA. La page s'ouvre dans",
     "The node itself may not be receiving anything from the mesh": "Il est possible que le node lui-même ne reçoive rien du mesh",
     "The node will be rebooted. The TLS connection will be disconnected afterwards.": "Le nœud va redémarrer. La connexion TLS sera déconnectée ensuite.",

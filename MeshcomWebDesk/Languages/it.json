@@ -898,7 +898,7 @@
     "Text too long": "Testo troppo lungo",
     "The file on disk was also cleared.": "Anche il file su disco è stato svuotato.",
     "The node applies no throttling of its own – this minimum interval between two extudp sends protects against flooding the mesh when a value jitters.": "Il nodo non applica alcuna limitazione propria: questo intervallo minimo tra due invii extudp protegge dal sovraccarico della mesh quando un valore oscilla.",
-    "The node did not confirm the sent values, so this was disabled automatically. Its firmware likely does not yet support the native \"tele\" telegram (or it has real sensor hardware installed).": "Il nodo non ha confermato i valori inviati, quindi la funzione è stata disattivata automaticamente. Probabilmente il suo firmware non supporta ancora il telegramma nativo \"tele\" (oppure ha un vero hardware di sensori installato).",
+    "The node did not confirm the sent values – sending is suspended until the next restart (the setting stays on). Its firmware likely does not yet support the native \"tele\" telegram (or it has real sensor hardware installed).": "Il nodo non ha confermato i valori inviati: l'invio è sospeso fino al prossimo riavvio (l'impostazione resta attiva). Probabilmente il suo firmware non supporta ancora il telegramma nativo \"tele\" (oppure ha un vero hardware di sensori installato).",
     "The node is starting the OTA web server. Page opens in": "Il nodo sta avviando il server web OTA. La pagina si apre tra",
     "The node itself may not be receiving anything from the mesh": "Il nodo stesso potrebbe non ricevere nulla dalla mesh",
     "The node will be rebooted. The TLS connection will be disconnected afterwards.": "Il nodo verrà riavviato. La connessione TLS sarà disconnessa.",

@@ -1448,12 +1448,13 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         if (_pendingExtUdpProbe is not null && DateTime.UtcNow - _pendingExtUdpProbeSentAt > ExtUdpProbeTimeout)
         {
             _pendingExtUdpProbe = null;
-            await DisableExtUdpTelemetryAsync(
+            SuspendExtUdpTelemetry(
                 "the node did not echo back matching values within the expected time – its firmware likely does not implement the extudp \"tele\" interface (or has real sensor hardware installed)");
             return;
         }
 
         if (!s.TelemetryEnabled || !s.TelemetryExtUdpEnabled) return;
+        if (Status.ExtUdpTelemetryConfirmed == false) return; // suspended after a failed probe (until restart / re-enable)
         if (!s.TelemetryMapping.Any(e => RoleToExtUdpField.ContainsKey(e.WeatherRole.Trim().ToLowerInvariant()))) return;
 
         var current = BuildExtUdpValues(s);
@@ -1524,30 +1525,20 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     }
 
     /// <summary>
-    /// Turns off <see cref="MeshcomSettings.TelemetryExtUdpEnabled"/> and persists it, so the app
-    /// stops wasting mesh airtime on a node whose firmware does not apply the values (see
-    /// <see cref="CheckAndSendExtUdpIfChangedAsync"/>'s timeout sweep). The user can re-enable it
-    /// manually in Settings at any time (e.g. after flashing supporting firmware), which re-arms
-    /// the probe on the next send.
+    /// Suspends extudp sending (runtime only, <see cref="ConnectionStatus.ExtUdpTelemetryConfirmed"/> = false) so
+    /// the app stops wasting mesh airtime on a node whose firmware does not apply the values (see
+    /// <see cref="CheckAndSendExtUdpIfChangedAsync"/>'s timeout sweep). The setting itself is NOT changed or
+    /// persisted: a slow or missed echo right after a restart used to switch it off for good, so the user had to
+    /// tick it again after every restart. The next start, or toggling it off/on, tries again.
     /// </summary>
-    private async Task DisableExtUdpTelemetryAsync(string reason)
+    private void SuspendExtUdpTelemetry(string reason)
     {
-        if (!_settings.TelemetryExtUdpEnabled) return; // already off
+        if (!_settings.TelemetryExtUdpEnabled || Status.ExtUdpTelemetryConfirmed == false) return; // off or already suspended
 
         _logger.LogWarning(
-            "Disabling extudp telemetry automatically: {Reason}.", reason);
+            "Suspending extudp telemetry until the next restart: {Reason}.", reason);
         Status.ExtUdpTelemetryConfirmed = false;
         NotifyStatusChange();
-
-        _settings.TelemetryExtUdpEnabled = false;
-        try
-        {
-            await _settingsService.SaveMeshcomSettingsAsync(_settings);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to persist automatic extudp telemetry disable");
-        }
     }
 
     private void SetTelemetryStatus(bool active, DateTime? nextSend)
