@@ -1,3 +1,5 @@
+<p align="center"><img src="MeshcomWebDesk/wwwroot/icons/icon.svg" alt="MeshCom WebDesk" width="128" height="128"></p>
+
 ```
   ███╗   ███╗███████╗███████╗██╗  ██╗ ██████╗ ██████╗ ███╗   ███╗
   ████╗ ████║██╔════╝██╔════╝██║  ██║██╔════╝██╔═══██╗████╗ ████║

@@ -41,6 +41,13 @@
     letter-spacing: 0.02em;
 }
 
+.app-logo {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border-radius: 6px;
+}
+
 .app-title {
     color: var(--link-soft);
 }
@@ -164,6 +171,10 @@
 
 /* Smaller brand title on phones (all iPhones up to Plus/Pro Max) */
 @media (max-width: 480px) {
+    .app-logo {
+        width: 22px;
+        height: 22px;
+    }
     .app-header-brand {
         font-size: 11px;
         gap: 4px;
