@@ -44,9 +44,11 @@ window.meshcomChat = (function () {
     // a message is converted on the server when it is sent.
     var emoticonMap = null;
     function convertEmoticonBeforeCursor(el, e) {
-        if (!emoticonMap || !e || e.inputType !== 'insertText' || !/^\s$/.test(e.data || '')) return;
+        // iOS keyboards often report the space with data=null or as insertReplacementText (autocorrect),
+        // so don't rely on e.data – just check that the character left of the caret is whitespace.
+        if (!emoticonMap || !e || !e.inputType || e.inputType.indexOf('insert') !== 0) return;
         var pos = el.selectionStart;
-        if (pos !== el.selectionEnd || pos < 2) return;
+        if (pos !== el.selectionEnd || pos < 2 || !/\s/.test(el.value.charAt(pos - 1))) return;
         var before = el.value.slice(0, pos - 1);              // text up to (excluding) the space just typed
         var m = /(^|\s)(\S+)$/.exec(before);
         if (!m) return;
