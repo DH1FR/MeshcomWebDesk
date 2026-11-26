@@ -601,7 +601,7 @@
                 </label>
                 <label class="settings-toggle">
                     <input type="checkbox" @bind="_model.EmoticonsToEmoji" />
-                    <span>@(_model.EmoticonsToEmoji ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv (Standard)", "Inactive (default)"))</span>
+                    <span>@(_model.EmoticonsToEmoji ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                 </label>
 
                 <label>
@@ -5310,7 +5310,7 @@
         public double FrequencyMhz            { get; set; } = 433.175;
         public double SystemMarginDb          { get; set; } = 30.0;
         public bool   OwnMessagesAlignLeft    { get; set; } = false;
-        public bool   EmoticonsToEmoji        { get; set; } = false;
+        public bool   EmoticonsToEmoji        { get; set; } = true;
         public int    TxCooldownSeconds         { get; set; } = 5;
         public bool   PresenceEnabled          { get; set; } = true;
         public int    PresenceFreshMinutes     { get; set; } = 45;

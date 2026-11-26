@@ -401,9 +401,9 @@ public class MeshcomSettings
 
     /// <summary>
     /// When true, text emoticons typed into the message field (e.g. <c>;-)</c>) are converted to emoji
-    /// (see <see cref="Services.EmoticonConverter"/>). Off by default, so an update changes nothing.
+    /// (see <see cref="Services.EmoticonConverter"/>). On by default.
     /// </summary>
-    public bool EmoticonsToEmoji { get; set; } = false;
+    public bool EmoticonsToEmoji { get; set; } = true;
 
     /// <summary>
     /// Minimum wait time between two transmissions in seconds.
