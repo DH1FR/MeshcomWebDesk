@@ -1713,13 +1713,19 @@ html.mon-animate .lower-pane {
 /* ===== About Page ===== */
 .about-page {
     display: flex;
-    align-items: center;
-    justify-content: center;
     height: 100%;
     padding: 2rem;
+    overflow-y: auto;            /* small displays: the card must be scrollable */
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 600px) {
+    .about-page { padding: 0.75rem; }
+    .about-card { padding: 1.25rem 1rem !important; }
 }
 
 .about-card {
+    margin: auto;                /* centers, but never clips the top when taller than the viewport */
     background: var(--bg-panel);
     border: 1px solid var(--accent);
     border-radius: 12px;
