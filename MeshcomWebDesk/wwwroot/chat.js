@@ -364,26 +364,29 @@ window.meshcomChat = (function () {
         if (attention) { attention.stop(); attention = null; }
     }
 
-    // ── Unread badge in the browser tab ───────────────────────────────────
-    // Prefixes the page title with "(n) " and puts a red dot on the favicon. Blazor's <PageTitle> sets the
-    // title itself (already including the number); this only re-applies it if something overwrote it and
-    // draws the favicon. n = 0 removes the dot again.
-    var favImg = null, favLink = null, favLastN = -1;
+    // ── Unread badge in the browser tab / on the installed app's icon ─────
+    // n   = all unread messages, imp = the part of them that is for us (direct messages + mentions).
+    // Title: "(n) " or "(n · imp💬) "; favicon: red dot (unread) + orange dot (direct/mention);
+    // app icon badge (taskbar / home screen): imp only – the Badging API can show a single number.
+    // Blazor's <PageTitle> does not set the number; this applies it and re-applies it if something overwrote it.
+    var favImg = null, favLink = null, favLastKey = '';
 
-    function setTabBadge(n) {
-        n = n > 0 ? n : 0;
-        // <PageTitle> is not updated interactively here, so the title is set directly.
+    function setTabBadge(n, imp) {
+        n   = n > 0 ? n : 0;
+        imp = n > 0 && imp > 0 ? Math.min(imp, n) : 0;
+        function fmt(v) { return v > 99 ? '99+' : String(v); }
         try {
-            var baseTitle = document.title.replace(/^\(\d+\+?\) /, '');
-            var wanted = n > 0 ? '(' + (n > 99 ? '99+' : n) + ') ' + baseTitle : baseTitle;
+            var baseTitle = document.title.replace(/^\(\d+\+?(?: · \d+\+?💬)?\) /, '');
+            var wanted = n > 0 ? '(' + fmt(n) + (imp > 0 ? ' · ' + fmt(imp) + '💬' : '') + ') ' + baseTitle : baseTitle;
             if (document.title !== wanted) document.title = wanted;
         } catch (e) { }
         try {
-            if (n > 0 && navigator.setAppBadge) navigator.setAppBadge(n).catch(function () { });
-            else if (n === 0 && navigator.clearAppBadge) navigator.clearAppBadge().catch(function () { });
+            if (imp > 0 && navigator.setAppBadge) navigator.setAppBadge(imp).catch(function () { });
+            else if (imp === 0 && navigator.clearAppBadge) navigator.clearAppBadge().catch(function () { });
         } catch (e) { }
-        if (n === favLastN) return;
-        favLastN = n;
+        var key = n + '|' + (imp > 0 ? 1 : 0);
+        if (key === favLastKey) return;
+        favLastKey = key;
         try {
             if (!favLink) {
                 favLink = document.createElement('link');
@@ -400,16 +403,20 @@ window.meshcomChat = (function () {
                 c.width = c.height = 64;
                 var g = c.getContext('2d');
                 if (favImg && favImg.complete && favImg.naturalWidth) g.drawImage(favImg, 0, 0, 64, 64);
-                g.beginPath(); g.arc(46, 18, 16, 0, Math.PI * 2);
-                g.fillStyle = '#e53935'; g.fill();
-                g.lineWidth = 4; g.strokeStyle = '#ffffff'; g.stroke();
+                function dot(x, y, color) {
+                    g.beginPath(); g.arc(x, y, 16, 0, Math.PI * 2);
+                    g.fillStyle = color; g.fill();
+                    g.lineWidth = 4; g.strokeStyle = '#ffffff'; g.stroke();
+                }
+                dot(46, 18, '#e53935');                  // unread
+                if (favLastKey.slice(-1) === '1') dot(46, 46, '#fb8c00');   // direct message / mention
                 favLink.href = c.toDataURL('image/png');
                 if (!favLink.parentNode) document.head.appendChild(favLink);
             }
             if (!favImg) {
                 favImg = new Image();
-                favImg.onload  = function () { if (favLastN > 0) draw(); };
-                favImg.onerror = function () { if (favLastN > 0) draw(); };
+                favImg.onload  = function () { if (favLastKey !== '0|0') draw(); };
+                favImg.onerror = function () { if (favLastKey !== '0|0') draw(); };
                 favImg.src = 'favicon.png';
             } else {
                 draw();

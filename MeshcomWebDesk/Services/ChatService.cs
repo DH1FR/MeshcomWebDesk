@@ -730,13 +730,32 @@ public class ChatService
     /// </summary>
     public int GetUnreadTotal()
     {
-        var ids = _nodeManager?.Nodes.Select(n => (Guid?)n.Id).ToList() ?? [];
-        if (ids.Count == 0) ids.Add(null);   // legacy single-node mode
-        var states = ids.Select(ResolveState).Distinct().ToList();
+        var states = CurrentNodeStates();
         lock (_lock)
         {
             return states.Sum(st => st.Tabs.Values.Sum(t => t.UnreadCount));
         }
+    }
+
+    /// <summary>
+    /// The part of <see cref="GetUnreadTotal"/> that is addressed to us: unread messages in direct (1:1) tabs plus unread
+    /// mentions of our callsign in group / "All" tabs. Shown as the badge on the installed app's icon.
+    /// </summary>
+    public int GetUnreadImportantTotal()
+    {
+        var states = CurrentNodeStates();
+        lock (_lock)
+        {
+            return states.Sum(st => st.Tabs.Values.Sum(t =>
+                t.Key == "*" || t.Key.StartsWith('#') ? t.MentionUnread : t.UnreadCount));
+        }
+    }
+
+    private List<NodeState> CurrentNodeStates()
+    {
+        var ids = _nodeManager?.Nodes.Select(n => (Guid?)n.Id).ToList() ?? [];
+        if (ids.Count == 0) ids.Add(null);   // legacy single-node mode
+        return ids.Select(ResolveState).Distinct().ToList();
     }
 
     /// <summary>

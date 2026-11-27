@@ -1393,12 +1393,15 @@
     /// <summary>Unread messages still waiting (nobody has really looked at them) – for the browser tab title.</summary>
     private int TabUnread => SettingsOptions.CurrentValue.TabTitleUnreadEnabled ? ChatService.GetUnreadTotal() : 0;
 
+    /// <summary>The part of <see cref="TabUnread"/> that is for us (direct messages + mentions) – drives the app icon badge.</summary>
+    private int TabUnreadImportant => SettingsOptions.CurrentValue.TabTitleUnreadEnabled ? ChatService.GetUnreadImportantTotal() : 0;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         try
         {
             await OnAfterRenderCoreAsync(firstRender);
-            await JS.InvokeVoidAsync("meshcomChat.setTabBadge", TabUnread);
+            await JS.InvokeVoidAsync("meshcomChat.setTabBadge", TabUnread, TabUnreadImportant);
         }
         catch (Exception ex) when (ex is TaskCanceledException or OperationCanceledException or JSDisconnectedException)
         {
