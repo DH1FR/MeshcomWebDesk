@@ -648,14 +648,16 @@ window.meshcomChat = (function () {
         },
 
         // ── SendBar: fügt Text an der aktuellen Cursorposition ein ──
-        insertAtCursor: (id, text) => {
+        insertAtCursor: (id, text, maxLength) => {
             var el = document.getElementById(id);
             if (!el) return;
             var start = el.selectionStart;
             var end   = el.selectionEnd;
             var val   = el.value;
-            el.value  = val.substring(0, start) + text + val.substring(end);
-            var pos   = start + text.length;
+            var nv    = val.substring(0, start) + text + val.substring(end);
+            if (maxLength && nv.length > maxLength) nv = nv.substring(0, maxLength);
+            el.value  = nv;
+            var pos   = Math.min(start + text.length, nv.length);
             el.setSelectionRange(pos, pos);
             el.focus();
             // Counter aktualisieren
