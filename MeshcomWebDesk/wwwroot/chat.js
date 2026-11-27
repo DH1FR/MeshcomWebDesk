@@ -371,6 +371,20 @@ window.meshcomChat = (function () {
     // Blazor's <PageTitle> does not set the number; this applies it and re-applies it if something overwrote it.
     var favImg = null, favLink = null, favLastKey = '';
 
+    var hiddenIcons = [];
+    function hideStaticIcons() {
+        if (hiddenIcons.length) return;
+        document.querySelectorAll('link[rel="icon"]').forEach(function (l) {
+            if (l === favLink) return;
+            hiddenIcons.push({ el: l, next: l.nextSibling });
+            l.parentNode.removeChild(l);
+        });
+    }
+    function restoreStaticIcons() {
+        hiddenIcons.forEach(function (h) { document.head.insertBefore(h.el, h.next && h.next.parentNode === document.head ? h.next : null); });
+        hiddenIcons = [];
+    }
+
     function setTabBadge(n, imp) {
         n   = n > 0 ? n : 0;
         imp = n > 0 && imp > 0 ? Math.min(imp, n) : 0;
@@ -396,6 +410,7 @@ window.meshcomChat = (function () {
             }
             if (n === 0) {
                 if (favLink.parentNode) favLink.parentNode.removeChild(favLink);
+                restoreStaticIcons();
                 return;
             }
             function draw() {
@@ -411,6 +426,9 @@ window.meshcomChat = (function () {
                 dot(46, 18, '#e53935');                  // unread
                 if (favLastKey.slice(-1) === '1') dot(46, 46, '#fb8c00');   // direct message / mention
                 favLink.href = c.toDataURL('image/png');
+                // The page declares its own <link rel="icon"> (svg + png); with several candidates the browser may
+                // keep one of those instead of ours, so take them out while the badge is shown.
+                hideStaticIcons();
                 if (!favLink.parentNode) document.head.appendChild(favLink);
             }
             if (!favImg) {
