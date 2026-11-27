@@ -316,6 +316,89 @@ public class ChatService
     private readonly ConcurrentDictionary<string, (DateTime Time, bool Direct)> _relaySeen =
         new(StringComparer.OrdinalIgnoreCase);
 
+    // ── KISS relay paths with a clamped SSID ("DH1FR-?") ────────────────────────────────────
+    // The same packet usually arrives a second time via ext-udp with the complete path. The first (KISS) copy is
+    // already stored by then and the second one is dropped as a duplicate, so its path is used to repair the stored one.
+
+    private sealed record ClampedPath(MeshcomMessage Message, Guid? NodeId, DateTime At);
+
+    private readonly ConcurrentDictionary<string, ClampedPath> _clampedPaths = new();
+    private static readonly TimeSpan ClampedPathWindow = TimeSpan.FromSeconds(90);
+
+    private static bool HasUnknownHop(string? path) =>
+        path != null && path.Contains("-?", StringComparison.Ordinal);
+
+    private static string ClampedKey(MeshcomMessage m, Guid? nodeId) =>
+        $"{nodeId:N}|{m.From}|{m.Text}";
+
+    private void RegisterClampedPath(MeshcomMessage message, Guid? nodeId)
+    {
+        if (!HasUnknownHop(message.RelayPath) || string.IsNullOrEmpty(message.From)) return;
+        var cutoff = DateTime.Now - ClampedPathWindow;
+        foreach (var kv in _clampedPaths)
+            if (kv.Value.At < cutoff) _clampedPaths.TryRemove(kv.Key, out _);
+        _clampedPaths[ClampedKey(message, nodeId)] = new ClampedPath(message, nodeId, DateTime.Now);
+    }
+
+    /// <summary>True when <paramref name="full"/> is the complete version of <paramref name="partial"/> (same length, same calls except the "-?" hops).</summary>
+    private static bool IsCompletionOf(string full, string partial)
+    {
+        var f = full.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        var p = partial.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        if (f.Length != p.Length) return false;
+        for (var i = 0; i < f.Length; i++)
+        {
+            if (string.Equals(f[i], p[i], StringComparison.OrdinalIgnoreCase)) continue;
+            if (!p[i].EndsWith("-?", StringComparison.Ordinal)) return false;
+            var baseCall = p[i][..^1];   // "DH1FR-"
+            if (!f[i].StartsWith(baseCall, StringComparison.OrdinalIgnoreCase)) return false;
+            if (!int.TryParse(f[i].AsSpan(baseCall.Length), out var ssid) || ssid < 15) return false;
+        }
+        return true;
+    }
+
+    private void TryRepairClampedPath(MeshcomMessage incoming, Guid? nodeId)
+    {
+        if (_clampedPaths.IsEmpty || string.IsNullOrEmpty(incoming.RelayPath) || HasUnknownHop(incoming.RelayPath)) return;
+        if (!_clampedPaths.TryGetValue(ClampedKey(incoming, nodeId), out var pending)) return;
+        var stored  = pending.Message;
+        var oldPath = stored.RelayPath;
+        if (oldPath is null || DateTime.Now - pending.At > ClampedPathWindow || !IsCompletionOf(incoming.RelayPath, oldPath)) return;
+        _clampedPaths.TryRemove(ClampedKey(incoming, nodeId), out _);
+
+        var newPath = incoming.RelayPath;
+        _logger.LogDebug("Relay path repaired from the full copy: {Old} -> {New}", oldPath, newPath);
+        stored.RelayPath = newPath;
+        if (stored.DigipeaterPath != null)
+            stored.DigipeaterPath = string.Join(",", newPath.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Skip(1));
+
+        bool mhChanged = false;
+        var mh = GetPrimaryState().MhList;
+        if (IsPrimaryNode(nodeId) && mh.TryGetValue(stored.From, out var station))
+        {
+            if (station.LastRelayPath == oldPath) { station.LastRelayPath = newPath; mhChanged = true; }
+            lock (station.RelayPathHistory)
+            {
+                var wrong = station.RelayPathHistory.FirstOrDefault(p => p.Path == oldPath);
+                if (wrong is not null)
+                {
+                    var right = station.RelayPathHistory.FirstOrDefault(p => p.Path == newPath);
+                    if (right is null) wrong.Path = newPath;
+                    else
+                    {
+                        right.Count    += wrong.Count;
+                        right.LastSeen  = right.LastSeen > wrong.LastSeen ? right.LastSeen : wrong.LastSeen;
+                        station.RelayPathHistory.Remove(wrong);
+                    }
+                    mhChanged = true;
+                }
+            }
+        }
+        RecordRelaySightings(stored);
+        if (mhChanged) OnMhChange?.Invoke();
+        NotifyChange();
+    }
+
     private void RecordRelaySightings(MeshcomMessage message)
     {
         if (string.IsNullOrEmpty(message.RelayPath)) return;
@@ -324,6 +407,7 @@ public class ChatService
         for (var i = 1; i < hops.Length; i++)   // index 0 = originator, handled by the MH list
         {
             if (string.Equals(hops[i], own, StringComparison.OrdinalIgnoreCase)) continue;
+            if (hops[i].EndsWith("-?", StringComparison.Ordinal)) continue;   // clamped SSID from KISS, real call unknown
             var direct = i == hops.Length - 1;
             _relaySeen.AddOrUpdate(hops[i],
                 (message.Timestamp, direct),
@@ -393,12 +477,17 @@ public class ChatService
         // mesh routes. Scoped per state bucket so every node that heard the message keeps its
         // own copy; isFirstReceipt marks the very first copy across all nodes and gates
         // one-time side effects (webhook, MQTT, watchlist, CQ) below.
+        // A copy that carries the complete relay path repairs a KISS copy stored earlier with "-?" hops.
+        TryRepairClampedPath(message, nodeId);
+
         if (IsDuplicate(message, ResolveBucketId(nodeId), out bool isFirstReceipt))
         {
             _logger.LogDebug("Duplicate message suppressed: Node={NodeId} From={From} Seq={Seq} Text={Text}",
                 nodeId, message.From, message.SequenceNumber, message.Text);
             return;
         }
+
+        RegisterClampedPath(message, nodeId);
 
         // Blacklisted sender: monitor only – no tab, notifications, bot, webhook or watchlist.
         if (IsBlacklisted(message.From))
