@@ -226,7 +226,7 @@ public sealed class NodePresenceService : IHostedService, IDisposable
         }
         catch (Exception ex)
         {
-            // Not every dashboard serves nodes.html (e.g. DL returns 404): warn once per URL.
+            // Not every dashboard serves nodes.html (e.g. user-defined sources may lack it): warn once per URL.
             bool first;
             lock (_warnedUrls) first = _warnedUrls.Add(url);
             if (first)

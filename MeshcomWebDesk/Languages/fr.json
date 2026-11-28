@@ -650,6 +650,7 @@
     "Node settings": "Paramètres nœud",
     "node unreachable": "node injoignable",
     "None (custom sources only)": "Aucune (sources personnalisées uniquement)",
+    "All (OE, DL, IT, HB, SP)": "Tous (OE, DL, IT, HB, SP)",
     "none (nothing configured or event passed)": "aucune (rien de configuré ou événement passé)",
     "None of the assigned extudp values could be found in the file.": "Aucune des valeurs extudp attribuées n'a été trouvée dans le fichier.",
     "Not connected": "Non connecté",

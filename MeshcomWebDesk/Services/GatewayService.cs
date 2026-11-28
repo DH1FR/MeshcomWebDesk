@@ -99,20 +99,25 @@ public sealed class GatewayService : IHostedService, IAsyncDisposable
     {
         var urls = new List<string>();
 
-        // GatewayServer may be a single code ("oe"), the legacy "both" alias, "none",
-        // or a space/comma separated list ("oe it").
-        var raw = settings.GatewayServer?.Trim() ?? "oe";
+        // GatewayServer may be "all" (every preset), a single code ("oe"), the legacy "both" alias,
+        // "none", or a space/comma separated list ("oe it").
+        var raw = settings.GatewayServer?.Trim() ?? "all";
         var tokens = raw.Split(new[] { ' ', ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
                         .Select(t => t.ToLowerInvariant())
                         .ToList();
 
         if (tokens.Count == 0)
-            tokens.Add("oe");
+            tokens.Add("all");
 
         foreach (var token in tokens)
         {
             if (token is "none")
                 continue;
+            if (token is "all")
+            {
+                urls.AddRange(PresetUrls.Values);
+                continue;
+            }
             if (token is "both")
             {
                 urls.Add(PresetUrls["oe"]);

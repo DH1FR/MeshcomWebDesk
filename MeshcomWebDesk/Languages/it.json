@@ -633,6 +633,7 @@
     "Node settings": "Impostazioni nodo",
     "node unreachable": "nodo irraggiungibile",
     "None (custom sources only)": "Nessuno (solo sorgenti personalizzate)",
+    "All (OE, DL, IT, HB, SP)": "Tutti (OE, DL, IT, HB, SP)",
     "none (nothing configured or event passed)": "nessuna (niente configurato o evento passato)",
     "None of the assigned extudp values could be found in the file.": "Nessuno dei valori extudp assegnati è stato trovato nel file.",
     "Not connected": "Non connesso",

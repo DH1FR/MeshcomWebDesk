@@ -654,6 +654,7 @@
                     <small>@Loc.T("Eingebautes Dashboard für die Gateway-Liste.", "Built-in dashboard for the gateway list.")</small>
                 </label>
                 <select @bind="_model.GatewayServer">
+                    <option value="all">@Loc.T("Alle (OE, DL, IT, HB, SP)", "All (OE, DL, IT, HB, SP)")</option>
                     <option value="oe">🇦🇹 OE – meshcom.oevsv.at</option>
                     <option value="dl">🇩🇪 DL – meshcom.hamnet.network</option>
                     <option value="it">🇮🇹 IT – meshcom.dig-italia.it</option>
@@ -5316,7 +5317,7 @@
         public int    PresenceFreshMinutes     { get; set; } = 45;
         public int    PresenceStaleMinutes     { get; set; } = 120;
         public bool   GatewayHighlightEnabled  { get; set; } = true;
-        public string GatewayServer            { get; set; } = "oe";
+        public string GatewayServer            { get; set; } = "all";
         public List<GatewaySourceEntry> GatewaySources { get; set; } = [];
         public List<WebLinkEntry> WebLinks { get; set; } = [];
 
