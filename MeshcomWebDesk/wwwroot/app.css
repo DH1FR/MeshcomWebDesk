@@ -540,6 +540,23 @@ h1:focus {
 
 .new-msg-fab:hover { filter: brightness(1.15); }
 
+/* "↑ N ungelesen": jump back to the "New messages" line (sticky at the top of the list) */
+.unread-jump-wrap {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    height: 0;
+    flex: none;
+    display: flex;
+    justify-content: center;
+    overflow: visible;
+}
+
+.unread-jump {
+    top: 6px;
+    bottom: auto;
+}
+
 /* ── Trennlinie "Neue Nachrichten" ─────────────────────────────────────── */
 .new-messages-divider {
     display: flex;
@@ -789,6 +806,47 @@ h1:focus {
 }
 
 .quicktext-close:hover { color: var(--error); }
+
+/* {} variable picker: compact scrollable table (label | current value) */
+.var-flyout {
+    background: var(--bg-panel);
+    border-top: 1px solid var(--accent);
+}
+.var-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 3px 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border-strong);
+}
+.var-list {
+    max-height: min(200px, 30vh);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.var-row {
+    display: flex;
+    width: 100%;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 5px 10px;
+    background: none;
+    color: var(--btn-text);
+    border: 0;
+    border-bottom: 1px solid var(--border-strong);
+    font: inherit;
+    font-size: 12px;
+    text-align: left;
+    cursor: pointer;
+}
+.var-row:hover:not(:disabled) { background: var(--btn-hover-bg); color: var(--btn-hover-text); }
+.var-row:disabled { opacity: .45; cursor: not-allowed; }
+.var-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.var-value { flex: 0 1 45%; min-width: 0; text-align: right; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html[data-display="compact"] .var-list { max-height: 34vh; }
 
 /* ⚡ Button in SendBar */
 .btn-quicktext {
@@ -1713,13 +1771,19 @@ html.mon-animate .lower-pane {
 /* ===== About Page ===== */
 .about-page {
     display: flex;
-    align-items: center;
-    justify-content: center;
     height: 100%;
     padding: 2rem;
+    overflow-y: auto;            /* small displays: the card must be scrollable */
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 600px) {
+    .about-page { padding: 0.75rem; }
+    .about-card { padding: 1.25rem 1rem !important; }
 }
 
 .about-card {
+    margin: auto;                /* centers, but never clips the top when taller than the viewport */
     background: var(--bg-panel);
     border: 1px solid var(--accent);
     border-radius: 12px;
@@ -1731,8 +1795,13 @@ html.mon-animate .lower-pane {
 }
 
 .about-icon {
-    font-size: 3rem;
     margin-bottom: 0.5rem;
+    line-height: 0;
+}
+.about-icon img {
+    width: 72px;
+    height: 72px;
+    border-radius: 14px;
 }
 
 .about-title {
@@ -3102,9 +3171,13 @@ html.mon-animate .lower-pane {
     align-items: center;
     justify-content: center;
     z-index: 9999;
+    overflow-y: auto;            /* low screens: the dialog must be scrollable */
+    -webkit-overflow-scrolling: touch;
 }
 
 .welcome-modal {
+    margin: auto;                /* centers, but never clips the top when taller than the viewport */
+    flex-shrink: 0;
     background: var(--bg-elevated);
     border: 1px solid var(--border-strong);
     border-radius: 12px;
@@ -4377,14 +4450,27 @@ html[data-display="compact"] .app-header {
     height: 34px;
     padding: 0 6px;
 }
-html[data-display="compact"] .app-title,
-html[data-display="compact"] .app-version,
 html[data-display="compact"] .app-license-badge,
 html[data-display="compact"] .nav-label {
     display: none;
 }
+/* Really tiny screens (e.g. 480x320): icon only. A phone held sideways (iPhone ~844px wide) has room for the
+   name: "WebDesk" with the version small underneath, in the slim 34px header. */
+@media (max-width: 599px) {
+    html[data-display="compact"] .app-title,
+    html[data-display="compact"] .app-version {
+        display: none;
+    }
+}
 html[data-display="compact"] .app-header-brand {
     font-size: 14px;
+}
+html[data-display="compact"] .app-title {
+    font-size: 13px;
+    line-height: 1.05;
+}
+html[data-display="compact"] .app-version {
+    font-size: 8px;
 }
 html[data-display="compact"] .app-nav {
     gap: 2px;
@@ -4928,6 +5014,40 @@ html[data-display="compact"] .app-nav-qr { display: none !important; }
         z-index: 2;
         background: var(--bg-panel);
     }
+}
+
+/* ===== Too many tabs on any screen: chat.js (fitTabs) sets .tabs-scroll when the wrapped tab rows would leave too
+   little room for the chat. Same one-row swipeable layout as on phones / low screens. ===== */
+.tab-bar.tabs-scroll {
+    flex-wrap: nowrap;
+    padding: 2px 4px 0;
+    scrollbar-width: none;
+}
+.tab-bar.tabs-scroll::-webkit-scrollbar {
+    display: none;
+}
+.tab-bar.tabs-scroll .tab-button {
+    flex-shrink: 0;
+}
+.tab-bar.tabs-scroll .tab-label-wrap {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 4px;
+}
+.tab-bar.tabs-scroll .tab-qrz-name {
+    max-width: 64px;
+}
+.tab-bar.tabs-scroll > .tab-new-wrap:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--bg-panel);
+}
+.tab-bar.tabs-scroll > .tab-new-wrap:last-child {
+    position: sticky;
+    right: 0;
+    z-index: 2;
+    background: var(--bg-panel);
 }
 
 /* ===== Touch devices (iPhone/iPad/Android): no unwanted zoom =====

@@ -1,5 +1,30 @@
 ﻿# Changelog
 
+## [1.18.4] – 2026-11-28
+
+### Features
+- **Optional access protection (password)** – WebDesk can now ask for a shared password so that not everybody in the local network can open it. **Settings → System → Access protection**: choose *Only from other devices* (recommended – the PC running WebDesk gets in without a password, phones, tablets and other PCs log in once per device and stay logged in for 90 days), *Always* (this PC too) or *Off* (default, nothing changes for existing installations), enter the password twice and press *Apply* – it takes effect at once and this browser is signed in automatically. Also there: *Sign out all devices* and *Sign out this device*. The password is stored only as a salted PBKDF2 hash in `<DataPath>/access.json` (not part of the settings backup, not touched by *Save*); wrong passwords are throttled per address (5 tries, then 30 s doubling up to 5 min). A small standalone login page (`/login`) is shown in the interface language; everything else – pages, the live connection and the `/api/*` endpoints – needs the login. `POST /api/telemetry` keeps its own `X-Api-Key` and stays reachable for Home Assistant & co. If WebDesk also listens on https (profile `lan-https`, port `5163`), a protected request over plain http from another device is redirected there first so the password does not cross the network in clear text; otherwise the login page warns that the connection is not encrypted. **Forgot the password?** Start WebDesk once with `--reset-password` (switches the protection off; `--reset-password NEWPASSWORD` sets a new one), in Docker `docker exec <container> ./MeshcomWebDesk --reset-password`, or – without a shell – start the container once with `MESHCOM_RESET_ACCESS=1` (remove it afterwards). A running WebDesk picks the change up within seconds. The 📱 QR dialog now only warns about missing protection when none is set.
+- **All gateway dashboards are queried by default** – the gateway highlight list and the "last seen on the server" presence now read all built-in MeshCom dashboards (OE, DL, IT, HB, SP) instead of OE only. The dashboards hardly overlap (about 880 gateways in total, OE alone knows only about 480), so with the old default many gateways were not marked and many nodes showed no server presence. New option **Settings → Gateway source → All (OE, DL, IT, HB, SP)**, now the default; a single dashboard or *None* can still be chosen. At the update every installation is switched to *All* once, whatever was selected before; after that the choice is yours (selecting e.g. OE again and saving keeps it).
+- **`{}` button in the send bar** – inserts the current value of a variable (e.g. `{callsign}`, `{locator}`, `{last-qso}`) at the cursor. A scrollable table lists the variables with a short description; values that take a moment to determine are loaded lazily.
+- **Text emoticons become emoji** – `;-)`, `:D`, `<3` and similar are converted in the message field while typing, once a space follows, and the last word when the message is sent. Switch: **Settings → Chat & Monitor** (on by default). Also works on iOS keyboards.
+- **Tabs open at the "New messages" line** – a tab with many unread messages opens at the line where the new messages start. A button *↑ N unread* jumps back to that line. Unread counts survive a restart.
+- **Unread badge shows total and direct/mention count** – in the browser tab title, in the favicon dots and on the app icon badge.
+- **New app icon** – new mesh-network icon (higher contrast) for the favicon, PWA manifest, iOS touch icon, Windows `app.ico`, the header, the About page and desktop notifications.
+- **Tab bar switches to a one-row swipeable layout when too many tabs** would take the chat area, on any screen size (not only on phones).
+
+### Improvements
+- **Bot commands work with `--` again** – besides `>` the bot answers direct messages that start with `--` (two hyphens) or `—` (em dash, as typed by many mobile keyboards) and a letter: `--ping` and `>ping` are the same, likewise `--version`, `--help`, `--time`, … Reason: some devices, e.g. the LilyGo T-Deck, have no `>` key. `---===` style decoration and a bare `ping` are still ordinary chat text. The ping round-trip time works for both forms.
+- **Header title fits small and mid-size screens** – up to 900 px the license hint is dropped and the title never wraps (version small underneath); below 700 px only "WebDesk" is shown. In the compact mode (phone held sideways) the name stays visible from 600 px width.
+- **Dialogs and pages scroll on small displays** – the About, Update and Clear pages and the QR dialog are reachable on low screens.
+
+### Bugfixes
+- **`>rx` or `--rx` over KISS no longer answers "signal unknown" on the first try** – with a KISS/TCP node the signal values (RSSI/SNR) arrive in a separate frame just after the message, but the bot had already built its reply by then. It now waits up to 1 s for them before answering `rx`.
+- **extudp telemetry stays enabled across restarts** – a missing node echo within 20 s used to switch the setting off and save it, so it had to be switched on again after every restart. Sending is now only suspended at runtime; the setting is kept and the next start tries again.
+- **KISS relay hops with a clamped SSID** – hops with SSID −15 showed as `-?`; they are now repaired from the full ext-udp path.
+- **Unread favicon dots show again** – the static icon links are lifted out while the badge is active.
+
+---
+
 ## [1.18.3] – released
 
 ### Features

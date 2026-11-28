@@ -183,6 +183,12 @@
             @if (_activeTab != null)
             {
                 <div class="message-list" id="tab-messages">
+                    @if (_dividerAbove && _newMessagesFromIndex >= 0)
+                    {
+                        <div class="unread-jump-wrap">
+                            <button class="new-msg-fab unread-jump" @onclick="JumpToDividerAsync">↑ @(_activeTabMessages.Count - _newMessagesFromIndex) @Loc.T("ungelesen", "unread")</button>
+                        </div>
+                    }
                     @{ var msgIdx = 0; }
                     @foreach (var msg in _activeTabMessages)
                     {
@@ -1393,12 +1399,15 @@
     /// <summary>Unread messages still waiting (nobody has really looked at them) – for the browser tab title.</summary>
     private int TabUnread => SettingsOptions.CurrentValue.TabTitleUnreadEnabled ? ChatService.GetUnreadTotal() : 0;
 
+    /// <summary>The part of <see cref="TabUnread"/> that is for us (direct messages + mentions) – drives the app icon badge.</summary>
+    private int TabUnreadImportant => SettingsOptions.CurrentValue.TabTitleUnreadEnabled ? ChatService.GetUnreadImportantTotal() : 0;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         try
         {
             await OnAfterRenderCoreAsync(firstRender);
-            await JS.InvokeVoidAsync("meshcomChat.setTabBadge", TabUnread);
+            await JS.InvokeVoidAsync("meshcomChat.setTabBadge", TabUnread, TabUnreadImportant);
         }
         catch (Exception ex) when (ex is TaskCanceledException or OperationCanceledException or JSDisconnectedException)
         {
@@ -1551,11 +1560,13 @@
             _scrollMessages = false;
             var force = _forceScroll;
             var delta = _scrollDelta;
+            var toDivider = force && _jumpToDivider;
             _forceScroll = false;
+            _jumpToDivider = false;
             _scrollDelta = 0;
             try
             {
-                var scrolled = await JS.InvokeAsync<bool>("chatScroll.after", "tab-messages", force);
+                var scrolled = await JS.InvokeAsync<bool>("chatScroll.after", "tab-messages", force, toDivider);
                 if (force) await JS.InvokeVoidAsync("meshcomChat.revealActiveTab");
                 if (scrolled)
                 {
@@ -1894,6 +1905,9 @@
         var unread = _activeTab?.UnreadCount ?? 0;
         if (unread > 0 && _activeTabMessages.Count > 0)
             _newMessagesFromIndex = Math.Max(0, _activeTabMessages.Count - unread);
+        // Many unread: open at the "New messages" line instead of the end (few: the line is visible at the end anyway)
+        _jumpToDivider = _newMessagesFromIndex >= 0 && unread > JumpToDividerMinUnread;
+        _dividerAbove = false;
 
         // Clicking a tab is proof that somebody is looking at it.
         ChatService.MarkAttended(_activeNodeId, key, notify: false);
@@ -2019,7 +2033,7 @@
 
         // Firmware 4.40a.10+ accepts ping targets that are plain callsigns only; a ping to a
         // group or broadcast is refused by the node (BP_SEND_INVALID), so do not send it.
-        var isPing = text.Trim().Equals(">ping", StringComparison.OrdinalIgnoreCase);
+        var isPing = MeshcomWebDesk.Services.Bot.BotCommandService.IsPing(text);
         if (isPing && (isBroadcast || isGroup))
         {
             await JS.InvokeVoidAsync("alert", Loc.T(
@@ -2414,6 +2428,25 @@
             _unseenNew = 0;
             _ = InvokeAsync(StateHasChanged);
         }
+    }
+
+    private const int JumpToDividerMinUnread = 8;
+    private bool _jumpToDivider;   // next forced scroll goes to the "New messages" line
+    private bool _dividerAbove;    // the line has scrolled out above the visible area → "↑ N unread" button
+
+    /// <summary>Called from chat.js when the "New messages" line leaves / re-enters the visible area.</summary>
+    [JSInvokable]
+    public void OnDividerAboveChanged(bool above)
+    {
+        if (_dividerAbove == above) return;
+        _dividerAbove = above;
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private async Task JumpToDividerAsync()
+    {
+        try { await JS.InvokeVoidAsync("chatScroll.toDivider", "tab-messages"); }
+        catch (JSException) { }
     }
 
     private async Task ScrollToLatestAsync()

@@ -22,6 +22,27 @@
             <button class="quicktext-close" @onclick="() => _flyoutOpen = false" title="@Loc.T("Schließen", "Close")">✕</button>
         </div>
     }
+    @if (_varFlyoutOpen)
+    {
+        <div class="var-flyout">
+            <div class="var-head">
+                <span>@Loc.T("Variable einfügen", "Insert variable")</span>
+                <button class="quicktext-close" @onclick="CloseVarFlyout" title="@Loc.T("Schließen", "Close")">✕</button>
+            </div>
+            <div class="var-list">
+                @foreach (var v in _varItems)
+                {
+                    var item = v;
+                    <button class="var-row" disabled="@(item.Value.Length == 0 || item.Value == VarPending)"
+                            @onclick="() => InsertVariableAsync(item.Value)"
+                            title="@item.Token">
+                        <span class="var-label">@Loc.T(item.De, item.En)</span>
+                        <span class="var-value">@(item.Value.Length == 0 ? "–" : item.Value)</span>
+                    </button>
+                }
+            </div>
+        </div>
+    }
     <div class="send-bar">
         @if (_quickTexts.Count > 0)
         {
@@ -29,6 +50,9 @@
                     @onclick="ToggleFlyout"
                     title="@Loc.T("Schnelltexte", "Quick Texts")">⚡</button>
         }
+        <button class="btn-quicktext @(_varFlyoutOpen ? "btn-quicktext-active" : "")"
+                @onclick="ToggleVarFlyout"
+                title="@Loc.T("Variable einfügen", "Insert variable")">@("{}")</button>
         <textarea id="send-bar-input"
                   placeholder="@Loc.T("Nachricht eingeben...", "Enter message...")"
                   maxlength="149"
@@ -74,7 +98,26 @@
     {
         Loc.OnChange += OnLocChange;
         LoadQuickTextsFromSettings();
-        _settingsListener = SettingsMonitor.OnChange(_ => { LoadQuickTextsFromSettings(); InvokeAsync(ForceRerender); });
+        _settingsListener = SettingsMonitor.OnChange(changed =>
+        {
+            LoadQuickTextsFromSettings();
+            InvokeAsync(ForceRerender);
+            _ = InvokeAsync(PushEmoticonSettingAsync);
+        });
+    }
+
+    /// <summary>Tells chat.js whether (and with which table) to convert emoticons while typing; null = off.</summary>
+    private async Task PushEmoticonSettingAsync()
+    {
+        try
+        {
+            object? map = SettingsMonitor.CurrentValue.EmoticonsToEmoji ? EmoticonConverter.Map : null;
+            await JS.InvokeVoidAsync("meshcomChat.setEmoticons", map);
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException or JSDisconnectedException or TaskCanceledException)
+        {
+            // circuit not ready / already gone – the next settings change or page load pushes it again
+        }
     }
 
     private bool _rendered;
@@ -92,6 +135,7 @@
         {
             _dotNetRef ??= DotNetObjectReference.Create(this);
             await JS.InvokeVoidAsync("meshcomChat.initSendBarCounter", "send-bar-input", _dotNetRef);
+            await PushEmoticonSettingAsync();
         }
 
         if (_flyoutOpen && _quickTexts.Count > 0)
@@ -160,7 +204,94 @@
 
     private void ForceRerender() { _rendered = false; StateHasChanged(); }
 
-    private void ToggleFlyout() { _flyoutOpen = !_flyoutOpen; ForceRerender(); }
+    private void ToggleFlyout() { _flyoutOpen = !_flyoutOpen; if (_flyoutOpen) _varFlyoutOpen = false; ForceRerender(); }
+
+    // ── Variable picker ({}): inserts the CURRENT VALUE of a variable at the cursor ──
+    private sealed record VarItem(string Token, string De, string En, string Value = "");
+
+    // The English texts match Settings → auto-reply variables, so the es/fr/it translations already exist.
+    private static readonly VarItem[] VarDefs =
+    [
+        new("{mycall}",            "Eigenes Rufzeichen",                  "Own callsign"),
+        new("{callsign}",          "Rufzeichen Gesprächspartner",         "Chat partner callsign"),
+        new("{dest-name}",         "Vorname (QRZ)",                       "First name (QRZ)"),
+        new("{dest-loc}",          "Standort (QRZ)",                      "Location (QRZ)"),
+        new("{mylocator}",         "Eigener QTH-Locator",                 "Own QTH Locator"),
+        new("{locator}",           "QTH-Locator (Gesprächspartner)",      "QTH Locator (partner)"),
+        new("{rssi}",              "RSSI (letzter Empfang)",              "RSSI (last RX)"),
+        new("{snr}",               "SNR (letzter Empfang)",               "SNR (last RX)"),
+        new("{hw}",                "Hardware-Typ",                        "Hardware type"),
+        new("{route}",             "Relay-Pfad",                          "Relay path"),
+        new("{hops}",              "Anzahl Relay-Hops",                   "Relay hop count"),
+        new("{date}",              "Aktuelles Datum",                     "Current date"),
+        new("{time}",              "Aktuelle Uhrzeit",                    "Current time"),
+        new("{last-qso}",          "Letztes QSO mit diesem Rufzeichen",   "Last QSO with this callsign"),
+        new("{telemetry}",         "Telemetrie-String (aus JSON-Datei)",  "Telemetry string (from JSON file)"),
+        new("{node-firmware}",     "Node-Firmware",                       "Node firmware"),
+        new("{node-hw}",           "Node-Hardware",                       "Node hardware"),
+        new("{version}",           "App-Version",                         "App version"),
+        new("{my-tx-power}",       "Sendeleistung der eigenen Station",   "Own station TX power"),
+        new("{my-eirp}",           "Effektive Strahlungsleistung (EIRP)", "Effective isotropic radiated power (EIRP)"),
+        new("{my-antenna}",        "Antennengewinn der eigenen Station",  "Own station antenna gain"),
+        new("{my-antenna-type}",   "Antennentyp der eigenen Station",     "Own station antenna type"),
+        new("{my-antenna-height}", "Antennenhöhe der eigenen Station",    "Own station antenna height"),
+        new("{my-freq}",           "Sendefrequenz der eigenen Station",   "Own station frequency"),
+    ];
+
+    private bool _varFlyoutOpen;
+    private List<VarItem> _varItems = [];
+
+    private void CloseVarFlyout() { _varFlyoutOpen = false; ForceRerender(); }
+
+    // {last-qso} (database query) and {telemetry} (reads files) are slow – everything else resolves instantly
+    private static bool IsSlowVar(string token) => token is "{last-qso}" or "{telemetry}";
+    private const string VarPending = "…";
+
+    private async Task ToggleVarFlyout()
+    {
+        if (_varFlyoutOpen) { CloseVarFlyout(); return; }
+        _flyoutOpen = false;
+
+        // open at once with the cheap values; the slow ones follow below
+        var items = new List<VarItem>(VarDefs.Length);
+        foreach (var d in VarDefs)
+        {
+            string value;
+            if (IsSlowVar(d.Token)) value = VarPending;
+            else
+            {
+                try { value = UdpService.ExpandVariables(d.Token, Callsign).Trim(); }
+                catch { value = ""; }
+            }
+            // a token that stays unresolved is not worth offering
+            items.Add(d with { Value = value.Equals(d.Token, StringComparison.OrdinalIgnoreCase) ? "" : value });
+        }
+        _varItems = items;
+        _varFlyoutOpen = true;
+        ForceRerender();
+
+        var generation = ++_varGeneration;
+        foreach (var d in VarDefs.Where(v => IsSlowVar(v.Token)))
+        {
+            string value;
+            try { value = (await UdpService.ExpandVariablesAsync(d.Token, Callsign)).Trim(); }
+            catch { value = ""; }
+            if (value.Equals(d.Token, StringComparison.OrdinalIgnoreCase)) value = "";
+            if (!_varFlyoutOpen || generation != _varGeneration) return;   // closed or reopened meanwhile
+            var i = _varItems.FindIndex(x => x.Token == d.Token);
+            if (i >= 0) _varItems[i] = _varItems[i] with { Value = value };
+            await InvokeAsync(ForceRerender);
+        }
+    }
+
+    private int _varGeneration;
+
+    private async Task InsertVariableAsync(string value)
+    {
+        _varFlyoutOpen = false;
+        _rendered = false;
+        await JS.InvokeVoidAsync("meshcomChat.insertAtCursor", "send-bar-input", value, MaxLength);
+    }
 
     private async Task LoadQuickText(string text)
     {
@@ -175,6 +306,8 @@
     {
         if (ChatService.TxCooldownRemaining > 0) return;
         _text = await JS.InvokeAsync<string>("meshcomChat.getSendBarValue", "send-bar-input");
+        // The last word has no trailing space yet, so the live conversion in chat.js did not see it
+        if (SettingsMonitor.CurrentValue.EmoticonsToEmoji) _text = EmoticonConverter.Convert(_text);
         if (string.IsNullOrWhiteSpace(_text) || _text.Length > MaxLength) return;
         var expanded = await UdpService.ExpandVariablesAsync(_text, Callsign);
         var text = expanded.Length > MaxLength ? expanded[..MaxLength] : expanded;

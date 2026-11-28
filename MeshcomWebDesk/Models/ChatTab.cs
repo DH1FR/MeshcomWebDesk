@@ -38,6 +38,13 @@ public class ChatTab
     public int MentionUnread { get; set; }
 
     /// <summary>
+    /// <see cref="UnreadCount"/> / <see cref="MentionUnread"/> as written to the snapshot file, so that a restart
+    /// does not forget what was still unread. Only used while saving and loading; live values are the two above.
+    /// </summary>
+    public int SavedUnread { get; set; }
+    public int SavedMentionUnread { get; set; }
+
+    /// <summary>
     /// Direct messages received since a viewer last actually looked at this tab
     /// (see <see cref="MeshcomWebDesk.Services.AttentionService"/>). Drives the MQTT unread alert. Not persisted.
     /// </summary>

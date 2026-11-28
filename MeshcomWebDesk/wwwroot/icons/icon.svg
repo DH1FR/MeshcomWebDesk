@@ -1,11 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
-  <rect width="192" height="192" fill="#0d1117"/>
-  <rect width="192" height="192" fill="#0f3460" rx="20"/>
-  <line x1="96" y1="28" x2="96" y2="152" stroke="#3fb950" stroke-width="5"/>
-  <line x1="52" y1="78" x2="140" y2="78" stroke="#3fb950" stroke-width="4"/>
-  <line x1="62" y1="108" x2="130" y2="108" stroke="#3fb950" stroke-width="3"/>
-  <line x1="74" y1="132" x2="118" y2="132" stroke="#3fb950" stroke-width="2.5"/>
-  <path d="M 44 54 Q 96 36 148 54" fill="none" stroke="#40916c" stroke-width="3" stroke-dasharray="6,4"/>
-  <path d="M 28 36 Q 96 12 164 36" fill="none" stroke="#2d6a4f" stroke-width="2" stroke-dasharray="6,5"/>
-  <rect x="80" y="150" width="32" height="14" fill="#3fb950" rx="3"/>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2f78c4"/><stop offset="1" stop-color="#1a4f8f"/></linearGradient></defs>
+  <rect width="192" height="192" rx="30" fill="url(#bg)"/>
+  <g fill="none" stroke="#5fdc78" stroke-width="6" stroke-linecap="round">
+    <path d="M 42 64 A 58 58 0 0 0 42 128"/><path d="M 150 64 A 58 58 0 0 1 150 128"/>
+  </g>
+  <g stroke="#0e3366" stroke-width="4" stroke-linecap="round">
+    <line x1="96" y1="42" x2="70" y2="66"/><line x1="96" y1="42" x2="126" y2="70"/><line x1="70" y1="66" x2="96" y2="80"/>
+    <line x1="70" y1="66" x2="68" y2="104"/><line x1="68" y1="104" x2="96" y2="80"/><line x1="68" y1="104" x2="86" y2="144"/>
+    <line x1="86" y1="144" x2="96" y2="116"/><line x1="86" y1="144" x2="124" y2="138"/>
+  </g>
+  <g fill="#0e3366"><circle cx="96" cy="42" r="9"/><circle cx="70" cy="66" r="9"/><circle cx="68" cy="104" r="9"/><circle cx="86" cy="144" r="9"/></g>
+  <g stroke="#5fdc78" stroke-width="4.5" stroke-linecap="round">
+    <line x1="96" y1="80" x2="126" y2="70"/><line x1="96" y1="80" x2="96" y2="116"/><line x1="96" y1="80" x2="128" y2="104"/>
+    <line x1="96" y1="116" x2="128" y2="104"/><line x1="96" y1="116" x2="124" y2="138"/>
+    <line x1="126" y1="70" x2="128" y2="104"/><line x1="128" y1="104" x2="124" y2="138"/>
+  </g>
+  <g fill="#5fdc78"><circle cx="96" cy="80" r="10"/><circle cx="126" cy="70" r="9"/><circle cx="128" cy="104" r="10"/><circle cx="96" cy="116" r="10"/><circle cx="124" cy="138" r="9"/></g>
 </svg>

@@ -38,6 +38,28 @@ window.meshcomChat = (function () {
         return bytes;
     }
 
+    // Optional emoticon → emoji conversion while typing (Settings → Chat & Monitor). The table comes from the server
+    // (EmoticonConverter.Map) via setEmoticons; null = off. Converts the whole word before the cursor when the user
+    // has just typed a space/line break after it – so "http://x", ":Dank" or "8)" are never touched. The last word of
+    // a message is converted on the server when it is sent.
+    var emoticonMap = null;
+    function convertEmoticonBeforeCursor(el, e) {
+        // iOS keyboards often report the space with data=null or as insertReplacementText (autocorrect),
+        // so don't rely on e.data – just check that the character left of the caret is whitespace.
+        if (!emoticonMap || !e || !e.inputType || e.inputType.indexOf('insert') !== 0) return;
+        var pos = el.selectionStart;
+        if (pos !== el.selectionEnd || pos < 2 || !/\s/.test(el.value.charAt(pos - 1))) return;
+        var before = el.value.slice(0, pos - 1);              // text up to (excluding) the space just typed
+        var m = /(^|\s)(\S+)$/.exec(before);
+        if (!m) return;
+        var emoji = Object.prototype.hasOwnProperty.call(emoticonMap, m[2]) ? emoticonMap[m[2]] : null;
+        if (!emoji) return;
+        var start = before.length - m[2].length;
+        el.setRangeText(emoji, start, before.length, 'preserve');
+        var caret = pos - m[2].length + emoji.length;
+        el.setSelectionRange(caret, caret);
+    }
+
     function updateSendCounter(counter, text) {
         var chars     = text.length;
         var jsonBytes = csharpJsonMsgBytes(text);
@@ -113,6 +135,32 @@ window.meshcomChat = (function () {
         var tabBar = document.querySelector('.tab-bar');
         if (!tabBar || tabBar.dataset.dragInit) return;
         tabBar.dataset.dragInit = '1';
+
+        // Many open tabs: wrapped onto several rows they eat the chat area. When that happens (on any screen size,
+        // not only on phones) switch to the one-row swipeable layout (.tabs-scroll, same rules as on phones).
+        // The wrapped height is measured with the class removed, so the decision cannot flip-flop.
+        var fitQueued = false;
+        function fitTabs() {
+            fitQueued = false;
+            var pane = tabBar.closest('.upper-pane');
+            if (!pane) return;
+            var had = tabBar.classList.contains('tabs-scroll');
+            if (had) tabBar.classList.remove('tabs-scroll');
+            var barH  = tabBar.offsetHeight;
+            var paneH = pane.clientHeight;
+            var scroll = barH > 40 && (paneH - barH < 220 || barH > paneH * 0.3);
+            if (scroll) tabBar.classList.add('tabs-scroll');
+            if (scroll !== had && scroll && window.meshcomChat) window.meshcomChat.revealActiveTab();
+        }
+        function queueFit() {
+            if (fitQueued) return;
+            fitQueued = true;
+            requestAnimationFrame(fitTabs);
+        }
+        new MutationObserver(queueFit).observe(tabBar, { childList: true });
+        if (window.ResizeObserver && tabBar.closest('.upper-pane')) new ResizeObserver(queueFit).observe(tabBar.closest('.upper-pane'));
+        window.addEventListener('resize', queueFit);
+        queueFit();
 
         // Narrow screens (one swipeable row): bring a tapped tab to the middle right away, without waiting
         // for the server round trip that re-renders the bar.
@@ -316,26 +364,43 @@ window.meshcomChat = (function () {
         if (attention) { attention.stop(); attention = null; }
     }
 
-    // ── Unread badge in the browser tab ───────────────────────────────────
-    // Prefixes the page title with "(n) " and puts a red dot on the favicon. Blazor's <PageTitle> sets the
-    // title itself (already including the number); this only re-applies it if something overwrote it and
-    // draws the favicon. n = 0 removes the dot again.
-    var favImg = null, favLink = null, favLastN = -1;
+    // ── Unread badge in the browser tab / on the installed app's icon ─────
+    // n   = all unread messages, imp = the part of them that is for us (direct messages + mentions).
+    // Title: "(n) " or "(n · imp💬) "; favicon: red dot (unread) + orange dot (direct/mention);
+    // app icon badge (taskbar / home screen): imp only – the Badging API can show a single number.
+    // Blazor's <PageTitle> does not set the number; this applies it and re-applies it if something overwrote it.
+    var favImg = null, favLink = null, favLastKey = '';
 
-    function setTabBadge(n) {
-        n = n > 0 ? n : 0;
-        // <PageTitle> is not updated interactively here, so the title is set directly.
+    var hiddenIcons = [];
+    function hideStaticIcons() {
+        if (hiddenIcons.length) return;
+        document.querySelectorAll('link[rel="icon"]').forEach(function (l) {
+            if (l === favLink) return;
+            hiddenIcons.push({ el: l, next: l.nextSibling });
+            l.parentNode.removeChild(l);
+        });
+    }
+    function restoreStaticIcons() {
+        hiddenIcons.forEach(function (h) { document.head.insertBefore(h.el, h.next && h.next.parentNode === document.head ? h.next : null); });
+        hiddenIcons = [];
+    }
+
+    function setTabBadge(n, imp) {
+        n   = n > 0 ? n : 0;
+        imp = n > 0 && imp > 0 ? Math.min(imp, n) : 0;
+        function fmt(v) { return v > 99 ? '99+' : String(v); }
         try {
-            var baseTitle = document.title.replace(/^\(\d+\+?\) /, '');
-            var wanted = n > 0 ? '(' + (n > 99 ? '99+' : n) + ') ' + baseTitle : baseTitle;
+            var baseTitle = document.title.replace(/^\(\d+\+?(?: · \d+\+?💬)?\) /, '');
+            var wanted = n > 0 ? '(' + fmt(n) + (imp > 0 ? ' · ' + fmt(imp) + '💬' : '') + ') ' + baseTitle : baseTitle;
             if (document.title !== wanted) document.title = wanted;
         } catch (e) { }
         try {
-            if (n > 0 && navigator.setAppBadge) navigator.setAppBadge(n).catch(function () { });
-            else if (n === 0 && navigator.clearAppBadge) navigator.clearAppBadge().catch(function () { });
+            if (imp > 0 && navigator.setAppBadge) navigator.setAppBadge(imp).catch(function () { });
+            else if (imp === 0 && navigator.clearAppBadge) navigator.clearAppBadge().catch(function () { });
         } catch (e) { }
-        if (n === favLastN) return;
-        favLastN = n;
+        var key = n + '|' + (imp > 0 ? 1 : 0);
+        if (key === favLastKey) return;
+        favLastKey = key;
         try {
             if (!favLink) {
                 favLink = document.createElement('link');
@@ -345,6 +410,7 @@ window.meshcomChat = (function () {
             }
             if (n === 0) {
                 if (favLink.parentNode) favLink.parentNode.removeChild(favLink);
+                restoreStaticIcons();
                 return;
             }
             function draw() {
@@ -352,16 +418,23 @@ window.meshcomChat = (function () {
                 c.width = c.height = 64;
                 var g = c.getContext('2d');
                 if (favImg && favImg.complete && favImg.naturalWidth) g.drawImage(favImg, 0, 0, 64, 64);
-                g.beginPath(); g.arc(46, 18, 16, 0, Math.PI * 2);
-                g.fillStyle = '#e53935'; g.fill();
-                g.lineWidth = 4; g.strokeStyle = '#ffffff'; g.stroke();
+                function dot(x, y, color) {
+                    g.beginPath(); g.arc(x, y, 16, 0, Math.PI * 2);
+                    g.fillStyle = color; g.fill();
+                    g.lineWidth = 4; g.strokeStyle = '#ffffff'; g.stroke();
+                }
+                dot(46, 18, '#e53935');                  // unread
+                if (favLastKey.slice(-1) === '1') dot(46, 46, '#fb8c00');   // direct message / mention
                 favLink.href = c.toDataURL('image/png');
+                // The page declares its own <link rel="icon"> (svg + png); with several candidates the browser may
+                // keep one of those instead of ours, so take them out while the badge is shown.
+                hideStaticIcons();
                 if (!favLink.parentNode) document.head.appendChild(favLink);
             }
             if (!favImg) {
                 favImg = new Image();
-                favImg.onload  = function () { if (favLastN > 0) draw(); };
-                favImg.onerror = function () { if (favLastN > 0) draw(); };
+                favImg.onload  = function () { if (favLastKey !== '0|0') draw(); };
+                favImg.onerror = function () { if (favLastKey !== '0|0') draw(); };
                 favImg.src = 'favicon.png';
             } else {
                 draw();
@@ -402,7 +475,7 @@ window.meshcomChat = (function () {
     function showNotification(title, body, tag, silent, tabKey, nodeId) {
         if (!('Notification' in window) || Notification.permission !== 'granted') return false;
         var opts = {
-            body: body, tag: tag || undefined, renotify: !!tag, silent: !!silent, icon: 'favicon.png',
+            body: body, tag: tag || undefined, renotify: !!tag, silent: !!silent, icon: 'icons/notification-icon.png',
             data: { tabKey: tabKey || '', nodeId: nodeId || '' }
         };
         function viaPage() {
@@ -575,14 +648,16 @@ window.meshcomChat = (function () {
         },
 
         // ── SendBar: fügt Text an der aktuellen Cursorposition ein ──
-        insertAtCursor: (id, text) => {
+        insertAtCursor: (id, text, maxLength) => {
             var el = document.getElementById(id);
             if (!el) return;
             var start = el.selectionStart;
             var end   = el.selectionEnd;
             var val   = el.value;
-            el.value  = val.substring(0, start) + text + val.substring(end);
-            var pos   = start + text.length;
+            var nv    = val.substring(0, start) + text + val.substring(end);
+            if (maxLength && nv.length > maxLength) nv = nv.substring(0, maxLength);
+            el.value  = nv;
+            var pos   = Math.min(start + text.length, nv.length);
             el.setSelectionRange(pos, pos);
             el.focus();
             // Counter aktualisieren
@@ -635,12 +710,14 @@ window.meshcomChat = (function () {
         },
 
         // ── SendBar: registriert oninput-Handler für Live-Counter ohne Blazor-Binding ──
+        setEmoticons: (map) => { emoticonMap = map || null; },
         initSendBarCounter: (id, dotNetRef) => {            var el = document.getElementById(id);
             if (!el || el.dataset.counterInit) return;
             el.dataset.counterInit = '1';
 
-            // Live-Counter
-            el.addEventListener('input', function () {
+            // Live-Counter (+ optional emoticon → emoji conversion, see setEmoticons)
+            el.addEventListener('input', function (e) {
+                convertEmoticonBeforeCursor(el, e);
                 var bar     = el.closest('.send-bar');
                 var counter = bar && bar.querySelector('.char-counter');
                 if (!counter) return;
@@ -860,18 +937,50 @@ window.chatScroll = (function () {
         }
     }, true);
 
+    // "↑ N unread" button: true while the "New messages" line has scrolled out above the visible area
+    // and the reader is not at the end (there they have read everything anyway).
+    var divAbove = false;
+    function reportDivider(el) {
+        var d = el.querySelector('.new-messages-divider');
+        var v = !!d && !atBottom(el) && d.getBoundingClientRect().bottom < el.getBoundingClientRect().top + 4;
+        if (v !== divAbove) {
+            divAbove = v;
+            if (dn) dn.invokeMethodAsync('OnDividerAboveChanged', v).catch(function () { });
+        }
+    }
+    document.addEventListener('scroll', function (e) {
+        if (e.target && e.target.id === 'tab-messages') reportDivider(e.target);
+    }, true);
+
+    function scrollToDivider(el) {
+        var d = el.querySelector('.new-messages-divider');
+        if (!d) return false;
+        el.scrollTop += d.getBoundingClientRect().top - el.getBoundingClientRect().top - 6;
+        stick = atBottom(el);
+        return true;
+    }
+
     return {
         init: function (ref) { dn = ref; },
         // Scrolls to the bottom if forced or if the reader was at the bottom; returns whether it scrolled.
-        after: function (id, force) {
+        // toDivider (with force): jump to the "New messages" line instead of the end.
+        after: function (id, force, toDivider) {
             var el = document.getElementById(id);
             if (!el) return false;
-            if (force || stick) {
+            var res = false;
+            if (force && toDivider && scrollToDivider(el)) {
+                res = true;
+            } else if (force || stick) {
                 el.scrollTop = el.scrollHeight;
                 stick = true;
-                return true;
+                res = true;
             }
-            return false;
+            requestAnimationFrame(function () { reportDivider(el); });
+            return res;
+        },
+        toDivider: function (id) {
+            var el = document.getElementById(id);
+            if (el) { scrollToDivider(el); reportDivider(el); }
         }
     };
 }());

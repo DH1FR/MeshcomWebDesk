@@ -371,12 +371,14 @@ public class SettingsService
                 ["FrequencyMhz"]            = s.FrequencyMhz,
                 ["SystemMarginDb"]          = s.SystemMarginDb,
                 ["OwnMessagesAlignLeft"]    = s.OwnMessagesAlignLeft,
+                ["EmoticonsToEmoji"]        = s.EmoticonsToEmoji,
                 ["TxCooldownSeconds"]       = s.TxCooldownSeconds,
                 ["PresenceEnabled"]         = s.PresenceEnabled,
                 ["PresenceFreshMinutes"]    = s.PresenceFreshMinutes,
                 ["PresenceStaleMinutes"]    = s.PresenceStaleMinutes,
                 ["GatewayHighlightEnabled"] = s.GatewayHighlightEnabled,
                 ["GatewayServer"]           = s.GatewayServer,
+                ["GatewayAllDefaultApplied"] = true,   // one-time "oe" → "all" migration is done
                 ["GatewaySources"] = new JsonArray(s.GatewaySources.Select(g => (JsonNode?)new JsonObject
                 {
                     ["Name"]    = g.Name,

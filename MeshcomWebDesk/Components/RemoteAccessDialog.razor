@@ -1,5 +1,6 @@
 @* On-request QR code so a phone or tablet can open this WebDesk. *@
 @inject RemoteAccessService Remote
+@inject MeshcomWebDesk.Services.Access.AccessService Access
 @inject NavigationManager Nav
 @inject LanguageService Loc
 @inject IJSRuntime JS
@@ -54,9 +55,18 @@
                     "Over http the browser features \"install as app\" and location are not available on the device. That needs https (see the LAN certificate guide).")</p>
             }
 
-            <p class="remote-note remote-warn">⚠️ @Loc.T(
-                "WebDesk hat keinen Zugriffsschutz: Wer diese Adresse erreicht, kann Nachrichten senden und Einstellungen ändern. Nur im eigenen Netz verwenden.",
-                "WebDesk has no access protection: anyone who can reach this address can send messages and change settings. Use it in your own network only.")</p>
+            @if (Access.Enabled)
+            {
+                <p class="remote-note">🔒 @Loc.T(
+                    "Der Zugriffsschutz ist aktiv: Das Gerät fragt beim ersten Öffnen nach dem Passwort (Einstellungen → Zugriffsschutz).",
+                    "Access protection is on: the device asks for the password when it opens WebDesk for the first time (Settings → Access protection).")</p>
+            }
+            else
+            {
+                <p class="remote-note remote-warn">⚠️ @Loc.T(
+                    "WebDesk hat keinen Zugriffsschutz: Wer diese Adresse erreicht, kann Nachrichten senden und Einstellungen ändern. Nur im eigenen Netz verwenden oder unter Einstellungen → Zugriffsschutz ein Passwort setzen.",
+                    "WebDesk has no access protection: anyone who can reach this address can send messages and change settings. Use it in your own network only, or set a password under Settings → Access protection.")</p>
+            }
 
             <p class="remote-note">
                 @Loc.TF("Verbindet das Gerät nicht? Die Windows-Firewall muss eingehendes TCP auf Port {0} erlauben:",

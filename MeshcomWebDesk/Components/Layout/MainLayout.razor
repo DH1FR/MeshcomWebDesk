@@ -8,8 +8,8 @@
 <div class="app-layout">
     <header class="app-header">
         <div class="app-header-brand">
-            <span>📡</span>
-            <span class="app-title @(LicenseService.IsLicensed ? "app-title--licensed" : "")">MeshCom WebDesk <span class="app-version">v@_version</span>
+            <img class="app-logo" src="icons/icon.svg" alt="" width="28" height="28" />
+            <span class="app-title @(LicenseService.IsLicensed ? "app-title--licensed" : "")"><span class="app-title-prefix">MeshCom </span>WebDesk <span class="app-version">v@_version</span>
                 @if (LicenseService.IsLicensed)
                 {
                     <span class="app-license-badge app-license-badge--licensed"><span class="app-license-text">✅ @Loc.T("Lizenziert für", "Licensed for") <span class="app-license-call">@LicenseService.LicensedCallsign</span></span></span>

@@ -400,6 +400,12 @@ public class MeshcomSettings
     public bool OwnMessagesAlignLeft { get; set; } = false;
 
     /// <summary>
+    /// When true, text emoticons typed into the message field (e.g. <c>;-)</c>) are converted to emoji
+    /// (see <see cref="Services.EmoticonConverter"/>). On by default.
+    /// </summary>
+    public bool EmoticonsToEmoji { get; set; } = true;
+
+    /// <summary>
     /// Minimum wait time between two transmissions in seconds.
     /// 0 = disabled. Valid range when enabled: 5–60 s.
     /// </summary>
@@ -425,12 +431,19 @@ public class MeshcomSettings
 
     /// <summary>
     /// Built-in gateway dashboard preset(s) for the highlight list.
-    /// Allowed values: "oe" (meshcom.oevsv.at, default), "dl" (meshcom.hamnet.network),
+    /// Allowed values: "all" (every preset below, default), "oe" (meshcom.oevsv.at), "dl" (meshcom.hamnet.network),
     /// "it" (meshcom.dig-italia.it), "hb" (meshcom.emcomm.ch), "sp" (sp.meshcom.pl), the legacy "both" alias (= oe + dl), "none",
     /// or a space-separated combination (e.g. "oe it").
     /// User-defined sources in <see cref="GatewaySources"/> are always merged on top.
     /// </summary>
-    public string GatewayServer { get; set; } = "oe";
+    public string GatewayServer { get; set; } = "all";
+
+    /// <summary>
+    /// One-time migration marker (v1.18.4): every installation is switched
+    /// to "all" once, whatever was stored before. Written as <c>true</c> by every save, so any
+    /// later deliberate choice is kept. Not shown in the UI.
+    /// </summary>
+    public bool GatewayAllDefaultApplied { get; set; }
 
     /// <summary>
     /// User-defined gateway dashboard sources, merged with the <see cref="GatewayServer"/> preset(s).

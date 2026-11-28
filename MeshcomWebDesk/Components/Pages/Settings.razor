@@ -21,6 +21,7 @@
 @inject MeshcomWebDesk.Models.ResolvedLogPath ResolvedLogPath
 @inject MeshcomWebDesk.Services.WeatherApiPollingService WeatherPollingService
 @inject MeshcomWebDesk.Services.AppLicenseService AppLicenseService
+@inject MeshcomWebDesk.Services.Access.AccessService Access
 @implements IDisposable
 
 <PageTitle>@Loc.T("Einstellungen", "Settings") – MeshCom WebDesk</PageTitle>
@@ -595,6 +596,15 @@
                 </label>
 
                 <label>
+                    @Loc.T("Emoticons in Emojis umwandeln", "Convert emoticons to emoji")<br />
+                    <small>@Loc.T("Beim Schreiben wird z. B. ;-) nach dem Leerzeichen zu 😉, :-) zu 🙂, <3 zu ❤️. Der letzte Begriff einer Nachricht wird beim Senden umgewandelt.", "While typing, e.g. ;-) becomes 😉 after the space, :-) becomes 🙂, <3 becomes ❤️. The last word of a message is converted when it is sent.")</small>
+                </label>
+                <label class="settings-toggle">
+                    <input type="checkbox" @bind="_model.EmoticonsToEmoji" />
+                    <span>@(_model.EmoticonsToEmoji ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
+                </label>
+
+                <label>
                     @Loc.T("Sendepause (Sekunden)", "TX Cooldown (seconds)")<br />
                     <small>@Loc.T("Mindestwartezeit zwischen zwei Sendungen (5–60 Sek.).", "Minimum wait time between two transmissions (5–60 s).")</small>
                 </label>
@@ -644,6 +654,7 @@
                     <small>@Loc.T("Eingebautes Dashboard für die Gateway-Liste.", "Built-in dashboard for the gateway list.")</small>
                 </label>
                 <select @bind="_model.GatewayServer">
+                    <option value="all">@Loc.T("Alle (OE, DL, IT, HB, SP)", "All (OE, DL, IT, HB, SP)")</option>
                     <option value="oe">🇦🇹 OE – meshcom.oevsv.at</option>
                     <option value="dl">🇩🇪 DL – meshcom.hamnet.network</option>
                     <option value="it">🇮🇹 IT – meshcom.dig-italia.it</option>
@@ -697,6 +708,87 @@
                     <small style="display:block;color:#8b949e;margin-top:.3rem">📱 @Loc.T("Den QR-Code zeigt der Knopf 📱 in der Navigationsleiste (ab einer bestimmten Bildschirmbreite).", "The 📱 button in the navigation bar shows the QR code (on wide enough screens).")</small>
                 </div>
             </div>
+            }
+        </div>
+
+        <!-- Access protection (password) – applied immediately with its own button, not part of the form's Save -->
+        <div id="sec-access" class="settings-section @SecClass("access")" style="order:@SecOrder("access")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("access")'>🔒 @Loc.T("Zugriffsschutz", "Access protection") <span class="section-chevron">@(IsOpen("access") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("access")) {
+            <div class="settings-notice" style="margin-bottom:0.75rem">
+                @Loc.T("Optional: ein gemeinsames Passwort für den Zugriff auf WebDesk. Der Rechner, auf dem WebDesk läuft, kommt im Modus „Nur von anderen Geräten“ ohne Passwort hinein; Handy, Tablet und andere PCs im Netz müssen sich einmal pro Gerät anmelden. Wird sofort mit dem Knopf unten übernommen (nicht erst mit „Speichern“).",
+                       "Optional: one shared password for access to WebDesk. In the mode “Only from other devices” the PC running WebDesk gets in without a password; phones, tablets and other PCs in the network log in once per device. Applied immediately with the button below (not only with “Save”).")
+            </div>
+            @if (!Access.Enabled)
+            {
+                <div class="settings-warning" style="margin-bottom:0.75rem">⚠️ @Loc.T("Zurzeit ist WebDesk für jeden im Netzwerk offen.", "WebDesk is currently open to everybody in the network.")</div>
+            }
+            else if (_accessInsecure)
+            {
+                <div class="settings-warning" style="margin-bottom:0.75rem">⚠️ @Loc.T("Diese Verbindung ist nicht verschlüsselt (http): das Passwort wird im Klartext übertragen. Für sicheren Zugriff https verwenden (README → „HTTPS“).", "This connection is not encrypted (http): the password is sent in clear text. Use https for secure access (README → “HTTPS”).")</div>
+            }
+            <div class="settings-grid">
+                <label>@Loc.T("Schutz", "Protection")</label>
+                <div>
+                    <select @bind="_accessMode" style="width:100%">
+                        <option value="@MeshcomWebDesk.Services.Access.AccessMode.Off">@Loc.T("Aus", "Off")</option>
+                        <option value="@MeshcomWebDesk.Services.Access.AccessMode.OutsideLocalhost">@Loc.T("Nur von anderen Geräten (empfohlen)", "Only from other devices (recommended)")</option>
+                        <option value="@MeshcomWebDesk.Services.Access.AccessMode.Always">@Loc.T("Immer, auch an diesem Rechner", "Always, also on this PC")</option>
+                    </select>
+                </div>
+
+                @if (Access.HasPassword && !_accessLocal)
+                {
+                    <label>@Loc.T("Aktuelles Passwort", "Current password")</label>
+                    <div><input type="password" @bind="_accessCurrent" autocomplete="current-password" style="width:100%" /></div>
+                }
+
+                @if (_accessMode != MeshcomWebDesk.Services.Access.AccessMode.Off)
+                {
+                    <label>
+                        @(Access.HasPassword ? Loc.T("Neues Passwort", "New password") : Loc.T("Passwort", "Password"))<br />
+                        <small>@(Access.HasPassword
+                            ? Loc.T("Leer lassen, um das Passwort zu behalten. Ein neues Passwort meldet alle anderen Geräte ab.", "Leave empty to keep the password. A new password signs all other devices out.")
+                            : Loc.TF("Mindestens {0} Zeichen.", "At least {0} characters.", MeshcomWebDesk.Services.Access.AccessPassword.MinLength))</small>
+                    </label>
+                    <div><input type="password" @bind="_accessNew" autocomplete="new-password" style="width:100%" /></div>
+
+                    <label>@Loc.T("Passwort wiederholen", "Repeat password")</label>
+                    <div><input type="password" @bind="_accessRepeat" autocomplete="new-password" style="width:100%" /></div>
+                }
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:0.75rem">
+                <button type="button" class="btn-action" @onclick="ApplyAccessAsync">
+                    🔒 @(_accessMode == MeshcomWebDesk.Services.Access.AccessMode.Off ? Loc.T("Schutz ausschalten", "Switch protection off") : Loc.T("Übernehmen", "Apply"))
+                </button>
+                @if (Access.Enabled)
+                {
+                    <button type="button" class="btn-action" @onclick="SignOutEverywhereAsync"
+                            title="@Loc.T("Meldet alle Geräte ab (auch dieses wird danach automatisch wieder angemeldet).", "Signs every device out (this one is signed in again automatically).")">
+                        🚪 @Loc.T("Alle Geräte abmelden", "Sign out all devices")
+                    </button>
+                    @if (!(_accessLocal && Access.Mode == MeshcomWebDesk.Services.Access.AccessMode.OutsideLocalhost))
+                    {
+                        <a class="btn-action" href="/logout" data-enhance-nav="false" style="text-decoration:none">↩ @Loc.T("Dieses Gerät abmelden", "Sign out this device")</a>
+                    }
+                }
+            </div>
+            @if (_accessError != null)
+            {
+                <div class="settings-error" style="margin-top:0.5rem">❌ @_accessError</div>
+            }
+            @if (_accessOk)
+            {
+                <div class="settings-success" style="margin-top:0.5rem">✅ @Loc.T("Zugriffsschutz übernommen.", "Access protection applied.")</div>
+            }
+            <small style="display:block;color:#8b949e;margin-top:.75rem">
+                💡 @Loc.T("Passwort vergessen? Am Rechner: WebDesk mit --reset-password starten (Docker: docker exec <Container> ./MeshcomWebDesk --reset-password) oder die Variable MESHCOM_RESET_ACCESS=1 setzen. Details im README.",
+                          "Forgot the password? On the PC: start WebDesk with --reset-password (Docker: docker exec <container> ./MeshcomWebDesk --reset-password) or set the variable MESHCOM_RESET_ACCESS=1. Details in the README.")
+            </small>
+            <small style="display:block;color:#8b949e;margin-top:.3rem">
+                ℹ️ @Loc.T("Der Zugriffsschutz ist nicht Teil der Datensicherung und wird von „Speichern“ nicht verändert. Ungespeicherte Änderungen in anderen Bereichen vor dem Übernehmen bitte speichern – die Seite wird danach neu geladen.",
+                          "Access protection is not part of the backup and “Save” does not change it. Please save unsaved changes in other sections before applying – the page reloads afterwards.")
+            </small>
             }
         </div>
 
@@ -951,8 +1043,8 @@
                             @if (IsOpen("bot")) {
                             <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
                                 ℹ️ @Loc.T(
-                                    "Eingehende Direkt-Nachrichten, die mit > beginnen, werden als Befehle interpretiert. Eingebaut: >version, >time, >mh, >ping, >rx, >echo, >help.",
-                                    "Incoming direct messages starting with > are interpreted as commands. Built-in: >version, >time, >mh, >ping, >rx, >echo, >help.")
+                                    "Eingehende Direkt-Nachrichten, die mit > oder -- beginnen, werden als Befehle interpretiert. Eingebaut: >version, >time, >mh, >ping, >rx, >echo, >help (auch mit -- statt >).",
+                                    "Incoming direct messages starting with > or -- are interpreted as commands. Built-in: >version, >time, >mh, >ping, >rx, >echo, >help (also with -- instead of >).")
                             </div>
                             <div class="settings-grid">
                                 <label>@Loc.T("Bot aktiv", "Bot Active")</label>
@@ -1490,7 +1582,7 @@
                     }
                     else if (extUdpConfirmed == false)
                     {
-                        <small style="color:#f85149">⚠️ @Loc.T("Der Node hat die gesendeten Werte nicht bestätigt und wurde deshalb automatisch deaktiviert. Vermutlich unterstützt die Firmware das native \"tele\"-Telegramm noch nicht (oder es ist echte Sensor-Hardware verbaut).", "The node did not confirm the sent values, so this was disabled automatically. Its firmware likely does not yet support the native \"tele\" telegram (or it has real sensor hardware installed).")</small>
+                        <small style="color:#f85149">⚠️ @Loc.T("Der Node hat die gesendeten Werte nicht bestätigt – das Senden ist bis zum nächsten Neustart ausgesetzt (die Einstellung bleibt aktiv). Vermutlich unterstützt die Firmware das native \"tele\"-Telegramm noch nicht (oder es ist echte Sensor-Hardware verbaut).", "The node did not confirm the sent values – sending is suspended until the next restart (the setting stays on). Its firmware likely does not yet support the native \"tele\" telegram (or it has real sensor hardware installed).")</small>
                     }
                     else
                     {
@@ -2991,6 +3083,7 @@
         new("log",        "system", "Logging",                  "Logging",                 "log protokoll pfad path aufbewahrung retention"),
         new("data",       "system", "Datenspeicherung",         "Data Storage",            "datapath speicher persist"),
         new("remote",     "system", "Zugriff von anderen Geräten", "Access from other devices", "handy phone qr remote url public"),
+        new("access",     "system", "Zugriffsschutz",           "Access protection",       "passwort password login anmelden zugang zugriff schutz sicherheit security auth sperre https"),
         new("backup",     "system", "Datensicherung",           "Backup & Restore",        "backup sicherung export import wiederherstellen restore"),
         new("license",    "system", "Lizenz",                   "License",                 "lizenz license spende donation key"),
     ];
@@ -3271,9 +3364,83 @@
         }
     }
 
+    // ── Access protection ──────────────────────────────────────────────────
+    private MeshcomWebDesk.Services.Access.AccessMode _accessMode;
+    private string  _accessCurrent = string.Empty;
+    private string  _accessNew     = string.Empty;
+    private string  _accessRepeat  = string.Empty;
+    private string? _accessError;
+    private bool    _accessOk;
+    /// <summary>This browser sits on the PC running WebDesk (asked from the browser, like the update page).</summary>
+    private bool    _accessLocal;
+    private bool    _accessInsecure;
+
+    private string AccessErrorText(string key) => key switch
+    {
+        "wrong-current"     => Loc.T("Das aktuelle Passwort ist falsch.", "The current password is wrong."),
+        "too-short"         => Loc.TF("Das Passwort braucht mindestens {0} Zeichen.", "The password needs at least {0} characters.", MeshcomWebDesk.Services.Access.AccessPassword.MinLength),
+        "password-required" => Loc.T("Bitte ein Passwort festlegen.", "Please set a password."),
+        _                   => key,
+    };
+
+    /// <summary>Signs this browser in again (a password change invalidates its cookie) – unless it is exempt anyway.</summary>
+    private void SignThisBrowserIn()
+    {
+        if (!Access.Enabled) return;
+        if (_accessLocal && Access.Mode == MeshcomWebDesk.Services.Access.AccessMode.OutsideLocalhost) return;
+        Nav.NavigateTo("/api/access/ticket?t=" + Access.CreateTicket() + "&returnUrl=" + Uri.EscapeDataString("/settings"), forceLoad: true);
+    }
+
+    private Task ApplyAccessAsync()
+    {
+        _accessError = null;
+        _accessOk    = false;
+        if (!string.IsNullOrEmpty(_accessNew) && _accessNew != _accessRepeat)
+        {
+            _accessError = Loc.T("Die beiden neuen Passwörter sind verschieden.", "The two new passwords do not match.");
+            return Task.CompletedTask;
+        }
+        var err = Access.Apply(_accessMode, _accessNew, _accessCurrent, skipCurrentCheck: _accessLocal || !Access.HasPassword);
+        if (err != null)
+        {
+            _accessError = AccessErrorText(err);
+            return Task.CompletedTask;
+        }
+        _accessCurrent = _accessNew = _accessRepeat = string.Empty;
+        _accessMode    = Access.Mode;
+        _accessOk      = true;
+        // Whatever changed (new password, "Always" instead of "only others", protection switched on): this browser
+        // may need a cookie now, otherwise it is locked out at the next reload. Skipped where it is exempt anyway.
+        SignThisBrowserIn();
+        return Task.CompletedTask;
+    }
+
+    private Task SignOutEverywhereAsync()
+    {
+        _accessError = null;
+        _accessOk    = false;
+        Access.SignOutEverywhere(_accessCurrent, skipCurrentCheck: _accessLocal, out var err);
+        if (err != null)
+        {
+            _accessError = AccessErrorText(err);
+            return Task.CompletedTask;
+        }
+        _accessCurrent = string.Empty;
+        _accessOk      = true;
+        SignThisBrowserIn();
+        return Task.CompletedTask;
+    }
+
     private async Task OnAfterRenderCoreAsync(bool firstRender)
     {
         if (!firstRender) return;
+        try
+        {
+            _accessLocal    = await JS.InvokeAsync<bool>("meshcomUpdate.isLocal");
+            _accessInsecure = Nav.BaseUri.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && !_accessLocal;
+            StateHasChanged();
+        }
+        catch (JSException) { }
         try
         {
             _displayMode = await JS.InvokeAsync<string>("meshcomDisplay.get");
@@ -3903,6 +4070,7 @@
 
     protected override void OnInitialized()
     {
+        _accessMode = Access.Mode;
         Loc.OnChange += StateHasChanged;
         TelnetService.OnChange += OnTelnetChange;
         UdpService.OnStatusChange += OnUdpStatusChange;
@@ -4101,6 +4269,7 @@
             FrequencyMhz            = s.FrequencyMhz,
             SystemMarginDb          = s.SystemMarginDb,
             OwnMessagesAlignLeft    = s.OwnMessagesAlignLeft,
+            EmoticonsToEmoji        = s.EmoticonsToEmoji,
             TxCooldownSeconds       = s.TxCooldownSeconds,
             PresenceEnabled         = s.PresenceEnabled,
             PresenceFreshMinutes    = s.PresenceFreshMinutes,
@@ -4975,6 +5144,7 @@
                 AntennaType             = s.AntennaType,
                 AntennaHeightM          = s.AntennaHeightM,
                 OwnMessagesAlignLeft    = s.OwnMessagesAlignLeft,
+                EmoticonsToEmoji        = s.EmoticonsToEmoji,
                 TxCooldownSeconds       = s.TxCooldownSeconds,
                 PresenceEnabled         = s.PresenceEnabled,
                 PresenceFreshMinutes    = s.PresenceFreshMinutes,
@@ -5141,12 +5311,13 @@
         public double FrequencyMhz            { get; set; } = 433.175;
         public double SystemMarginDb          { get; set; } = 30.0;
         public bool   OwnMessagesAlignLeft    { get; set; } = false;
+        public bool   EmoticonsToEmoji        { get; set; } = true;
         public int    TxCooldownSeconds         { get; set; } = 5;
         public bool   PresenceEnabled          { get; set; } = true;
         public int    PresenceFreshMinutes     { get; set; } = 45;
         public int    PresenceStaleMinutes     { get; set; } = 120;
         public bool   GatewayHighlightEnabled  { get; set; } = true;
-        public string GatewayServer            { get; set; } = "oe";
+        public string GatewayServer            { get; set; } = "all";
         public List<GatewaySourceEntry> GatewaySources { get; set; } = [];
         public List<WebLinkEntry> WebLinks { get; set; } = [];
 
@@ -5347,6 +5518,7 @@
             FrequencyMhz            = FrequencyMhz,
             SystemMarginDb          = SystemMarginDb,
             OwnMessagesAlignLeft    = OwnMessagesAlignLeft,
+            EmoticonsToEmoji        = EmoticonsToEmoji,
             TxCooldownSeconds       = TxCooldownSeconds,
             PresenceEnabled         = PresenceEnabled,
             PresenceFreshMinutes    = Math.Clamp(PresenceFreshMinutes, 5, 1440),

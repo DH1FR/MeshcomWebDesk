@@ -395,6 +395,15 @@ public sealed class KissClientService : BackgroundService
     /// <param name="srcInfoOverride">Full origin callsign from a preceding SrcInfo (0x20) frame,
     /// used in place of the AX.25 <c>src</c> (which was clamped to a 4-bit SSID) as the true
     /// sender – for the monitor display, the chat tab and the reply addressee.</param>
+    /// <summary>
+    /// An AX.25 address carries a 4-bit SSID, so a relay with a real SSID above 15 (e.g. DH1FR-99) arrives as
+    /// "-15". KISS has no frame that restores it for digipeaters (SrcInfo only covers the origin), so such a hop is
+    /// shown as "-?" instead of a callsign that does not exist. <see cref="ChatService"/> replaces it with the real
+    /// one when the ext-udp copy of the same packet delivers the full path.
+    /// </summary>
+    internal static string MarkClampedSsid(string call) =>
+        call.EndsWith("-15", StringComparison.OrdinalIgnoreCase) ? call[..^2] + "?" : call;
+
     private void HandleDataFrame(NodeProfile node, ReadOnlySpan<byte> payload, KissRxContext ctx,
         string? srcInfoOverride = null)
     {
@@ -411,7 +420,7 @@ public sealed class KissClientService : BackgroundService
         }
 
         var info = AprsInfo.Parse(ax.Info);
-        var digis = ax.Digipeaters.Count > 0 ? string.Join(",", ax.Digipeaters) : null;
+        var digis = ax.Digipeaters.Count > 0 ? string.Join(",", ax.Digipeaters.Select(MarkClampedSsid)) : null;
 
         // The AX.25 src carries only a 4-bit SSID; a SrcInfo (0x20) frame restores the real call.
         var src = string.IsNullOrEmpty(srcInfoOverride) ? ax.Src : srcInfoOverride;

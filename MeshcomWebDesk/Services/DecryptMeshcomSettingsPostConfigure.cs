@@ -42,6 +42,15 @@ public sealed class DecryptMeshcomSettingsPostConfigure : IPostConfigureOptions<
         // Migration: MhMaxAgeDays (days) → MhMaxAgeHours (hours).
         if (options.MhMaxAgeDays > 0 && options.MhMaxAgeHours == 0)
             options.MhMaxAgeHours = options.MhMaxAgeDays * 24;
+
+        // One-time migration (v1.18.4): whatever gateway source was stored, it becomes "all" once.
+        // The marker is persisted by SettingsService on every save, so any choice made
+        // afterwards sticks.
+        if (!options.GatewayAllDefaultApplied)
+        {
+            options.GatewayServer = "all";
+            options.GatewayAllDefaultApplied = true;
+        }
     }
 
     private string Decrypt(string value)
