@@ -63,6 +63,11 @@
             </div>
         }
 
+        @if (_loaded)
+        {
+            <StationSparklines Callsign="@Callsign" />
+        }
+
         <div class="mh-sc-actions" style="flex-wrap:wrap">
             @if (OnOpenChat.HasDelegate)
             {

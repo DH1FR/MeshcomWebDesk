@@ -1,0 +1,40 @@
+@* Tiny inline SVG line chart. The x axis spans a fixed window (From..To) so gaps in the data stay visible. *@
+<svg class="spark" width="@Width" height="@Height" viewBox="0 0 @Width @Height" role="img" aria-label="@Title">
+    <title>@Title</title>
+    @if (_path is not null)
+    {
+        <polyline points="@_path" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round" />
+        <circle cx="@_lastX" cy="@_lastY" r="2" fill="currentColor" />
+    }
+</svg>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<MeshcomWebDesk.Services.History.SeriesPoint> Points { get; set; } = [];
+    [Parameter, EditorRequired] public DateTime From { get; set; }
+    [Parameter, EditorRequired] public DateTime To { get; set; }
+    [Parameter] public int Width { get; set; } = 110;
+    [Parameter] public int Height { get; set; } = 24;
+    /// <summary>Tooltip / accessible text (e.g. "min 3.1 – max 9.8 °C").</summary>
+    [Parameter] public string Title { get; set; } = "";
+
+    private string? _path;
+    private string _lastX = "0", _lastY = "0";
+
+    protected override void OnParametersSet()
+    {
+        _path = null;
+        if (Points.Count < 2) return;
+        var min = Points.Min(p => p.Value);
+        var max = Points.Max(p => p.Value);
+        var span = max - min;
+        const double pad = 3;
+        var spanT = Math.Max(1, (To - From).TotalSeconds);
+
+        string X(DateTime t) => (pad + Math.Clamp((t - From).TotalSeconds / spanT, 0, 1) * (Width - 2 * pad)).ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+        string Y(double v)   => (span < 1e-9 ? Height / 2.0 : pad + (1 - (v - min) / span) * (Height - 2 * pad)).ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+
+        _path  = string.Join(' ', Points.Select(p => $"{X(p.Time)},{Y(p.Value)}"));
+        _lastX = X(Points[^1].Time);
+        _lastY = Y(Points[^1].Value);
+    }
+}

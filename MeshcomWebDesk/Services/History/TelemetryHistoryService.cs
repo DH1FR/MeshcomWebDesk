@@ -47,6 +47,27 @@ public sealed class TelemetryHistoryService
         }
     }
 
+    private static readonly HistoryMetric[] SparkMetrics =
+        [HistoryMetric.Temp1, HistoryMetric.Humidity, HistoryMetric.Pressure, HistoryMetric.Battery, HistoryMetric.Rssi, HistoryMetric.Snr];
+    private static readonly TimeSpan SparkCacheTime = TimeSpan.FromSeconds(60);
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, (DateTime At, Dictionary<HistoryMetric, SeriesResult> Data)> _sparkCache = new();
+
+    /// <summary>All sparkline metrics of one station (about 48 points each). Cached for a minute so hovering does not hit the database repeatedly.</summary>
+    public async Task<Dictionary<HistoryMetric, SeriesResult>> GetSparklinesAsync(string callsign, DateTime from, DateTime to,
+        CancellationToken ct = default)
+    {
+        var key = callsign.ToUpperInvariant();
+        if (_sparkCache.TryGetValue(key, out var hit) && DateTime.UtcNow - hit.At < SparkCacheTime)
+            return hit.Data;
+
+        var results = await Task.WhenAll(SparkMetrics.Select(m => GetSeriesAsync(callsign, m, from, to, 48, ct)));
+        var data = SparkMetrics.Zip(results).ToDictionary(x => x.First, x => x.Second);
+
+        if (_sparkCache.Count > 200) _sparkCache.Clear();     // trivial bound
+        _sparkCache[key] = (DateTime.UtcNow, data);
+        return data;
+    }
+
     public async Task<StationsResult> GetStationsAsync(HistoryMetric metric, DateTime from, int limit = 100,
         CancellationToken ct = default)
     {

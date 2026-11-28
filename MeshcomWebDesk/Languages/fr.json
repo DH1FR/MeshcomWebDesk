@@ -1628,6 +1628,7 @@
     "entries are older than the retention limit and will be deleted – this cannot be undone.": "entrées sont plus anciennes que la limite de rétention et seront supprimées – action irréversible.",
     "The bucket retention rule will be set to the chosen limit; InfluxDB then deletes older data itself – this cannot be undone.": "La règle de rétention du bucket sera réglée sur la limite choisie ; InfluxDB supprimera ensuite lui-même les données plus anciennes – action irréversible.",
     "entries deleted.": "entrées supprimées.",
-    "Retention rule set.": "Règle de rétention définie."
+    "Retention rule set.": "Règle de rétention définie.",
+    "Trend, last 24 h": "Évolution, dernières 24 h"
   }
 }
