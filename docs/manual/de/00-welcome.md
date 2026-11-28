@@ -12,7 +12,10 @@ Dieselben Dateien liegen auf GitHub unter [docs/manual](https://github.com/DH1FR
 | Kapitel | Inhalt |
 |---|---|
 | Willkommen | Dieses Kapitel |
-| [Node verbinden](01-connect-node.md) | Wie WebDesk mit einem MeshCom-Node spricht |
+| [Schnellstart und Installation](01-install.md) | WebDesk installieren und starten (Windows, Linux, Docker, macOS) |
+| [Node verbinden](02-connect-node.md) | Wie WebDesk mit einem MeshCom-Node spricht, Verbindung prüfen |
+| [Die Oberfläche](03-interface.md) | Chat, MH-Liste, Monitor und Statusleiste |
+| [Nachrichten schreiben](04-writing-messages.md) | Länge, Variablen, Schnelltexte, Emoticons |
 
 ## Schreibweisen
 
