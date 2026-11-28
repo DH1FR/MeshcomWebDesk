@@ -744,6 +744,7 @@
     "QTH Locator (partner)": "Localisateur QTH (partenaire)",
     "Queries the QRZ.com XML API. A free account provides basic data (first name, location). An XML subscription (~$30/year) unlocks full profile data.": "Interroge l'API XML de QRZ.com. Un compte gratuit fournit les données de base (prénom, localité). Un abonnement XML (~30 $/an) débloque les données complètes du profil.",
     "Quick Texts": "Textes rapides",
+    "unread": "non lus",
     "Insert variable": "Insérer une variable",
     "Own callsign": "Indicatif propre",
     "Chat partner callsign": "Indicatif de l'interlocuteur",

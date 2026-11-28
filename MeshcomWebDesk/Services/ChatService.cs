@@ -1252,7 +1252,7 @@ public class ChatService
             {
                 SavedAt         = DateTime.Now,
                 Tabs            = primaryState.Tabs.Values
-                                    .Select(t => new ChatTab { NodeId = t.NodeId, Key = t.Key, Title = t.Title, Messages = t.Messages.ToList() })
+                                    .Select(t => new ChatTab { NodeId = t.NodeId, Key = t.Key, Title = t.Title, Messages = t.Messages.ToList(), SavedUnread = t.UnreadCount, SavedMentionUnread = t.MentionUnread })
                                     .ToList(),
                 MhList          = primaryState.MhList.Values.ToList(),
                 MonitorMessages = primaryState.Messages.ToList(),
@@ -1265,7 +1265,7 @@ public class ChatService
                 snapshot.NodeSnapshots[nodeId.ToString()] = new NodeSnapshotEntry
                 {
                     Tabs            = state.Tabs.Values
-                                        .Select(t => new ChatTab { NodeId = t.NodeId, Key = t.Key, Title = t.Title, Messages = t.Messages.ToList() })
+                                        .Select(t => new ChatTab { NodeId = t.NodeId, Key = t.Key, Title = t.Title, Messages = t.Messages.ToList(), SavedUnread = t.UnreadCount, SavedMentionUnread = t.MentionUnread })
                                         .ToList(),
                     MonitorMessages = state.Messages.ToList(),
                     TabOrder        = state.TabOrder.ToList()
@@ -1304,6 +1304,8 @@ public class ChatService
                         if (max > 0 && tab.Messages.Count > max)
                             tab.Messages.RemoveRange(0, tab.Messages.Count - max);
                         tab.MessageCount = tab.Messages.Count;
+                        tab.UnreadCount  = Math.Min(tab.SavedUnread, tab.Messages.Count);
+                        tab.MentionUnread = Math.Min(tab.SavedMentionUnread, tab.UnreadCount);
                         state.Tabs[tab.Key] = tab;
                     }
                 }
@@ -1353,6 +1355,8 @@ public class ChatService
                         if (max > 0 && tab.Messages.Count > max)
                             tab.Messages.RemoveRange(0, tab.Messages.Count - max);
                         tab.MessageCount = tab.Messages.Count;
+                        tab.UnreadCount  = Math.Min(tab.SavedUnread, tab.Messages.Count);
+                        tab.MentionUnread = Math.Min(tab.SavedMentionUnread, tab.UnreadCount);
                         primaryState.Tabs[tab.Key] = tab;
                     }
                 }

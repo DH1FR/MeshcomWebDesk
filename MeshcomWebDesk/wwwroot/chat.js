@@ -937,18 +937,50 @@ window.chatScroll = (function () {
         }
     }, true);
 
+    // "↑ N unread" button: true while the "New messages" line has scrolled out above the visible area
+    // and the reader is not at the end (there they have read everything anyway).
+    var divAbove = false;
+    function reportDivider(el) {
+        var d = el.querySelector('.new-messages-divider');
+        var v = !!d && !atBottom(el) && d.getBoundingClientRect().bottom < el.getBoundingClientRect().top + 4;
+        if (v !== divAbove) {
+            divAbove = v;
+            if (dn) dn.invokeMethodAsync('OnDividerAboveChanged', v).catch(function () { });
+        }
+    }
+    document.addEventListener('scroll', function (e) {
+        if (e.target && e.target.id === 'tab-messages') reportDivider(e.target);
+    }, true);
+
+    function scrollToDivider(el) {
+        var d = el.querySelector('.new-messages-divider');
+        if (!d) return false;
+        el.scrollTop += d.getBoundingClientRect().top - el.getBoundingClientRect().top - 6;
+        stick = atBottom(el);
+        return true;
+    }
+
     return {
         init: function (ref) { dn = ref; },
         // Scrolls to the bottom if forced or if the reader was at the bottom; returns whether it scrolled.
-        after: function (id, force) {
+        // toDivider (with force): jump to the "New messages" line instead of the end.
+        after: function (id, force, toDivider) {
             var el = document.getElementById(id);
             if (!el) return false;
-            if (force || stick) {
+            var res = false;
+            if (force && toDivider && scrollToDivider(el)) {
+                res = true;
+            } else if (force || stick) {
                 el.scrollTop = el.scrollHeight;
                 stick = true;
-                return true;
+                res = true;
             }
-            return false;
+            requestAnimationFrame(function () { reportDivider(el); });
+            return res;
+        },
+        toDivider: function (id) {
+            var el = document.getElementById(id);
+            if (el) { scrollToDivider(el); reportDivider(el); }
         }
     };
 }());

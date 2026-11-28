@@ -540,6 +540,23 @@ h1:focus {
 
 .new-msg-fab:hover { filter: brightness(1.15); }
 
+/* "↑ N ungelesen": jump back to the "New messages" line (sticky at the top of the list) */
+.unread-jump-wrap {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    height: 0;
+    flex: none;
+    display: flex;
+    justify-content: center;
+    overflow: visible;
+}
+
+.unread-jump {
+    top: 6px;
+    bottom: auto;
+}
+
 /* ── Trennlinie "Neue Nachrichten" ─────────────────────────────────────── */
 .new-messages-divider {
     display: flex;
