@@ -1617,6 +1617,9 @@
     "Please enter the access password.": "Veuillez saisir le mot de passe d'accès.",
     "Log in": "Se connecter",
     "Access protection is on: the device asks for the password when it opens WebDesk for the first time (Settings → Access protection).": "La protection d'accès est active : l'appareil demande le mot de passe à la première ouverture de WebDesk (Paramètres → Protection d'accès).",
-    "WebDesk has no access protection: anyone who can reach this address can send messages and change settings. Use it in your own network only, or set a password under Settings → Access protection.": "WebDesk n'a pas de protection d'accès : quiconque atteint cette adresse peut envoyer des messages et modifier les paramètres. À utiliser uniquement sur votre propre réseau, ou définissez un mot de passe sous Paramètres → Protection d'accès."
+    "WebDesk has no access protection: anyone who can reach this address can send messages and change settings. Use it in your own network only, or set a password under Settings → Access protection.": "WebDesk n'a pas de protection d'accès : quiconque atteint cette adresse peut envoyer des messages et modifier les paramètres. À utiliser uniquement sur votre propre réseau, ou définissez un mot de passe sous Paramètres → Protection d'accès.",
+    "Chapters": "Chapitres",
+    "The manual is available in German and English.": "Le manuel est disponible en allemand et en anglais.",
+    "Chapter not found.": "Chapitre introuvable."
   }
 }
