@@ -16,6 +16,10 @@ The same files are on GitHub in [docs/manual](https://github.com/DH1FR/MeshcomWe
 | [Connecting the node](02-connect-node.md) | How WebDesk talks to a MeshCom node, checking the connection |
 | [The interface](03-interface.md) | Chat, MH list, monitor and status bar |
 | [Writing messages](04-writing-messages.md) | Length, variables, quick texts, emoticons |
+| [Notifications](05-notifications.md) | Sounds, watchlist, CQ, mentions, desktop notifications |
+| [Automation](06-automation.md) | Beacon, calendar beacon, auto-reply, bot, telemetry, weather |
+| [Map and range](07-map.md) | Markers, gateways, measured and theoretical range |
+| [Integrations](08-integrations.md) | QRZ.com, database, AI, webhook, MQTT |
 
 ## Conventions
 

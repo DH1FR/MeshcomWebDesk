@@ -16,6 +16,10 @@ Dieselben Dateien liegen auf GitHub unter [docs/manual](https://github.com/DH1FR
 | [Node verbinden](02-connect-node.md) | Wie WebDesk mit einem MeshCom-Node spricht, Verbindung prüfen |
 | [Die Oberfläche](03-interface.md) | Chat, MH-Liste, Monitor und Statusleiste |
 | [Nachrichten schreiben](04-writing-messages.md) | Länge, Variablen, Schnelltexte, Emoticons |
+| [Benachrichtigungen](05-notifications.md) | Töne, Watchlist, CQ, Erwähnungen, Desktop-Meldungen |
+| [Automatik](06-automation.md) | Bake, Termin-Bake, Auto-Reply, Bot, Telemetrie, Wetter |
+| [Karte und Reichweite](07-map.md) | Marker, Gateways, gemessene und theoretische Reichweite |
+| [Integrationen](08-integrations.md) | QRZ.com, Datenbank, KI, Webhook, MQTT |
 
 ## Schreibweisen
 
