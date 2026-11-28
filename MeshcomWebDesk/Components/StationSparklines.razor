@@ -1,0 +1,73 @@
+@using MeshcomWebDesk.Services.History
+@inject TelemetryHistoryService History
+@inject LanguageService Loc
+@implements IDisposable
+
+@* Trend of the last 24 h per measurement. Rows without enough data are left out; renders nothing when there is no history. *@
+@if (_rows.Count > 0)
+{
+    <div class="spark-box">
+        <div class="spark-caption">@Loc.T("Verlauf, letzte 24 h", "Trend, last 24 h")</div>
+        @foreach (var r in _rows)
+        {
+            <div class="spark-row">
+                <span class="mh-sc-lbl">@r.Icon</span>
+                <Sparkline Points="r.Points" From="_from" To="_to" Title="@r.Tooltip" />
+                <span class="spark-val">@r.Last</span>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public string Callsign { get; set; } = string.Empty;
+
+    private sealed record Row(string Icon, IReadOnlyList<SeriesPoint> Points, string Last, string Tooltip);
+
+    private static readonly (HistoryMetric M, string Icon, string Unit, string Fmt)[] Defs =
+    [
+        (HistoryMetric.Temp1,    "🌡️", "°C",  "F1"),
+        (HistoryMetric.Humidity, "💧", "%",   "F0"),
+        (HistoryMetric.Pressure, "🧭", "hPa", "F1"),
+        (HistoryMetric.Battery,  "🔋", "%",   "F0"),
+        (HistoryMetric.Rssi,     "RSSI", "dBm", "F0"),
+        (HistoryMetric.Snr,      "SNR", "dB", "F1"),
+    ];
+
+    private List<Row> _rows = [];
+    private DateTime _from, _to;
+    private string?  _loadedFor;
+    private CancellationTokenSource? _cts;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_loadedFor == Callsign) return;
+        _loadedFor = Callsign;
+        _cts?.Cancel();
+        _cts = new CancellationTokenSource();
+        var ct = _cts.Token;
+
+        _to   = DateTime.Now;
+        _from = _to.AddHours(-24);
+        try
+        {
+            var data = await History.GetSparklinesAsync(Callsign, _from, _to, ct);
+            if (ct.IsCancellationRequested) return;
+            _rows = Defs
+                .Where(d => data.TryGetValue(d.M, out var s) && s.Points.Count >= 3)
+                .Select(d =>
+                {
+                    var pts = data[d.M].Points;
+                    var inv = System.Globalization.CultureInfo.CurrentCulture;
+                    var min = pts.Min(p => p.Value).ToString(d.Fmt, inv);
+                    var max = pts.Max(p => p.Value).ToString(d.Fmt, inv);
+                    return new Row(d.Icon, pts, $"{pts[^1].Value.ToString(d.Fmt, inv)} {d.Unit}", $"min {min} – max {max} {d.Unit}");
+                })
+                .ToList();
+        }
+        catch (OperationCanceledException) { }
+        catch { _rows = []; }
+    }
+
+    public void Dispose() => _cts?.Cancel();
+}

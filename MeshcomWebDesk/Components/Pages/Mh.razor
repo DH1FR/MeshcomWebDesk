@@ -198,6 +198,10 @@
                                                 <span title="@Loc.T("APRS-Symbol", "APRS symbol")">@MeshcomLookup.AprsSymbolIcon(s.AprsSymbol, s.AprsSymbolGroup) <span style="font-family:monospace">@(s.AprsSymbolGroup + s.AprsSymbol)</span></span>
                                             }
                                         </div>
+                                        @if (_cardCallsign == s.Callsign)
+                                        {
+                                            <StationSparklines Callsign="@s.Callsign" />
+                                        }
                                         @if (!string.IsNullOrEmpty(s.LastMessage))
                                         {
                                             <div class="mh-sc-msg">@Truncate(s.LastMessage, 60)</div>

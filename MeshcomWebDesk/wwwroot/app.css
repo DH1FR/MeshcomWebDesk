@@ -1640,6 +1640,21 @@ html.mon-animate .lower-pane {
 }
 .mh-sc-lbl { color: var(--text-dim); }
 
+/* Sparklines in station cards */
+.spark-box { margin: 4px 0 8px; }
+.spark-caption { font-size: 10px; color: var(--text-dim); margin-bottom: 2px; }
+.spark-row {
+    display: grid;
+    grid-template-columns: 34px 110px 1fr;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--link);
+}
+.spark-row .mh-sc-lbl { white-space: nowrap; }
+.spark-val { color: var(--text-soft); white-space: nowrap; }
+.spark { display: block; overflow: visible; }
+
 .mh-sc-msg {
     font-size: 11px;
     color: var(--text-muted);

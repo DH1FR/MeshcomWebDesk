@@ -1,4 +1,5 @@
 using MeshcomWebDesk.Models;
+using MeshcomWebDesk.Services.History;
 using Microsoft.Extensions.Options;
 
 namespace MeshcomWebDesk.Services.Database;
@@ -13,6 +14,7 @@ public sealed class MonitorSinkService : IMonitorDataSink
     private readonly IOptionsMonitor<MeshcomSettings> _settings;
     private readonly MySqlMonitorSink                 _mysql;
     private readonly InfluxDbMonitorSink              _influx;
+    private readonly LocalTelemetryHistory            _history;
 
     // -------------------------------------------------------------------------
     // Status (readable by UI)
@@ -25,8 +27,10 @@ public sealed class MonitorSinkService : IMonitorDataSink
     public MonitorSinkService(
         IOptionsMonitor<MeshcomSettings> settings,
         MySqlMonitorSink                 mysql,
-        InfluxDbMonitorSink              influx)
+        InfluxDbMonitorSink              influx,
+        LocalTelemetryHistory            history)
     {
+        _history  = history;
         _settings = settings;
         _mysql    = mysql;
         _influx   = influx;
@@ -34,6 +38,9 @@ public sealed class MonitorSinkService : IMonitorDataSink
 
     public async Task WriteAsync(MeshcomMessage message, CancellationToken ct = default)
     {
+        // built-in history (works without a database); must never break the DB write
+        try { _history.Record(message); } catch { /* ignore */ }
+
         try
         {
             await (_settings.CurrentValue.Database.Provider switch

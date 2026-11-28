@@ -24,6 +24,12 @@ public class DatabaseSettings
     public string InfluxOrg    { get; set; } = "meshcom";
     public string InfluxBucket { get; set; } = "meshcom";
 
+    // ── Retention ─────────────────────────────────────────────────────────
+
+    /// <summary>How long monitor data is kept: 0 = unlimited, otherwise days (minimum 7).
+    /// MySQL: daily purge by WebDesk; InfluxDB: retention rule of the bucket.</summary>
+    public int RetentionDays { get; set; } = 0;
+
     // ── Logging ───────────────────────────────────────────────────────────
 
     /// <summary>When true, every successful DB write is logged at Information level.</summary>

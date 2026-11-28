@@ -231,7 +231,9 @@ public sealed class DatabaseSetupService
             {
                 orgID          = orgId,
                 name           = settings.InfluxBucket,
-                retentionRules = Array.Empty<object>()
+                retentionRules = DatabaseRetentionService.Effective(settings.RetentionDays) > 0
+                    ? new object[] { new { type = "expire", everySeconds = DatabaseRetentionService.Effective(settings.RetentionDays) * 86400L } }
+                    : Array.Empty<object>()
             });
 
             using var bucketReq = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/api/v2/buckets");
