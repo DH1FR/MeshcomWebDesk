@@ -1,5 +1,12 @@
 ﻿# Changelog
 
+## [1.19.0] – unreleased
+
+### Features
+- **User manual in the app (❓ Help)** – WebDesk now has a manual of its own, in **German and English**. **❓ Help** opens it inside the application (page `/help`: chapter list on the left, text on the right) instead of a page on GitHub. It works **without an internet connection** and always matches the installed version, because the Markdown files are built into the program. It consists of a welcome page and eleven chapters: *Quick start and installation*, *Connecting the node*, *The interface*, *Writing messages*, *Notifications*, *Automation*, *Map and range*, *Integrations*, *Security and access*, *Backup, maintenance and troubleshooting* and a *Reference* (ports, parameters, bot commands, settings at a glance). The language follows the interface language; the other languages show the English text with a note. The same files are on GitHub in `docs/manual`.
+
+---
+
 ## [1.18.4] – 2026-11-28
 
 ### Features

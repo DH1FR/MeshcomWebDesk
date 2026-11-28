@@ -1,0 +1,57 @@
+@page "/help"
+@page "/help/{Chapter}"
+@rendermode InteractiveServer
+@inject MeshcomWebDesk.Services.LanguageService Loc
+@inject MeshcomWebDesk.Services.ManualService Manual
+@implements IDisposable
+
+<PageTitle>@Loc.T("Handbuch", "Manual") – MeshCom WebDesk</PageTitle>
+
+<div class="help-page">
+    <nav class="help-nav" aria-label="@Loc.T("Kapitel", "Chapters")">
+        <h2 class="help-nav-title">📖 @Loc.T("Handbuch", "Manual")</h2>
+        @foreach (var c in _chapters)
+        {
+            <a class="help-nav-link @(c.Slug == _current?.Slug ? "active" : "")" href="/help/@c.Slug">@c.Title</a>
+        }
+    </nav>
+
+    <article class="help-content">
+        @if (!ManualService.IsNative(Loc.Current))
+        {
+            <p class="help-note">ℹ️ @Loc.T("Das Handbuch gibt es auf Deutsch und Englisch.", "The manual is available in German and English.")</p>
+        }
+        @if (_html is null)
+        {
+            <p>@Loc.T("Kapitel nicht gefunden.", "Chapter not found.")</p>
+        }
+        else
+        {
+            @((MarkupString)_html)
+        }
+    </article>
+</div>
+
+@code {
+    [Parameter] public string? Chapter { get; set; }
+
+    private IReadOnlyList<ManualChapter> _chapters = [];
+    private ManualChapter? _current;
+    private string? _html;
+
+    private void OnLocChange() { Load(); _ = InvokeAsync(StateHasChanged); }
+
+    protected override void OnInitialized() => Loc.OnChange += OnLocChange;
+    public void Dispose() => Loc.OnChange -= OnLocChange;
+
+    protected override void OnParametersSet() => Load();
+
+    private void Load()
+    {
+        _chapters = Manual.GetChapters(Loc.Current);
+        _current  = string.IsNullOrEmpty(Chapter)
+            ? _chapters.FirstOrDefault()
+            : _chapters.FirstOrDefault(c => c.Slug == Chapter);
+        _html     = _current is null ? null : Manual.GetChapterHtml(Loc.Current, _current.Slug);
+    }
+}

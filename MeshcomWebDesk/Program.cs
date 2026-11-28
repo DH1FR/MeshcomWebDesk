@@ -241,6 +241,7 @@ builder.Services.AddSingleton<MeshcomUdpService>();
 builder.Services.AddSingleton<DataPersistenceService>();
 builder.Services.AddSingleton<SettingsService>();
 builder.Services.AddSingleton<LanguageService>();
+builder.Services.AddSingleton<ManualService>();
 builder.Services.AddSingleton<MySqlMonitorSink>();
 builder.Services.AddSingleton<InfluxDbMonitorSink>();
 builder.Services.AddSingleton<MonitorSinkService>();
@@ -346,6 +347,11 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 MeshcomWebDesk.Services.Access.AccessEndpoints.MapAccessEndpoints(app);
 MeshcomWebDesk.Services.Update.UpdateEndpoints.MapUpdateEndpoints(app);
+// Images of the manual (embedded in the assembly, see ManualService)
+app.MapGet("/help-img/{name}", (string name, ManualService manual) =>
+    manual.OpenImage(name) is { } img
+        ? Results.Stream(img.Stream, img.ContentType)
+        : Results.NotFound());
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

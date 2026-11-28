@@ -14,6 +14,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Markdig" Version="1.6.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.0" />
     <PackageReference Include="MQTTnet" Version="4.3.7.1207" />
     <PackageReference Include="MySqlConnector" Version="2.6.1" />
@@ -54,6 +55,15 @@
     <!-- Built-in UI languages (EN text → translation). Additional/overriding files are read from
          <DataPath>/languages/*.json at runtime, see LanguageService. -->
     <EmbeddedResource Include="Languages\*.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- User manual: Markdown (de/en) and images from docs/manual, embedded so it works offline in every package.
+         Resource names are manual/<lang>/<chapter>.md and manual/img/<file>, see ManualService. -->
+    <EmbeddedResource Include="..\docs\manual\de\*.md" LogicalName="manual/de/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\docs\manual\en\*.md" LogicalName="manual/en/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\docs\manual\img\*.*"
+                      LogicalName="manual/img/%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>
