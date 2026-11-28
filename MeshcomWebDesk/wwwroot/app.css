@@ -5171,3 +5171,31 @@ html[data-display="compact"] .app-nav-qr { display: none !important; }
     .help-nav-title { flex: 0 0 100%; margin-bottom: 0.25rem; }
     .help-content { padding: 1rem; }
 }
+
+
+/* Charts page */
+.chart-page { padding: 12px 16px; max-width: 1000px; margin: 0 auto; }
+.chart-h { margin: 0 0 10px; font-size: 18px; }
+.chart-controls { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; }
+.chart-controls label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--text-dim); }
+.chart-controls select, .chart-controls input {
+    background: var(--bg-input); color: var(--text); border: 1px solid var(--border-strong);
+    border-radius: 4px; padding: 5px 8px; font-size: 13px; min-width: 150px;
+}
+.chart-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.chart-chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid; border-radius: 12px; padding: 2px 4px 2px 8px; font-size: 12px; }
+.chart-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 2px; }
+.chart-x { background: none; border: 0; color: var(--text-dim); cursor: pointer; font-size: 15px; line-height: 1; padding: 0 4px; }
+.chart-x:hover { color: var(--text); }
+.chart-empty { color: var(--text-dim); padding: 24px 0; }
+.chart-suggest { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: var(--text-dim); }
+.chart-sug { background: var(--bg-elevated); color: var(--text); border: 1px solid var(--border-strong); border-radius: 4px; padding: 3px 8px; cursor: pointer; }
+.chart-warn { font-size: 12px; color: var(--text-dim); margin: 4px 0; }
+.chart-box { background: var(--bg-elevated); border: 1px solid var(--border-strong); border-radius: 6px; padding: 6px; }
+.chart-svg { width: 100%; height: auto; display: block; }
+.chart-grid { stroke: var(--border-strong); stroke-width: 1; opacity: .5; }
+.chart-tick { fill: var(--text-dim); font-size: 11px; }
+.chart-pt:hover { stroke: var(--text); stroke-width: 1.5; }
+.chart-foot { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 8px; font-size: 12px; color: var(--text-dim); }
+.chart-stat b { color: var(--text); margin-right: 4px; }
+.chart-src { margin-left: auto; }

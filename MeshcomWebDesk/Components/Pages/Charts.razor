@@ -1,0 +1,315 @@
+@page "/charts"
+@rendermode InteractiveServer
+@using MeshcomWebDesk.Services
+@using MeshcomWebDesk.Services.History
+@inject TelemetryHistoryService History
+@inject LanguageService Loc
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>@Loc.T("Verläufe", "Charts")</PageTitle>
+
+<div class="chart-page">
+    <h2 class="chart-h">📈 @Loc.T("Verläufe", "Charts")</h2>
+
+    <div class="chart-controls">
+        <label>@Loc.T("Messwert", "Measurement")
+            <select value="@_metric" @onchange="OnMetricChanged">
+                @foreach (var d in Defs)
+                {
+                    <option value="@d.M">@d.Icon @Loc.T(d.De, d.En) (@d.Unit)</option>
+                }
+            </select>
+        </label>
+        <label>@Loc.T("Zeitraum", "Time range")
+            <select value="@_hours" @onchange="OnRangeChanged">
+                @foreach (var r in Ranges)
+                {
+                    <option value="@r.Hours">@Loc.T(r.De, r.En)</option>
+                }
+            </select>
+        </label>
+        <label>@Loc.T("Station hinzufügen", "Add station")
+            <input list="chart-stations" @bind="_input" @bind:event="oninput" @onchange="AddFromInput"
+                   placeholder="@Loc.T("Rufzeichen", "Callsign")" maxlength="32" autocomplete="off" />
+            <datalist id="chart-stations">
+                @foreach (var s in _known.Where(k => !_selected.Contains(k.Callsign, StringComparer.OrdinalIgnoreCase)))
+                {
+                    <option value="@s.Callsign">@s.Samples</option>
+                }
+            </datalist>
+        </label>
+    </div>
+
+    @if (_selected.Count > 0)
+    {
+        <div class="chart-chips">
+            @for (var i = 0; i < _selected.Count; i++)
+            {
+                var call = _selected[i];
+                var color = Palette[i % Palette.Length];
+                <span class="chart-chip" style="border-color:@color">
+                    <span class="chart-dot" style="background:@color"></span>@call
+                    <button type="button" class="chart-x" title="@Loc.T("Entfernen", "Remove")" @onclick="() => Remove(call)">×</button>
+                </span>
+            }
+        </div>
+    }
+
+    @if (_selected.Count == 0)
+    {
+        <div class="chart-empty">@Loc.T("Wähle eine oder mehrere Stationen (bis zu 5), um die Verläufe zu vergleichen.",
+                                        "Pick one or more stations (up to 5) to compare their history.")</div>
+        @if (_known.Count > 0)
+        {
+            <div class="chart-suggest">
+                @Loc.T("Stationen mit Daten:", "Stations with data:")
+                @foreach (var s in _known.Take(12))
+                {
+                    <button type="button" class="chart-sug" @onclick="() => Add(s.Callsign)">@s.Callsign <small>(@s.Samples)</small></button>
+                }
+            </div>
+        }
+    }
+    else if (_loading)
+    {
+        <div class="chart-empty">@Loc.T("Lade …", "Loading …")</div>
+    }
+    else
+    {
+        @if (_warning is not null)
+        {
+            <div class="chart-warn">⚠️ @Loc.T("Datenbank nicht lesbar – verwende lokalen Verlauf: ", "Database not readable – using local history: ") @_warning</div>
+        }
+        @if (_source == HistorySource.Local && _hours > 168)
+        {
+            <div class="chart-warn">ℹ️ @Loc.T("Der lokale Verlauf reicht nur 7 Tage zurück. Für längere Zeiträume eine Datenbank einrichten.",
+                                              "The local history only goes back 7 days. Set up a database for longer ranges.")</div>
+        }
+        @if (_series.All(s => s.Points.Count == 0))
+        {
+            <div class="chart-empty">@Loc.T("Keine Daten im gewählten Zeitraum.", "No data in the selected time range.")</div>
+        }
+        else
+        {
+            <div class="chart-box">@((MarkupString)BuildSvg())</div>
+            <div class="chart-foot">
+                @foreach (var (call, pts, i) in _series.Select((s, i) => (s.Call, s.Points, i)))
+                {
+                    <span class="chart-stat">
+                        <span class="chart-dot" style="background:@Palette[i % Palette.Length]"></span>
+                        <b>@call</b>
+                        @if (pts.Count == 0) { <span>@Loc.T("keine Daten", "no data")</span> }
+                        else
+                        {
+                            <span>@Loc.T("zuletzt", "last") @Fmt(pts[^1].Value) · min @Fmt(pts.Min(p => p.Value)) · max @Fmt(pts.Max(p => p.Value))</span>
+                        }
+                    </span>
+                }
+                <span class="chart-src">@SourceLabel()</span>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private sealed record Def(HistoryMetric M, string Icon, string De, string En, string Unit, string Fmt);
+    private sealed record Range(int Hours, string De, string En);
+    private sealed record Line(string Call, IReadOnlyList<SeriesPoint> Points);
+
+    private static readonly Def[] Defs =
+    [
+        new(HistoryMetric.Temp1,    "🌡️", "Temperatur",           "Temperature",   "°C",  "F1"),
+        new(HistoryMetric.Temp2,    "🌡️", "Temperatur 2",         "Temperature 2", "°C",  "F1"),
+        new(HistoryMetric.Humidity, "💧", "Luftfeuchte",          "Humidity",      "%",   "F0"),
+        new(HistoryMetric.Pressure, "🧭", "Luftdruck",            "Pressure",      "hPa", "F1"),
+        new(HistoryMetric.Battery,  "🔋", "Akku",                 "Battery",       "%",   "F0"),
+        new(HistoryMetric.Rssi,     "📶", "RSSI",                 "RSSI",          "dBm", "F0"),
+        new(HistoryMetric.Snr,      "📶", "SNR",                  "SNR",           "dB",  "F1"),
+    ];
+
+    private static readonly Range[] Ranges =
+    [
+        new(24,   "Letzte 24 Stunden", "Last 24 hours"),
+        new(72,   "Letzte 3 Tage",     "Last 3 days"),
+        new(168,  "Letzte 7 Tage",     "Last 7 days"),
+        new(720,  "Letzte 30 Tage",    "Last 30 days"),
+        new(2160, "Letzte 90 Tage",    "Last 90 days"),
+    ];
+
+    // Distinct on dark and light themes.
+    private static readonly string[] Palette = ["#4da3ff", "#ff9f40", "#3fb97c", "#e5534b", "#b07cf0"];
+    private const int MaxStations = 5;
+
+    private HistoryMetric _metric = HistoryMetric.Temp1;
+    private int _hours = 24;
+    private string _input = "";
+    private readonly List<string> _selected = [];
+    private IReadOnlyList<StationInfo> _known = [];
+    private List<Line> _series = [];
+    private HistorySource _source;
+    private string? _warning;
+    private bool _loading;
+    private DateTime _from, _to;
+    private CancellationTokenSource? _cts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Optional deep link: /charts?call=DL1ABC,DL2XYZ&metric=Humidity&hours=168
+        var q = System.Web.HttpUtility.ParseQueryString(new Uri(Nav.Uri).Query);
+        if (Enum.TryParse<HistoryMetric>(q["metric"], true, out var m)) _metric = m;
+        if (int.TryParse(q["hours"], out var h) && Ranges.Any(r => r.Hours == h)) _hours = h;
+        foreach (var c in (q["call"] ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            if (IsValid(c) && _selected.Count < MaxStations && !_selected.Contains(c, StringComparer.OrdinalIgnoreCase))
+                _selected.Add(c.ToUpperInvariant());
+
+        await ReloadAsync();
+    }
+
+    private static bool IsValid(string s) => s.Length is > 0 and <= 32 && s.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '/');
+
+    private async Task OnMetricChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<HistoryMetric>(e.Value?.ToString(), out var m)) _metric = m;
+        await ReloadAsync();
+    }
+
+    private async Task OnRangeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var h)) _hours = h;
+        await ReloadAsync();
+    }
+
+    private async Task AddFromInput()
+    {
+        var c = _input.Trim().ToUpperInvariant();
+        _input = "";
+        if (IsValid(c)) await Add(c);
+    }
+
+    private async Task Add(string call)
+    {
+        if (_selected.Count >= MaxStations || _selected.Contains(call, StringComparer.OrdinalIgnoreCase)) return;
+        _selected.Add(call.ToUpperInvariant());
+        await ReloadAsync();
+    }
+
+    private async Task Remove(string call)
+    {
+        _selected.Remove(call);
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        _cts?.Cancel();
+        _cts = new CancellationTokenSource();
+        var ct = _cts.Token;
+        _loading = true;
+        _to = DateTime.Now;
+        _from = _to.AddHours(-_hours);
+        StateHasChanged();
+        try
+        {
+            var stations = await History.GetStationsAsync(_metric, _from, 100, ct);
+            var results = await Task.WhenAll(_selected.Select(c => History.GetSeriesAsync(c, _metric, _from, _to, 240, ct)));
+            if (ct.IsCancellationRequested) return;
+            _known = stations.Stations;
+            _series = _selected.Zip(results, (c, r) => new Line(c, r.Points)).ToList();
+            _source = results.Length > 0 ? results[0].Source : stations.Source;
+            _warning = results.Select(r => r.Warning).FirstOrDefault(w => w is not null) ?? stations.Warning;
+            _loading = false;
+        }
+        catch (OperationCanceledException) { return; }
+        catch (Exception ex)
+        {
+            _series = _selected.Select(c => new Line(c, [])).ToList();
+            _warning = ex.Message;
+            _loading = false;
+        }
+    }
+
+    private Def Cur => Defs.First(d => d.M == _metric);
+    private string Fmt(double v) => $"{v.ToString(Cur.Fmt, System.Globalization.CultureInfo.CurrentCulture)} {Cur.Unit}";
+
+    private string SourceLabel() => _source switch
+    {
+        HistorySource.MySql    => Loc.T("Quelle: MySQL", "Source: MySQL"),
+        HistorySource.InfluxDb => Loc.T("Quelle: InfluxDB", "Source: InfluxDB"),
+        _                      => Loc.T("Quelle: lokaler Verlauf", "Source: local history")
+    };
+
+    // ── SVG ──────────────────────────────────────────────────────────────────
+    private string BuildSvg()
+    {
+        const double W = 900, H = 380, L = 56, R = 16, T = 14, B = 34;
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        string N(double v) => v.ToString("F1", inv);
+        var all = _series.SelectMany(s => s.Points).ToList();
+        var min = all.Min(p => p.Value);
+        var max = all.Max(p => p.Value);
+        if (max - min < 1e-9) { min -= 1; max += 1; }
+        var padV = (max - min) * 0.08;
+        min -= padV; max += padV;
+        var spanT = Math.Max(1, (_to - _from).TotalSeconds);
+
+        double X(DateTime t) => L + Math.Clamp((t - _from).TotalSeconds / spanT, 0, 1) * (W - L - R);
+        double Y(double v) => T + (1 - (v - min) / (max - min)) * (H - T - B);
+
+        var sb = new System.Text.StringBuilder();
+        sb.Append($"<svg class=\"chart-svg\" viewBox=\"0 0 {W} {H}\" role=\"img\" aria-label=\"{System.Net.WebUtility.HtmlEncode(Loc.T(Cur.De, Cur.En))}\">");
+
+        // Y grid + labels
+        for (var i = 0; i <= 5; i++)
+        {
+            var v = min + (max - min) * i / 5;
+            var y = Y(v);
+            sb.Append($"<line x1=\"{L}\" x2=\"{W - R}\" y1=\"{N(y)}\" y2=\"{N(y)}\" class=\"chart-grid\"/>");
+            sb.Append($"<text x=\"{L - 6}\" y=\"{N(y + 4)}\" text-anchor=\"end\" class=\"chart-tick\">{v.ToString(Cur.Fmt, System.Globalization.CultureInfo.CurrentCulture)}</text>");
+        }
+
+        // X grid + labels
+        var fmt = _hours <= 24 ? "HH:mm" : _hours <= 72 ? "ddd HH:mm" : "dd.MM.";
+        for (var i = 0; i <= 6; i++)
+        {
+            var t = _from.AddSeconds(spanT * i / 6);
+            var x = X(t);
+            sb.Append($"<line x1=\"{N(x)}\" x2=\"{N(x)}\" y1=\"{T}\" y2=\"{H - B}\" class=\"chart-grid\"/>");
+            var anchor = i == 0 ? "start" : i == 6 ? "end" : "middle";
+            sb.Append($"<text x=\"{N(x)}\" y=\"{H - 12}\" text-anchor=\"{anchor}\" class=\"chart-tick\">{t.ToString(fmt, System.Globalization.CultureInfo.CurrentCulture)}</text>");
+        }
+
+        // Series (a gap of more than 3 buckets starts a new segment so missing data is not interpolated)
+        var bucket = Math.Max(60, spanT / 240);
+        for (var si = 0; si < _series.Count; si++)
+        {
+            var pts = _series[si].Points;
+            if (pts.Count == 0) continue;
+            var color = Palette[si % Palette.Length];
+            var seg = new List<string>();
+            void Flush()
+            {
+                if (seg.Count > 1) sb.Append($"<polyline points=\"{string.Join(' ', seg)}\" fill=\"none\" stroke=\"{color}\" stroke-width=\"1.8\" stroke-linejoin=\"round\" stroke-linecap=\"round\"/>");
+                seg.Clear();
+            }
+            for (var i = 0; i < pts.Count; i++)
+            {
+                if (i > 0 && (pts[i].Time - pts[i - 1].Time).TotalSeconds > bucket * 3) Flush();
+                seg.Add($"{N(X(pts[i].Time))},{N(Y(pts[i].Value))}");
+            }
+            Flush();
+
+            var showDots = pts.Count <= 60;
+            foreach (var p in pts)
+            {
+                var tip = System.Net.WebUtility.HtmlEncode($"{_series[si].Call} · {p.Time.ToString("g", System.Globalization.CultureInfo.CurrentCulture)} · {Fmt(p.Value)}");
+                sb.Append($"<circle cx=\"{N(X(p.Time))}\" cy=\"{N(Y(p.Value))}\" r=\"{(showDots ? "2.6" : "5")}\" fill=\"{(showDots ? color : "transparent")}\" class=\"chart-pt\"><title>{tip}</title></circle>");
+            }
+        }
+
+        sb.Append("</svg>");
+        return sb.ToString();
+    }
+
+    public void Dispose() { _cts?.Cancel(); _cts?.Dispose(); }
+}
