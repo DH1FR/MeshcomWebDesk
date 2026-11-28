@@ -34,6 +34,7 @@
             <NavLink class="app-nav-link" href="/" Match="NavLinkMatch.All">💬 <span class="nav-label">@Loc.T("Chat", "Chat")</span></NavLink>
             <NavLink class="app-nav-link" href="/mh">📻 <span class="nav-label">MH</span></NavLink>
             <NavLink class="app-nav-link" href="/map">🗺️ <span class="nav-label">@Loc.T("Karte", "Map")</span></NavLink>
+            <NavLink class="app-nav-link" href="/charts">📈 <span class="nav-label">@Loc.T("Verläufe", "Charts")</span></NavLink>
             @if (SettingsMon.CurrentValue.WebLinks.Any(w => w.Enabled))
             {
                 <NavLink class="app-nav-link" href="/web">🌐 <span class="nav-label">Web</span></NavLink>

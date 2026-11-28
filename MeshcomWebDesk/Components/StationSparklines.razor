@@ -7,7 +7,7 @@
 @if (_rows.Count > 0)
 {
     <div class="spark-box">
-        <div class="spark-caption">@Loc.T("Verlauf, letzte 24 h", "Trend, last 24 h")</div>
+        <div class="spark-caption">@Loc.T("Verlauf, letzte 24 h", "Trend, last 24 h") · <a href="/charts?call=@Uri.EscapeDataString(Callsign)" title="@Loc.T("Großes Diagramm mit Zeitraum und Stationsvergleich", "Large chart with time range and station comparison")">📈 @Loc.T("Diagramm", "Chart")</a></div>
         @foreach (var r in _rows)
         {
             <div class="spark-row">
