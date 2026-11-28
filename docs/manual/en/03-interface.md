@@ -7,6 +7,7 @@ The menu bar at the top takes you to every area of WebDesk:
 | **Chat** | Conversations (tabs) with the monitor below |
 | **MH** | List of the stations heard most recently |
 | **Map** | Live map of the stations |
+| **NET Console** | The node's command line in the browser (only visible when switched on in the settings, see [Maintenance](10-maintenance.md)) |
 | **Settings** | All settings in the browser |
 | **Clear** | Deletes all stored chats, monitor entries and the MH list (with a confirmation) |
 | **About** | Version, links, update and backups |

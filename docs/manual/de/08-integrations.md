@@ -94,5 +94,4 @@ Der Inhalt ist JSON, z. B. `{ "text": "Nachricht" }`. Variablen wie `{mycall}` o
 - **Telemetrie** von außen nach WebDesk: `POST /api/telemetry`, siehe [Automatik](06-automation.md).
 - **Wetterdaten** (AWEKAS, Weather Underground): ebenfalls unter **Integrationen**, siehe [Automatik](06-automation.md).
 
-Weiter geht es mit den weiteren Kapiteln. Bis dahin findest du Sicherheit, Sicherung und Update im Kapitel
-[Schnellstart und Installation](01-install.md) und im [README](https://github.com/DH1FR/MeshcomWebDesk#readme).
+Weiter mit [Sicherheit und Zugriff](09-security.md).

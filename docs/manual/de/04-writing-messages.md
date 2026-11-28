@@ -70,5 +70,4 @@ Fährst du in einem Direkt-Chat über eine Nachricht, erscheint ein Knopf 📋. 
 Das Eingabefeld nutzt die **Rechtschreibprüfung deines Browsers**. Falsch geschriebene Wörter werden unterstrichen, wenn
 die Prüfung in den Browser-Einstellungen eingeschaltet ist.
 
-Weiter geht es mit den weiteren Kapiteln, die nach und nach dazukommen. Bis dahin hilft die vollständige
-Funktionsübersicht im [README](https://github.com/DH1FR/MeshcomWebDesk#readme).
+Weiter mit [Benachrichtigungen](05-notifications.md).

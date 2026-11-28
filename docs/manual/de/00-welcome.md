@@ -4,8 +4,6 @@ Dieses Handbuch erklärt **MeshCom WebDesk** Schritt für Schritt – von der In
 Es ist in der Anwendung über **❓ Hilfe** erreichbar und funktioniert auch ohne Internet.
 Dieselben Dateien liegen auf GitHub unter [docs/manual](https://github.com/DH1FR/MeshcomWebDesk/tree/master/docs/manual).
 
-> 🚧 **Das Handbuch wächst.** Die Kapitel kommen nach und nach; bis dahin hilft das
-> [README](https://github.com/DH1FR/MeshcomWebDesk#readme) mit der vollständigen Funktionsübersicht.
 
 ## Aufbau
 
@@ -20,6 +18,9 @@ Dieselben Dateien liegen auf GitHub unter [docs/manual](https://github.com/DH1FR
 | [Automatik](06-automation.md) | Bake, Termin-Bake, Auto-Reply, Bot, Telemetrie, Wetter |
 | [Karte und Reichweite](07-map.md) | Marker, Gateways, gemessene und theoretische Reichweite |
 | [Integrationen](08-integrations.md) | QRZ.com, Datenbank, KI, Webhook, MQTT |
+| [Sicherheit und Zugriff](09-security.md) | Passwortschutz, HTTPS, App-Installation, QR-Code |
+| [Sicherung, Wartung und Fehlersuche](10-maintenance.md) | Datensicherung, Konsole, Logs, typische Probleme |
+| [Referenz](11-reference.md) | Ports, Parameter, Befehle, Einstellungen im Überblick |
 
 ## Schreibweisen
 

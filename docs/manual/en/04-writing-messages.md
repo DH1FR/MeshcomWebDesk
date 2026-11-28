@@ -69,5 +69,4 @@ If you hover over a message in a direct chat, a 📋 button appears. It copies t
 The input field uses your **browser's spell checker**. Misspelled words are underlined if spell checking is switched on in
 the browser settings.
 
-More chapters will follow step by step. Until then the complete feature overview is in the
-[README](https://github.com/DH1FR/MeshcomWebDesk#readme).
+Continue with [Notifications](05-notifications.md).

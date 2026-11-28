@@ -7,6 +7,7 @@ Oben in der Menüleiste erreichst du alle Bereiche von WebDesk:
 | **Chat** | Unterhaltungen (Tabs) mit dem Monitor darunter |
 | **MH** | Liste der zuletzt gehörten Stationen |
 | **Karte** | Live-Karte der Stationen |
+| **NET Console** | Kommandozeile des Nodes im Browser (nur sichtbar, wenn in den Einstellungen eingeschaltet, siehe [Wartung](10-maintenance.md)) |
 | **Einstellungen** | Alle Einstellungen im Browser |
 | **Löschen** | Löscht alle gespeicherten Chats, Monitor-Einträge und die MH-Liste (mit Rückfrage) |
 | **Über** | Version, Links, Aktualisieren und Sicherungen |

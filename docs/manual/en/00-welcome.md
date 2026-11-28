@@ -4,8 +4,6 @@ This manual explains **MeshCom WebDesk** step by step – from installation to t
 It is available inside the application under **❓ Help** and works without an internet connection.
 The same files are on GitHub in [docs/manual](https://github.com/DH1FR/MeshcomWebDesk/tree/master/docs/manual).
 
-> 🚧 **The manual is growing.** Chapters are added one by one; until then the
-> [README](https://github.com/DH1FR/MeshcomWebDesk#readme) has the complete feature overview.
 
 ## Contents
 
@@ -20,6 +18,9 @@ The same files are on GitHub in [docs/manual](https://github.com/DH1FR/MeshcomWe
 | [Automation](06-automation.md) | Beacon, calendar beacon, auto-reply, bot, telemetry, weather |
 | [Map and range](07-map.md) | Markers, gateways, measured and theoretical range |
 | [Integrations](08-integrations.md) | QRZ.com, database, AI, webhook, MQTT |
+| [Security and access](09-security.md) | Password protection, HTTPS, app installation, QR code |
+| [Backup, maintenance and troubleshooting](10-maintenance.md) | Backup, console, logs, typical problems |
+| [Reference](11-reference.md) | Ports, parameters, commands, settings at a glance |
 
 ## Conventions
 
