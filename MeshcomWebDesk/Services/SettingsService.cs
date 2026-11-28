@@ -378,6 +378,7 @@ public class SettingsService
                 ["PresenceStaleMinutes"]    = s.PresenceStaleMinutes,
                 ["GatewayHighlightEnabled"] = s.GatewayHighlightEnabled,
                 ["GatewayServer"]           = s.GatewayServer,
+                ["GatewayAllDefaultApplied"] = true,   // one-time "oe" → "all" migration is done
                 ["GatewaySources"] = new JsonArray(s.GatewaySources.Select(g => (JsonNode?)new JsonObject
                 {
                     ["Name"]    = g.Name,

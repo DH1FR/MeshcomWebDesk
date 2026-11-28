@@ -439,6 +439,13 @@ public class MeshcomSettings
     public string GatewayServer { get; set; } = "all";
 
     /// <summary>
+    /// One-time migration marker (v1.18.4): installations that still had the old default "oe"
+    /// are switched to "all" once. Written as <c>true</c> by every save, so a later deliberate
+    /// choice of "oe" is kept. Not shown in the UI.
+    /// </summary>
+    public bool GatewayAllDefaultApplied { get; set; }
+
+    /// <summary>
     /// User-defined gateway dashboard sources, merged with the <see cref="GatewayServer"/> preset(s).
     /// Each URL must point to the <c>rakgw.html</c> page of a MeshCom dashboard.
     /// </summary>
