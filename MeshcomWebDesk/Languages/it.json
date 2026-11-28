@@ -1593,6 +1593,17 @@
     "Please enter the access password.": "Inserisci la password di accesso.",
     "Log in": "Accedi",
     "Access protection is on: the device asks for the password when it opens WebDesk for the first time (Settings → Access protection).": "La protezione dell'accesso è attiva: il dispositivo chiede la password alla prima apertura di WebDesk (Impostazioni → Protezione dell'accesso).",
-    "WebDesk has no access protection: anyone who can reach this address can send messages and change settings. Use it in your own network only, or set a password under Settings → Access protection.": "WebDesk non ha protezione dell'accesso: chiunque raggiunga questo indirizzo può inviare messaggi e modificare le impostazioni. Usalo solo nella tua rete o imposta una password in Impostazioni → Protezione dell'accesso."
+    "WebDesk has no access protection: anyone who can reach this address can send messages and change settings. Use it in your own network only, or set a password under Settings → Access protection.": "WebDesk non ha protezione dell'accesso: chiunque raggiunga questo indirizzo può inviare messaggi e modificare le impostazioni. Usalo solo nella tua rete o imposta una password in Impostazioni → Protezione dell'accesso.",
+    "Keep data": "Conserva dati",
+    "Older data is deleted automatically (MySQL: daily by WebDesk, InfluxDB: via the bucket retention rule). Minimum 7 days.": "I dati più vecchi vengono eliminati automaticamente (MySQL: ogni giorno da WebDesk, InfluxDB: tramite la regola di retention del bucket). Minimo 7 giorni.",
+    "Unlimited": "Illimitato",
+    "days": "giorni",
+    "Check cleanup": "Verifica pulizia",
+    "Delete now": "Elimina ora",
+    "Nothing to delete.": "Niente da eliminare.",
+    "entries are older than the retention limit and will be deleted – this cannot be undone.": "voci sono più vecchie del limite di conservazione e verranno eliminate – operazione irreversibile.",
+    "The bucket retention rule will be set to the chosen limit; InfluxDB then deletes older data itself – this cannot be undone.": "La regola di retention del bucket verrà impostata sul limite scelto; InfluxDB eliminerà poi da sé i dati più vecchi – operazione irreversibile.",
+    "entries deleted.": "voci eliminate.",
+    "Retention rule set.": "Regola di retention impostata."
   }
 }

@@ -243,6 +243,8 @@ builder.Services.AddSingleton<SettingsService>();
 builder.Services.AddSingleton<LanguageService>();
 builder.Services.AddSingleton<MySqlMonitorSink>();
 builder.Services.AddSingleton<InfluxDbMonitorSink>();
+builder.Services.AddSingleton<DatabaseRetentionService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<DatabaseRetentionService>());
 builder.Services.AddSingleton<MonitorSinkService>();
 builder.Services.AddSingleton<IMonitorDataSink>(sp => sp.GetRequiredService<MonitorSinkService>());
 builder.Services.AddSingleton<DatabaseSetupService>();

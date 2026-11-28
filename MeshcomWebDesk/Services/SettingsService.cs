@@ -292,6 +292,7 @@ public class SettingsService
                     ["InfluxToken"]           = Encrypt(s.Database.InfluxToken),
                     ["InfluxOrg"]             = s.Database.InfluxOrg,
                     ["InfluxBucket"]          = s.Database.InfluxBucket,
+                    ["RetentionDays"]         = s.Database.RetentionDays,
                     ["LogInserts"]            = s.Database.LogInserts
                 },
                 ["Webhook"] = new JsonObject

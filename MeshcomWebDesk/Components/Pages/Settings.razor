@@ -10,6 +10,7 @@
 @inject NodeManager NodeManager
 @inject LanguageService Loc
 @inject DatabaseSetupService DatabaseSetupService
+@inject DatabaseRetentionService DbRetention
 @inject QrzService QrzService
 @inject IJSRuntime JS
 @inject MeshcomWebDesk.Services.Bot.BotCommandService BotCommandService
@@ -2205,6 +2206,25 @@
                 @if (_model.DbProvider != DatabaseSettings.ProviderNone)
                 {
                     <label>
+                        @Loc.T("Daten aufbewahren", "Keep data")
+                        <small>@Loc.T("Ältere Daten werden automatisch gelöscht (MySQL: täglich durch WebDesk, InfluxDB: per Retention-Regel des Buckets). Mindestens 7 Tage.", "Older data is deleted automatically (MySQL: daily by WebDesk, InfluxDB: via the bucket retention rule). Minimum 7 days.")</small>
+                    </label>
+                    <select @bind="_model.DbRetentionDays">
+                        <option value="0">@Loc.T("Unbegrenzt", "Unlimited")</option>
+                        <option value="30">30 @Loc.T("Tage", "days")</option>
+                        <option value="90">90 @Loc.T("Tage", "days")</option>
+                        <option value="180">180 @Loc.T("Tage", "days")</option>
+                        <option value="365">365 @Loc.T("Tage", "days")</option>
+                        @if (_model.DbRetentionDays is not (0 or 30 or 90 or 180 or 365))
+                        {
+                            <option value="@_model.DbRetentionDays">@_model.DbRetentionDays @Loc.T("Tage", "days")</option>
+                        }
+                    </select>
+                }
+
+                @if (_model.DbProvider != DatabaseSettings.ProviderNone)
+                {
+                    <label>
                         @Loc.T("DB-Inserts loggen", "Log DB Inserts")
                     </label>
                     <label class="settings-toggle">
@@ -2228,6 +2248,30 @@
                         }
                     </button>
                 </div>
+
+                @if (_model.DbRetentionDays > 0)
+                {
+                    <div style="margin-top:0.5rem">
+                        <button type="button" class="btn-send-now" @onclick="CheckRetentionAsync" disabled="@_dbRetentionBusy">
+                            🧹 @Loc.T("Bereinigung prüfen", "Check cleanup")
+                        </button>
+                        @if (_dbRetentionInfo != null)
+                        {
+                            <div style="margin-top:0.5rem">@_dbRetentionInfo</div>
+                        }
+                        @if (_dbRetentionConfirm)
+                        {
+                            <div style="margin-top:0.5rem;display:flex;gap:8px">
+                                <button type="button" class="btn-remove" @onclick="RunRetentionAsync" disabled="@_dbRetentionBusy">
+                                    🗑️ @Loc.T("Jetzt löschen", "Delete now")
+                                </button>
+                                <button type="button" class="btn-save" @onclick="CancelRetention">
+                                    @Loc.T("Abbrechen", "Cancel")
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
 
                 @if (_dbTestResult != null)
                 {
@@ -4034,6 +4078,55 @@
         await SaveAsync();
     }
 
+    // ── Database retention (manual check / run; the daily job is DatabaseRetentionService) ──
+    private bool    _dbRetentionBusy;
+    private bool    _dbRetentionConfirm;
+    private string? _dbRetentionInfo;
+
+    private void CancelRetention() { _dbRetentionConfirm = false; _dbRetentionInfo = null; }
+
+    private async Task CheckRetentionAsync()
+    {
+        _dbRetentionBusy = true; _dbRetentionConfirm = false; _dbRetentionInfo = null;
+        try
+        {
+            var db    = _model.ToDbSettings();
+            if (db.Provider == DatabaseSettings.ProviderMySql)
+            {
+                var n = await DbRetention.CountExpiredAsync(db);
+                if (n == 0) _dbRetentionInfo = "✅ " + Loc.T("Nichts zu löschen.", "Nothing to delete.");
+                else
+                {
+                    _dbRetentionInfo = $"⚠️ {n:N0} " + Loc.T("Einträge sind älter als die eingestellte Frist und werden gelöscht – das kann nicht rückgängig gemacht werden.",
+                                                              "entries are older than the retention limit and will be deleted – this cannot be undone.");
+                    _dbRetentionConfirm = true;
+                }
+            }
+            else
+            {
+                _dbRetentionInfo = "⚠️ " + Loc.T("Die Retention-Regel des Buckets wird auf die gewählte Frist gesetzt; InfluxDB löscht ältere Daten danach selbst – das kann nicht rückgängig gemacht werden.",
+                                                  "The bucket retention rule will be set to the chosen limit; InfluxDB then deletes older data itself – this cannot be undone.");
+                _dbRetentionConfirm = true;
+            }
+        }
+        catch (Exception ex) { _dbRetentionInfo = "❌ " + ex.Message; }
+        finally { _dbRetentionBusy = false; }
+    }
+
+    private async Task RunRetentionAsync()
+    {
+        _dbRetentionBusy = true; _dbRetentionConfirm = false;
+        try
+        {
+            var n = await DbRetention.RunAsync(_model.ToDbSettings());
+            _dbRetentionInfo = "✅ " + (_model.DbProvider == DatabaseSettings.ProviderMySql
+                ? $"{n:N0} " + Loc.T("Einträge gelöscht.", "entries deleted.")
+                : Loc.T("Retention-Regel gesetzt.", "Retention rule set."));
+        }
+        catch (Exception ex) { _dbRetentionInfo = "❌ " + ex.Message; }
+        finally { _dbRetentionBusy = false; }
+    }
+
     private async Task TestDbConnectionAsync()
     {
         _dbTestResult = null;
@@ -4218,6 +4311,7 @@
             DbInfluxToken           = s.Database.InfluxToken,
             DbInfluxOrg             = s.Database.InfluxOrg,
             DbInfluxBucket          = s.Database.InfluxBucket,
+            DbRetentionDays         = s.Database.RetentionDays,
             DbLogInserts            = s.Database.LogInserts,
             WebhookEnabled          = s.Webhook.Enabled,
             WebhookUrl              = s.Webhook.Url,
@@ -5093,6 +5187,7 @@
                 DbInfluxToken           = s.Database.InfluxToken,
                 DbInfluxOrg             = s.Database.InfluxOrg,
                 DbInfluxBucket          = s.Database.InfluxBucket,
+                DbRetentionDays         = s.Database.RetentionDays,
                 DbLogInserts            = s.Database.LogInserts,
                 WebhookEnabled     = s.Webhook.Enabled,
                 WebhookUrl         = s.Webhook.Url,
@@ -5249,6 +5344,7 @@
         public string DbInfluxToken           { get; set; } = string.Empty;
         public string DbInfluxOrg             { get; set; } = "meshcom";
         public string DbInfluxBucket          { get; set; } = "meshcom";
+        public int    DbRetentionDays         { get; set; }
         public bool   DbLogInserts            { get; set; }
 
         // Webhook
@@ -5366,6 +5462,7 @@
                 InfluxToken           = DbInfluxToken,
                 InfluxOrg             = DbInfluxOrg,
                 InfluxBucket          = DbInfluxBucket,
+                RetentionDays         = DbRetentionDays,
                 LogInserts            = DbLogInserts
             };
         }
