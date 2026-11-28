@@ -43,13 +43,12 @@ public sealed class DecryptMeshcomSettingsPostConfigure : IPostConfigureOptions<
         if (options.MhMaxAgeDays > 0 && options.MhMaxAgeHours == 0)
             options.MhMaxAgeHours = options.MhMaxAgeDays * 24;
 
-        // One-time migration (v1.18.4): the old default gateway source "oe" becomes "all".
-        // The marker is persisted by SettingsService on every save, so choosing "oe" again
+        // One-time migration (v1.18.4): whatever gateway source was stored, it becomes "all" once.
+        // The marker is persisted by SettingsService on every save, so any choice made
         // afterwards sticks.
         if (!options.GatewayAllDefaultApplied)
         {
-            if (string.Equals(options.GatewayServer?.Trim(), "oe", StringComparison.OrdinalIgnoreCase))
-                options.GatewayServer = "all";
+            options.GatewayServer = "all";
             options.GatewayAllDefaultApplied = true;
         }
     }

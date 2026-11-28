@@ -439,9 +439,9 @@ public class MeshcomSettings
     public string GatewayServer { get; set; } = "all";
 
     /// <summary>
-    /// One-time migration marker (v1.18.4): installations that still had the old default "oe"
-    /// are switched to "all" once. Written as <c>true</c> by every save, so a later deliberate
-    /// choice of "oe" is kept. Not shown in the UI.
+    /// One-time migration marker (v1.18.4): every installation is switched
+    /// to "all" once, whatever was stored before. Written as <c>true</c> by every save, so any
+    /// later deliberate choice is kept. Not shown in the UI.
     /// </summary>
     public bool GatewayAllDefaultApplied { get; set; }
 
